@@ -76,5 +76,15 @@ header #right-header button{
     font-weight: 700;
 }
 
+#left-nav a{
+    margin: 15px auto;
+    font-weight: 540;
+}
+#left-nav a img{
+    display: inline;
+    margin: auto 6px;
+    height: 22px;
+}
+
 
 

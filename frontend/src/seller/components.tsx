@@ -3,6 +3,8 @@ import "../seller/css/components.css";
 import downArrow from "../seller/vectors/down-arrow.svg";
 import notifications from "../seller/vectors/notifications.svg";
 import fullLogo from "../seller/vectors/full-logo.svg"
+import securityIcon from "../seller/vectors/security-icon.svg";
+import logoutIcon from "../seller/vectors/logout-icon.svg";
 
 let username = "Max sharma";
 
@@ -47,6 +49,9 @@ const Leftnav = () => {
                     </svg>
                     <h1>{username}</h1>
                 </div>
+
+                <a href="/seller/security"> <img src={securityIcon} /> Security</a>
+                <a href="/"> <img src={logoutIcon} /> Logout</a>
             </div>
         </>
     );
