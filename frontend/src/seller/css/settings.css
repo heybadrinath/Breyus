@@ -1,0 +1,11 @@
+#settings-page{
+    display: grid;
+    grid-template-columns: 0fr auto;
+    grid-auto-flow: column; 
+    column-gap: 0px;
+}
+
+#right-section{
+    overflow-y: scroll;
+    height: 100vh;
+}

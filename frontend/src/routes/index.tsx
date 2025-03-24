@@ -5,6 +5,7 @@ import Signup from "../buyer/signup";  // Buyer Signup
 import SellerSignin from "../seller/signin";  // Seller Signin
 import SellerSignup from "../seller/signup";  // Seller Signup
 import Hero from "../main/hero";  // Hero Page
+import SellerSettings from "../seller/settings";
 
 const AppRoutes = () => {
   return (
@@ -20,6 +21,8 @@ const AppRoutes = () => {
         {/* Seller Routes */}
         <Route path="/seller/signin" element={<SellerSignin />} />
         <Route path="/seller/signup" element={<SellerSignup />} />
+
+        <Route path="/seller/settings" element={<SellerSettings />} />
       </Routes>
     </Router>
   );
