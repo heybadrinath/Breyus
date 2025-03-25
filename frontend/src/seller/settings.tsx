@@ -20,6 +20,22 @@ let userPrimaryMail = "user@example.com";
 let userAlternateMail = "alternate@example.com";
 let userAddress = "Example street 2nd main athani road " + city + ", " + state + " " + country + ".";
 
+// Company information
+let companyName = "Breyus";
+let companyWebsite = "breyus.com";
+let gst = "27AAAPA1234A1Z5";
+let companyAddress = "Benguluru, Karnataka";
+let Socials = "xx xx xx xx";
+
+//Bank details
+let accountType = "Current";
+let bankName = "Karnataka vikas grameen bank";
+let accountNumber = 48200485520;
+let ifsc = "KVGB0003114";
+
+
+
+// Ui components
 const Useravatar = () => {
     return (
         <div id="user-avatar">
@@ -35,11 +51,13 @@ const Useravatar = () => {
     );
 };
 
+
+
 const ContactInformation = () => {
     return (
-        <div id="contact-information" >
+        <div className="contact-information" >
 
-            <div id="contact-information-header">
+            <div className="contact-information-header">
                 <h1>Contact Information</h1>
                 <div className="edit-container">
                     Edit <img src={editIcon} />
@@ -70,6 +88,67 @@ const ContactInformation = () => {
 };
 
 
+
+// Company information section 
+const Companyinformation = () => {
+    return (
+        <div className="contact-information" >
+
+            <div className="contact-information-header">
+                <h1>Company Information</h1>
+                <div className="edit-container">
+                    Edit <img src={editIcon} />
+                </div>
+            </div>
+
+            <div className="contact-information-content">
+                <div><p>Company Name</p> {companyName} <img src={verifiedIcon} /></div>
+                <div><p>Company Website</p> {companyWebsite} <img src={verifiedIcon} /></div>
+            </div>
+
+            <div className="contact-information-content">
+                <div><p>Gstin</p> {gst} <img src={verifiedIcon} /></div>
+                <div><p>Company address</p> {companyAddress} <img src={verifiedIcon} /></div>
+            </div>
+
+            <div className="contact-information-content">
+                <div>
+                    <p>Socials</p> {Socials}
+                    <img src={verifiedIcon} />
+                </div>
+            </div>
+
+        </div>
+    );
+};
+
+
+// Bank details section
+const Bankdetails = () => {
+    return (
+        <div className="contact-information" >
+
+            <div className="contact-information-header">
+                <h1>Bank Details</h1>
+                <div className="edit-container">
+                    Edit <img src={editIcon} />
+                </div>
+            </div>
+
+            <div className="contact-information-content">
+                <div><p>IFSC Code</p> {ifsc} <img src={verifiedIcon} /></div>
+                <div><p>Account Number</p> {accountNumber} <img src={verifiedIcon} /></div>
+            </div>
+
+            <div className="contact-information-content">
+                <div><p>Bank Name</p> {bankName} <img src={verifiedIcon} /></div>
+                <div><p>Account type</p> {accountType} <img src={verifiedIcon} /></div>
+            </div>
+        </div>
+    );
+};
+
+
 // settings page starting point 
 const Settings = () => {
     return (
@@ -80,6 +159,8 @@ const Settings = () => {
                     <Header />
                     <Useravatar />
                     <ContactInformation />
+                    <Companyinformation/>
+                    <Bankdetails/>
                 </div>
             </div>
 

@@ -11,7 +11,7 @@
 }
 
 /* user avatar  and contact-information box (only)*/ 
-#user-avatar, #contact-information{
+#user-avatar, .contact-information{
     width: 80%;
     padding: 20px;
     margin: 50px auto;
@@ -39,6 +39,7 @@
     display: flex;
     height: fit-content;
     margin: 0px 5px 0px auto;
+    cursor: pointer;
    
 }
 .edit-container img{
@@ -50,16 +51,16 @@
 
 /* Contact Information */
 
-#contact-information-header{
+.contact-information-header{
     display: flex;
 }
-#contact-information-header h1{
+.contact-information-header h1{
     font-weight: 800;
     font-size: 1.8em;
     margin-left: 25px;
 }
 
-#contact-information{
+.contact-information{
     flex-direction: column !important;
 }
 
@@ -71,7 +72,7 @@
     margin: 20px 80px;
     font-weight: 700;
 }
-.contact-information-content div img{
+.contact-information-content div img {
     display: inline;
     margin: 0px 5px 0px 4px;
 }
