@@ -9,3 +9,73 @@
     overflow-y: scroll;
     height: 100vh;
 }
+
+/* user avatar  and contact-information box (only)*/ 
+#user-avatar, #contact-information{
+    width: 80%;
+    padding: 20px;
+    margin: 50px auto;
+    display: flex;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.050), 
+            0 6px 20px rgba(0, 0, 0, 0.068);
+    border-radius: 8px;
+}
+#user-profile-name-location{
+    margin: auto 20px;
+    width: fit-content;
+}
+#user-profile-name-location h1{
+    font-weight: 600;
+    font-size: 1.5em;
+    margin-left: 20px;
+}
+#location-container-h1{
+    display: flex;
+    margin-left: 0px !important;
+    font-weight: 400 !important;
+}
+
+.edit-container{
+    display: flex;
+    height: fit-content;
+    margin: 0px 5px 0px auto;
+   
+}
+.edit-container img{
+    height: auto;
+    width: 1.3rem;
+    margin: 0px 0px 0px 10px;
+
+}
+
+/* Contact Information */
+
+#contact-information-header{
+    display: flex;
+}
+#contact-information-header h1{
+    font-weight: 800;
+    font-size: 1.8em;
+    margin-left: 25px;
+}
+
+#contact-information{
+    flex-direction: column !important;
+}
+
+.contact-information-content{
+    display: flex;
+    margin: 20px;
+}
+.contact-information-content div{
+    margin: 20px 80px;
+    font-weight: 700;
+}
+.contact-information-content div img{
+    display: inline;
+    margin: 0px 5px 0px 4px;
+}
+
+.contact-information-content p{
+    font-weight: 400;
+}

@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import "../seller/css/components.css";
 import downArrow from "../seller/vectors/down-arrow.svg";
 import notifications from "../seller/vectors/notifications.svg";
@@ -6,7 +7,6 @@ import fullLogo from "../seller/vectors/full-logo.svg"
 import securityIcon from "../seller/vectors/security-icon.svg";
 import logoutIcon from "../seller/vectors/logout-icon.svg";
 
-let username = "Max sharma";
 
 const Header = () => {
     return (
@@ -26,7 +26,7 @@ const Header = () => {
     );
 };
 
-const Leftnav = () => {
+const Leftnav = ({username}: {username: String}) => {
     return (
         <>
             <div id="left-nav">
@@ -50,12 +50,12 @@ const Leftnav = () => {
                     <h1>{username}</h1>
                 </div>
 
-                <a href="/seller/security"> <img src={securityIcon} /> Security</a>
-                <a href="/"> <img src={logoutIcon} /> Logout</a>
+                <Link to="/seller/security"> <img src={securityIcon} /> Security</Link>
+                <Link to="/"> <img src={logoutIcon} /> Logout</Link>
             </div>
         </>
     );
 }
 
 
-export { Header, Leftnav };
+export { Header, Leftnav};

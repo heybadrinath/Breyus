@@ -14,6 +14,7 @@ const AppRoutes = () => {
         {/* Hero Page */}
         <Route path="/" element={<Hero />} />
 
+
         {/* Buyer Routes */}
         <Route path="/buyer/signin" element={<Signin />} />
         <Route path="/buyer/signup" element={<Signup />} />
@@ -23,6 +24,7 @@ const AppRoutes = () => {
         <Route path="/seller/signup" element={<SellerSignup />} />
 
         <Route path="/seller/settings" element={<SellerSettings />} />
+        {/* <Route path="/" element={<SellerSettings/>}/> */}
       </Routes>
     </Router>
   );
