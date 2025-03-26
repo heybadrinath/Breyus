@@ -1,3 +1,16 @@
+/* Layout  */
+.layout{
+    display: grid;
+    grid-template-columns: 0fr auto;
+    grid-auto-flow: column; 
+    column-gap: 0px;
+}
+
+#right-section{
+    overflow-y: scroll;
+    height: 100vh;
+}
+
 /* header  */
 header{
     background-color: black;
@@ -16,10 +29,12 @@ header #left-header{
     cursor: pointer;
 
 }
-header #left-header img{
+header #left-header img, .down-arrow{
     margin: auto 10px;
     width: 15px;
-    
+}
+.down-arrow{
+    filter: invert(1);
 }
 
 header #right-header{
@@ -78,15 +93,31 @@ header #right-header button{
     font-weight: 700;
 }
 
-#left-nav a{
-    margin: 15px auto;
+#left-nav a, #link-left-nav-dash-bottom a{
+    margin: 15px 0px;
     font-weight: 540;
+    
 }
+#links-left-nav-dash{
+    display: flex;
+  flex-direction: column;
+  width: fit-content;
+  margin: 0px auto;
+  height: 100vh;
+}
+
 #left-nav a img{
     display: inline;
     margin: auto 6px;
     height: 22px;
 }
+
+#links-left-nav-dash-bottom{
+    display: flex;
+    flex-direction: column;
+     margin: auto auto 40px 0px;
+}
+
 
 
 

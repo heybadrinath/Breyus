@@ -153,7 +153,7 @@ const Bankdetails = () => {
 const Settings = () => {
     return (
         <>
-            <div id="settings-page">
+            <div className="layout">
                 <Leftnav username={username} />
                 <div id="right-section">
                     <Header />
