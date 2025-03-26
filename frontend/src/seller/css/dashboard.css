@@ -25,3 +25,6 @@
 #analytics-graph p{
     font-weight: 100;
 }
+#analytics-graph div{
+    width: 22.8vw;
+}

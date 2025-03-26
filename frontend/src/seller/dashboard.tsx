@@ -2,6 +2,7 @@ import React from "react";
 import { Header, Leftnavdash } from "../seller/components";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Scatter, Line, ResponsiveContainer, ComposedChart } from 'recharts';
 import "../seller/css/dashboard.css";
+import "../seller/css/components.css";
 
 
 
@@ -28,28 +29,31 @@ const Scatterdata: ScatterGraphDataType[] = [
   { x: 4, y: 27 },
   { x: 5, y: 18 },
   { x: 6, y: 32 },
-  { x: 8, y: 0 }
+  { x: 8, y: 33 },
+  { x: 9, y: 55}
 ];
 
 
 // Bargraph ui element
 const Bargraph = ({ data }: { data: BarGraphDataType[] }) => {
   return (
-    <BarChart width={400} height={300} data={data}>
-      <CartesianGrid strokeDasharray="3 3" />
-      <XAxis dataKey="week" />
-      <YAxis domain={[0, Math.max(...data.map(d => d.storeVisits)) + 5]} />
-      <Tooltip />
-      <Legend />
-      <Bar dataKey="storeVisits" fill="#71DE5F" radius={[8, 8, 0, 0]} />
-    </BarChart>
+    <ResponsiveContainer height={300} width="100%">
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="week" />
+          <YAxis domain={[0, Math.max(...data.map(d => d.storeVisits)) + 5]} />
+          <Tooltip />
+          <Legend />
+          <Bar dataKey="storeVisits" fill="#71DE5F" radius={[8, 8, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
   );
 };
 
 // Scatter graph ui element
 const Scattergraph = ({ data }: { data: ScatterGraphDataType[] }) => {
   return (
-    <ResponsiveContainer width={400} height={300}>
+    <ResponsiveContainer  height={300} width="100%">
       <ComposedChart data={data}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis type="number" dataKey="x" name="Day" />
@@ -77,11 +81,28 @@ const Analytics = () => {
         <p>Check the sales ,value and bounce rate by country</p>
       </div>
 
-      <div id="analytics-graph">
-        <div>
-          <h2>In-Store Visits</h2>
-          <p>Last Campaign Performance</p>
+      <div id="analytics-graph" className="my-10">
+
+        <div className="shadow-2xl rounded-md mx-2 pl-1 pr-10 pb-2 pt-4 bg-gray-50">
+          <h2 className="mx-10">In-Store Visits</h2>
+          <p className="mx-10 my-0 mb-8">Last Campaign Performance</p>
+          <Bargraph data={Bardata}/>
         </div>
+
+        <div className="shadow-2xl rounded-md mx-2 pl-1 pr-10 pb-2 pt-4 bg-white">
+          <h2 className="mx-10">Daily Sales</h2>
+          <p className="mx-10 my-0 mb-8">(+15%) increase in todays sales</p>
+          <Scattergraph data={Scatterdata}/>
+        </div>
+
+        <div className="shadow-2xl rounded-md mx-2 pl-1 pr-10 pb-2 pt-4 bg-white">
+          <h2 className="mx-10">Completed Tasks</h2>
+          <p className="mx-10 my-0 mb-8">Last Campaign Performance</p>
+          <Scattergraph data={Scatterdata}/>
+        </div>
+
+        
+
       </div>
 
 
