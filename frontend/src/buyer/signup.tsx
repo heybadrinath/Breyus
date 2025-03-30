@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import axios from "axios";
 
-const Signin: React.FC = () => {
+const Signup: React.FC = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     firstName: "",
@@ -46,7 +46,7 @@ const Signin: React.FC = () => {
     );
   };
 
-  const handleSendOtp = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
@@ -66,19 +66,22 @@ const Signin: React.FC = () => {
     }
 
     try {
-      const response = await axios.post("http://localhost:5000/auth/send-otp", {
+      const response = await axios.post("http://localhost:5000/auth/register", {
         email: formData.email,
         password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        role: "buyer",
       });
 
-      if (response.data.message === "OTP sent successfully") {
+      if (response.data.success) {
         setIsOtpSent(true);
         setResendTimer(300);
       } else {
-        setError(response.data.message || "Failed to send OTP.");
+        setError(response.data.message || "Failed to register.");
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || "Error sending OTP.");
+      setError(err.response?.data?.message || "Error during registration.");
     } finally {
       setIsLoading(false);
     }
@@ -90,15 +93,16 @@ const Signin: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post("http://localhost:5000/auth/verify-otp", {
+      const response = await axios.post("http://localhost:5000/auth/verify-registration-otp", {
         email: formData.email,
         otp: otp,
       });
 
-      if (response.data.message === "OTP verified successfully") {
+      if (response.data.success) {
+        // Registration successful, redirect to dashboard
         navigate("/buyer/dashboard");
       } else {
-        setError("Invalid OTP. Please try again.");
+        setError(response.data.message || "Invalid OTP. Please try again.");
       }
     } catch (err: any) {
       setError(err.response?.data?.message || "Error verifying OTP.");
@@ -123,7 +127,7 @@ const Signin: React.FC = () => {
           </p>
 
           {!isOtpSent ? (
-            <form onSubmit={handleSendOtp} className="w-full">
+            <form onSubmit={handleRegister} className="w-full">
               <div className="flex gap-4">
                 <div className="w-1/2">
                   <label className="block text-gray-700">First Name</label>
@@ -209,7 +213,7 @@ const Signin: React.FC = () => {
                 className={`mt-6 w-full py-3 rounded-full ${isLoading ? "bg-gray-400 cursor-not-allowed" : "bg-black text-white"}`}
                 disabled={isLoading}
               >
-                {isLoading ? "Sending..." : "Send OTP"}
+                {isLoading ? "Registering..." : "Register"}
               </button>
             </form>
           ) : (
@@ -237,7 +241,7 @@ const Signin: React.FC = () => {
 
               <button
                 type="button"
-                onClick={handleSendOtp}
+                onClick={handleRegister}
                 disabled={resendTimer > 0}
                 className="mt-3 text-gray-600 text-sm"
               >
@@ -253,15 +257,11 @@ const Signin: React.FC = () => {
       </div>
 
       {/* Right Section - Image */}
-      <div className="w-1/2 h-full hidden lg:flex items-center justify-center bg-gray-100">
-        <img
-          src="/assets/side-photo2.png"
-          alt="Side Illustration"
-          className="w-full h-full object-cover"
-        />
+      <div className="w-1/2 h-full hidden lg:flex items-center justify-center">
+        <img src="/assets/side-photo.png" alt="Side Illustration" className="w-full h-full object-cover" />
       </div>
     </div>
   );
 };
 
-export default Signin;
+export default Signup;
