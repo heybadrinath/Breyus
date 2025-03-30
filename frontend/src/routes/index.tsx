@@ -11,6 +11,7 @@ import SellerDashboard from "../seller/dashboard";
 import Security from "../seller/security";
 import { motion, AnimatePresence } from "framer-motion";
 import { Leftnavdash, Header } from "../seller/components";
+import Sales from "../seller/sales";
 
 let username = "Demo user";
 
@@ -64,6 +65,7 @@ const AppRoutes = () => {
         <Route path="/seller/dashboard" element={<Animate page={<SellerDashboard />} />} />
         <Route path="/seller/security" element={<Animate page={<Security />} />} />
         <Route path="/seller/settings" element={<Animate page={<SellerSettings />} />} />
+        <Route path="/seller/sales" element={<Animate page={<Sales/>} />} />
 
         {/* 404 page  */}
         <Route path="*" element={<Notfoundpage />} />
