@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import axios from "axios";
+import authService from "../services/auth.service";
 
 const Signin: React.FC = () => {
   const navigate = useNavigate();
@@ -41,6 +42,7 @@ const Signin: React.FC = () => {
       const response = await axios.post("http://localhost:5000/auth/send-otp", {
         email: formData.email,
         password: formData.password,
+        role: "buyer",
       });
 
       if (response.data.message === "OTP sent successfully") {
@@ -59,20 +61,68 @@ const Signin: React.FC = () => {
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIsLoading(true);
 
     try {
+      console.log("Verifying OTP for:", formData.email);
       const response = await axios.post("http://localhost:5000/auth/verify-otp", {
         email: formData.email,
         otp,
       });
 
+      console.log("OTP verification response:", response.data);
+      
       if (response.data.success) {
+        // Store user information and token
+        if (response.data.token) {
+          authService.setToken(response.data.token);
+          console.log("Token stored in localStorage");
+        } else {
+          console.error("No token received from server");
+          setError("Authentication failed: No token received");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Get user data from response, ensure it has a role
+        const userData = response.data.user || {};
+        
+        if (!userData.role) {
+          console.warn("No role in user data, defaulting to buyer role");
+          userData.role = "buyer";
+        }
+        
+        console.log("Setting user data:", userData);
+        authService.setUser(userData);
+        
+        // Check localStorage after setting values
+        console.log("After storing - localStorage check:", {
+          token: localStorage.getItem('token') ? 'exists' : 'missing',
+          user: localStorage.getItem('user')
+        });
+        
+        // Check authentication status before redirect
+        const isAuth = authService.isAuthenticated();
+        const hasRole = authService.hasRole("buyer");
+        console.log("Authentication check before redirect:", { isAuth, hasRole });
+        
+        if (!isAuth || !hasRole) {
+          console.error("Authentication validation failed after login");
+          setError("Authentication failed after login. Please try again.");
+          setIsLoading(false);
+          return;
+        }
+        
+        console.log("Authentication successful, redirecting to dashboard");
         navigate("/buyer/dashboard");
       } else {
         setError("Invalid OTP. Please try again.");
       }
     } catch (err: any) {
+      console.error("OTP verification error:", err.response?.data || err.message);
       setError(err.response?.data?.message || "Error verifying OTP.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -127,7 +177,7 @@ const Signin: React.FC = () => {
               {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
 
               <div className="text-right text-sm mt-2">
-                <Link to="/forgot-password" className="text-gray-500 hover:underline">
+                <Link to="/buyer/forgot-password" className="text-gray-500 hover:underline">
                   Forgot Password?
                 </Link>
               </div>

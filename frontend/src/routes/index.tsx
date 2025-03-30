@@ -1,14 +1,18 @@
 import React from "react";
 import { ReactNode } from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation, Link, Navigate } from "react-router-dom";
 import Signin from "../buyer/signin";  // Buyer Signin
 import Signup from "../buyer/signup";  // Buyer Signup
+import ForgotPassword from "../buyer/forgot-password"; // Buyer Forgot Password
+import BuyerDashboard from "../buyer/dashboard"; // Buyer Dashboard
 import SellerSignin from "../seller/signin";  // Seller Signin
 import SellerSignup from "../seller/signup";  // Seller Signup
+import SellerForgotPassword from "../seller/forgot-password"; // Seller Forgot Password
 import Hero from "../main/hero";  // Hero Page
 import SellerSettings from "../seller/settings";
 import SellerDashboard from "../seller/dashboard";
 import Security from "../seller/security";
+import ProtectedRoute from "./ProtectedRoute";
 import { motion, AnimatePresence } from "framer-motion";
 import { Leftnavdash, Header } from "../seller/components";
 
@@ -53,17 +57,50 @@ const AppRoutes = () => {
         {/* Hero Page */}
         <Route path="/" element={<Animate page={<Hero />} />} />
 
+        {/* Redirects */}
+        <Route path="/forgot-password" element={<Navigate to="/seller/forgot-password" replace />} />
 
         {/* Buyer Routes */}
         <Route path="/buyer/signin" element={<Animate page={<Signin />} />} />
         <Route path="/buyer/signup" element={<Animate page={<Signup />} />} />
+        <Route path="/buyer/forgot-password" element={<Animate page={<ForgotPassword />} />} />
+        <Route 
+          path="/buyer/dashboard" 
+          element={
+            <ProtectedRoute requiredRole="buyer">
+              <Animate page={<BuyerDashboard />} />
+            </ProtectedRoute>
+          } 
+        />
 
         {/* Seller Routes */}
         <Route path="/seller/signin" element={<Animate page={<SellerSignin />} />} />
         <Route path="/seller/signup" element={<Animate page={<SellerSignup />} />} />
-        <Route path="/seller/dashboard" element={<Animate page={<SellerDashboard />} />} />
-        <Route path="/seller/security" element={<Animate page={<Security />} />} />
-        <Route path="/seller/settings" element={<Animate page={<SellerSettings />} />} />
+        <Route path="/seller/forgot-password" element={<Animate page={<SellerForgotPassword />} />} />
+        <Route 
+          path="/seller/dashboard" 
+          element={
+            <ProtectedRoute requiredRole="seller">
+              <Animate page={<SellerDashboard />} />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/seller/security" 
+          element={
+            <ProtectedRoute requiredRole="seller">
+              <Animate page={<Security />} />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/seller/settings" 
+          element={
+            <ProtectedRoute requiredRole="seller">
+              <Animate page={<SellerSettings />} />
+            </ProtectedRoute>
+          } 
+        />
 
         {/* 404 page  */}
         <Route path="*" element={<Notfoundpage />} />
