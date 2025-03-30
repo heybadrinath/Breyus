@@ -1,5 +1,5 @@
 import React from "react";
-import { Header, Leftnav } from "../seller/components";
+import {Leftnav,Header } from "../seller/components";
 import "../seller/css/settings.css"
 import userProfile from "../seller/vectors/profile.svg";
 import locationIcon from "../seller/vectors/location-icon.svg"
@@ -39,13 +39,13 @@ let ifsc = "KVGB0003114";
 const Useravatar = () => {
     return (
         <div id="user-avatar">
-            <img src={userProfile} id="user-profile-picture" />
+            <img alt="" src={userProfile} id="user-profile-picture" />
             <div id="user-profile-name-location">
                 <h1>{username}</h1>
-                <h1 id="location-container-h1"><img src={locationIcon} />{city + " " + state}</h1>
+                <h1 id="location-container-h1"><img alt="" src={locationIcon} />{city + " " + state}</h1>
             </div>
             <div className="edit-container">
-                Edit <img src={editIcon} />
+                Edit <img alt="" src={editIcon} />
             </div>
         </div>
     );
@@ -60,26 +60,26 @@ const ContactInformation = () => {
             <div className="contact-information-header">
                 <h1>Contact Information</h1>
                 <div className="edit-container">
-                    Edit <img src={editIcon} />
+                    Edit <img alt="" src={editIcon} />
 
                 </div>
             </div>
 
             <div className="contact-information-content">
-                <div><p>Contact information</p> {contactNumber} <img src={verifiedIcon} /></div>
-                <div><p>Alternate Sale Contact</p> {alternateNumber} <img src={verifiedIcon} /></div>
-                <div><p>Alternate Sale Contact</p> {alternateNumber2} <img src={verifiedIcon} /></div>
+                <div><p>Contact information</p> {contactNumber} <img alt="" src={verifiedIcon} /></div>
+                <div><p>Alternate Sale Contact</p> {alternateNumber} <img alt="" src={verifiedIcon} /></div>
+                <div><p>Alternate Sale Contact</p> {alternateNumber2} <img alt="" src={verifiedIcon} /></div>
             </div>
 
             <div className="contact-information-content">
-                <div><p>Primary Email</p> {userPrimaryMail} <img src={verifiedIcon} /></div>
-                <div><p>Alternate Email</p> {userAlternateMail} <img src={verifiedIcon} /></div>
+                <div><p>Primary Email</p> {userPrimaryMail} <img alt="" src={verifiedIcon} /></div>
+                <div><p>Alternate Email</p> {userAlternateMail} <img alt="" src={verifiedIcon} /></div>
             </div>
 
             <div className="contact-information-content">
                 <div>
                     <p>Address </p> {userAddress}
-                    <img src={verifiedIcon} />
+                    <img alt="" src={verifiedIcon} />
                 </div>
             </div>
 
@@ -97,24 +97,24 @@ const Companyinformation = () => {
             <div className="contact-information-header">
                 <h1>Company Information</h1>
                 <div className="edit-container">
-                    Edit <img src={editIcon} />
+                    Edit <img alt="" src={editIcon} />
                 </div>
             </div>
 
             <div className="contact-information-content">
-                <div><p>Company Name</p> {companyName} <img src={verifiedIcon} /></div>
-                <div><p>Company Website</p> {companyWebsite} <img src={verifiedIcon} /></div>
+                <div><p>Company Name</p> {companyName} <img alt="" src={verifiedIcon} /></div>
+                <div><p>Company Website</p> {companyWebsite} <img alt="" src={verifiedIcon} /></div>
             </div>
 
             <div className="contact-information-content">
-                <div><p>Gstin</p> {gst} <img src={verifiedIcon} /></div>
-                <div><p>Company address</p> {companyAddress} <img src={verifiedIcon} /></div>
+                <div><p>Gstin</p> {gst} <img alt="" src={verifiedIcon} /></div>
+                <div><p>Company address</p> {companyAddress} <img alt="" src={verifiedIcon} /></div>
             </div>
 
             <div className="contact-information-content">
                 <div>
                     <p>Socials</p> {Socials}
-                    <img src={verifiedIcon} />
+                    <img alt="" src={verifiedIcon} />
                 </div>
             </div>
 
@@ -131,18 +131,18 @@ const Bankdetails = () => {
             <div className="contact-information-header">
                 <h1>Bank Details</h1>
                 <div className="edit-container">
-                    Edit <img src={editIcon} />
+                    Edit <img alt="" src={editIcon} />
                 </div>
             </div>
 
             <div className="contact-information-content">
-                <div><p>IFSC Code</p> {ifsc} <img src={verifiedIcon} /></div>
-                <div><p>Account Number</p> {accountNumber} <img src={verifiedIcon} /></div>
+                <div><p>IFSC Code</p> {ifsc} <img alt="" src={verifiedIcon} /></div>
+                <div><p>Account Number</p> {accountNumber} <img alt="" src={verifiedIcon} /></div>
             </div>
 
             <div className="contact-information-content">
-                <div><p>Bank Name</p> {bankName} <img src={verifiedIcon} /></div>
-                <div><p>Account type</p> {accountType} <img src={verifiedIcon} /></div>
+                <div><p>Bank Name</p> {bankName} <img alt="" src={verifiedIcon} /></div>
+                <div><p>Account type</p> {accountType} <img alt="" src={verifiedIcon} /></div>
             </div>
         </div>
     );

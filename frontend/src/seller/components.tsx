@@ -1,4 +1,4 @@
-import React from "react";
+import React, { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import "../seller/css/components.css";
 
@@ -20,7 +20,7 @@ const Header = () => {
             <header>
                 <div id="left-header">
                     <div>sort: Last week</div>
-                    <img src={downArrow} />
+                    <img alt="" src={downArrow} />
                 </div>
                 <div className="sa"></div>
                 <div id="right-header">
@@ -56,8 +56,8 @@ const Leftnav = ({ username }: { username: String }) => {
                     <h1>{username}</h1>
                 </div>
 
-                <Link to="/seller/security"> <img src={securityIcon} /> Security</Link>
-                <Link to="/"> <img src={logoutIcon} /> Logout</Link>
+                <Link to="/seller/security"> <img alt="" src={securityIcon} /> Security</Link>
+                <Link to="/"> <img alt="" src={logoutIcon} /> Logout</Link>
             </div>
         </>
     );
@@ -88,14 +88,14 @@ const Leftnavdash = ({ username }: { username: String }) => {
                 </div>
 
                 <div id="links-left-nav-dash">
-                    <Link to="/seller/dashboard"> <img src={dashIcon} /> Dashboard <img className="down-arrow" src={downArrow} /></Link>
-                    <Link to="/seller/product"> <img src={productIcon} /> Product <img className="down-arrow" src={downArrow} /></Link>
-                    <Link to="/seller/inbox"><img src={securityIcon} />Inbox</Link>
-                    <Link to="/seller/trade"><img src={logoutIcon} />Trade</Link>
+                    <Link to="/seller/dashboard"> <img alt="" src={dashIcon} /> Dashboard <img alt="" className="down-arrow" src={downArrow} /></Link>
+                    <Link to="/seller/product"> <img alt="" src={productIcon} /> Product <img alt="" className="down-arrow" src={downArrow} /></Link>
+                    <Link to="/seller/inbox"><img alt="" src={securityIcon} />Inbox</Link>
+                    <Link to="/seller/trade"><img alt="" src={logoutIcon} />Trade</Link>
 
                     <div id="links-left-nav-dash-bottom">
-                        <Link to="/seller/support"><img src={helpIcon} />Help</Link>
-                        <Link to="/seller/settings"><img src={SettingsIcon} />Settings</Link>
+                        <Link to="/seller/support"><img alt="" src={helpIcon} />Help</Link>
+                        <Link to="/seller/settings"><img alt="" src={SettingsIcon} />Settings</Link>
                     </div>
                 </div>
 
@@ -104,7 +104,19 @@ const Leftnavdash = ({ username }: { username: String }) => {
             </div>
         </>
     );
-}
+};
+
+const Layout = ({Body}: {Body: ReactNode}) =>{
+    return(
+        <div className="layout">
+            <Leftnavdash username={"Demo user"}/>
+            <div id="right-section">
+                <Header/>
+            {Body}
+            </div>
+        </div>
+    );
+};
 
 
-export { Header, Leftnav, Leftnavdash };
+export {Leftnav, Layout, Header };
