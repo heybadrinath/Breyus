@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react";
+import React, { ReactNode, useState } from "react";
 import { Link } from "react-router-dom";
 import "../seller/css/components.css";
 
@@ -64,6 +64,13 @@ const Leftnav = ({ username }: { username: String }) => {
 }
 
 const Leftnavdash = ({ username }: { username: String }) => {
+
+    const [isdashopen, setdash] = useState(false);
+
+    const toggle = () =>{
+        setdash(isdashopen => !isdashopen);
+    };
+
     return (
         <>
             <div id="left-nav">
@@ -88,7 +95,14 @@ const Leftnavdash = ({ username }: { username: String }) => {
                 </div>
 
                 <div id="links-left-nav-dash">
-                    <Link to="/seller/dashboard"> <img alt="" src={dashIcon} /> Dashboard <img alt="" className="down-arrow" src={downArrow} /></Link>
+                    <Link onClick={toggle} to=""> <img alt="" src={dashIcon} /> Dashboard <img alt="" className={`down-arrow transition transition-transform duration-500 ${isdashopen? "rotate-180 ":"hue-rotate-180"}`} src={downArrow} /></Link>
+                    <div className={`flex  flex-col overflow-hidden transition-all duration-500 ease-bounce  ${isdashopen?"max-h-56 opacity-100": "max-h-0 opacity-0"}`}>
+                       {/* toggle content  */}
+                       <Link className="!my-1" to={"/seller/dashboard"}>Analysis</Link>
+        
+                       <Link className="!my-1" to={"/seller/sales"}>Sales</Link>
+
+                    </div>
                     <Link to="/seller/product"> <img alt="" src={productIcon} /> Product <img alt="" className="down-arrow" src={downArrow} /></Link>
                     <Link to="/seller/inbox"><img alt="" src={securityIcon} />Inbox</Link>
                     <Link to="/seller/trade"><img alt="" src={logoutIcon} />Trade</Link>
