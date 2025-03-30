@@ -1,5 +1,5 @@
 import React from "react";
-import { Header, Leftnavdash } from "../seller/components";
+import {Layout } from "../seller/components";
 
 // demo data 
 let sales = 230220;
@@ -66,14 +66,7 @@ const SalesAnalysis = () => {
 
 const Sales = () => {
     return (
-        <div className="layout">
-            <Leftnavdash username={"Demo user"} />
-            <div id="right-section">
-                <Header />
-                <SalesAnalysis />
-
-            </div>
-        </div>
+        <Layout Body={<SalesAnalysis />}/>
     );
 };
 

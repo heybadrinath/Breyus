@@ -1,12 +1,8 @@
 import React from "react";
-import { Header, Leftnavdash } from "../seller/components";
+import {Layout } from "../seller/components";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Scatter, Line, ResponsiveContainer, ComposedChart } from 'recharts';
 import "../seller/css/components.css";
 
-
-
-// dummy data 
-let username = "Demo user"
 
 type BarGraphDataType = { week: string; storeVisits: number };
 type ScatterGraphDataType = { x: number, y: number };
@@ -214,13 +210,7 @@ const Analytics = () => {
 
 const SellerDashboard = () => {
   return (
-    <div className="layout">
-      <Leftnavdash username={username} />
-      <div id="right-section" className=" overflow-scroll h-max ">
-        <Header />
-        <Analytics />
-      </div>
-    </div>
+     <Layout Body={<Analytics/>}/>
   );
 };
 
