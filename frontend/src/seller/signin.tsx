@@ -176,7 +176,7 @@ const Signin: React.FC = () => {
               {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
 
               <div className="text-right text-sm mt-2">
-                <Link to="/forgot-password" className="text-gray-500 hover:underline">
+                <Link to="/seller/forgot-password" className="text-gray-500 hover:underline">
                   Forgot Password?
                 </Link>
               </div>

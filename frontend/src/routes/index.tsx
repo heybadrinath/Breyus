@@ -13,7 +13,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import Sales from "../seller/sales";
 import Upgrade from "../seller/upgrade";
 import { Layout } from "../seller/components";
-
+import ForgotPassword from "../buyer/forgot-password";
+import BuyerDashboard from "../buyer/dashboard";
+import SellerForgotPassword from "../seller/forgot-password";
 
 const pageVariants = {
   initial: { opacity: 0, x: -50 },
@@ -22,52 +24,70 @@ const pageVariants = {
 };
 
 const Animate = ({ page }: { page: ReactNode }) => {
-
   return (
-    <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">  {page} </motion.div>
+    <motion.div 
+      variants={pageVariants} 
+      initial="initial" 
+      animate="animate" 
+      exit="exit"
+    >
+      {page}
+    </motion.div>
+  );
+};
+
+// Wrapper for seller dashboard pages that includes layout
+const SellerPage = ({ children }: { children: ReactNode }) => {
+  return (
+    <Layout Body={
+      <motion.div
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+      >
+        {children}
+      </motion.div>
+    } />
   );
 };
 
 const Notfoundpage = () => {
   return (
-    <Layout Body={
-      <div className="shadow-2xl max-w-fit whitespace-nowrap flex p-5 my-72 mx-auto max-h-fit text-3xl">
-        404 Error Page not found
-      </div>
-    } />
+    <div className="shadow-2xl max-w-fit whitespace-nowrap flex p-5 my-72 mx-auto max-h-fit text-3xl">
+      404 Error Page not found
+    </div>
   );
 };
 
 const AppRoutes = () => {
   const location = useLocation();
   return (
-
     <AnimatePresence mode="wait">
-
-      <Routes key={location.pathname}>
+      <Routes location={location} key={location.pathname}>
         {/* Hero Page */}
         <Route path="/" element={<Animate page={<Hero />} />} />
-
 
         {/* Buyer Routes */}
         <Route path="/buyer/signin" element={<Animate page={<Signin />} />} />
         <Route path="/buyer/signup" element={<Animate page={<Signup />} />} />
+        <Route path="/buyer/forgot-password" element={<Animate page={<ForgotPassword />} />} />
+        <Route path="/buyer/dashboard" element={<Animate page={<BuyerDashboard />} />} />
 
         {/* Seller Routes */}
         <Route path="/seller/signin" element={<Animate page={<SellerSignin />} />} />
         <Route path="/seller/signup" element={<Animate page={<SellerSignup />} />} />
-        <Route path="/seller/dashboard" element={<Animate page={<SellerDashboard />} />} />
-        <Route path="/seller/security" element={<Animate page={<Security />} />} />
-        <Route path="/seller/settings" element={<Animate page={<SellerSettings />} />} />
-        <Route path="/seller/sales" element={<Animate page={<Sales />} />} />
-        <Route path="/seller/upgrade" element={<Animate page={<Upgrade />} />} />
+        <Route path="/seller/forgot-password" element={<Animate page={<SellerForgotPassword />} />} />
+        <Route path="/seller/dashboard" element={<SellerPage><SellerDashboard /></SellerPage>} />
+        <Route path="/seller/security" element={<SellerPage><Security /></SellerPage>} />
+        <Route path="/seller/settings" element={<SellerPage><SellerSettings /></SellerPage>} />
+        <Route path="/seller/sales" element={<SellerPage><Sales /></SellerPage>} />
+        <Route path="/seller/upgrade" element={<SellerPage><Upgrade /></SellerPage>} />
 
         {/* 404 page  */}
         <Route path="*" element={<Notfoundpage />} />
       </Routes>
-
     </AnimatePresence>
-
   );
 };
 
