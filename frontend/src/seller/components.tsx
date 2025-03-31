@@ -95,21 +95,20 @@ const Leftnavdash = ({ username }: { username: String }) => {
                 </div>
 
                 <div id="links-left-nav-dash">
-                    <Link onClick={toggle} to=""> <img alt="" src={dashIcon} /> Dashboard <img alt="" className={`down-arrow transition transition-transform duration-500 ${isdashopen? "rotate-180 ":"hue-rotate-180"}`} src={downArrow} /></Link>
-                    <div className={`flex  flex-col overflow-hidden transition-all duration-500 ease-bounce  ${isdashopen?"max-h-56 opacity-100": "max-h-0 opacity-0"}`}>
+                    <Link onClick={toggle} className={` rounded-lg transition-all duration-500 ease-in-out px-4 py-2 ${isdashopen?"bg-[#0004]":"bg-none"}`} to=""> <img alt="" src={dashIcon} /> Dashboard <img alt="" className={`down-arrow transition-transform duration-500 !ml-auto ${isdashopen? "rotate-180 ":"hue-rotate-180"}`} src={downArrow} /></Link>
+                    <div className={`flex  flex-col overflow-hidden transition-all duration-1000 ease-bounch  ${isdashopen?"max-h-56 opacity-100": "max-h-0 opacity-40"}`}>
                        {/* toggle content  */}
-                       <Link className="!my-1" to={"/seller/dashboard"}>Analysis</Link>
-        
-                       <Link className="!my-1" to={"/seller/sales"}>Sales</Link>
+                       <Link className="!my-y !mx-6" to={"/seller/dashboard"}>Analysis</Link>
+                       <Link className="!my-y !mx-6" to={"/seller/sales"}>Sales</Link>
 
                     </div>
-                    <Link to="/seller/product"> <img alt="" src={productIcon} /> Product <img alt="" className="down-arrow" src={downArrow} /></Link>
-                    <Link to="/seller/inbox"><img alt="" src={securityIcon} />Inbox</Link>
-                    <Link to="/seller/trade"><img alt="" src={logoutIcon} />Trade</Link>
+                    <Link className="px-4 py-2" to="/seller/product"> <img alt="" src={productIcon} /> Product <img alt="" className={`down-arrow down-arrow transition-transform duration-500 !ml-auto ${false? "rotate-180 ":"hue-rotate-180"}`} src={downArrow} /></Link>
+                    <Link className="px-4 py-2" to="/seller/inbox"><img alt="" src={securityIcon} />Inbox</Link>
+                    <Link className="px-4 py-2" to="/seller/trade"><img alt="" src={logoutIcon} />Trade</Link>
 
                     <div id="links-left-nav-dash-bottom">
-                        <Link to="/seller/support"><img alt="" src={helpIcon} />Help</Link>
-                        <Link to="/seller/settings"><img alt="" src={SettingsIcon} />Settings</Link>
+                        <Link className="px-4 py-2" to="/seller/support"><img alt="" src={helpIcon} />Help</Link>
+                        <Link className="px-4 py-2" to="/seller/settings"><img alt="" src={SettingsIcon} />Settings</Link>
                     </div>
                 </div>
 

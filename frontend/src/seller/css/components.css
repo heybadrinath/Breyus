@@ -94,15 +94,15 @@ header #right-header button{
 }
 
 #left-nav a, #link-left-nav-dash-bottom a{
-    margin: 15px 0px;
+    display: flex;
+    margin: 5px 0px;
     font-weight: 540;
     
 }
 #links-left-nav-dash{
-    display: flex;
+display: flex;
   flex-direction: column;
-  width: fit-content;
-  margin: 0px auto;
+  width: 100%;
   height: 100vh;
 }
 
