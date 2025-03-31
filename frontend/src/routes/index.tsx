@@ -72,7 +72,7 @@ const AppRoutes = () => {
         <Route path="/seller/settings" element={<Animate page={<SellerSettings />} />} />
         <Route path="/seller/sales" element={<Animate page={<Sales />} />} />
         <Route path="/seller/upgrade" element={<Animate page={<Upgrade />} />} />
-        <Route path="/seller/product" element={<Animate page={<Upgrade />} />} />
+        <Route path="/seller/product" element={<Animate page={<Products/>} />} />
 
 
         {/* 404 page  */}
