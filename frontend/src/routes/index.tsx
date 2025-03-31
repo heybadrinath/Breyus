@@ -13,14 +13,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import Sales from "../seller/sales";
 import Upgrade from "../seller/upgrade";
 import { Layout } from "../seller/components";
+import Products from "../seller/products";
 import ForgotPassword from "../buyer/forgot-password";
 import BuyerDashboard from "../buyer/dashboard";
 import SellerForgotPassword from "../seller/forgot-password";
 
 const pageVariants = {
-  initial: { opacity: 0, x: -50 },
+  initial: { opacity: 0, x: -80 },
   animate: { opacity: 1, x: 0, transition: { duration: 0.4 } },
-  exit: { opacity: 0, x: 50, transition: { duration: 0.4 } }
+  exit: { opacity: 0, x: 80, transition: { duration: 0.4 } }
 };
 
 const Animate = ({ page }: { page: ReactNode }) => {
