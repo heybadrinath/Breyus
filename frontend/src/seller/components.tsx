@@ -56,8 +56,8 @@ const Leftnav = ({ username }: { username: String }) => {
                     <h1>{username}</h1>
                 </div>
 
-                <Link to="/seller/security"> <img alt="" src={securityIcon} /> Security</Link>
-                <Link to="/"> <img alt="" src={logoutIcon} /> Logout</Link>
+                <Link className="px-4 py-2" to="/seller/security"> <img alt="" src={securityIcon} /> Security</Link>
+                <Link className="px-4 py-2" to="/"> <img alt="" src={logoutIcon} /> Logout</Link>
             </div>
         </>
     );
