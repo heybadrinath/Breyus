@@ -24,12 +24,13 @@ const pageVariants = {
   exit: { opacity: 0, x: 80, transition: { duration: 0.4 } }
 };
 
+// wrapper for seller div is already available 
 const Animate = ({ page }: { page: ReactNode }) => {
   return (
-    <motion.div 
-      variants={pageVariants} 
-      initial="initial" 
-      animate="animate" 
+    <motion.div
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
       exit="exit"
     >
       {page}
@@ -38,20 +39,7 @@ const Animate = ({ page }: { page: ReactNode }) => {
 };
 
 // Wrapper for seller dashboard pages that includes layout
-const SellerPage = ({ children }: { children: ReactNode }) => {
-  return (
-    <Layout Body={
-      <motion.div
-        variants={pageVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-      >
-        {children}
-      </motion.div>
-    } />
-  );
-};
+
 
 const Notfoundpage = () => {
   return (
@@ -79,11 +67,13 @@ const AppRoutes = () => {
         <Route path="/seller/signin" element={<Animate page={<SellerSignin />} />} />
         <Route path="/seller/signup" element={<Animate page={<SellerSignup />} />} />
         <Route path="/seller/forgot-password" element={<Animate page={<SellerForgotPassword />} />} />
-        <Route path="/seller/dashboard" element={<SellerPage><SellerDashboard /></SellerPage>} />
-        <Route path="/seller/security" element={<SellerPage><Security /></SellerPage>} />
-        <Route path="/seller/settings" element={<SellerPage><SellerSettings /></SellerPage>} />
-        <Route path="/seller/sales" element={<SellerPage><Sales /></SellerPage>} />
-        <Route path="/seller/upgrade" element={<SellerPage><Upgrade /></SellerPage>} />
+        <Route path="/seller/dashboard" element={<Animate page={<SellerDashboard />} />} />
+        <Route path="/seller/security" element={<Animate page={<Security />} />} />
+        <Route path="/seller/settings" element={<Animate page={<SellerSettings />} />} />
+        <Route path="/seller/sales" element={<Animate page={<Sales />} />} />
+        <Route path="/seller/upgrade" element={<Animate page={<Upgrade />} />} />
+        <Route path="/seller/product" element={<Animate page={<Upgrade />} />} />
+
 
         {/* 404 page  */}
         <Route path="*" element={<Notfoundpage />} />
