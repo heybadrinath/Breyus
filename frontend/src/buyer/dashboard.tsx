@@ -13,11 +13,11 @@ const BuyerDashboard: React.FC = () => {
         console.log('BuyerDashboard - Validating token with backend');
         const isValidToken = await authService.validateTokenWithBackend();
         
-        // if (!isValidToken) {
-        //   console.log('BuyerDashboard - Invalid token, redirecting to login');
-        //   navigate('/buyer/signin');
-        //   return;
-        // }
+        if (!isValidToken) {
+          console.log('BuyerDashboard - Invalid token, redirecting to login');
+          navigate('/buyer/signin');
+          return;
+        }
         
         const userData = authService.getUser();
         console.log('BuyerDashboard - User data:', userData);
