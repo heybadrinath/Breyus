@@ -114,6 +114,7 @@ const Signin: React.FC = () => {
         
         console.log("Authentication successful, redirecting to dashboard");
         navigate("/seller/dashboard");
+        
       } else {
         setError("Invalid OTP. Please try again.");
       }

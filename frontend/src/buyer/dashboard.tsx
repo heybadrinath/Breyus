@@ -15,7 +15,7 @@ const BuyerDashboard: React.FC = () => {
         
         if (!isValidToken) {
           console.log('BuyerDashboard - Invalid token, redirecting to login');
-          navigate('/buyer/signin');
+          // navigate('/buyer/signin'); // Temporarily commented out redirection
           return;
         }
         
@@ -25,7 +25,7 @@ const BuyerDashboard: React.FC = () => {
         if (!userData || userData.role !== 'buyer') {
           console.log('BuyerDashboard - User is not a buyer, redirecting to login');
           authService.logout();
-          navigate('/buyer/signin');
+          // navigate('/buyer/signin'); // Temporarily commented out redirection
           return;
         }
 
@@ -33,7 +33,7 @@ const BuyerDashboard: React.FC = () => {
         setIsLoading(false);
       } catch (error) {
         console.error('BuyerDashboard - Error:', error);
-        navigate('/buyer/signin');
+        // navigate('/buyer/signin'); // Temporarily commented out redirection
       }
     };
 
@@ -106,7 +106,7 @@ const BuyerDashboard: React.FC = () => {
             className="bg-gray-50 p-4 rounded-md text-center hover:bg-gray-100 transition duration-200 cursor-pointer"
             onClick={() => {
               authService.logout();
-              navigate('/buyer/signin');
+              // navigate('/buyer/signin'); // Temporarily commented out redirection
             }}
           >
             <h3 className="font-medium mb-1">Logout</h3>

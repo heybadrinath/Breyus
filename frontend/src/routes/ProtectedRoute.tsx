@@ -65,7 +65,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
     const loginPath = requiredRole === 'seller' ? '/seller/signin' : '/buyer/signin';
     console.log('ProtectedRoute - Not authenticated, redirecting to:', loginPath);
     
-    return <Navigate to={loginPath} state={{ from: location }} replace />;
+    // Comment out redirect
+    // return <Navigate to={loginPath} state={{ from: location }} replace />;
+    
+    // Show unauthorized message instead of redirecting
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-center p-4">
+          <h1 className="text-xl font-bold mb-2">Authentication Required</h1>
+          <p>You need to be logged in to view this page.</p>
+          <p>Redirection temporarily disabled for debugging.</p>
+        </div>
+      </div>
+    );
   }
 
   // If authenticated and has the required role, render the children
