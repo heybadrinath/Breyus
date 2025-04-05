@@ -11,6 +11,9 @@
 # production
 /build
 
+#tauri src folder for desktop application
+/src-tauri
+
 # misc
 .DS_Store
 .env.local

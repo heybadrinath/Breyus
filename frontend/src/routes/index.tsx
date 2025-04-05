@@ -12,7 +12,6 @@ import Security from "../seller/security";
 import { motion, AnimatePresence } from "framer-motion";
 import Sales from "../seller/sales";
 import Upgrade from "../seller/upgrade";
-import { Layout } from "../seller/components";
 import Products from "../seller/products";
 import ForgotPassword from "../buyer/forgot-password";
 import BuyerDashboard from "../buyer/dashboard";
