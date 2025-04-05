@@ -78,15 +78,15 @@ const Leftnav = ({ username }: { username: String }) => {
                     <h1>{username}</h1>
                 </div>
 
-<<<<<<< Updated upstream
+
                 <Link className="px-4 py-2" to="/seller/security"> <img alt="" src={securityIcon} /> Security</Link>
                 <Link className="px-4 py-2" to="/"> <img alt="" src={logoutIcon} /> Logout</Link>
-=======
+
                 <Link to="/seller/security"> <img alt="" src={securityIcon} /> Security</Link>
                 <button onClick={handleLogout} className="flex items-center px-4 py-2 w-full text-left">
                     <img alt="" src={logoutIcon} /> Logout
                 </button>
->>>>>>> Stashed changes
+
             </div>
         </>
     );
