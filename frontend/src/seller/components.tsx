@@ -34,13 +34,7 @@ const Header = () => {
                 <div id="right-header">
                     <img src={notifications} alt="Notifications" />
                     <button>Try Breyus Core</button>
-                    <button 
-                        onClick={handleLogout} 
-                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded ml-2 flex items-center"
-                    >
-                        <img src={logoutIcon} alt="Logout" className="w-4 h-4 mr-2" />
-                        Logout
-                    </button>
+        
                 </div>
             </header>
         </>

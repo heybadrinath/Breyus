@@ -82,8 +82,8 @@ const Productcontent = () => {
 
                 <div id="description" className="flex flex-col mx-4">
                     <h1 className="font-semibold text-md m-4">Description</h1>
-                    <input placeholder="Precise description" className="px-2 py-4 border-2 focus:outline-none border-[#00000053]" type="text" name="precise-description" id="precise-description" />
-                    <textarea placeholder="Detailed Description" className="px-2 py-2 w-[25vw] h-[20vh] border-[#00000053] border-2" name="Detailed-Description" id="Detailed-Description" />
+                    <input placeholder="Precise description" className="px-2 py-4 border-l focus:outline-none border-[#00000053]" type="text" name="precise-description" id="precise-description" />
+                    <textarea placeholder="Detailed Description" className="px-2 py-2 w-[25vw] h-[20vh] border-[#00000053] border-1" name="Detailed-Description" id="Detailed-Description" />
                 </div>
 
                 <div className="mx-4 flex w-full flex-col" id="Category-hsn">
