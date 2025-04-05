@@ -1,9 +1,12 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, Headers, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, Headers, UseGuards, Request, HttpException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ForgotPasswordDto, ResetPasswordDto, RegistrationDto } from './dto';
+import { Logger } from '@nestjs/common';
 
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(private readonly authService: AuthService) {}
 
   @Post('send-otp')
@@ -49,21 +52,45 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   async register(@Body() registrationDto: RegistrationDto) {
-    return await this.authService.register(
-      registrationDto.email,
-      registrationDto.password,
-      registrationDto.firstName,
-      registrationDto.lastName,
-      registrationDto.role,
-    );
+    try {
+      return await this.authService.register(
+        registrationDto.email,
+        registrationDto.password,
+        registrationDto.firstName,
+        registrationDto.lastName,
+        registrationDto.role,
+      );
+    } catch (error) {
+      this.logger.error(`Registration error: ${error.message}`, error.stack);
+      
+      if (error.status === 401 && error.message.includes('already registered')) {
+        throw new HttpException(
+          'Email already registered',
+          HttpStatus.CONFLICT,
+        );
+      }
+      
+      throw new HttpException(
+        'Registration failed. Please try again later.',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Post('verify-registration-otp')
   @HttpCode(HttpStatus.OK)
   async verifyRegistrationOtp(@Body() body: { email: string; otp: string }) {
-    return await this.authService.verifyRegistrationOtp(
-      body.email,
-      body.otp,
-    );
+    try {
+      return await this.authService.verifyRegistrationOtp(
+        body.email,
+        body.otp,
+      );
+    } catch (error) {
+      this.logger.error(`OTP verification error: ${error.message}`, error.stack);
+      throw new HttpException(
+        'OTP verification failed. Please try again.',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }

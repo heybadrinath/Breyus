@@ -9,6 +9,7 @@ export class MailService {
   private readonly isDev: boolean;
 
   constructor(private readonly configService: ConfigService) {
+<<<<<<< Updated upstream
     this.isDev = this.configService.get('NODE_ENV') !== 'production';
     
     // Only create real transporter in production mode
@@ -23,6 +24,51 @@ export class MailService {
     } else {
       // For development, create a fake transporter
       this.logger.log('Running in development mode, emails will be logged to console');
+=======
+    const mailUser = this.configService.get<string>('MAIL_USER');
+    const mailPass = this.configService.get<string>('MAIL_PASS');
+    
+    if (!mailUser || !mailPass) {
+      this.logger.error('❌ SMTP credentials not found in configuration. Email functionality will not work.');
+      this.logger.error('Please ensure MAIL_USER and MAIL_PASS are set in the .env file');
+    }
+    
+    try {
+      this.transporter = nodemailer.createTransport({
+        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        requireTLS: true,
+        auth: {
+          user: mailUser,
+          pass: mailPass, // Use App Password if 2FA is enabled
+        },
+        tls: {
+          ciphers: 'SSLv3' // Enforce secure encryption
+        },
+        connectionTimeout: 10000, // 10-second timeout
+        socketTimeout: 10000, // 10-second socket timeout
+        logger: true // Enable debug logging
+      });
+
+      // Verify connection on startup
+      this.transporter.verify((error) => {
+        if (error) {
+          this.logger.error('❌ SMTP Connection Failed:', error);
+          const smtpError = error as any; // Cast to any to access potential code property
+          if (smtpError.code === 'EAUTH') {
+            this.logger.error('Authentication failed. Please check your username and password.');
+          } else if (smtpError.code === 'ESOCKET') {
+            this.logger.error('Could not connect to SMTP server. Please check your network settings.');
+          }
+        } else {
+          this.logger.log('✅ SMTP Connection Verified Successfully');
+        }
+      });
+    } catch (error) {
+      this.logger.error('❌ Failed to create mail transporter:', error);
+>>>>>>> Stashed changes
     }
   }
 
@@ -66,11 +112,25 @@ export class MailService {
     };
 
     try {
-      await this.transporter.sendMail(mailOptions);
-      this.logger.log(`✅ OTP sent to ${to}`);
+      this.logger.log(`Attempting to send OTP to ${to}...`);
+      const info = await this.transporter.sendMail(mailOptions);
+      this.logger.log(`✅ OTP sent to ${to} - MessageId: ${info.messageId}`);
+      return;
     } catch (error) {
+<<<<<<< Updated upstream
       this.logger.error('❌ Error sending email:', error);
       throw new Error('Error sending OTP email');
+=======
+      this.logger.error(`❌ Error sending email to ${to}:`, error);
+      // Check if this is a configuration issue
+      const mailError = error as any;
+      if (mailError.code === 'EAUTH' || mailError.command === 'AUTH') {
+        this.logger.error('Authentication failed. Please check SMTP credentials.');
+      } else if (mailError.code === 'ESOCKET' || mailError.code === 'ETIMEDOUT') {
+        this.logger.error('Connection to mail server failed. Please check network settings.');
+      }
+      throw new Error(`Failed to send email: ${error.message}`);
+>>>>>>> Stashed changes
     }
   }
 
@@ -115,11 +175,25 @@ export class MailService {
     };
 
     try {
-      await this.transporter.sendMail(mailOptions);
-      this.logger.log(`✅ Password Reset OTP sent to ${to}`);
+      this.logger.log(`Attempting to send password reset OTP to ${to}...`);
+      const info = await this.transporter.sendMail(mailOptions);
+      this.logger.log(`✅ Password Reset OTP sent to ${to} - MessageId: ${info.messageId}`);
+      return;
     } catch (error) {
+<<<<<<< Updated upstream
       this.logger.error('❌ Error sending email:', error);
       throw new Error('Error sending password reset email');
+=======
+      this.logger.error(`❌ Error sending password reset email to ${to}:`, error);
+      // Check if this is a configuration issue
+      const mailError = error as any;
+      if (mailError.code === 'EAUTH' || mailError.command === 'AUTH') {
+        this.logger.error('Authentication failed. Please check SMTP credentials.');
+      } else if (mailError.code === 'ESOCKET' || mailError.code === 'ETIMEDOUT') {
+        this.logger.error('Connection to mail server failed. Please check network settings.');
+      }
+      throw new Error(`Failed to send password reset email: ${error.message}`);
+>>>>>>> Stashed changes
     }
   }
 }

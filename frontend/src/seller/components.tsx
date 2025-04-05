@@ -1,6 +1,7 @@
 import React, { ReactNode, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "../seller/css/components.css";
+import authService from "../services/auth.service";
 
 // assets import 
 import downArrow from "../seller/vectors/down-arrow.svg";
@@ -15,6 +16,13 @@ import helpIcon from "../seller/vectors/help.svg";
 
 
 const Header = () => {
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        authService.logout();
+        navigate('/');
+    };
+
     return (
         <>
             <header>
@@ -26,6 +34,13 @@ const Header = () => {
                 <div id="right-header">
                     <img src={notifications} alt="Notifications" />
                     <button>Try Breyus Core</button>
+                    <button 
+                        onClick={handleLogout} 
+                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded ml-2 flex items-center"
+                    >
+                        <img src={logoutIcon} alt="Logout" className="w-4 h-4 mr-2" />
+                        Logout
+                    </button>
                 </div>
             </header>
         </>
@@ -33,6 +48,13 @@ const Header = () => {
 };
 
 const Leftnav = ({ username }: { username: String }) => {
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        authService.logout();
+        navigate('/');
+    };
+
     return (
         <>
             <div id="left-nav">
@@ -56,19 +78,31 @@ const Leftnav = ({ username }: { username: String }) => {
                     <h1>{username}</h1>
                 </div>
 
+<<<<<<< Updated upstream
                 <Link className="px-4 py-2" to="/seller/security"> <img alt="" src={securityIcon} /> Security</Link>
                 <Link className="px-4 py-2" to="/"> <img alt="" src={logoutIcon} /> Logout</Link>
+=======
+                <Link to="/seller/security"> <img alt="" src={securityIcon} /> Security</Link>
+                <button onClick={handleLogout} className="flex items-center px-4 py-2 w-full text-left">
+                    <img alt="" src={logoutIcon} /> Logout
+                </button>
+>>>>>>> Stashed changes
             </div>
         </>
     );
 }
 
 const Leftnavdash = ({ username }: { username: String }) => {
-
+    const navigate = useNavigate();
     const [isdashopen, setdash] = useState(false);
 
-    const toggle = () =>{
+    const toggle = () => {
         setdash(isdashopen => !isdashopen);
+    };
+
+    const handleLogout = () => {
+        authService.logout();
+        navigate('/');
     };
 
     return (
@@ -110,20 +144,25 @@ const Leftnavdash = ({ username }: { username: String }) => {
                     <div id="links-left-nav-dash-bottom">
                         <Link className="px-4 py-2" to="/seller/support"><img alt="" src={helpIcon} />Help</Link>
                         <Link className="px-4 py-2" to="/seller/settings"><img alt="" src={SettingsIcon} />Settings</Link>
+                        <button onClick={handleLogout} className="px-4 py-2 text-red-500 hover:text-red-700 transition-colors">
+                            <img alt="" src={logoutIcon} />Logout
+                        </button>
                     </div>
                 </div>
-
-
-
             </div>
         </>
     );
 };
 
 const Layout = ({Body}: {Body: ReactNode}) =>{
+    // Get user data from localStorage
+    const userStr = localStorage.getItem('user');
+    const user = userStr ? JSON.parse(userStr) : null;
+    const firstName = user?.firstName || 'User';
+
     return(
         <div className="layout">
-            <Leftnavdash username={"Demo user"}/>
+            <Leftnavdash username={firstName}/>
             <div id="right-section">
                 <Header/>
             {Body}

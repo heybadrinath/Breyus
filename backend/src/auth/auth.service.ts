@@ -43,8 +43,6 @@ export class AuthService {
     }, 10 * 60 * 1000);
 
     await this.mailService.sendOtp(email, otp);
-    this.logger.debug(`OTP for ${email}: ${otp}`); // Debug log
-
     return { message: 'OTP sent successfully' };
   }
 
@@ -115,8 +113,6 @@ export class AuthService {
     }, 10 * 60 * 1000);
 
     await this.mailService.sendPasswordResetOtp(email, otp);
-    this.logger.debug(`Password Reset OTP for ${email}: ${otp}`); // Debug log
-
     return { message: 'Password reset instructions sent to your email' };
   }
 
@@ -184,8 +180,6 @@ export class AuthService {
     }, 10 * 60 * 1000);
 
     await this.mailService.sendOtp(email, otp);
-    this.logger.debug(`Registration OTP for ${email}: ${otp}`); // Debug log
-    
     return { message: 'Registration OTP sent successfully' };
   }
 
@@ -236,7 +230,31 @@ export class AuthService {
       };
     } catch (error) {
       this.logger.error(`Error during user creation: ${error.message}`, error.stack);
-      return { message: 'Error during registration', success: false };
+      
+      // Check if this is a duplicate email error
+      if (error.code === 'SQLITE_CONSTRAINT' || error.message.includes('UNIQUE constraint failed')) {
+        return { 
+          message: 'This email is already registered', 
+          success: false,
+          error: 'duplicate_email'
+        };
+      }
+      
+      // For any other database errors
+      if (error.code || error.errno) {
+        this.logger.error(`Database error: ${JSON.stringify(error)}`);
+        return { 
+          message: 'Database error during registration', 
+          success: false,
+          error: 'database_error'
+        };
+      }
+      
+      return { 
+        message: 'Error during registration. Please try again later.', 
+        success: false,
+        error: 'registration_failed'
+      };
     }
   }
 

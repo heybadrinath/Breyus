@@ -1,7 +1,6 @@
 import React from "react";
-import { Layout } from "./components";
 
-const UpgradeBody = () => {
+const Upgrade = () => {
     return (
         <div className="h-[85vh] flex">
             <div className="border-2 shadow-lg border-[#cccc] w-fit px-20 py-16 rounded-lg mx-auto my-auto flex h-fit flex-col">
@@ -10,13 +9,6 @@ const UpgradeBody = () => {
                 <button className="w-fit mx-auto my-4 bg-black text-white text-sm px-20 py-2 rounded-lg">Upgrade to core</button>
             </div>
         </div>
-
-    );
-};
-
-const Upgrade = () => {
-    return (
-        <Layout Body={<UpgradeBody />} />
     );
 };
 

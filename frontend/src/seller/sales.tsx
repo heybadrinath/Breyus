@@ -1,5 +1,4 @@
 import React from "react";
-import {Layout } from "../seller/components";
 
 // demo data 
 let sales = 230220;
@@ -11,11 +10,9 @@ let revenueincrease = 35;
 let AvereageRevenue = 1.200;
 let AvereageRevenueIncrease = 213;
 
-
-const SalesAnalysis = () => {
+const Sales = () => {
     return (
         <div className="flex flex-col m-4">
-
             <div className="flex flex-col m-4">
                 <h1 className="font-extrabold text-4xl">Sales</h1>
                 <p className="text-[#353535]">Check the sales, value and bounce rate by country</p>
@@ -50,23 +47,8 @@ const SalesAnalysis = () => {
                     <hr className="border-0 h-[1.5px] bg-gradient-to-r from-[#ECECEC] via-[#00000080] to-[#ECECEC]" />
                     <p className="text-[#acabab]"> <span className=" text-[#71DE5F]  " >+{"$"+AvereageRevenueIncrease}</span> than last week</p>
                 </div>
-
-                
-
-                
             </div>
-
-        
-                
-        
-
         </div>
-    );
-};
-
-const Sales = () => {
-    return (
-        <Layout Body={<SalesAnalysis />}/>
     );
 };
 
