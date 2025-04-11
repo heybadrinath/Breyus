@@ -103,6 +103,27 @@ const Productcontent = () => {
 
         </div>
     );
+};
+
+
+const Media = () =>{
+    return(
+        <div>
+            <ProductLayout productype="media" Body={
+                <div>
+                    <h1>Media</h1>
+                    <div id="product-image">
+                        <p>Product Image</p>
+                        <input type="file" />
+                    </div>
+                    <div id="test-reports">
+                        <p>Test Report Files</p>
+                        <input type="file" name="" id="" />
+                    </div>
+                </div>
+            }/>
+        </div>
+    );
 }
 
 
@@ -110,7 +131,8 @@ const Productcontent = () => {
 function Product() {
     return (
         <Layout Body={<div>
-            <ProductLayout productype="product" Body={<Productcontent />} />
+            {/* <ProductLayout productype="product" Body={<Productcontent />} /> */}
+            <Media/>
         </div>} />
     );
 }
