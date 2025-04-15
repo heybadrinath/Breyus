@@ -71,10 +71,13 @@ const AppRoutes = () => {
           <Route path="/seller/forgot-password" element={<Animate page={<SellerForgotPassword />} />} />
           <Route path="/seller/dashboard" element={<Animate page={<Layout Body={<SellerDashboard />}/>} />} />
           <Route path="/seller/security" element={<Animate page={<Layout Body={<Security />}/>} />} />
-          <Route path="/seller/settings" element={<Animate page={<Layout Body={<SellerSettings />}/>} />} />
           <Route path="/seller/sales" element={<Animate page={<Layout Body={<Sales />}/>} />} />
           <Route path="/seller/upgrade" element={<Animate page={<Layout Body={<Upgrade />}/>} />} />
           <Route path="/seller/product" element={<Animate page={<Layout Body={<Products/>}/>} />} />
+
+          {/* Seller settings with different layout */}
+          <Route path="/seller/settings" element={<Animate page={<SellerSettings />} />}/>
+
   
   
           {/* 404 page  */}

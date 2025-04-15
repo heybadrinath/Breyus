@@ -16,12 +16,12 @@ import helpIcon from "../seller/vectors/help.svg";
 
 
 const Header = () => {
-    const navigate = useNavigate();
+    // const navigate = useNavigate();
 
-    const handleLogout = () => {
-        authService.logout();
-        navigate('/');
-    };
+    // const handleLogout = () => {
+    //     authService.logout();
+    //     navigate('/');
+    // };
 
     return (
         <>
@@ -41,7 +41,7 @@ const Header = () => {
     );
 };
 
-const Leftnav = ({ username }: { username: String }) => {
+const LeftnavSettings = ({ username }: { username: String }) => {
     const navigate = useNavigate();
 
     const handleLogout = () => {
@@ -72,12 +72,8 @@ const Leftnav = ({ username }: { username: String }) => {
                     <h1>{username}</h1>
                 </div>
 
-
-                <Link className="px-4 py-2" to="/seller/security"> <img alt="" src={securityIcon} /> Security</Link>
-                <Link className="px-4 py-2" to="/"> <img alt="" src={logoutIcon} /> Logout</Link>
-
-                <Link to="/seller/security"> <img alt="" src={securityIcon} /> Security</Link>
-                <button onClick={handleLogout} className="flex items-center px-4 py-2 w-full text-left">
+                <Link className={"!my-3 !mx-2 "} to="/seller/security"> <img alt="" src={securityIcon} /> Security</Link>
+                <button onClick={handleLogout} className="!my-3 !mx-2 flex items-center px-4 py-2 w-full text-left">
                     <img alt="" src={logoutIcon} /> Logout
                 </button>
 
@@ -87,18 +83,14 @@ const Leftnav = ({ username }: { username: String }) => {
 }
 
 const Leftnavdash = ({ username }: { username: String }) => {
-    const navigate = useNavigate();
+    
     const [isdashopen, setdash] = useState(false);
 
     const toggle = () => {
         setdash(isdashopen => !isdashopen);
     };
 
-    const handleLogout = () => {
-        authService.logout();
-        navigate('/');
-    };
-
+    
     return (
         <>
             <div id="left-nav">
@@ -166,4 +158,21 @@ const Layout = ({Body}: {Body: ReactNode}) =>{
 };
 
 
-export {Leftnav, Layout, Header };
+const SettingsLayout = ({Body}: {Body: ReactNode}) =>{
+    // Get user data from localStorage
+    const userStr = localStorage.getItem('user');
+    const user = userStr ? JSON.parse(userStr) : null;
+    const firstName = user?.firstName || 'User';
+
+    return(
+        <div className="layout">
+            <LeftnavSettings username={firstName}/>
+            <div id="right-section">
+                <Header/>
+            {Body}
+            </div>
+        </div>
+    );
+};
+
+export {Layout, SettingsLayout };

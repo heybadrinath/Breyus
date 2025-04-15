@@ -1,5 +1,5 @@
 import React from "react";
-import { Leftnav, Header } from "../seller/components";
+import { SettingsLayout } from "../seller/components";
 import "../seller/css/settings.css"
 import userProfile from "../seller/vectors/profile.svg";
 import locationIcon from "../seller/vectors/location-icon.svg"
@@ -152,13 +152,19 @@ const Bankdetails = () => {
 // settings page starting point 
 const Settings = () => {
   return (
-    <div>
-      <Useravatar />
-      <ContactInformation />
-      <Companyinformation />
-      <Bankdetails />
 
-    </div>
+    <SettingsLayout Body={
+      <>
+        <Useravatar />
+        <ContactInformation />
+        <Companyinformation />
+        <Bankdetails />
+      </>
+
+    } />
+
+
+
   );
 };
 export default Settings;
