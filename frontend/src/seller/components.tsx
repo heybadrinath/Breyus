@@ -138,9 +138,9 @@ const Leftnavdash = ({ username }: { username: String }) => {
                     <div id="links-left-nav-dash-bottom">
                         <Link className="px-4 py-2" to="/seller/support"><img alt="" src={helpIcon} />Help</Link>
                         <Link className="px-4 py-2" to="/seller/settings"><img alt="" src={SettingsIcon} />Settings</Link>
-                        <button onClick={handleLogout} className="px-4 py-2 text-red-500 hover:text-red-700 transition-colors">
+                        {/* <button onClick={handleLogout} className="px-4 py-2 text-red-500 hover:text-red-700 transition-colors">
                             <img alt="" src={logoutIcon} />Logout
-                        </button>
+                        </button> */}
                     </div>
                 </div>
             </div>

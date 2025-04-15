@@ -1,6 +1,6 @@
 import React from "react";
 import { ReactNode } from "react";
-import { Layout } from "../seller/components";
+
 
 const ProductProgressVector = ({ page }: { page: string }) => { // use 'product, media, price, tags' for different pages in page prop
     let product = false;
