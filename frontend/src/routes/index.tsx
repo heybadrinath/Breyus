@@ -12,7 +12,7 @@ import Security from "../seller/security";
 import { motion, AnimatePresence } from "framer-motion";
 import Sales from "../seller/sales";
 import Upgrade from "../seller/upgrade";
-import Products from "../seller/products";
+import {Product} from "../seller/products";
 import ForgotPassword from "../buyer/forgot-password";
 import BuyerDashboard from "../buyer/dashboard";
 import SellerForgotPassword from "../seller/forgot-password";
@@ -73,7 +73,7 @@ const AppRoutes = () => {
           <Route path="/seller/security" element={<Animate page={<Layout Body={<Security />}/>} />} />
           <Route path="/seller/sales" element={<Animate page={<Layout Body={<Sales />}/>} />} />
           <Route path="/seller/upgrade" element={<Animate page={<Layout Body={<Upgrade />}/>} />} />
-          <Route path="/seller/product" element={<Animate page={<Layout Body={<Products/>}/>} />} />
+          <Route path="/seller/product" element={<Animate page={<Layout Body={<Product/>}/>} />} />
 
           {/* Seller settings with different layout */}
           <Route path="/seller/settings" element={<Animate page={<SellerSettings />} />}/>

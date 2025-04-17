@@ -1,4 +1,4 @@
-import React from "react";
+import React, { JSX, useState } from "react";
 import { ReactNode } from "react";
 
 
@@ -63,45 +63,47 @@ const ProductLayout = ({ productype, Body }: { productype: string, Body: ReactNo
     );
 }
 
-const Productcontent = () => {
+const ProductInformation = () => {
     return (
-        <div>
-            <h1 className=" font-bold m-4 text-2xl">Product Information</h1>
+        <ProductLayout productype="product" Body={
+            <div className="flex flex-col">
+                <h1 className=" font-bold m-4 text-2xl">Product Information</h1>
 
-            <div className="flex w-full">
-                <input placeholder="Name" w-full className={"border-b-2 m-4 p-2 focus:outline-none w-full"} type="text" name="Name" id="Name" />
-                <select className="w-full bg-transparent p-3  m-4 outline-none border-b-2 text-gray-800  placeholder-gray-400">
-                    <option className=" font-extralight" disabled selected>MOQ</option>
-                    <option>100 KG</option>
-                    <option>200 KG</option>
-                    <option>500 KG</option>
-                </select>
-            </div>
-
-            <div className="flex ">
-
-                <div id="description" className="flex flex-col mx-4">
-                    <h1 className="font-semibold text-md m-4">Description</h1>
-                    <input placeholder="Precise description" className="px-2 py-4 border-l focus:outline-none border-[#00000053]" type="text" name="precise-description" id="precise-description" />
-                    <textarea placeholder="Detailed Description" className="px-2 py-2 w-[25vw] h-[20vh] border-[#00000053] border-1" name="Detailed-Description" id="Detailed-Description" />
-                </div>
-
-                <div className="mx-4 flex w-full flex-col" id="Category-hsn">
-                    <h1 className="font-semibold text-md m-4">Category</h1>
-                    <select className="bg-transparent p-3 border-b-2 my-4 mx-2" id="Product-Categories">
-                        <option>Oils</option>
-                        <option>dummy-1</option>
-                        <option>dummy-2</option>
+                <div className="flex w-full">
+                    <input placeholder="Name" w-full className={"border-b-2 m-4 p-2 focus:outline-none w-full"} type="text" name="Name" id="Name" />
+                    <select className="w-full bg-transparent p-3  m-4 outline-none border-b-2 text-gray-800  placeholder-gray-400">
+                        <option className=" font-extralight" disabled selected>MOQ</option>
+                        <option>100 KG</option>
+                        <option>200 KG</option>
+                        <option>500 KG</option>
                     </select>
-
-                    <h1 className="font-semibold text-md m-4">HSN Code:</h1>
-                    <input className="focus:outline-none border-b-2 p-2 mx-2" placeholder="xxxxxxx" type="text" />
                 </div>
 
+                <div className="flex ">
+
+                    <div id="description" className="flex flex-col mx-4">
+                        <h1 className="font-semibold text-md m-4">Description</h1>
+                        <input placeholder="Precise description" className="px-2 py-4 border-x border-t focus:outline-none border-[#00000053] rounded-tl-lg rounded-tr-lg" type="text" name="precise-description" id="precise-description" />
+                        <textarea placeholder="Detailed Description" className="px-2 py-2 w-[25vw] h-[20vh] border-[#00000053] border-x border-y rounded-bl-lg rounded-br-lg" name="Detailed-Description" id="Detailed-Description" />
+                    </div>
+
+                    <div className="mx-4 flex w-full flex-col" id="Category-hsn">
+                        <h1 className="font-semibold text-md m-4">Category</h1>
+                        <select className="bg-transparent p-3 border-b-2 my-4 mx-2" id="Product-Categories">
+                            <option>Oils</option>
+                            <option>dummy-1</option>
+                            <option>dummy-2</option>
+                        </select>
+
+                        <h1 className="font-semibold text-md m-4">HSN Code:</h1>
+                        <input className="focus:outline-none border-b-2 p-2 mx-2" placeholder="xxxxxxx" type="text" />
+                    </div>
+
+                </div>
+
+                <button className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md ml-auto w-fit"}>Next</button>
             </div>
-
-
-        </div>
+        } />
     );
 };
 
@@ -120,21 +122,53 @@ const Media = () => {
                         <p>Test Report Files</p>
                         <input type="file" name="" id="" />
                     </div>
+                    <button>Next</button>
                 </div>
+
             } />
         </div>
+    );
+}
+
+const Price = () => {
+    const [onSale, setOnSale] = useState(true);
+
+    return (
+        <ProductLayout productype="price" Body={
+          <div>
+
+          </div>
+        } />
+    );
+}
+
+const Tags = () => {
+    return (
+        <ProductLayout productype="tags" Body={
+            <div>
+                
+            </div>
+        } />
     );
 }
 
 
 
 function Product() {
+    let page_no = 3; // 0: Product Information, 1: Media, 2: Price, 3: Tags
+    let Product_pages: JSX.Element[] = [
+        <ProductInformation />,
+        <Media />,
+        <Price />,
+        <Tags />
+    ];
+
     return (
-        <div>
-            <ProductLayout productype="product" Body={<Productcontent />} />
-            {/* <Media/> */}
-        </div>
+        <>
+            {Product_pages[page_no]}
+        </>
+
     );
 }
 
-export default Product;
+export { Product, Media };
