@@ -1,5 +1,7 @@
 import React, { JSX, useState } from "react";
 import { ReactNode } from "react";
+import { ToggleButton } from "./components";
+import "../seller/css/product.css"
 
 
 
@@ -56,7 +58,7 @@ const ProductLayout = ({ productype, Body }: { productype: string, Body: ReactNo
     return (
         <div className={"w-[840px] h-fit mx-auto my-14 flex flex-col"}>
             <ProductProgressVector page={productype} />
-            <div className={"w-[850px] h-fit px-4 absolute py-8 translate-y-16 border-[#00000021] shadow-lg rounded-lg border-[2px]"}>
+            <div className={"w-[850px] h-[fit] px-4 absolute py-8 translate-y-16 border-[#00000021] shadow-lg rounded-lg border-[2px]"}>
                 {Body}
 
             </div>
@@ -64,7 +66,7 @@ const ProductLayout = ({ productype, Body }: { productype: string, Body: ReactNo
     );
 }
 
-const ProductInformation = ({setPageNo}: ProductProps) => {
+const ProductInformation = ({ setPageNo }: ProductProps) => {
     return (
         <ProductLayout productype="product" Body={
             <div className="flex flex-col">
@@ -102,19 +104,19 @@ const ProductInformation = ({setPageNo}: ProductProps) => {
 
                 </div>
 
-                <button onClick={()=>setPageNo(1)} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md ml-auto w-fit"}>Next</button>
+                <button onClick={() => setPageNo(1)} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md ml-auto w-fit"}>Next</button>
             </div>
         } />
     );
 };
 
 
-const Media = ({setPageNo}: ProductProps) => {
+const Media = ({ setPageNo }: ProductProps) => {
     return (
         <div>
             <ProductLayout productype="media" Body={
                 <div className="flex flex-col px-4 py-2">
-                    <h1>Media</h1>
+                    <h1 className=" font-bold m-4 text-2xl">Media</h1>
                     <div id="product-image">
                         <p>Product Image</p>
                         <input type="file" />
@@ -124,10 +126,10 @@ const Media = ({setPageNo}: ProductProps) => {
                         <input type="file" name="" id="" />
                     </div>
                     <div className="h-fit w-full flex mt-6">
-                    <button onClick={()=>{setPageNo(0)}} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md  w-fit"}>Prev</button>
-                    <button onClick={()=>{setPageNo(2)}} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md ml-auto w-fit"}>Next</button>
+                        <button onClick={() => { setPageNo(0) }} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md  w-fit"}>Prev</button>
+                        <button onClick={() => { setPageNo(2) }} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md ml-auto w-fit"}>Next</button>
                     </div>
-                    
+
                 </div>
 
             } />
@@ -135,24 +137,76 @@ const Media = ({setPageNo}: ProductProps) => {
     );
 }
 
-const Price = ({setPageNo}: ProductProps) => {
+const Price = ({ setPageNo }: ProductProps) => {
     const [onSale, setOnSale] = useState(true);
 
     return (
         <ProductLayout productype="price" Body={
-          <div>
-            <h1 className=" font-bold m-4 text-2xl">Price</h1>
-          </div>
+            <div>
+                <h1 className=" font-bold m-4 text-2xl">Price</h1>
+
+                <div className="grid grid-cols-3 gap-2 price-container">
+                    {/* first row  */}
+                    <input placeholder="Price" type="text" />
+                    <select className="min-w-[150px] bg-transparent">
+                        {/* <option value="option-1">Options</option> */}
+                    </select>
+                    <input placeholder="SKU" type="text" />
+
+
+                    {/* second row */}
+                    <div className="col-span-3 ml-6 flex"><ToggleButton /> <span className="my-auto mx-3">On Sale</span></div>
+
+
+                    {/* third row */}
+                    <input type="text" placeholder="Discount" />
+                    <div className="col-span-2">
+                        <input type="text" placeholder="Sale price" />
+                    </div>
+
+
+                    {/* Fourth row */}
+                    <input type="text" placeholder="Cost of goods" />
+                    <input type="text" placeholder="profit" />
+                    <div className="flex">
+                        <svg className="my-auto" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <g className="inline" opacity="0.5">
+                                <path d="M5.5 17C5.08334 17 4.72934 16.8543 4.438 16.563C4.14667 16.2717 4.00067 15.9173 4 15.5C3.99934 15.0827 4.14534 14.7287 4.438 14.438C4.73067 14.1473 5.08467 14.0013 5.5 14H18.5C18.9167 14 19.271 14.146 19.563 14.438C19.855 14.73 20.0007 15.084 20 15.5C19.9993 15.916 19.8537 16.2703 19.563 16.563C19.2723 16.8557 18.918 17.0013 18.5 17H5.5ZM5.5 10C5.08334 10 4.72934 9.85433 4.438 9.563C4.14667 9.27167 4.00067 8.91733 4 8.5C3.99934 8.08267 4.14534 7.72867 4.438 7.438C4.73067 7.14733 5.08467 7.00133 5.5 7H18.5C18.9167 7 19.271 7.146 19.563 7.438C19.855 7.73 20.0007 8.084 20 8.5C19.9993 8.916 19.8537 9.27033 19.563 9.563C19.2723 9.85567 18.918 10.0013 18.5 10H5.5Z" fill="black" />
+                            </g>
+                        </svg>
+                        <input className="w-full" type="text" placeholder="Margin" />
+                    </div>
+
+
+
+
+                </div>
+
+
+
+
+
+                <div id="next-prev-btn-div" className="h-fit w-full flex mt-6">
+                    <button onClick={() => { setPageNo(1) }} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md  w-fit"}>Prev</button>
+                    <button onClick={() => { setPageNo(3) }} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md ml-auto w-fit"}>Next</button>
+                </div>
+            </div>
         } />
     );
 }
 
-const Tags = ({setPageNo}: ProductProps) => {
+const Tags = ({ setPageNo }: ProductProps) => {
     return (
         <ProductLayout productype="tags" Body={
             <div>
-                
+                <h1 className={"font-bold m-4 text-2xl"}>Tags</h1>
+
+                <div className="h-fit w-full flex mt-6">
+                    <button onClick={() => { setPageNo(2) }} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md  w-fit"}>Prev</button>
+                    <button onClick={() => { }} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md ml-auto w-fit"}>Add your Terms</button>
+                </div>
             </div>
+
         } />
     );
 }
@@ -164,10 +218,10 @@ type ProductProps = {
 function Product() {
     const [page_no, setpage] = useState(0); // 0: Product Information, 1: Media, 2: Price, 3: Tags "active page"
     let Product_pages: JSX.Element[] = [
-        <ProductInformation setPageNo={setpage}/>,
-        <Media setPageNo={setpage}/>,
-        <Price setPageNo={setpage}/>,
-        <Tags setPageNo={setpage}/>
+        <ProductInformation setPageNo={setpage} />,
+        <Media setPageNo={setpage} />,
+        <Price setPageNo={setpage} />,
+        <Tags setPageNo={setpage} />
     ];
 
     return (

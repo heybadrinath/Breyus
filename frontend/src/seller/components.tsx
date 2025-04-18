@@ -175,4 +175,23 @@ const SettingsLayout = ({Body}: {Body: ReactNode}) =>{
     );
 };
 
-export {Layout, SettingsLayout };
+function ToggleButton() {
+    const [enabled, setEnabled] = useState(false);
+  
+    return (
+      <button
+        onClick={() => setEnabled(!enabled)}
+        className={`w-14 h-8 flex items-center p-1 rounded-full transition-all ${
+          enabled ? 'bg-[#0076D3]' : 'bg-gray-300'
+        }`}
+      >
+        <div
+          className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+            enabled ? 'translate-x-6' : ''
+          }`}
+        />
+      </button>
+    );
+  }
+
+export {Layout, SettingsLayout, ToggleButton };
