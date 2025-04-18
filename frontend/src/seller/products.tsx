@@ -141,7 +141,7 @@ const Price = ({setPageNo}: ProductProps) => {
     return (
         <ProductLayout productype="price" Body={
           <div>
-
+            <h1 className=" font-bold m-4 text-2xl">Price</h1>
           </div>
         } />
     );
