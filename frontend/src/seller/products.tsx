@@ -2,6 +2,7 @@ import React, { JSX, useState } from "react";
 import { ReactNode } from "react";
 
 
+
 const ProductProgressVector = ({ page }: { page: string }) => { // use 'product, media, price, tags' for different pages in page prop
     let product = false;
     let media = false;
@@ -63,7 +64,7 @@ const ProductLayout = ({ productype, Body }: { productype: string, Body: ReactNo
     );
 }
 
-const ProductInformation = () => {
+const ProductInformation = ({setPageNo}: ProductProps) => {
     return (
         <ProductLayout productype="product" Body={
             <div className="flex flex-col">
@@ -84,7 +85,7 @@ const ProductInformation = () => {
                     <div id="description" className="flex flex-col mx-4">
                         <h1 className="font-semibold text-md m-4">Description</h1>
                         <input placeholder="Precise description" className="px-2 py-4 border-x border-t focus:outline-none border-[#00000053] rounded-tl-lg rounded-tr-lg" type="text" name="precise-description" id="precise-description" />
-                        <textarea placeholder="Detailed Description" className="px-2 py-2 w-[25vw] h-[20vh] border-[#00000053] border-x border-y rounded-bl-lg rounded-br-lg" name="Detailed-Description" id="Detailed-Description" />
+                        <textarea placeholder="Detailed Description" className="px-2 py-2 w-[25vw] h-[20vh] focus:outline-none border-[#00000053] border-x border-y rounded-bl-lg rounded-br-lg" name="Detailed-Description" id="Detailed-Description" />
                     </div>
 
                     <div className="mx-4 flex w-full flex-col" id="Category-hsn">
@@ -101,18 +102,18 @@ const ProductInformation = () => {
 
                 </div>
 
-                <button className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md ml-auto w-fit"}>Next</button>
+                <button onClick={()=>setPageNo(1)} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md ml-auto w-fit"}>Next</button>
             </div>
         } />
     );
 };
 
 
-const Media = () => {
+const Media = ({setPageNo}: ProductProps) => {
     return (
         <div>
             <ProductLayout productype="media" Body={
-                <div>
+                <div className="flex flex-col px-4 py-2">
                     <h1>Media</h1>
                     <div id="product-image">
                         <p>Product Image</p>
@@ -122,7 +123,11 @@ const Media = () => {
                         <p>Test Report Files</p>
                         <input type="file" name="" id="" />
                     </div>
-                    <button>Next</button>
+                    <div className="h-fit w-full flex mt-6">
+                    <button onClick={()=>{setPageNo(0)}} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md  w-fit"}>Prev</button>
+                    <button onClick={()=>{setPageNo(2)}} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md ml-auto w-fit"}>Next</button>
+                    </div>
+                    
                 </div>
 
             } />
@@ -130,7 +135,7 @@ const Media = () => {
     );
 }
 
-const Price = () => {
+const Price = ({setPageNo}: ProductProps) => {
     const [onSale, setOnSale] = useState(true);
 
     return (
@@ -142,7 +147,7 @@ const Price = () => {
     );
 }
 
-const Tags = () => {
+const Tags = ({setPageNo}: ProductProps) => {
     return (
         <ProductLayout productype="tags" Body={
             <div>
@@ -152,15 +157,17 @@ const Tags = () => {
     );
 }
 
-
+type ProductProps = {
+    setPageNo: (pageNo: number) => void;
+};
 
 function Product() {
-    let page_no = 3; // 0: Product Information, 1: Media, 2: Price, 3: Tags
+    const [page_no, setpage] = useState(0); // 0: Product Information, 1: Media, 2: Price, 3: Tags "active page"
     let Product_pages: JSX.Element[] = [
-        <ProductInformation />,
-        <Media />,
-        <Price />,
-        <Tags />
+        <ProductInformation setPageNo={setpage}/>,
+        <Media setPageNo={setpage}/>,
+        <Price setPageNo={setpage}/>,
+        <Tags setPageNo={setpage}/>
     ];
 
     return (
