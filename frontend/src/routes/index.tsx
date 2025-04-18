@@ -14,7 +14,7 @@ import Sales from "../seller/sales";
 import Upgrade from "../seller/upgrade";
 import {Product} from "../seller/products";
 import ForgotPassword from "../buyer/forgot-password";
-import BuyerDashboard from "../buyer/dashboard";
+// import BuyerDashboard from "../buyer/dashboard";
 import SellerForgotPassword from "../seller/forgot-password";
 import { Layout } from "../seller/components";
 
@@ -63,7 +63,7 @@ const AppRoutes = () => {
           <Route path="/buyer/signin" element={<Animate page={<Signin />} />} />
           <Route path="/buyer/signup" element={<Animate page={<Signup />} />} />
           <Route path="/buyer/forgot-password" element={<Animate page={<ForgotPassword />} />} />
-          <Route path="/buyer/dashboard" element={<Animate page={<BuyerDashboard />} />} />
+          {/* <Route path="/buyer/dashboard" element={<Animate page={<BuyerDashboard />} />} /> */}
   
           {/* Seller Routes */}
           <Route path="/seller/signin" element={<Animate page={<SellerSignin />} />} />
