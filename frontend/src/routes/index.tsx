@@ -17,6 +17,7 @@ import ForgotPassword from "../buyer/forgot-password";
 // import BuyerDashboard from "../buyer/dashboard";
 import SellerForgotPassword from "../seller/forgot-password";
 import { Layout } from "../seller/components";
+import Inbox from "../seller/inbox"; 
 
 const pageVariants = {
   initial: { opacity: 0, x: -80 },
@@ -74,6 +75,9 @@ const AppRoutes = () => {
           <Route path="/seller/sales" element={<Animate page={<Layout Body={<Sales />}/>} />} />
           <Route path="/seller/upgrade" element={<Animate page={<Layout Body={<Upgrade />}/>} />} />
           <Route path="/seller/product" element={<Animate page={<Layout Body={<Product/>}/>} />} />
+          <Route path="/seller/Inbox" element={<Animate page={<Layout Body={<Inbox/>}/>} />} />
+  
+          {/* Seller settings with default layout */}
 
           {/* Seller settings with different layout */}
           <Route path="/seller/settings" element={<Animate page={<SellerSettings />} />}/>
