@@ -8,6 +8,11 @@ import { User } from './users/entities/user.entity';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { Analytics } from './analytics/entities/analytics.entity';
 import { UserDetails } from './users/entities/user-details.entity';
+import { ProductsModule } from './products/products.module';
+import { SalesModule } from './sales/sales.module';
+import { SecurityModule } from './security/security.module';
+import { Product } from './products/entities/product.entity';
+import { Sale } from './sales/entities/sale.entity';
 
 @Module({
   imports: [
@@ -23,7 +28,7 @@ import { UserDetails } from './users/entities/user-details.entity';
         return {
           type: 'sqlite',
           database: configService.get('DB_PATH', 'breyus.sqlite'),
-          entities: [User, UserDetails, Analytics],
+          entities: [User, UserDetails, Analytics, Product, Sale],
           synchronize: !isProduction,
           logging: !isProduction,
         };
@@ -33,7 +38,10 @@ import { UserDetails } from './users/entities/user-details.entity';
     AuthModule,
     MailModule,
     UsersModule,
-    AnalyticsModule
+    AnalyticsModule,
+    ProductsModule,
+    SalesModule,
+    SecurityModule
   ],
 })
 export class AppModule {}

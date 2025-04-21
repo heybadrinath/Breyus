@@ -14,7 +14,10 @@ import Sales from "../seller/sales";
 import Upgrade from "../seller/upgrade";
 import Products from "../seller/products";
 import ForgotPassword from "../buyer/forgot-password";
+<<<<<<< Updated upstream
 import BuyerDashboard from "../buyer/dashboard";
+=======
+>>>>>>> Stashed changes
 import SellerForgotPassword from "../seller/forgot-password";
 import { Layout } from "../seller/components";
 
