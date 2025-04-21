@@ -234,8 +234,115 @@ function AddProduct() {
 
 const Inventory = () => {
     return (
-        <div>
-            
+        <div className="flex flex-col w-[80%] h-fit mx-auto my-14 shadow-lg rounded-lg border-[#00000021] border-[2px] p-8">
+            <div className="flex justify-between items-center">
+                <div><h1 className="font-bold text-2xl">All Products</h1><p className="text-[#00000048]">Check whether the things are thier or not </p></div>
+                <div>
+                    <button className="mx-3 bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-2 rounded-md w-fit">New Product</button>
+                    <button className="mx-3 border-[1px] text-blue-500 border-blue-500 px-8 py-2 rounded-md w-fit">Import CSV File</button>
+                    <button className="mx-3 border-[1px] text-blue-500 border-blue-500 px-8 py-2 rounded-md w-fit">Export CSV File</button>
+                </div>
+            </div>
+
+            <div className="flex items-center space-x-2 m-8">
+                <select className="border rounded-md px-3 py-1 focus:outline-none">
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
+                <span className="text-gray-500">entries per page</span>
+            </div>
+
+
+
+            <div className="overflow-x-auto my-8">
+                <table className="min-w-full table-auto">
+                    <thead>
+                        <tr className="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                            <th className="py-3 px-6 text-left">Product</th>
+                            <th className="py-3 px-6 text-left">Category</th>
+                            <th className="py-3 px-6 text-left">Price</th>
+                            <th className="py-3 px-6 text-left">SKU</th>
+                            <th className="py-3 px-6 text-left">Quantity</th>
+                            <th className="py-3 px-6 text-left">Status</th>
+                            <th className="py-3 px-6 text-left">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody className="text-gray-600 text-sm font-light">
+                        <tr className="border-b border-gray-200 hover:bg-gray-100">
+                            <td className="py-6 px-6 text-left">
+                                <input type="checkbox" className="form-checkbox" />
+                            </td>
+                            <td className="py-6 px-6 text-left"></td>
+                            <td className="py-6 px-6 text-left">$1298</td>
+                            <td className="py-6 px-6 text-left">22423232</td>
+                            <td className="py-6 px-6 text-left">0</td>
+                            <td className="py-6 px-6 text-left">
+                                <span className="bg-red-300 text-red-800 py-1 px-3 rounded-full text-xs">Out of Stock</span>
+                            </td>
+                            <td className="py-6 px-6 text-left"></td>
+                        </tr>
+
+                        <tr className="border-b border-gray-200 hover:bg-gray-100">
+                            <td className="py-6 px-6 text-left">
+                                <input type="checkbox" className="form-checkbox" />
+                            </td>
+                            <td className="py-6 px-6 text-left"></td>
+                            <td className="py-6 px-6 text-left">$1298</td>
+                            <td className="py-6 px-6 text-left">22423232</td>
+                            <td className="py-6 px-6 text-left">0</td>
+                            <td className="py-6 px-6 text-left">
+                                <span className="bg-green-200 text-green-800 py-1 px-3 rounded-full text-xs">In Stock</span>
+                            </td>
+                            <td className="py-6 px-6 text-left"></td>
+                        </tr>
+
+                        <tr className="border-b border-gray-200 hover:bg-gray-100">
+                            <td className="py-6 px-6 text-left">
+                                <input type="checkbox" className="form-checkbox" />
+                            </td>
+                            <td className="py-6 px-6 text-left"></td>
+                            <td className="py-6 px-6 text-left">$1298</td>
+                            <td className="py-6 px-6 text-left">22423232</td>
+                            <td className="py-6 px-6 text-left">0</td>
+                            <td className="py-6 px-6 text-left">
+                                <span className="bg-green-200 text-green-800 py-1 px-3 rounded-full text-xs">In Stock</span>
+                            </td>
+                            <td className="py-6 px-6 text-left"></td>
+                        </tr>
+
+                        <tr className="border-b border-gray-200 hover:bg-gray-100">
+                            <td className="py-6 px-6 text-left">
+                                <input type="checkbox" className="form-checkbox" />
+                            </td>
+                            <td className="py-6 px-6 text-left"></td>
+                            <td className="py-6 px-6 text-left">$1298</td>
+                            <td className="py-6 px-6 text-left">22423232</td>
+                            <td className="py-6 px-6 text-left">0</td>
+                            <td className="py-6 px-6 text-left">
+                                <span className="bg-green-200 text-green-800 py-1 px-3 rounded-full text-xs">In Stock</span>
+                            </td>
+                            <td className="py-6 px-6 text-left"></td>
+                        </tr>
+
+                        <tr className="border-b border-gray-200 hover:bg-gray-100">
+                            <td className="py-6 px-6 text-left">
+                                <input type="checkbox" className="form-checkbox" />
+                            </td>
+                            <td className="py-6 px-6 text-left"></td>
+                            <td className="py-6 px-6 text-left">$1298</td>
+                            <td className="py-6 px-6 text-left">22423232</td>
+                            <td className="py-6 px-6 text-left">0</td>
+                            <td className="py-6 px-6 text-left">
+                                <span className="bg-green-200 text-green-800 py-1 px-3 rounded-full text-xs">In Stock</span>
+                            </td>
+                            <td className="py-6 px-6 text-left"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
         </div>
     );
 };
