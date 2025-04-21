@@ -93,7 +93,7 @@ const Productcontent = () => {
                         <option>dummy-1</option>
                         <option>dummy-2</option>
                     </select>
-                    
+
                     <h1 className="font-semibold text-md m-4">HSN Code:</h1>
                     <input className="focus:outline-none border-b-2 p-2 mx-2" placeholder="xxxxxxx" type="text" />
                 </div>
@@ -103,15 +103,37 @@ const Productcontent = () => {
 
         </div>
     );
+};
+
+
+const Media = () => {
+    return (
+        <div>
+            <ProductLayout productype="media" Body={
+                <div>
+                    <h1>Media</h1>
+                    <div id="product-image">
+                        <p>Product Image</p>
+                        <input type="file" />
+                    </div>
+                    <div id="test-reports">
+                        <p>Test Report Files</p>
+                        <input type="file" name="" id="" />
+                    </div>
+                </div>
+            } />
+        </div>
+    );
 }
 
 
 
 function Product() {
     return (
-        <Layout Body={<div>
+        <div>
             <ProductLayout productype="product" Body={<Productcontent />} />
-        </div>} />
+            {/* <Media/> */}
+        </div>
     );
 }
 

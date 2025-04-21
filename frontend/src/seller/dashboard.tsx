@@ -79,90 +79,90 @@ const Scattergraph = ({ data }: { data: ScatterGraphDataType[] }) => {
 };
 
 const Analytics = () => {
-  const [analyticsData, setAnalyticsData] = useState<FrontendAnalyticsType | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // const [analyticsData, setAnalyticsData] = useState<FrontendAnalyticsType | null>(null);
+  // const [loading, setLoading] = useState(true);
+  // const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchAnalytics = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await axios.get('http://localhost:5000/analytics');
-        const data = response.data;
+  // useEffect(() => {
+  //   const fetchAnalytics = async () => {
+  //     setLoading(true);
+  //     setError(null);
+  //     try {
+  //       const response = await axios.get('http://localhost:5000/analytics');
+  //       const data = response.data;
         
-        // Handle JSON strings from SQLite if they come as strings
-        let storeVisits = [];
-        let dailySales = [];
-        let countrySales = [];
+  //       // Handle JSON strings from SQLite if they come as strings
+  //       let storeVisits = [];
+  //       let dailySales = [];
+  //       let countrySales = [];
         
-        try {
-          if (data.store_visits) {
-            storeVisits = typeof data.store_visits === 'string' 
-              ? JSON.parse(data.store_visits) 
-              : data.store_visits;
-          }
-        } catch (e) {
-          console.error('Error parsing store_visits:', e);
-          storeVisits = [];
-        }
+  //       try {
+  //         if (data.store_visits) {
+  //           storeVisits = typeof data.store_visits === 'string' 
+  //             ? JSON.parse(data.store_visits) 
+  //             : data.store_visits;
+  //         }
+  //       } catch (e) {
+  //         console.error('Error parsing store_visits:', e);
+  //         storeVisits = [];
+  //       }
         
-        try {
-          if (data.daily_sales) {
-            dailySales = typeof data.daily_sales === 'string' 
-              ? JSON.parse(data.daily_sales) 
-              : data.daily_sales;
-          }
-        } catch (e) {
-          console.error('Error parsing daily_sales:', e);
-          dailySales = [];
-        }
+  //       try {
+  //         if (data.daily_sales) {
+  //           dailySales = typeof data.daily_sales === 'string' 
+  //             ? JSON.parse(data.daily_sales) 
+  //             : data.daily_sales;
+  //         }
+  //       } catch (e) {
+  //         console.error('Error parsing daily_sales:', e);
+  //         dailySales = [];
+  //       }
         
-        try {
-          if (data.country_sales) {
-            countrySales = typeof data.country_sales === 'string' 
-              ? JSON.parse(data.country_sales) 
-              : data.country_sales;
-          }
-        } catch (e) {
-          console.error('Error parsing country_sales:', e);
-          countrySales = [];
-        }
+  //       try {
+  //         if (data.country_sales) {
+  //           countrySales = typeof data.country_sales === 'string' 
+  //             ? JSON.parse(data.country_sales) 
+  //             : data.country_sales;
+  //         }
+  //       } catch (e) {
+  //         console.error('Error parsing country_sales:', e);
+  //         countrySales = [];
+  //       }
         
-        // Create a properly typed object with default values for all properties
-        const processedData: FrontendAnalyticsType = {
-          storeVisits: storeVisits || [],
-          dailySales: dailySales || [],
-          websiteViews: data.website_views || 0,
-          websiteViewsIncrease: data.website_views_increase || 0,
-          todayUsers: data.today_users || 0, 
-          todayUsersIncrease: data.today_users_increase || 0,
-          revenue: data.revenue || 0,
-          revenueIncrease: data.revenue_increase || 0,
-          followers: data.followers || 0,
-          followersIncrease: data.followers_increase || 0,
-          countrySales: countrySales || []
-        };
+  //       // Create a properly typed object with default values for all properties
+  //       const processedData: FrontendAnalyticsType = {
+  //         storeVisits: storeVisits || [],
+  //         dailySales: dailySales || [],
+  //         websiteViews: data.website_views || 0,
+  //         websiteViewsIncrease: data.website_views_increase || 0,
+  //         todayUsers: data.today_users || 0, 
+  //         todayUsersIncrease: data.today_users_increase || 0,
+  //         revenue: data.revenue || 0,
+  //         revenueIncrease: data.revenue_increase || 0,
+  //         followers: data.followers || 0,
+  //         followersIncrease: data.followers_increase || 0,
+  //         countrySales: countrySales || []
+  //       };
         
-        setAnalyticsData(processedData);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching analytics data:', err);
-        setError('Failed to load analytics data');
-        setLoading(false);
-      }
-    };
+  //       setAnalyticsData(processedData);
+  //       setLoading(false);
+  //     } catch (err) {
+  //       console.error('Error fetching analytics data:', err);
+  //       setError('Failed to load analytics data');
+  //       setLoading(false);
+  //     }
+  //   };
 
-    fetchAnalytics();
-  }, []);
+  //   fetchAnalytics();
+  // }, []);
 
-  if (loading) {
-    return <div className="flex justify-center items-center h-screen">Loading analytics...</div>;
-  }
+  // if (loading) {
+  //   return <div className="flex justify-center items-center h-screen">Loading analytics...</div>;
+  // }
 
-  if (error || !analyticsData) {
-    return <div className="text-red-500 text-center p-4">{error || 'No data available'}</div>;
-  }
+  // if (error || !analyticsData) {
+  //   return <div className="text-red-500 text-center p-4">{error || 'No data available'}</div>;
+  // }
 
   return (
     <div id="analytics-section">
@@ -176,19 +176,19 @@ const Analytics = () => {
         <div className="shadow-2xl w-full md:w-[60%] md:mx-auto rounded-md my-4 xl:mx-8 pl-1 pr-10 pb-2 pt-4 bg-gray-50">
           <h2 className="mx-10 font-bold text-2xl">In-Store Visits</h2>
           <p className="mx-10 my-0 mb-8">Last Campaign Performance</p>
-          <Bargraph data={analyticsData.storeVisits} />
+          {/* <Bargraph data={analyticsData.storeVisits} /> */}
         </div>
 
         <div className="shadow-2xl w-full md:w-[60%] md:mx-auto rounded-md my-4 xl:mx-8 pl-1 pr-10 pb-2 pt-4 bg-white">
           <h2 className="mx-10 font-bold text-2xl">Daily Sales</h2>
           <p className="mx-10 my-0 mb-8">(+15%) increase in todays sales</p>
-          <Scattergraph data={analyticsData.dailySales} />
+          {/* <Scattergraph data={analyticsData.dailySales} /> */}
         </div>
 
         <div className="shadow-2xl w-full md:w-[60%] md:mx-auto rounded-md my-4 xl:mx-8 pl-1 pr-10 pb-2 pt-4 bg-white">
           <h2 className="mx-10 font-bold text-2xl">Completed Tasks</h2>
           <p className="mx-10 my-0 mb-8">Last Campaign Performance</p>
-          <Scattergraph data={analyticsData.dailySales} />
+          {/* <Scattergraph data={analyticsData.dailySales} /> */}
         </div>
       </div>
 
@@ -196,37 +196,37 @@ const Analytics = () => {
       <div className="flex mx-4 my-8">
         <div className="p-4 mx-10 w-full shadow-lg rounded-lg bg-gray-50">
           <p className="text-[#353535] text-xs">Website Views</p>
-          <p className="text-[#353535] text-3xl">{analyticsData.websiteViews ? analyticsData.websiteViews.toLocaleString() : '0'}</p>
+          {/* <p className="text-[#353535] text-3xl">{analyticsData.websiteViews ? analyticsData.websiteViews.toLocaleString() : '0'}</p> */}
           <hr className="border-0 h-[1.5px] bg-gradient-to-r from-[#ECECEC] via-[#00000080] to-[#ECECEC]" />
           <p className="text-[#CCCCCC]">
-            <span className="text-[#71DE5F]">+{analyticsData.websiteViewsIncrease || 0}%</span> than last week
+            {/* <span className="text-[#71DE5F]">+{analyticsData.websiteViewsIncrease || 0}%</span> than last week */}
           </p>
         </div>
 
         <div className="p-4 mx-10 w-full shadow-lg rounded-lg bg-gray-50">
           <p className="text-[#353535] text-xs">Today users</p>
-          <p className="text-[#353535] text-3xl">{analyticsData.todayUsers ? analyticsData.todayUsers.toLocaleString() : '0'}</p>
+          {/* <p className="text-[#353535] text-3xl">{analyticsData.todayUsers ? analyticsData.todayUsers.toLocaleString() : '0'}</p> */}
           <hr className="border-0 h-[1.5px] bg-gradient-to-r from-[#ECECEC] via-[#00000080] to-[#ECECEC]" />
           <p className="text-[#CCCCCC]">
-            <span className="text-[#71DE5F]">+{analyticsData.todayUsersIncrease || 0}%</span> than last week
+            {/* <span className="text-[#71DE5F]">+{analyticsData.todayUsersIncrease || 0}%</span> than last week */}
           </p>
         </div>
 
         <div className="p-4 mx-10 w-full shadow-lg rounded-lg bg-gray-50">
           <p className="text-[#353535] text-xs">Revenue</p>
-          <p className="text-[#353535] text-3xl">${analyticsData.revenue ? analyticsData.revenue.toLocaleString() : '0'}</p>
+          {/* <p className="text-[#353535] text-3xl">${analyticsData.revenue ? analyticsData.revenue.toLocaleString() : '0'}</p> */}
           <hr className="border-0 h-[1.5px] bg-gradient-to-r from-[#ECECEC] via-[#00000080] to-[#ECECEC]" />
           <p className="text-[#CCCCCC]">
-            <span className="text-[#71DE5F]">+{analyticsData.revenueIncrease || 0}%</span> than last week
+            {/* <span className="text-[#71DE5F]">+{analyticsData.revenueIncrease || 0}%</span> than last week */}
           </p>
         </div>
 
         <div className="p-4 mx-10 w-full shadow-lg rounded-lg bg-gray-50">
           <p className="text-[#353535] text-xs">Followers</p>
-          <p className="text-[#353535] text-3xl">{analyticsData.followers ? analyticsData.followers.toLocaleString() : '0'}</p>
+          {/* <p className="text-[#353535] text-3xl">{analyticsData.followers ? analyticsData.followers.toLocaleString() : '0'}</p> */}
           <hr className="border-0 h-[1.5px] bg-gradient-to-r from-[#ECECEC] via-[#00000080] to-[#ECECEC]" />
           <p className="text-[#CCCCCC]">
-            <span className="text-[#71DE5F]">+{analyticsData.followersIncrease || 0}%</span> than last week
+            {/* <span className="text-[#71DE5F]">+{analyticsData.followersIncrease || 0}%</span> than last week */}
           </p>
         </div>
       </div>
@@ -246,7 +246,7 @@ const Analytics = () => {
             </tr>
           </thead>
           <tbody>
-            {analyticsData.countrySales && analyticsData.countrySales.map((country, index) => (
+            {/* {analyticsData.countrySales && analyticsData.countrySales.map((country, index) => (
               <tr key={index} className="border-b border-gray-200">
                 <td className="px-4 py-2 flex items-center gap-2">
                   <img src={country.flagUrl} alt={`${country.country} Flag`} className="w-6 h-4" />
@@ -256,7 +256,7 @@ const Analytics = () => {
                 <td className="px-4 py-2">${country.value ? country.value.toLocaleString() : '0'}</td>
                 <td className="px-4 py-2">{country.bounce}%</td>
               </tr>
-            ))}
+            ))} */}
           </tbody>
         </table>
       </div>

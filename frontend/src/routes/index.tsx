@@ -16,6 +16,7 @@ import Products from "../seller/products";
 import ForgotPassword from "../buyer/forgot-password";
 import BuyerDashboard from "../buyer/dashboard";
 import SellerForgotPassword from "../seller/forgot-password";
+import { Layout } from "../seller/components";
 
 const pageVariants = {
   initial: { opacity: 0, x: -80 },
@@ -48,35 +49,39 @@ const Notfoundpage = () => {
   );
 };
 
+
 const AppRoutes = () => {
   const location = useLocation();
   return (
     <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
-        {/* Hero Page */}
-        <Route path="/" element={<Animate page={<Hero />} />} />
-
-        {/* Buyer Routes */}
-        <Route path="/buyer/signin" element={<Animate page={<Signin />} />} />
-        <Route path="/buyer/signup" element={<Animate page={<Signup />} />} />
-        <Route path="/buyer/forgot-password" element={<Animate page={<ForgotPassword />} />} />
-        <Route path="/buyer/dashboard" element={<Animate page={<BuyerDashboard />} />} />
-
-        {/* Seller Routes */}
-        <Route path="/seller/signin" element={<Animate page={<SellerSignin />} />} />
-        <Route path="/seller/signup" element={<Animate page={<SellerSignup />} />} />
-        <Route path="/seller/forgot-password" element={<Animate page={<SellerForgotPassword />} />} />
-        <Route path="/seller/dashboard" element={<Animate page={<SellerDashboard />} />} />
-        <Route path="/seller/security" element={<Animate page={<Security />} />} />
-        <Route path="/seller/settings" element={<Animate page={<SellerSettings />} />} />
-        <Route path="/seller/sales" element={<Animate page={<Sales />} />} />
-        <Route path="/seller/upgrade" element={<Animate page={<Upgrade />} />} />
-        <Route path="/seller/product" element={<Animate page={<Products/>} />} />
-
-
-        {/* 404 page  */}
-        <Route path="*" element={<Notfoundpage />} />
-      </Routes>
+    
+          <Routes location={location} key={location.pathname}>
+          {/* Hero Page */}
+          <Route path="/" element={<Animate page={<Hero />} />} />
+  
+          {/* Buyer Routes */}
+          <Route path="/buyer/signin" element={<Animate page={<Signin />} />} />
+          <Route path="/buyer/signup" element={<Animate page={<Signup />} />} />
+          <Route path="/buyer/forgot-password" element={<Animate page={<ForgotPassword />} />} />
+          <Route path="/buyer/dashboard" element={<Animate page={<BuyerDashboard />} />} />
+  
+          {/* Seller Routes */}
+          <Route path="/seller/signin" element={<Animate page={<SellerSignin />} />} />
+          <Route path="/seller/signup" element={<Animate page={<SellerSignup />} />} />
+          <Route path="/seller/forgot-password" element={<Animate page={<SellerForgotPassword />} />} />
+          <Route path="/seller/dashboard" element={<Animate page={<Layout Body={<SellerDashboard />}/>} />} />
+          <Route path="/seller/security" element={<Animate page={<Layout Body={<Security />}/>} />} />
+          <Route path="/seller/settings" element={<Animate page={<Layout Body={<SellerSettings />}/>} />} />
+          <Route path="/seller/sales" element={<Animate page={<Layout Body={<Sales />}/>} />} />
+          <Route path="/seller/upgrade" element={<Animate page={<Layout Body={<Upgrade />}/>} />} />
+          <Route path="/seller/product" element={<Animate page={<Layout Body={<Products/>}/>} />} />
+  
+  
+          {/* 404 page  */}
+          <Route path="*" element={<Notfoundpage />} />
+        </Routes>
+       
+      
     </AnimatePresence>
   );
 };
