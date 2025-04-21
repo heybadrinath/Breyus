@@ -18,6 +18,7 @@ import ForgotPassword from "../buyer/forgot-password";
 import SellerForgotPassword from "../seller/forgot-password";
 import { Layout } from "../seller/components";
 import Inbox from "../seller/inbox"; 
+import Trade from "../seller/trade";
 
 const pageVariants = {
   initial: { opacity: 0, x: -80 },
@@ -77,6 +78,8 @@ const AppRoutes = () => {
           <Route path="/seller/add-products" element={<Animate page={<Layout Body={<AddProduct/>}/>} />} />
           <Route path="/seller/Inbox" element={<Animate page={<Layout Body={<Inbox/>}/>} />} />
           <Route path="/seller/inventory" element={<Animate page={<Layout Body={<Inventory/>}/>} />} />
+          <Route path="/seller/trade" element={<Animate page={<Layout Body={<Trade/>}/>} />} />
+
   
          
   
