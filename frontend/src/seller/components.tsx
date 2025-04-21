@@ -85,7 +85,11 @@ const LeftnavSettings = ({ username }: { username: String }) => {
 const Leftnavdash = ({ username }: { username: String }) => {
     
     const [isdashopen, setdash] = useState(false);
+    const [isproductopen, setproduct] = useState(false);
 
+    const toggleproduct = () => {
+        setproduct(isproductopen => !isproductopen);
+    };
     const toggle = () => {
         setdash(isdashopen => !isdashopen);
     };
@@ -123,7 +127,15 @@ const Leftnavdash = ({ username }: { username: String }) => {
                        <Link className="!my-y !mx-6" to={"/seller/upgrade"}>Product Analysis</Link>
                        <Link className="!my-y !mx-6" to={"/seller/upgrade"}>Advanced Analysis</Link>
                     </div>
-                    <Link className="px-4 py-2" to="/seller/product"> <img alt="" src={productIcon} /> Product <img alt="" className={`down-arrow down-arrow transition-transform duration-500 !ml-auto ${false? "rotate-180 ":"hue-rotate-180"}`} src={downArrow} /></Link>
+                    {/* <Link className="px-4 py-2" to="/seller/product"> <img alt="" src={productIcon} /> Product <img alt="" className={`down-arrow down-arrow transition-transform duration-500 !ml-auto ${false? "rotate-180 ":"hue-rotate-180"}`} src={downArrow} /></Link> */}
+
+                    <Link onClick={toggleproduct} className={` rounded-lg transition-all duration-500 ease-in-out px-4 py-2 ${isproductopen?"bg-[#0004]":"bg-none"}`} to=""> <img alt="" src={productIcon} /> Products <img alt="" className={`down-arrow transition-transform duration-500 !ml-auto ${isdashopen? "rotate-180 ":"hue-rotate-180"}`} src={downArrow} /></Link>
+                    <div className={`flex  flex-col overflow-hidden transition-all duration-1000 ease-bounch  ${isproductopen?"max-h-56 opacity-100": "max-h-0 opacity-40"}`}>
+                       {/* toggle content  */}
+                       <Link className="!my-y !mx-6" to={"/seller/add-products"}>Add Products</Link>
+                       <Link className="!my-y !mx-6" to={"/seller/inventory"}>Inventory</Link>
+                       
+                    </div>
                     <Link className="px-4 py-2" to="/seller/inbox"><img alt="" src={securityIcon} />Inbox</Link>
                     <Link className="px-4 py-2" to="/seller/trade"><img alt="" src={logoutIcon} />Trade</Link>
 
@@ -175,7 +187,7 @@ const SettingsLayout = ({Body}: {Body: ReactNode}) =>{
     );
 };
 
-function ToggleButton() {
+function Togglebutton() {
     const [enabled, setEnabled] = useState(false);
   
     return (
@@ -194,4 +206,4 @@ function ToggleButton() {
     );
   }
 
-export {Layout, SettingsLayout, ToggleButton };
+export {Layout, SettingsLayout, Togglebutton };

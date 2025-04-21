@@ -1,6 +1,6 @@
 import React, { JSX, useState } from "react";
 import { ReactNode } from "react";
-import { ToggleButton } from "./components";
+import { Togglebutton } from "./components";
 import "../seller/css/product.css"
 
 
@@ -155,7 +155,7 @@ const Price = ({ setPageNo }: ProductProps) => {
 
 
                     {/* second row */}
-                    <div className="col-span-3 ml-6 flex"><ToggleButton /> <span className="my-auto mx-3">On Sale</span></div>
+                    <div className="col-span-3 ml-6 flex"><Togglebutton /> <span className="my-auto mx-3">On Sale</span></div>
 
 
                     {/* third row */}
@@ -215,7 +215,7 @@ type ProductProps = {
     setPageNo: (pageNo: number) => void;
 };
 
-function Product() {
+function AddProduct() {
     const [page_no, setpage] = useState(0); // 0: Product Information, 1: Media, 2: Price, 3: Tags "active page"
     let Product_pages: JSX.Element[] = [
         <ProductInformation setPageNo={setpage} />,
@@ -232,4 +232,11 @@ function Product() {
     );
 }
 
-export { Product, Media };
+const Inventory = () => {
+    return (
+        <div>
+            
+        </div>
+    );
+};
+export { AddProduct, Inventory };
