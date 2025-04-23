@@ -57,35 +57,22 @@ class AuthService {
 
   // Validate token with backend
   async validateTokenWithBackend(): Promise<boolean> {
-    try {
-      const token = this.getToken();
-      if (!token) {
-        console.log('validateTokenWithBackend: No token found');
-        return false;
-      }
+    const token = this.getToken();
+    if (!token) {
+      return false;
+    }
 
-      console.log('validateTokenWithBackend: Validating token with backend');
+    try {
+      // Configure axios to send the token in the Authorization header
       const response = await axios.get(`${API_URL}/validate-token`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
-
-      console.log('validateTokenWithBackend response:', response.data);
       
-      if (response.data.valid && response.data.user) {
-        // Update user data in localStorage with the latest from server
-        this.setUser(response.data.user);
-        return true;
-      } else {
-        // Token is invalid, clear auth data
-        this.logout();
-        return false;
-      }
+      return response.data.valid === true;
     } catch (error) {
-      console.error('validateTokenWithBackend error:', error);
-      // If there's an error, assume token is invalid
-      this.logout();
+      console.error('Token validation failed:', error);
       return false;
     }
   }

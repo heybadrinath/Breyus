@@ -57,11 +57,11 @@ export class Product {
   @Column({ nullable: true, type: 'simple-array' })
   tags: string[];
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'seller_id' })
   seller: User;
 
-  @Column({ name: 'seller_id' })
+  @Column({ name: 'seller_id', nullable: true })
   sellerId: string;
 
   @CreateDateColumn()

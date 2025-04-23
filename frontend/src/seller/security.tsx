@@ -1,5 +1,4 @@
 import React from "react";
-import {Layout} from "../seller/components";
 import "../seller/css/components.css";
 import "../seller/css/security.css";
 
@@ -16,7 +15,8 @@ const SecuritySection = () => {
 
 const Security = () => {
     return(
-        <Layout Body={<SecuritySection/>}/>
+      
+        <SecuritySection/>
     );
 };
 

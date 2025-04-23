@@ -1,24 +1,25 @@
-import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards, Request, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Delete, Request, Logger, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { Product } from './entities/product.entity';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('products')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class ProductsController {
   private readonly logger = new Logger(ProductsController.name);
+  private defaultSellerId = '1'; // Default seller ID for development
 
   constructor(private readonly productsService: ProductsService) {}
 
+  // Public endpoint - no authentication required
   @Get()
-  @Roles('seller')
   async findAll(@Request() req): Promise<Product[]> {
     try {
       this.logger.log('GET /products request received');
-      return await this.productsService.findAll(req.user.id);
+      const sellerId = req.user?.id; // Will be undefined for non-authenticated requests
+      
+      // Only filter by seller if authenticated and requesting own products
+      return await this.productsService.findAll(sellerId);
     } catch (error) {
       this.logger.error('Error in findAll', error);
       throw new HttpException(
@@ -28,18 +29,12 @@ export class ProductsController {
     }
   }
 
+  // Public endpoint - no authentication required
   @Get(':id')
-  @Roles('seller')
   async findOne(@Param('id') id: string, @Request() req): Promise<Product> {
     try {
       this.logger.log(`GET /products/${id} request received`);
       const product = await this.productsService.findOne(id);
-      
-      // Check if the product belongs to the seller
-      if (product.sellerId !== req.user.id) {
-        throw new HttpException('Access denied', HttpStatus.FORBIDDEN);
-      }
-      
       return product;
     } catch (error) {
       this.logger.error(`Error in findOne(${id})`, error);
@@ -53,14 +48,28 @@ export class ProductsController {
     }
   }
 
+  // Requires authentication
   @Post()
-  @Roles('seller')
+  @UseGuards(JwtAuthGuard)
   async create(@Body() createProductDto: CreateProductDto, @Request() req): Promise<Product> {
     try {
       this.logger.log('POST /products request received');
-      return await this.productsService.create(createProductDto, req.user.id);
+      // Use authenticated user's ID as seller ID
+      const sellerId = req.user?.id;
+      
+      if (!sellerId) {
+        throw new HttpException(
+          'Authentication required',
+          HttpStatus.UNAUTHORIZED
+        );
+      }
+      
+      return await this.productsService.create(createProductDto, sellerId);
     } catch (error) {
       this.logger.error('Error in create', error);
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new HttpException(
         'Failed to create product',
         HttpStatus.INTERNAL_SERVER_ERROR
@@ -68,8 +77,9 @@ export class ProductsController {
     }
   }
 
+  // Requires authentication
   @Put(':id')
-  @Roles('seller')
+  @UseGuards(JwtAuthGuard)
   async update(
     @Param('id') id: string, 
     @Body() updateProductDto: UpdateProductDto,
@@ -77,10 +87,15 @@ export class ProductsController {
   ): Promise<Product> {
     try {
       this.logger.log(`PUT /products/${id} request received`);
-      // Check if the product belongs to the seller
+      // First, check if user is authorized to update this product
       const product = await this.productsService.findOne(id);
-      if (product.sellerId !== req.user.id) {
-        throw new HttpException('Access denied', HttpStatus.FORBIDDEN);
+      const userId = req.user?.id;
+      
+      if (product.sellerId && product.sellerId !== userId) {
+        throw new HttpException(
+          'You are not authorized to update this product',
+          HttpStatus.FORBIDDEN
+        );
       }
       
       return await this.productsService.update(id, updateProductDto);
@@ -96,15 +111,21 @@ export class ProductsController {
     }
   }
 
+  // Requires authentication
   @Delete(':id')
-  @Roles('seller')
+  @UseGuards(JwtAuthGuard)
   async remove(@Param('id') id: string, @Request() req): Promise<{ message: string }> {
     try {
       this.logger.log(`DELETE /products/${id} request received`);
-      // Check if the product belongs to the seller
+      // First, check if user is authorized to delete this product
       const product = await this.productsService.findOne(id);
-      if (product.sellerId !== req.user.id) {
-        throw new HttpException('Access denied', HttpStatus.FORBIDDEN);
+      const userId = req.user?.id;
+      
+      if (product.sellerId && product.sellerId !== userId) {
+        throw new HttpException(
+          'You are not authorized to delete this product',
+          HttpStatus.FORBIDDEN
+        );
       }
       
       await this.productsService.remove(id);

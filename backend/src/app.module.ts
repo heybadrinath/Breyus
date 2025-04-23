@@ -13,6 +13,8 @@ import { SalesModule } from './sales/sales.module';
 import { SecurityModule } from './security/security.module';
 import { Product } from './products/entities/product.entity';
 import { Sale } from './sales/entities/sale.entity';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 @Module({
   imports: [
@@ -43,5 +45,7 @@ import { Sale } from './sales/entities/sale.entity';
     SalesModule,
     SecurityModule
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

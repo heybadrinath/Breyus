@@ -32,11 +32,11 @@ export class ProductsService {
     return product;
   }
 
-  async create(createProductDto: CreateProductDto, sellerId: string): Promise<Product> {
-    this.logger.log(`Creating new product for seller ${sellerId}`);
+  async create(createProductDto: CreateProductDto, sellerId?: string): Promise<Product> {
+    this.logger.log(`Creating new product ${sellerId ? 'for seller ' + sellerId : 'without seller'}`);
     const product = this.productsRepository.create({
       ...createProductDto,
-      sellerId,
+      ...(sellerId ? { sellerId } : {})
     });
     return this.productsRepository.save(product);
   }

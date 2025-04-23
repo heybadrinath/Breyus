@@ -12,14 +12,13 @@ import Security from "../seller/security";
 import { motion, AnimatePresence } from "framer-motion";
 import Sales from "../seller/sales";
 import Upgrade from "../seller/upgrade";
-import Products from "../seller/products";
+import {AddProduct, Inventory} from "../seller/products";
 import ForgotPassword from "../buyer/forgot-password";
-<<<<<<< Updated upstream
-import BuyerDashboard from "../buyer/dashboard";
-=======
->>>>>>> Stashed changes
+// import BuyerDashboard from "../buyer/dashboard";
 import SellerForgotPassword from "../seller/forgot-password";
 import { Layout } from "../seller/components";
+import Inbox from "../seller/inbox"; 
+import Trade from "../seller/trade";
 
 const pageVariants = {
   initial: { opacity: 0, x: -80 },
@@ -66,7 +65,7 @@ const AppRoutes = () => {
           <Route path="/buyer/signin" element={<Animate page={<Signin />} />} />
           <Route path="/buyer/signup" element={<Animate page={<Signup />} />} />
           <Route path="/buyer/forgot-password" element={<Animate page={<ForgotPassword />} />} />
-          <Route path="/buyer/dashboard" element={<Animate page={<BuyerDashboard />} />} />
+          {/* <Route path="/buyer/dashboard" element={<Animate page={<BuyerDashboard />} />} /> */}
   
           {/* Seller Routes */}
           <Route path="/seller/signin" element={<Animate page={<SellerSignin />} />} />
@@ -74,10 +73,21 @@ const AppRoutes = () => {
           <Route path="/seller/forgot-password" element={<Animate page={<SellerForgotPassword />} />} />
           <Route path="/seller/dashboard" element={<Animate page={<Layout Body={<SellerDashboard />}/>} />} />
           <Route path="/seller/security" element={<Animate page={<Layout Body={<Security />}/>} />} />
-          <Route path="/seller/settings" element={<Animate page={<Layout Body={<SellerSettings />}/>} />} />
           <Route path="/seller/sales" element={<Animate page={<Layout Body={<Sales />}/>} />} />
           <Route path="/seller/upgrade" element={<Animate page={<Layout Body={<Upgrade />}/>} />} />
-          <Route path="/seller/product" element={<Animate page={<Layout Body={<Products/>}/>} />} />
+          <Route path="/seller/add-products" element={<Animate page={<Layout Body={<AddProduct/>}/>} />} />
+          <Route path="/seller/Inbox" element={<Animate page={<Layout Body={<Inbox/>}/>} />} />
+          <Route path="/seller/inventory" element={<Animate page={<Layout Body={<Inventory/>}/>} />} />
+          <Route path="/seller/trade" element={<Animate page={<Layout Body={<Trade/>}/>} />} />
+
+  
+         
+  
+       
+
+          {/* Seller settings with different layout */}
+          <Route path="/seller/settings" element={<Animate page={<SellerSettings />} />}/>
+
   
   
           {/* 404 page  */}

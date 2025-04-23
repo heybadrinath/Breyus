@@ -1,4 +1,4 @@
-import React, { ReactNode, useState } from "react";
+import React, { ReactNode, useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../seller/css/components.css";
 import authService from "../services/auth.service";
@@ -16,12 +16,12 @@ import helpIcon from "../seller/vectors/help.svg";
 
 
 const Header = () => {
-    const navigate = useNavigate();
+    // const navigate = useNavigate();
 
-    const handleLogout = () => {
-        authService.logout();
-        navigate('/');
-    };
+    // const handleLogout = () => {
+    //     authService.logout();
+    //     navigate('/');
+    // };
 
     return (
         <>
@@ -41,7 +41,7 @@ const Header = () => {
     );
 };
 
-const Leftnav = ({ username }: { username: String }) => {
+const LeftnavSettings = ({ username }: { username: String }) => {
     const navigate = useNavigate();
 
     const handleLogout = () => {
@@ -72,12 +72,8 @@ const Leftnav = ({ username }: { username: String }) => {
                     <h1>{username}</h1>
                 </div>
 
-
-                <Link className="px-4 py-2" to="/seller/security"> <img alt="" src={securityIcon} /> Security</Link>
-                <Link className="px-4 py-2" to="/"> <img alt="" src={logoutIcon} /> Logout</Link>
-
-                <Link to="/seller/security"> <img alt="" src={securityIcon} /> Security</Link>
-                <button onClick={handleLogout} className="flex items-center px-4 py-2 w-full text-left">
+                <Link className={"!my-3 !mx-2 "} to="/seller/security"> <img alt="" src={securityIcon} /> Security</Link>
+                <button onClick={handleLogout} className="!my-3 !mx-2 flex items-center px-4 py-2 w-full text-left">
                     <img alt="" src={logoutIcon} /> Logout
                 </button>
 
@@ -87,18 +83,18 @@ const Leftnav = ({ username }: { username: String }) => {
 }
 
 const Leftnavdash = ({ username }: { username: String }) => {
-    const navigate = useNavigate();
+    
     const [isdashopen, setdash] = useState(false);
+    const [isproductopen, setproduct] = useState(false);
 
+    const toggleproduct = () => {
+        setproduct(isproductopen => !isproductopen);
+    };
     const toggle = () => {
         setdash(isdashopen => !isdashopen);
     };
 
-    const handleLogout = () => {
-        authService.logout();
-        navigate('/');
-    };
-
+    
     return (
         <>
             <div id="left-nav">
@@ -131,16 +127,24 @@ const Leftnavdash = ({ username }: { username: String }) => {
                        <Link className="!my-y !mx-6" to={"/seller/upgrade"}>Product Analysis</Link>
                        <Link className="!my-y !mx-6" to={"/seller/upgrade"}>Advanced Analysis</Link>
                     </div>
-                    <Link className="px-4 py-2" to="/seller/product"> <img alt="" src={productIcon} /> Product <img alt="" className={`down-arrow down-arrow transition-transform duration-500 !ml-auto ${false? "rotate-180 ":"hue-rotate-180"}`} src={downArrow} /></Link>
+                    {/* <Link className="px-4 py-2" to="/seller/product"> <img alt="" src={productIcon} /> Product <img alt="" className={`down-arrow down-arrow transition-transform duration-500 !ml-auto ${false? "rotate-180 ":"hue-rotate-180"}`} src={downArrow} /></Link> */}
+
+                    <Link onClick={toggleproduct} className={` rounded-lg transition-all duration-500 ease-in-out px-4 py-2 ${isproductopen?"bg-[#0004]":"bg-none"}`} to=""> <img alt="" src={productIcon} /> Products <img alt="" className={`down-arrow transition-transform duration-500 !ml-auto ${isdashopen? "rotate-180 ":"hue-rotate-180"}`} src={downArrow} /></Link>
+                    <div className={`flex  flex-col overflow-hidden transition-all duration-1000 ease-bounch  ${isproductopen?"max-h-56 opacity-100": "max-h-0 opacity-40"}`}>
+                       {/* toggle content  */}
+                       <Link className="!my-y !mx-6" to={"/seller/add-products"}>Add Products</Link>
+                       <Link className="!my-y !mx-6" to={"/seller/inventory"}>Inventory</Link>
+                       
+                    </div>
                     <Link className="px-4 py-2" to="/seller/inbox"><img alt="" src={securityIcon} />Inbox</Link>
                     <Link className="px-4 py-2" to="/seller/trade"><img alt="" src={logoutIcon} />Trade</Link>
 
                     <div id="links-left-nav-dash-bottom">
                         <Link className="px-4 py-2" to="/seller/support"><img alt="" src={helpIcon} />Help</Link>
                         <Link className="px-4 py-2" to="/seller/settings"><img alt="" src={SettingsIcon} />Settings</Link>
-                        <button onClick={handleLogout} className="px-4 py-2 text-red-500 hover:text-red-700 transition-colors">
+                        {/* <button onClick={handleLogout} className="px-4 py-2 text-red-500 hover:text-red-700 transition-colors">
                             <img alt="" src={logoutIcon} />Logout
-                        </button>
+                        </button> */}
                     </div>
                 </div>
             </div>
@@ -166,4 +170,46 @@ const Layout = ({Body}: {Body: ReactNode}) =>{
 };
 
 
-export {Leftnav, Layout, Header };
+const SettingsLayout = ({Body}: {Body: ReactNode}) =>{
+    // Get user data from localStorage
+    const userStr = localStorage.getItem('user');
+    const user = userStr ? JSON.parse(userStr) : null;
+    const firstName = user?.firstName || 'User';
+
+    return(
+        <div className="layout">
+            <LeftnavSettings username={firstName}/>
+            <div id="right-section">
+                <Header/>
+            {Body}
+            </div>
+        </div>
+    );
+};
+
+function Togglebutton({ isActive }: { isActive?: boolean }) {
+    const [enabled, setEnabled] = useState(isActive || false);
+  
+    useEffect(() => {
+      if (isActive !== undefined) {
+        setEnabled(isActive);
+      }
+    }, [isActive]);
+  
+    return (
+      <button
+        onClick={() => setEnabled(!enabled)}
+        className={`w-14 h-8 flex items-center p-1 rounded-full transition-all ${
+          enabled ? 'bg-[#0076D3]' : 'bg-gray-300'
+        }`}
+      >
+        <div
+          className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+            enabled ? 'translate-x-6' : ''
+          }`}
+        />
+      </button>
+    );
+  }
+
+export {Layout, SettingsLayout, Togglebutton };

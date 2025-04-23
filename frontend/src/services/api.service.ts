@@ -1,4 +1,13 @@
-import axios from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
+
+// Extend the AxiosRequestConfig interface to include metadata
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    metadata?: {
+      startTime: number;
+    };
+  }
+}
 
 const API_URL = 'http://localhost:5000';
 
@@ -13,13 +22,29 @@ const api = axios.create({
 // Add request interceptor to include auth token
 api.interceptors.request.use(
   (config) => {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      if (user && user.token) {
-        config.headers.Authorization = `Bearer ${user.token}`;
+    const token = localStorage.getItem('token');
+    if (token) {
+      // Ensure token is properly formatted with Bearer prefix
+      const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      config.headers.Authorization = formattedToken;
+    } else {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          if (user && user.token) {
+            config.headers.Authorization = user.token.startsWith('Bearer ') 
+              ? user.token 
+              : `Bearer ${user.token}`;
+          }
+        } catch (error) {
+          console.error('Error parsing user data from localStorage:', error);
+        }
       }
     }
+    
+    // Add request timestamp for debugging
+    config.metadata = { startTime: new Date().getTime() };
     return config;
   },
   (error) => {
@@ -30,16 +55,65 @@ api.interceptors.request.use(
 // Add response interceptor to handle common errors
 api.interceptors.response.use(
   (response) => {
+    // Calculate and log request duration
+    const endTime = new Date().getTime();
+    const startTime = response.config.metadata?.startTime;
+    if (startTime) {
+      console.debug(`Request to ${response.config.url} completed in ${endTime - startTime}ms`);
+    }
     return response;
   },
-  (error) => {
+  async (error) => {
+    // For debugging: log detailed errors
     if (error.response) {
-      // Session expired or unauthorized
-      if (error.response.status === 401) {
-        localStorage.removeItem('user');
-        window.location.href = '/signin';
+      console.debug(`Request failed with status ${error.response.status}: ${error.config?.url}`, error.response.data);
+    } else if (error.request) {
+      console.debug(`No response received for request: ${error.config?.url}`);
+    } else {
+      console.debug(`Error setting up request: ${error.message}`);
+    }
+    
+    // Check for authentication errors
+    if (error.response && error.response.status === 401) {
+      console.error('Authentication error detected:', error.response.data);
+      
+      // Don't validate token if URL is already auth-related to prevent loops
+      const isAuthRelatedUrl = error.config?.url?.includes('/auth/');
+      
+      if (!isAuthRelatedUrl) {
+        try {
+          const authService = (await import('./auth.service')).default;
+          const isValid = await authService.validateTokenWithBackend();
+          
+          if (!isValid) {
+            console.log('Token validation failed, redirecting to login');
+            // Clear auth data
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            // Only redirect if not in settings page to prevent loops
+            const isSettingsPage = window.location.pathname.includes('/settings');
+            if (!isSettingsPage) {
+              window.location.href = '/signin';
+            }
+          } else {
+            // Token is still valid, might be an issue with the specific request
+            console.log('Token is valid, but request was unauthorized');
+            return Promise.reject(error);
+          }
+        } catch (validationError) {
+          console.error('Error during token validation:', validationError);
+          // Clear auth data as a precaution
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          // Only redirect if not in settings page to prevent loops
+          const isSettingsPage = window.location.pathname.includes('/settings');
+          if (!isSettingsPage) {
+            window.location.href = '/signin';
+          }
+        }
       }
     }
+    
     return Promise.reject(error);
   }
 );
