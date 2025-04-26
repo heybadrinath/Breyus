@@ -1,35 +1,11 @@
 import React, { ReactNode } from "react";
 import "../seller/css/trade.css";
 
-
-const Trade = () => {
-    return (
-        <div className="p-6 mx-16">
-            {/* Search and Tabs */}
-            <div className="flex flex-col space-y-4 mb-6">
-                <div className="flex items-center space-x-2">
-                    <div className="flex items-center border rounded-md px-3 py-2 w-full">
-                        <span className="text-gray-400 mr-2">🔍</span>
-                        <input
-                            type="text"
-                            placeholder="Search all the trades"
-                            className="w-full focus:outline-none"
-                        />
-                    </div>
-                    <button className="border rounded-md px-4 py-2 bg-white text-gray-700">Search trades</button>
-                </div>
-
-                <div className="flex space-x-6 border-b">
-                    <button className="pb-2 border-b-2 border-black text-black font-semibold">Purchase Request Status</button>
-                    <button className="pb-2 text-gray-500">Purchase Order Status</button>
-                    <button className="pb-2 text-gray-500">Ongoing Trades</button>
-                    <button className="pb-2 text-gray-500">Track Trade</button>
-                    <button className="pb-2 text-gray-500">Trade history</button>
-                </div>
-            </div>
-
+const PurchaseRequestStatus = () => {
+    return(
+        <div >
             {/* Purchase Request Title */}
-            <div className="bg-white p-4 rounded-md shadow-sm">
+            <div className="bg-white p-4 rounded-md shadow-lg">
                 <h2 className="text-lg font-bold">Purchase Request</h2>
                 <p className="text-sm text-gray-500">Check whether the things are thier or not</p>
 
@@ -86,6 +62,119 @@ const Trade = () => {
                     </table>
                 </div>
             </div>
+            
+        </div>
+    );
+};
+
+const PurchaseOrderStatus = () => {
+    return(
+        <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">Purchase Order</h1>
+            <p className="text-gray-500 text-sm">Check whether the things are thier or not</p>
+          </div>
+          <div className="flex gap-4">
+            <select className="border border-gray-300 rounded px-3 py-2 text-sm">
+              <option>Filters</option>
+              <option>Option 1</option>
+              <option>Option 2</option>
+            </select>
+            <button className="border border-blue-500 text-blue-500 rounded px-4 py-2 text-sm hover:bg-blue-50">
+              Export CSV
+            </button>
+          </div>
+        </div>
+  
+        <div className="flex items-center mb-4">
+          <input
+            type="number"
+            defaultValue="5"
+            className="w-16 border border-gray-300 rounded px-2 py-1 text-center text-sm"
+          />
+          <span className="ml-2 text-sm text-gray-600">entries per page</span>
+        </div>
+  
+        <div className="overflow-x-auto rounded-md shadow">
+          <table className="min-w-full bg-white">
+            <thead className="bg-gray-100 text-gray-700 text-left text-sm">
+              <tr>
+                <th className="py-3 px-4">ID</th>
+                <th className="py-3 px-4">Trade</th>
+                <th className="py-3 px-4">Buyer</th>
+                <th className="py-3 px-4">Product</th>
+                <th className="py-3 px-4">Request Analysis</th>
+                <th className="py-3 px-4">Request</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t">
+                <td className="py-4 px-4">123344823</td>
+                <td className="py-4 px-4">
+                  <a href="#" className="text-blue-500 hover:underline">
+                    Trade terms
+                  </a>
+                </td>
+                <td className="py-4 px-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-black"></div>
+                    Max Sharma
+                  </div>
+                </td>
+                <td className="py-4 px-4">xx%</td>
+                <td className="py-4 px-4">xx%</td>
+                <td className="py-4 px-4">
+                  <button className="bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-medium py-2 px-4 rounded">
+                    Confirm Order
+                  </button>
+                </td>
+              </tr>
+  
+              {/* Empty rows for spacing */}
+              <tr className="border-t h-16"></tr>
+              <tr className="border-t h-16"></tr>
+              <tr className="border-t h-16"></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+};
+
+
+const Trade = () => {
+    return (
+        <div className="p-6 mx-16">
+            {/* Search and Tabs */}
+            <div className="flex flex-col space-y-4 mb-6">
+                <div className="flex items-center space-x-2">
+                    <div className="flex items-center border rounded-md px-3 py-2 w-full">
+                        <span className="text-gray-400 mr-2">🔍</span>
+                        <input
+                            type="text"
+                            placeholder="Search all the trades"
+                            className="w-full focus:outline-none"
+                        />
+                    </div>
+                    <button className="border rounded-md px-4 py-2 bg-white text-gray-700">Search trades</button>
+                </div>
+
+                <div className="flex space-x-6 border-b">
+                    <button className="pb-2 border-b-2 border-black text-black font-semibold">Purchase Request Status</button>
+                    <button className="pb-2 text-gray-500">Purchase Order Status</button>
+                    <button className="pb-2 text-gray-500">Ongoing Trades</button>
+                    <button className="pb-2 text-gray-500">Track Trade</button>
+                    <button className="pb-2 text-gray-500">Trade history</button>
+                </div>
+            </div>
+
+            {/* <PurchaseRequestStatus/> */}
+            <PurchaseOrderStatus/>
+
+            
+
+            
         </div>
 
     );
