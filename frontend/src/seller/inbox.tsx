@@ -28,7 +28,7 @@ const Inbox: React.FC = () => {
 
             <div className='flex mt-2'>
                 <div className='flex flex-col h-full'>
-                    <div className="flex px-36 py-6 bg-[#E7E7E7] border-b border-1 border-[#35353540]">Seller-1</div>
+                    <div className={`flex px-36 py-6 bg-[#E7E7E7]${(false)?'hidden':''} border-b border-1 border-[#35353540]`}>Seller-1</div>
                     <div className="flex px-36 py-6 bg-[#E7E7E7] border-b border-1 border-[#35353540]">Seller-2</div>
                     <div className="flex px-36 py-6 bg-[#E7E7E7] border-b border-1 border-[#35353540]">Buyer-1</div>
                     <div className="flex px-36 py-6 bg-[#E7E7E7] border-b border-1 border-[#35353540]">......</div>

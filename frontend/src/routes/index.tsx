@@ -18,9 +18,15 @@ import ForgotPassword from "../buyer/forgot-password";
 import SellerForgotPassword from "../seller/forgot-password";
 import { Layout } from "../seller/components";
 import Inbox from "../seller/inbox"; 
+<<<<<<< HEAD
 import {Trade,Feedback} from "../seller/trade";
+=======
+import Trade from "../seller/trade";
+import Dashboard_buyer from "../buyer/pages/Homepage";
+import Homepage from "../buyer/pages/Homepage";
+>>>>>>> b6e6927 (home page seller)
 
-const pageVariants = {
+const pageVariants = { 
   initial: { opacity: 0, x: -80 },
   animate: { opacity: 1, x: 0, transition: { duration: 0.4 } },
   exit: { opacity: 0, x: 80, transition: { duration: 0.4 } }
@@ -65,7 +71,7 @@ const AppRoutes = () => {
           <Route path="/buyer/signin" element={<Animate page={<Signin />} />} />
           <Route path="/buyer/signup" element={<Animate page={<Signup />} />} />
           <Route path="/buyer/forgot-password" element={<Animate page={<ForgotPassword />} />} />
-          {/* <Route path="/buyer/dashboard" element={<Animate page={<BuyerDashboard />} />} /> */}
+          <Route path="/buyer/homepage" element={<Animate page={<Homepage />} />} />
   
           {/* Seller Routes */}
           <Route path="/seller/signin" element={<Animate page={<SellerSignin />} />} />
