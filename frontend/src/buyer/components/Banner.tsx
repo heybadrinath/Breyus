@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-import banner1 from "../../assets/banner.svg";
+import banner1 from "../../../public/assets/banner.svg";
 
 const images = [
     banner1,
