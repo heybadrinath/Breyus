@@ -18,13 +18,12 @@ import ForgotPassword from "../buyer/forgot-password";
 import SellerForgotPassword from "../seller/forgot-password";
 import { Layout } from "../seller/components";
 import Inbox from "../seller/inbox"; 
-<<<<<<< HEAD
 import {Trade,Feedback} from "../seller/trade";
-=======
-import Trade from "../seller/trade";
+
+
 import Dashboard_buyer from "../buyer/pages/Homepage";
 import Homepage from "../buyer/pages/Homepage";
->>>>>>> b6e6927 (home page seller)
+
 
 const pageVariants = { 
   initial: { opacity: 0, x: -80 },
