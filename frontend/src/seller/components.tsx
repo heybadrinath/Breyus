@@ -134,6 +134,8 @@ const Leftnavdash = ({ username }: { username: String }) => {
                        {/* toggle content  */}
                        <Link className="!my-y !mx-6" to={"/seller/add-products"}>Add Products</Link>
                        <Link className="!my-y !mx-6" to={"/seller/inventory"}>Inventory</Link>
+                       <Link className="!my-y !mx-6" to={"/seller/Product-Feedback"}>Feedback</Link>
+                       
                        
                     </div>
                     <Link className="px-4 py-2" to="/seller/inbox"><img alt="" src={securityIcon} />Inbox</Link>
