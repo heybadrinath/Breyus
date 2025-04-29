@@ -12,13 +12,14 @@ import Security from "../seller/security";
 import { motion, AnimatePresence } from "framer-motion";
 import Sales from "../seller/sales";
 import Upgrade from "../seller/upgrade";
-import {AddProduct, Inventory} from "../seller/products";
+import {AddProduct, Inventory, Incoterms} from "../seller/products";
 import ForgotPassword from "../buyer/forgot-password";
 // import BuyerDashboard from "../buyer/dashboard";
 import SellerForgotPassword from "../seller/forgot-password";
 import { Layout } from "../seller/components";
 import Inbox from "../seller/inbox"; 
 import {Trade,Feedback} from "../seller/trade";
+
 
 
 import Dashboard_buyer from "../buyer/pages/Homepage";
@@ -85,6 +86,8 @@ const AppRoutes = () => {
           <Route path="/seller/inventory" element={<Animate page={<Layout Body={<Inventory/>}/>} />} />
           <Route path="/seller/trade" element={<Animate page={<Layout Body={<Trade/>}/>} />} />
           <Route path="/seller/Product-Feedback" element={<Animate page={<Layout Body={<Feedback/>}/>} />} />
+          <Route path="/seller/incoterms" element={<Animate page={<Layout Body={<Incoterms/>}/>} />} />
+          
 
   
          

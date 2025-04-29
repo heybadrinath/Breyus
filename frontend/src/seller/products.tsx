@@ -2,6 +2,7 @@ import React, { JSX, useState } from "react";
 import { ReactNode } from "react";
 import { Togglebutton } from "./components";
 import "../seller/css/product.css"
+import { FaSyncAlt } from "react-icons/fa";
 
 
 
@@ -53,12 +54,89 @@ const ProductProgressVector = ({ page }: { page: string }) => { // use 'product,
 }; // page attributes 'product', 'media', 'price', 'tags'
 
 
+type ImageUploadProps = {
+    onChange?: (files: File[]) => void;
+    value?: File[];
+};
+
+const ImageUpload: React.FC<ImageUploadProps> = ({ onChange, value }) => {
+    const [dragActive, setDragActive] = useState(false);
+    const [files, setFiles] = useState<File[]>(value || []);
+
+    const handleFiles = (fileList: FileList | null) => {
+        if (!fileList) return;
+        // Only accept image files
+        const fileArr = Array.from(fileList).filter(file => file.type.startsWith("image/"));
+        setFiles(fileArr);
+        onChange?.(fileArr);
+    };
+
+    const handleDrag = (e: React.DragEvent<HTMLLabelElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.type === "dragenter" || e.type === "dragover") {
+            setDragActive(true);
+        } else if (e.type === "dragleave") {
+            setDragActive(false);
+        }
+    };
+
+    const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragActive(false);
+        handleFiles(e.dataTransfer.files);
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        handleFiles(e.target.files);
+    };
+
+    return (
+        <div className="flex flex-col w-full p-2">
+            <label
+                htmlFor="image-upload-input"
+                className={`border-2 border-gray-200 rounded-xl w-full h-[220px] p-4 flex flex-col items-center justify-center cursor-pointer transition-colors ${dragActive ? "border-blue-400 bg-blue-50" : ""}`}
+                onDragEnter={handleDrag}
+                onDragOver={handleDrag}
+                onDragLeave={handleDrag}
+                onDrop={handleDrop}
+            >
+                <input
+                    id="image-upload-input"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleChange}
+                />
+                {files.length === 0 ? (
+                    <span className="text-gray-400 text-lg text-center">
+                        Drop image files here and upload<br />or <span className="underline text-blue-500">browse</span>
+                    </span>
+                ) : (
+                    <div className="flex flex-wrap gap-2 justify-center">
+                        {files.map((file, idx) => (
+                            <img
+                                key={idx}
+                                src={URL.createObjectURL(file)}
+                                alt={file.name}
+                                className="w-20 h-20 object-cover rounded border"
+                            />
+                        ))}
+                    </div>
+                )}
+            </label>
+        </div>
+    );
+};
+
 
 const ProductLayout = ({ productype, Body }: { productype: string, Body: ReactNode }) => {
     return (
-        <div className={"w-[840px] h-fit mx-auto my-14 flex flex-col"}>
+        <div className={"w-[840px] h-[fit] mx-auto my-14 flex flex-col"}>
             <ProductProgressVector page={productype} />
-            <div className={"w-[850px] h-[fit] px-4 absolute py-8 translate-y-16 border-[#00000021] shadow-lg rounded-lg border-[2px]"}>
+            <div className={"w-[850px] h-[600px] px-4 absolute py-8 translate-y-16 border-[#00000021] shadow-lg rounded-lg border-[2px]"}>
                 {Body}
 
             </div>
@@ -69,7 +147,7 @@ const ProductLayout = ({ productype, Body }: { productype: string, Body: ReactNo
 const ProductInformation = ({ setPageNo }: ProductProps) => {
     return (
         <ProductLayout productype="product" Body={
-            <div className="flex flex-col">
+            <div className="flex flex-col h-full px-4 py-2">
                 <h1 className=" font-bold m-4 text-2xl">Product Information</h1>
 
                 <div className="flex w-full">
@@ -82,7 +160,7 @@ const ProductInformation = ({ setPageNo }: ProductProps) => {
                     </select>
                 </div>
 
-                <div className="flex ">
+                <div className="flex">
 
                     <div id="description" className="flex flex-col mx-4">
                         <h1 className="font-semibold text-md m-4">Description</h1>
@@ -92,19 +170,21 @@ const ProductInformation = ({ setPageNo }: ProductProps) => {
 
                     <div className="mx-4 flex w-full flex-col" id="Category-hsn">
                         <h1 className="font-semibold text-md m-4">Category</h1>
-                        <select className="bg-transparent p-3 border-b-2 my-4 mx-2" id="Product-Categories">
+                        <select className="bg-transparent p-3 border-b-2 my-4 mx-2 w-[90%]" id="Product-Categories">
                             <option>Oils</option>
                             <option>dummy-1</option>
                             <option>dummy-2</option>
                         </select>
 
                         <h1 className="font-semibold text-md m-4">HSN Code:</h1>
-                        <input className="focus:outline-none border-b-2 p-2 mx-2" placeholder="xxxxxxx" type="text" />
+                        <input className="focus:outline-none border-b-2 p-2 mx-2 w-[90%]" placeholder="xxxxxxx" type="text" />
                     </div>
-
                 </div>
+                <div className="ml-auto mt-auto flex w-fit">
+                <button onClick={() => setPageNo(1)} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md"}>Next</button>
+                </div>
+                
 
-                <button onClick={() => setPageNo(1)} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md ml-auto w-fit"}>Next</button>
             </div>
         } />
     );
@@ -115,17 +195,22 @@ const Media = ({ setPageNo }: ProductProps) => {
     return (
         <div>
             <ProductLayout productype="media" Body={
-                <div className="flex flex-col px-4 py-2">
+                <div className="flex flex-col px-4 py-2 h-full">
                     <h1 className=" font-bold m-4 text-2xl">Media</h1>
-                    <div id="product-image">
-                        <p>Product Image</p>
-                        <input type="file" />
+                    <div className="flex justify-between w-full">
+                        <div id="product-image">
+                            <p>Product Image</p>
+                            {/* <input type="file" /> */}
+                            <ImageUpload />
+                        </div>
+                        <div id="test-reports">
+                            <p>Test Report Files</p>
+                            {/* <input type="file" name="" id="" /> */}
+                            <ImageUpload />
+                        </div>
                     </div>
-                    <div id="test-reports">
-                        <p>Test Report Files</p>
-                        <input type="file" name="" id="" />
-                    </div>
-                    <div className="h-fit w-full flex mt-6">
+
+                    <div className="h-fit full flex mt-auto">
                         <button onClick={() => { setPageNo(0) }} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md  w-fit"}>Prev</button>
                         <button onClick={() => { setPageNo(2) }} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md ml-auto w-fit"}>Next</button>
                     </div>
@@ -142,7 +227,7 @@ const Price = ({ setPageNo }: ProductProps) => {
 
     return (
         <ProductLayout productype="price" Body={
-            <div>
+            <div className="flex flex-col px-4 py-2 h-full">
                 <h1 className=" font-bold m-4 text-2xl">Price</h1>
 
                 <div className="grid grid-cols-3 gap-2 price-container">
@@ -182,11 +267,7 @@ const Price = ({ setPageNo }: ProductProps) => {
 
                 </div>
 
-
-
-
-
-                <div id="next-prev-btn-div" className="h-fit w-full flex mt-6">
+                <div id="next-prev-btn-div" className="h-fit w-full flex mt-auto">
                     <button onClick={() => { setPageNo(1) }} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md  w-fit"}>Prev</button>
                     <button onClick={() => { setPageNo(3) }} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md ml-auto w-fit"}>Next</button>
                 </div>
@@ -196,12 +277,53 @@ const Price = ({ setPageNo }: ProductProps) => {
 }
 
 const Tags = ({ setPageNo }: ProductProps) => {
+    const [tags, setTags] = useState<string[]>([]);
+    const [input, setInput] = useState<string>("");
+
     return (
         <ProductLayout productype="tags" Body={
-            <div>
-                <h1 className={"font-bold m-4 text-2xl"}>Tags</h1>
+            <div className="flex flex-col px-4 py-2 h-full">
+                <div className="flex flex-col w-full">
+                    <span className="text-gray-500 mb-2">Tags : {tags.length}/5</span>
+                    <div className="border border-gray-200 rounded-xl w-full min-h-[220px] p-4 flex flex-col">
+                        <input
+                            type="text"
+                            placeholder="Add your tag"
+                            className="outline-none px-3 py-2 mb-2 bg-transparent"
+                            value={input}
+                            onChange={e => setInput(e.target.value)}
+                            onKeyDown={e => {
+                                if ((e.key === "Enter" || e.key === ",") && input.trim() && tags.length < 5) {
+                                    e.preventDefault();
+                                    if (!tags.includes(input.trim())) {
+                                        setTags([...tags, input.trim()]);
+                                    }
+                                    setInput("");
+                                }
+                            }}
+                            disabled={tags.length >= 5}
+                        />
+                        <div className="flex flex-wrap gap-4 mt-2">
+                            {tags.map((tag, idx) => (
+                                <div
+                                    key={tag}
+                                    className="flex items-center bg-gradient-to-r from-black to-[#353535] text-white rounded-full px-4 py-2"
+                                >
+                                    <span className="mr-2">{tag}</span>
+                                    <button
+                                        className="ml-1 text-white focus:outline-none"
+                                        onClick={() => setTags(tags.filter((_, i) => i !== idx))}
+                                        aria-label="Remove tag"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
 
-                <div className="h-fit w-full flex mt-6">
+                <div className="h-fit w-full flex mt-auto">
                     <button onClick={() => { setPageNo(2) }} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md  w-fit"}>Prev</button>
                     <button onClick={() => { }} className={" bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md ml-auto w-fit"}>Add your Terms</button>
                 </div>
@@ -210,6 +332,15 @@ const Tags = ({ setPageNo }: ProductProps) => {
         } />
     );
 }
+
+const Incoterms = () => {
+    return(
+        <div>
+            
+        </div>
+    );
+}
+
 
 type ProductProps = {
     setPageNo: (pageNo: number) => void;
@@ -346,4 +477,4 @@ const Inventory = () => {
         </div>
     );
 };
-export { AddProduct, Inventory };
+export { AddProduct, Inventory,Incoterms };
