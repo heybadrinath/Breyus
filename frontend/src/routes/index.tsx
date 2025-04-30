@@ -14,17 +14,21 @@ import Sales from "../seller/sales";
 import Upgrade from "../seller/upgrade";
 import {AddProduct, Inventory, Incoterms} from "../seller/products";
 import ForgotPassword from "../buyer/forgot-password";
-// import BuyerDashboard from "../buyer/dashboard";
+
+
+
+
+
 import SellerForgotPassword from "../seller/forgot-password";
 import { Layout } from "../seller/components";
 import Inbox from "../seller/inbox"; 
 import {Trade,Feedback} from "../seller/trade";
 
-
-
-import Dashboard_buyer from "../buyer/pages/Homepage";
+import BuyerInbox from "../buyer/pages/Inbox";
 import Homepage from "../buyer/pages/Homepage";
-
+import Wishlist from "../buyer/pages/Wishlist";
+import ProductCard from "../buyer/components/ProductCard";
+import CartPage from "../buyer/pages/Cartpage";
 
 const pageVariants = { 
   initial: { opacity: 0, x: -80 },
@@ -72,7 +76,9 @@ const AppRoutes = () => {
           <Route path="/buyer/signup" element={<Animate page={<Signup />} />} />
           <Route path="/buyer/forgot-password" element={<Animate page={<ForgotPassword />} />} />
           <Route path="/buyer/homepage" element={<Animate page={<Homepage />} />} />
-  
+          <Route path="/buyer/inbox" element={<Animate page={<BuyerInbox />} />} />
+          <Route path="/buyer/wishlist" element={<Animate page={<Wishlist />} />} />
+          <Route path="/buyer/cartpage" element={<Animate page={<CartPage />} />} />
           {/* Seller Routes */}
           <Route path="/seller/signin" element={<Animate page={<SellerSignin />} />} />
           <Route path="/seller/signup" element={<Animate page={<SellerSignup />} />} />
