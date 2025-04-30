@@ -1,6 +1,7 @@
 import React from "react";
 import "../seller/css/components.css";
 import "../seller/css/security.css";
+import { Link } from "react-router-dom";
 
 interface SecuritySectionProps {
     email?: string;
@@ -195,9 +196,89 @@ const ChangePassword: React.FC<{ className?: string }> = ({ className = "" }) =>
     );
 };
 
+const TwoFactorAuthentication: React.FC<{ className?: string }> = ({ className = "" }) => {
+    return (
+        <div
+            className={className}
+            style={{
+                border: "1px solid #e3e8ee",
+                borderRadius: "12px",
+                padding: "32px",
+                background: "#fff",
+                maxWidth: "600px",
+                margin: "24px auto",
+            }}
+        >
+            <div style={{ marginBottom: "24px", fontSize: "16px", color: "#222" }}>
+                After entering your password, verify your identity with an authentication method.
+            </div>
+            <div
+                style={{
+                    background: "#f7fafd",
+                    border: "1px solid #e3e8ee",
+                    borderRadius: "8px",
+                    padding: "20px",
+                    marginBottom: "24px",
+                    fontSize: "16px",
+                }}
+            >
+                <b>Two-step authentication</b> adds a layer of security to your account by using more than just your password to log in.
+            </div>
+            <div style={{ fontWeight: 600, marginBottom: "8px" }}>How it works</div>
+            <div style={{ fontSize: "15px", marginBottom: "12px" }}>
+                When you log in to Shopify, you’ll need to:
+            </div>
+            <ol style={{ paddingLeft: "20px", fontSize: "15px", marginBottom: "12px" }}>
+                <li style={{ marginBottom: "8px" }}>
+                    Enter your email and password
+                </li>
+                <li>
+                    Complete a second step to prove that it’s you logging in. You can enter a verification code, use a security key, or confirm your login on a trusted device.
+                </li>
+            </ol>
+            <button
+                disabled
+                style={{
+                    width: "100%",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid #eee",
+                    background: "#fafbfc",
+                    color: "#bdbdbd",
+                    fontWeight: 500,
+                    fontSize: "16px",
+                    marginBottom: "16px",
+                    cursor: "not-allowed",
+                }}
+            >
+                Turn on two-step
+            </button>
+            <div
+                style={{
+                    background: "#f7fafd",
+                    border: "1px solid #e3e8ee",
+                    borderRadius: "8px",
+                    padding: "12px",
+                    color: "#3b82f6",
+                    fontSize: "15px",
+                }}
+            >
+                Verify your email address jainulivukush@gmail.com to create a passkey.{" "}
+                <a
+                    href="#"
+                    style={{ color: "#3b82f6", textDecoration: "underline" }}
+                    onClick={e => e.preventDefault()}
+                >
+                    Resend verification email
+                </a>
+            </div>
+        </div>
+    );
+};
+
 const SecuritySection = () => {
     return(
-        <div id="security-section" className="flex flex-col w-[60%] my-auto mx-auto shadow-lg p-6 border-gray-100 rounded-lg">
+        <div id="security-section" className="flex flex-col w-[96%] my-12 mx-auto shadow-lg p-6 border-gray-100 rounded-lg">
             <h2 className="font-extrabold text-3xl">Security</h2>
             <HorizontalLine />
             <div className="flex flex-col md:flex-row justify-between gap-6">
@@ -216,6 +297,14 @@ const SecuritySection = () => {
             <ChangePassword className="w-[100%] ml-auto"/>
             </div>
             <HorizontalLine />
+
+            <div className="flex justify-between">
+                <div className="mt-4">
+                    <h2 className="text-2xl font-extrabold">Two-step authentication</h2>
+                    <p className="text-md">Learn more about <Link className=" underline font-bold" to="">two-step authentication</Link></p>
+                </div>
+                <TwoFactorAuthentication className="!w-[55%] !mx-4 !my-2" />
+            </div>
         </div>
      
     );
