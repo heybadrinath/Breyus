@@ -333,10 +333,11 @@ const Tags = ({ setPageNo }: ProductProps) => {
     );
 }
 
+
 const Incoterms = () => {
     return(
         <div>
-            
+
         </div>
     );
 }

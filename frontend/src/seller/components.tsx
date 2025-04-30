@@ -16,16 +16,16 @@ import helpIcon from "../seller/vectors/help.svg";
 
 
 const Header = () => {
-    // const navigate = useNavigate();
+    const navigate = useNavigate();
 
-    // const handleLogout = () => {
-    //     authService.logout();
-    //     navigate('/');
-    // };
+    const handleLogout = () => {
+        authService.logout();
+        navigate('/');
+    };
 
     return (
         <>
-            <header>
+            <header className="w-[96%]">
                 <div id="left-header">
                     <div>sort: Last week</div>
                     <img alt="" src={downArrow} />
