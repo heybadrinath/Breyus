@@ -1,6 +1,10 @@
 import React from 'react';
 import { Search as SearchIcon, } from "lucide-react";
 import { tab } from '@testing-library/user-event/dist/tab';
+import { Link } from 'react-router-dom';
+import { MessageCircle as ChatIcon } from "lucide-react";
+import ProductCard from "../components/ProductCard";
+
 
 
 // Trade component for the seller module
@@ -41,16 +45,16 @@ const BlackButton: React.FC<Buttonprops> = ({ text, className = "" }) => {
   );
 };
 
-const RedButton: React.FC<{ text: string }> = ({ text }) => {
-  return (
-    <button className='m-auto flex bg-red-400 px-3 py-1 rounded-md cursor-pointer hover:bg-red-500 transition-all duration-300 ease-in-out hover:scale-[1.03]'>{text}</button>
-  );
+const RedButton: React.FC<{ text: string; className?: string }> = ({ text, className = "" }) => {
+    return (
+        <button className={`m-auto flex bg-red-400 px-3 py-1 rounded-md cursor-pointer hover:bg-red-500 transition-all duration-300 ease-in-out hover:scale-[1.03] ${className}`}>{text}</button>
+    );
 }
 
-const GreenButton: React.FC<{ text: string }> = ({ text }) => {
-  return (
-    <button className='m-auto flex bg-green-400  cursor-pointer px-3 py-1 rounded-md hover:bg-green-500 transition-all duration-300 ease-in-out hover:scale-[1.03]'>{text}</button>
-  );
+const GreenButton: React.FC<{ text: string; className?: string }> = ({ text, className = "" }) => {
+    return (
+        <button className={`m-auto flex bg-green-400 cursor-pointer px-3 py-1 rounded-md hover:bg-green-500 transition-all duration-300 ease-in-out hover:scale-[1.03] ${className}`}>{text}</button>
+    );
 };
 const HeadingDescription: React.FC<{ heading: string; description: string }> = ({ heading, description }) => {
   return (
@@ -114,7 +118,6 @@ const Tabs: React.FC<{ tabs: string[]; activeTab: string; onTabChange: (tab: str
   );
 };
 
-
 const Table: React.FC<{ headers: string[]; rows: React.ReactNode[] }> = ({ headers, rows }) => {
   return (
     <div className='w-[98%] mx-auto my-4 h-fit'>
@@ -156,6 +159,51 @@ const TableRow: React.FC<{ cells: React.ReactNode[] }> = ({ cells }) => {
   );
 };
 
+type StatusIndicatorProps = {
+    status: 'pending' | 'accepted' | 'declined';
+};
+
+const StatusIndicator: React.FC<StatusIndicatorProps & { className?: string }> = ({ status, className = "" }) => {
+    let color = '';
+    let label = '';
+
+    switch (status) {
+        case 'pending':
+            color = 'bg-yellow-400';
+            label = 'Pending';
+            break;
+        case 'accepted':
+            color = 'bg-green-500';
+            label = 'Accepted';
+            break;
+        case 'declined':
+            color = 'bg-red-500';
+            label = 'Rejected';
+            break;
+        default:
+            color = 'bg-gray-400';
+            label = 'Unknown';
+    }
+
+    return (
+        <div className={`flex items-center gap-2 ${className}`}>
+            <span className={`w-4 h-4 rounded-full ${color} inline-block`} />
+            <span className="text-gray-700 text-sm">{label}</span>
+        </div>
+    );
+};
+
+const AcceptReject: React.FC<{ onAccept: () => void; onReject: () => void; className?: string }> = ({ onAccept, onReject, className = "" }) => {
+    return (
+        <div className={`flex ${className}`}>
+            <GreenButton className='!rounded-full p-0' text='✔' />
+            <RedButton className='!rounded-full p-0 font-extrabold text-lg' text='⛌' />
+        </div>
+    );
+};
+
+// Trade components all buyer
+
 const PurchaseRequestStatus: React.FC = () => {
   return (
     <div className='flex justify-between flex-col w-[98%] mx-auto my-16 shadow-lg border-[1px] border-gray-300 rounded-lg p-6 bg-white'>
@@ -175,10 +223,12 @@ const PurchaseRequestStatus: React.FC = () => {
       />
 
       <Table
-        headers={['ID', 'Trade', 'Buyer', 'Product', 'Nogoation', 'Request Anaylsis', 'Request']}
+        headers={['ID', 'Trade Terms', 'Seller', 'Product', 'Request', 'Status', 'Purchase Request']}
         rows={[
-          <TableRow cells={['123344823', 'Trade Terms', 'Max Sharma', 'XXXXXX', 'Check INCO-TERMS', '', <div className='flex'><GreenButton text="Accept" /><RedButton text="Decline" /></div>]} />,
-          <TableRow cells={['123344823', 'Trade Terms', 'Max Sharma', 'XXXXXX', 'Check INCO-TERMS', '', <div className='flex'><GreenButton text="Accept" /><RedButton text="Decline" /></div>]} />,
+          <TableRow cells={['123344823', <Link to={""} className='text-[#0076D3]'>Term Docs</Link>, '--------', '-------',<AcceptReject onAccept={() =>{}} onReject={() =>{}} className='backdrop-filter: brightness-50'/> , <StatusIndicator className=' mx-auto w-fit' status='pending'/>, 'NA']} />,
+          <TableRow cells={['123344823', <Link to={""} className='text-[#0076D3]'>Term Docs</Link>, '--------', '-------', <AcceptReject onAccept={() =>{}} onReject={() =>{}} className='backdrop-filter: brightness-100'/>, <StatusIndicator className=' mx-auto w-fit' status='accepted'/>, <BlackButton text='Proceed'/>]} />,
+          <TableRow cells={['123344823', <Link to={""} className='text-[#0076D3]'>Term Docs</Link>, '--------', '-------', <Link to={""} className='text-[#0076D3]'>Send Again</Link>, <StatusIndicator className=' mx-auto w-fit' status='declined'/>, <Link to={""} className='text-[#5e666dcb] flex mx-auto w-fit'><ChatIcon className='my-auto mx-1'/>Chat with seller</Link>]} />,
+
 
 
         ]}
@@ -192,74 +242,44 @@ const PurchaseRequestStatus: React.FC = () => {
 }
 
 const PurchaseOrder: React.FC = () => {
-  return (
-    <div className='flex justify-between flex-col w-[98%] mx-auto my-16 shadow-lg border-[1px] border-gray-300 rounded-lg p-6 bg-white'>
-
-      <div className='flex w-full justify-between'>
-        <HeadingDescription heading='Purchase Order' description='Check whether the things are their or not' />
-        <div className='flex gap-2 mt-auto mr-2 my-auto'>
-          <BlueButton text='Filter' />
-          <BlueButton text='Export CSV' />
+    return (
+      <div className='flex justify-between flex-col w-[98%] mx-auto my-16 shadow-lg border-[1px] border-gray-300 rounded-lg p-6 bg-white'>
+  
+        <div className='flex w-full justify-between'>
+          <HeadingDescription heading='Purchase Request' description='Check whether the things are their or not' />
+          <div className='flex gap-2 mt-auto mr-2 my-auto'>
+            <BlueButton text='Filter' />
+            <BlueButton text='Export CSV' />
+          </div>
         </div>
+  
+        <EntriesPerPage
+          options={[5, 10, 20, 50]}
+          selected={5}
+          onChange={(value) => console.log("Selected entries per page:", value)}
+        />
+  
+        <Table
+          headers={['ID', 'Trade Terms', 'Seller', 'Product', 'Request', 'Status', 'Purchase Request']}
+          rows={[
+            <TableRow cells={['123344823', <Link to={""} className='text-[#0076D3]'>Term Docs</Link>, '--------', '-------',<AcceptReject onAccept={() =>{}} onReject={() =>{}} className='backdrop-filter: brightness-50'/> , <StatusIndicator className=' mx-auto w-fit' status='pending'/>, 'NA']} />,
+            <TableRow cells={['123344823', <Link to={""} className='text-[#0076D3]'>Term Docs</Link>, '--------', '-------', <AcceptReject onAccept={() =>{}} onReject={() =>{}} className='backdrop-filter: brightness-100'/>, <StatusIndicator className=' mx-auto w-fit' status='accepted'/>, <BlackButton text='Proceed to pay'/>]} />,
+            <TableRow cells={['123344823', <Link to={""} className='text-[#0076D3]'>Term Docs</Link>, '--------', '-------', <Link to={""} className='text-[#0076D3]'>Send Again</Link>, <StatusIndicator className=' mx-auto w-fit' status='declined'/>, <Link to={""} className='text-[#5e666dcb] flex mx-auto w-fit'><ChatIcon className='my-auto mx-1'/>Chat with seller</Link>]} />,
+  
+  
+  
+          ]}
+        />
+  
+  
+  
       </div>
-
-      <EntriesPerPage
-        options={[5, 10, 20, 50]}
-        selected={5}
-        onChange={(value) => console.log("Selected entries per page:", value)}
-      />
-
-      <Table
-        headers={['ID', 'Trade', 'Buyer', 'Product', 'Request Anaylsis', 'Request']}
-        rows={[
-          <TableRow cells={['123344823', 'Trade Terms', 'Max Sharma', 'XXXXXX', 'xx%', <BlackButton text="Confirm Order" />]} />,
-          <TableRow cells={['123344823', 'Trade Terms', 'Max Sharma', 'XXXXXX', 'XX%', <BlackButton text="Confirm Order" />]} />,
+  
+    );
+  }
+  
 
 
-        ]}
-      />
-
-
-
-    </div>
-
-  );
-}
-
-const OngoingTrades: React.FC = () => {
-  return (
-    <div className='flex justify-between flex-col w-[98%] mx-auto my-16 shadow-lg border-[1px] border-gray-300 rounded-lg p-6 bg-white'>
-
-      <div className='flex w-full justify-between'>
-        <HeadingDescription heading='Purchase Order' description='Check whether the things are their or not' />
-        <div className='flex gap-2 mt-auto mr-2 my-auto'>
-          <BlueButton text='Filter' />
-          <BlueButton text='Export CSV' />
-        </div>
-      </div>
-
-      <EntriesPerPage
-        options={[5, 10, 20, 50]}
-        selected={5}
-        onChange={(value) => console.log("Selected entries per page:", value)}
-      />
-
-      <Table
-        headers={['ID', 'Date', 'Status', 'Customer', 'Product', 'Revenue']}
-        rows={[
-          <TableRow cells={['123344823', '', '', 'Max Sharma', 'xxxxxx', '$1299']} />,
-          <TableRow cells={['123344823', '', '', 'Max Sharma', 'xxxxxx', '$1299']} />,
-
-
-        ]}
-      />
-
-
-
-    </div>
-
-  );
-}
 
 const PreviousTrades: React.FC = () => {
   return (
@@ -304,22 +324,23 @@ const PreviousTrades: React.FC = () => {
         <div className="w-fit m-auto flex flex-col" id="mid">
           <div className='flex flex-col m-2'>
             <p>---------------------------------</p>
-            <BlackButton className="border-gray-300 shadow-lg my-2" text="Sell Again" />
+            <BlackButton className="border-gray-300 shadow-lg my-2" text="Buy it again" />
             <BlackButton className="border-gray-300 shadow-lg my-2" text="View your item" />
           </div>
         </div>
         <div className="w-fit m-auto flex flex-col" id="right">
-          <BlackButton className="my-2 border-gray-400 shadow-md" text="Check Trade Terms" />
-          <BlackButton className="my-2 border-gray-400 shadow-md" text="Ask Buyer Queries" />
+          <BlackButton className="my-2 border-gray-400 shadow-md" text="Purchase Request status" />
+          <BlackButton className="my-2 border-gray-400 shadow-md" text="Ask Product Queries" />
           <BlackButton className="my-2 border-gray-400 shadow-md" text="Leave Seller Feedback" />
-          <BlackButton className="my-2 border-gray-400 shadow-md" text="Invoice" />
+          <BlackButton className="my-2 border-gray-400 shadow-md" text="Leave Delivery Feedback" />
+          <BlackButton className="my-2 border-gray-400 shadow-md" text="Track Consignment" />
         </div>
       </div>
     </div>
   );
 }
 
-const TradeHistory: React.FC = () => {
+const AllTrades: React.FC = () => {
   return (
     <div>
       <PreviousTrades />
@@ -328,28 +349,7 @@ const TradeHistory: React.FC = () => {
   );
 }
 
-const TrackTrade: React.FC<{ orders?: React.ReactNode[] }> = ({ orders = [] }) => {
-  return (
-    <div className='flex flex-col w-[98%] h-[50vh] mx-auto my-16 shadow-lg border-[1px] border-gray-300 rounded-lg bg-white'>
-      <div id="left" className='flex flex-col h-full overflow-y-scroll'>
-        <div id="header" className='flex border-b-[2px] border-gray-300 px-6 py-3 bg-white sticky top-0'>
-          <h1 className='text-3xl font-semibold'>Trades</h1>
-        </div>
-        <div className='flex flex-col w-full overflow-y-auto flex-1'>
-          {/* Track orders */}
-          {orders.map((order, index) => (
-            <React.Fragment key={index}>
-              {order}
-            </React.Fragment>
-          ))}
-        </div>
-      </div>
-      <div id="right" className='flex flex-col w-[0%]'>
 
-      </div>
-    </div>
-  );
-}
 
 const Trackconsignment: React.FC = () => {
   return (
@@ -494,6 +494,23 @@ const Feedback: React.FC = () => {
 };
 
 
+const BuyAgain: React.FC = () => {
+    return(
+        <div className='grid grid-cols-4 gap-4 w-[98%] mx-auto my-16'>
+            <ProductCard />
+            <ProductCard />
+            <ProductCard />
+            <ProductCard />
+            <ProductCard />
+            <ProductCard />
+            <ProductCard />
+
+            <ProductCard />
+
+        </div>
+    );
+}
+
 // Main Trade component
 
 const Trade: React.FC = () => {
@@ -508,21 +525,19 @@ const Trade: React.FC = () => {
     switch (activeTab) {
       case 'Purchase Request Status':
         return <PurchaseRequestStatus />;
-      case 'Purchase Order':
+      case 'Purchase Order Status':
         return <PurchaseOrder />;
-      case 'Ongoing Trades':
-        return <OngoingTrades />;
-      case 'Track Trade':
-        return <TradeHistory />;
-      case 'Trade History':
-        return <TrackTrade orders={[<Trackconsignment />, <Trackconsignment />]} />;
+      case 'All Trades':
+        return <AllTrades />;
+      case 'Buy Again':
+        return <BuyAgain />
       default:
         return null;
     }
   };
 
   return (
-    <div className='w-[95%] mx-auto my-4 h-fit flex flex-col'>
+    <div className='w-[97%] mx-auto my-4 h-fit flex flex-col'>
 
       <div className='flex w-[98%] mx-auto my-12'>
         <Search />
@@ -530,7 +545,7 @@ const Trade: React.FC = () => {
       </div>
 
       <Tabs
-        tabs={['Purchase Request Status', 'Purchase Order', 'Ongoing Trades', 'Track Trade', 'Trade History']}
+        tabs={['Purchase Request Status', 'Purchase Order Status', 'All Trades', 'Buy Again']}
         activeTab={activeTab}
         onTabChange={handleTabChange}
       />
@@ -545,4 +560,4 @@ const Trade: React.FC = () => {
 };
 
 
-export{Trade, Feedback};
+export default Trade;

@@ -12,7 +12,11 @@ const images = [
     banner1,
 ];
 
-const Banner: React.FC = () => {
+interface BannerProps {
+  className?: string;
+}
+
+const Banner: React.FC<BannerProps> = ({ className }) => {
   const [current, setCurrent] = useState(0);
 
   useEffect(() => {
@@ -24,7 +28,7 @@ const Banner: React.FC = () => {
   }, []);
 
   return (
-    <div className="relative w-full h-64 overflow-hidden rounded-2xl shadow-md">
+    <div className={`relative w-full h-64 overflow-hidden rounded-2xl shadow-md ${className ?? ""}`}>
       <AnimatePresence mode="wait">
         <motion.img
           key={images[current]}
