@@ -55,6 +55,54 @@ class AuthService {
     return hasRole;
   }
 
+  // Update user profile information (firstName, lastName)
+  async updateUserProfile(profileData: { firstName: string; lastName: string }): Promise<any> {
+    try {
+      const token = this.getToken();
+      if (!token) {
+        console.error('Authentication token not found');
+        return null;
+      }
+
+      console.log('Updating user profile:', profileData);
+      
+      // Update the user in the backend
+      const response = await axios.put(`${API_URL}/profile`, profileData, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      // If successful, update the local user data
+      if (response.data) {
+        const currentUser = this.getUser();
+        const updatedUser = { 
+          ...currentUser, 
+          firstName: profileData.firstName, 
+          lastName: profileData.lastName 
+        };
+        this.setUser(updatedUser);
+        console.log('User profile updated successfully:', updatedUser);
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      
+      if (axios.isAxiosError(error)) {
+        console.error('Server response:', error.response?.data);
+        
+        // If unauthorized, try to refresh token or log out
+        if (error.response?.status === 401) {
+          this.logout();
+          window.location.href = '/login';
+        }
+      }
+      
+      throw error; // Rethrow to allow components to handle the error
+    }
+  }
+
   // Validate token with backend
   async validateTokenWithBackend(): Promise<boolean> {
     const token = this.getToken();

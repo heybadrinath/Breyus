@@ -1,6 +1,7 @@
 import React from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Scatter, Line, ResponsiveContainer, ComposedChart } from 'recharts';
 import "../seller/css/components.css";
+import { PieChart, Pie, Cell, Label, Sector } from 'recharts';
 
 type BarGraphDataType = { week: string; storeVisits: number };
 type ScatterGraphDataType = { x: number, y: number };
@@ -24,6 +25,13 @@ const Scatterdata: ScatterGraphDataType[] = [
   { x: 6, y: 32 },
   { x: 8, y: 33 },
   { x: 9, y: 55 }
+];
+
+
+// Dummy data for Pie Chart
+const pieData = [
+  { name: 'New Customers', value: 300 },
+  { name: 'Returning Customers', value: 100 }
 ];
 
 // Analytics dummy data
@@ -74,6 +82,102 @@ const Scattergraph = ({ data }: { data: ScatterGraphDataType[] }) => {
   );
 };
 
+// Pie chart ui element
+const COLORS = ['#8F85FF', '#B7B1E9'];
+
+const renderActiveShape = (props: any) => {
+  const RADIAN = Math.PI / 180;
+  const {
+    cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle,
+    fill, payload, percent, value
+  } = props;
+
+  const sin = Math.sin(-RADIAN * midAngle);
+  const cos = Math.cos(-RADIAN * midAngle);
+  const sx = cx + (outerRadius + 10) * cos;
+  const sy = cy + (outerRadius + 10) * sin;
+  const mx = cx + (outerRadius + 30) * cos;
+  const my = cy + (outerRadius + 30) * sin;
+  const ex = mx + (cos >= 0 ? 1 : -1) * 22;
+  const ey = my;
+  const textAnchor = cos >= 0 ? 'start' : 'end';
+
+  return (
+    <g>
+      {/* <text x={cx} y={cy - 10} dy={8} textAnchor="middle" fill="#8F85FF" fontSize={18}>
+        Group B
+      </text> */}
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+        stroke="#fff"
+        strokeWidth={2}
+      />
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={outerRadius + 4}
+        outerRadius={outerRadius + 8}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+      />
+      {/* <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none"/> */}
+      <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none"/>
+      <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} textAnchor={textAnchor} fill="#333">{`FV ${value}`}</text>
+      <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey + 18} textAnchor={textAnchor} fill="#999">
+        {`(${(percent * 100).toFixed(2)}%)`}
+      </text>
+    </g>
+  );
+};
+
+const PiChart = ({ data }: { data: typeof pieData }) => {
+  const [activeIndex, setActiveIndex] = React.useState(0);
+
+  const onPieEnter = (_: any, index: number) => {
+    setActiveIndex(index);
+  };
+
+  return (
+   
+      <ResponsiveContainer width="100%" height={300}>
+        <PieChart>
+          <Pie
+            activeIndex={activeIndex}
+            activeShape={renderActiveShape}
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={80}
+            fill="#8884d8"
+            dataKey="value"
+            onMouseEnter={onPieEnter}
+            stroke="none"
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} opacity={0.7} />
+            ))}
+            <Label
+              value="Group B"
+              position="center"
+              fill="#8F85FF"
+              fontSize={18}
+              fontWeight={500}
+            />
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
+   
+  );
+};
+
 
 const Analytics = () => {
   return (
@@ -102,7 +206,7 @@ const Analytics = () => {
         <div className="shadow-2xl w-full md:w-[60%] md:mx-auto rounded-md  my-4 xl:mx-8  pl-1 pr-10 pb-2 pt-4 bg-white">
           <h2 className="mx-10 font-bold text-2xl ">Completed Tasks</h2>
           <p className="mx-10 my-0 mb-8">Last Campaign Performance</p>
-          <Scattergraph data={Scatterdata} />
+          <PiChart data={pieData} />
         </div>
       </div>
 
@@ -202,6 +306,9 @@ const Analytics = () => {
     </div>
   );
 };
+
+
+
 
 
 

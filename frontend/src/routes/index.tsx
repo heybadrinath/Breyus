@@ -12,15 +12,25 @@ import Security from "../seller/security";
 import { motion, AnimatePresence } from "framer-motion";
 import Sales from "../seller/sales";
 import Upgrade from "../seller/upgrade";
-import {AddProduct, Inventory} from "../seller/products";
+import {AddProduct, Inventory, Incoterms} from "../seller/products";
 import ForgotPassword from "../buyer/forgot-password";
-// import BuyerDashboard from "../buyer/dashboard";
+
+
+
+
+
 import SellerForgotPassword from "../seller/forgot-password";
 import { Layout } from "../seller/components";
 import Inbox from "../seller/inbox"; 
-import Trade from "../seller/trade";
+import {Trade,Feedback} from "../seller/trade";
 
-const pageVariants = {
+import BuyerInbox from "../buyer/pages/Inbox";
+import Homepage from "../buyer/pages/Homepage";
+import Wishlist from "../buyer/pages/Wishlist";
+//import ProductCard from "../buyer/components/ProductCard";
+import CartPage from "../buyer/pages/Cartpage";
+
+const pageVariants = { 
   initial: { opacity: 0, x: -80 },
   animate: { opacity: 1, x: 0, transition: { duration: 0.4 } },
   exit: { opacity: 0, x: 80, transition: { duration: 0.4 } }
@@ -65,8 +75,10 @@ const AppRoutes = () => {
           <Route path="/buyer/signin" element={<Animate page={<Signin />} />} />
           <Route path="/buyer/signup" element={<Animate page={<Signup />} />} />
           <Route path="/buyer/forgot-password" element={<Animate page={<ForgotPassword />} />} />
-          {/* <Route path="/buyer/dashboard" element={<Animate page={<BuyerDashboard />} />} /> */}
-  
+          <Route path="/buyer/homepage" element={<Animate page={<Homepage />} />} />
+          <Route path="/buyer/inbox" element={<Animate page={<BuyerInbox />} />} />
+          <Route path="/buyer/wishlist" element={<Animate page={<Wishlist />} />} />
+          <Route path="/buyer/cartpage" element={<Animate page={<CartPage />} />} />
           {/* Seller Routes */}
           <Route path="/seller/signin" element={<Animate page={<SellerSignin />} />} />
           <Route path="/seller/signup" element={<Animate page={<SellerSignup />} />} />
@@ -76,10 +88,12 @@ const AppRoutes = () => {
           <Route path="/seller/sales" element={<Animate page={<Layout Body={<Sales />}/>} />} />
           <Route path="/seller/upgrade" element={<Animate page={<Layout Body={<Upgrade />}/>} />} />
           <Route path="/seller/add-products" element={<Animate page={<Layout Body={<AddProduct/>}/>} />} />
-          <Route path="/seller/add-product" element={<Animate page={<Layout Body={<AddProduct/>}/>} />} />
           <Route path="/seller/Inbox" element={<Animate page={<Layout Body={<Inbox/>}/>} />} />
           <Route path="/seller/inventory" element={<Animate page={<Layout Body={<Inventory/>}/>} />} />
           <Route path="/seller/trade" element={<Animate page={<Layout Body={<Trade/>}/>} />} />
+          <Route path="/seller/Product-Feedback" element={<Animate page={<Layout Body={<Feedback/>}/>} />} />
+          <Route path="/seller/incoterms" element={<Animate page={<Layout Body={<Incoterms/>}/>} />} />
+          
 
   
          

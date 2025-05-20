@@ -1,4 +1,4 @@
-import React, { ReactNode, useState, useEffect } from "react";
+import React, { ReactNode, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../seller/css/components.css";
 import authService from "../services/auth.service";
@@ -16,24 +16,27 @@ import helpIcon from "../seller/vectors/help.svg";
 
 
 const Header = () => {
-    // const navigate = useNavigate();
+    const navigate = useNavigate();
 
-    // const handleLogout = () => {
-    //     authService.logout();
-    //     navigate('/');
-    // };
+    const handleLogout = () => {
+        authService.logout();
+        navigate('/');
+    };
 
     return (
         <>
-            <header>
+            <header className="w-[96%]">
                 <div id="left-header">
-                    <div>sort: Last week</div>
-                    <img alt="" src={downArrow} />
+                    <select className="sort-select bg-transparent">
+                        <option value="last-week">Last week</option>
+                        <option value="month">Last Month</option>
+                        <option value="year">Last Year</option>
+                    </select>
                 </div>
                 <div className="sa"></div>
                 <div id="right-header">
                     <img src={notifications} alt="Notifications" />
-                    <button>Try Breyus Core</button>
+                    <button className="breyus-core-animated-border">Try Breyus Core</button>
         
                 </div>
             </header>
@@ -129,11 +132,13 @@ const Leftnavdash = ({ username }: { username: String }) => {
                     </div>
                     {/* <Link className="px-4 py-2" to="/seller/product"> <img alt="" src={productIcon} /> Product <img alt="" className={`down-arrow down-arrow transition-transform duration-500 !ml-auto ${false? "rotate-180 ":"hue-rotate-180"}`} src={downArrow} /></Link> */}
 
-                    <Link onClick={toggleproduct} className={` rounded-lg transition-all duration-500 ease-in-out px-4 py-2 ${isproductopen?"bg-[#0004]":"bg-none"}`} to=""> <img alt="" src={productIcon} /> Products <img alt="" className={`down-arrow transition-transform duration-500 !ml-auto ${isdashopen? "rotate-180 ":"hue-rotate-180"}`} src={downArrow} /></Link>
+                    <Link onClick={toggleproduct} className={` rounded-lg transition-all duration-500 ease-in-out px-4 py-2 ${isproductopen?"bg-[#0004]":"bg-none"}`} to=""> <img alt="" src={productIcon} /> Products <img alt="" className={`down-arrow transition-transform duration-500 !ml-auto ${isproductopen? "rotate-180 ":"hue-rotate-180"}`} src={downArrow} /></Link>
                     <div className={`flex  flex-col overflow-hidden transition-all duration-1000 ease-bounch  ${isproductopen?"max-h-56 opacity-100": "max-h-0 opacity-40"}`}>
                        {/* toggle content  */}
-                       <Link className="!my-y !mx-6" to={"/seller/add-products?new=true"}>Add Products</Link>
+                       <Link className="!my-y !mx-6" to={"/seller/add-products"}>Add Products</Link>
                        <Link className="!my-y !mx-6" to={"/seller/inventory"}>Inventory</Link>
+                       <Link className="!my-y !mx-6" to={"/seller/Product-Feedback"}>Feedback</Link>
+                       
                        
                     </div>
                     <Link className="px-4 py-2" to="/seller/inbox"><img alt="" src={securityIcon} />Inbox</Link>
@@ -187,14 +192,8 @@ const SettingsLayout = ({Body}: {Body: ReactNode}) =>{
     );
 };
 
-function Togglebutton({ isActive }: { isActive?: boolean }) {
-    const [enabled, setEnabled] = useState(isActive || false);
-  
-    useEffect(() => {
-      if (isActive !== undefined) {
-        setEnabled(isActive);
-      }
-    }, [isActive]);
+function Togglebutton() {
+    const [enabled, setEnabled] = useState(false);
   
     return (
       <button
