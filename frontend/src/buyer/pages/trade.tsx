@@ -1,6 +1,7 @@
 import React from 'react';
 import { Tabs, Table, TableRow } from '../../seller/trade';
 import TradeHistorySearch from '../components/TradeHistorySearch';
+import ProductCard from '../components/ProductCard';
 
 
 const HeadingDescription: React.FC<{ heading: string; description: string }> = ({ heading, description }) => {
@@ -231,9 +232,114 @@ const PurchaseOrderStatus: React.FC = () => {
   );
 }
 
+const Order = () => {
+    return(
+        <div className='scale-95 my-10'>
+            <div id="top">
+                <div className="flex items-center justify-between bg-black text-white rounded-t-md px-6 py-5">
+                    <div className="flex gap-16">
+                        <div>
+                            <div className="text-sm font-semibold">ORDER PLACED</div>
+                            <div className="text-base mt-1">10 January 2025</div>
+                        </div>
+                        <div>
+                            <div className="text-sm font-semibold">Total</div>
+                            <div className="text-base mt-1">xxxxxx</div>
+                        </div>
+                        <div>
+                            <div className="text-sm font-semibold">Ship to</div>
+                            <a href="#" className="text-blue-400 text-base mt-1 block hover:underline">Max Sharma</a>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-10">
+                        <div className="flex flex-col items-end">
+                            <span className="font-bold text-lg">Order # 12445382492-232323</span>
+                            <div className="flex items-center gap-5 mt-1">
+                                <a href="#" className="text-blue-400 text-base hover:underline">View order details</a>
+                                <span className="h-5 border-r border-gray-400"></span>
+                                <a href="#" className="text-blue-400 text-base hover:underline">Invoice</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="bottom">
+                {/* Top: Delivery Info */}
+                <div className="px-8 pt-8 pb-4">
+                    <div className="text-2xl font-bold mb-1">Delivered 13 January</div>
+                    <div className="text-gray-500">Package was handed to&nbsp; xxxxx</div>
+                </div>
+                {/* Bottom: Product, Actions, Buttons */}
+                <div className="flex gap-8 px-8 pb-8 items-stretch">
+                    {/* Left: Product Image */}
+                    <div className="flex  w-[450px] h-[auto] bg-gray-200 rounded-md" />
+                    {/* Middle: Product Info & Actions */}
+                    <div className="flex w-fit m-auto flex-col">
+                        <div className="mb-6">
+                            <div className="text-black text-lg" style={{ letterSpacing: 2 }}>
+                                ------------------------------------------
+                            </div>
+                            <div className="text-black text-lg" style={{ letterSpacing: 2 }}>
+                                ----------------------
+                            </div>
+                        </div>
+                        <div className="flex gap-4 mt-4">
+                            <button className="border border-gray-400 rounded-md px-4 py-2 flex items-center gap-2 hover:bg-gray-50 transition">
+                                <span role="img" aria-label="repeat">&#8635;</span>
+                                Buy it again
+                            </button>
+                            <button className="border border-gray-400 rounded-md px-4 py-2 hover:bg-gray-50 transition">
+                                View your item
+                            </button>
+                        </div>
+                    </div>
+                    {/* Right: Action Buttons */}
+                    <div className="flex flex-col gap-4 w-64">
+                        <button className="border border-gray-400 rounded-md px-6 py-2 text-base hover:bg-gray-50 transition">Purchase Request status</button>
+                        <button className="border border-gray-400 rounded-md px-6 py-2 text-base hover:bg-gray-50 transition">Ask Product Doubt</button>
+                        <button className="border border-gray-400 rounded-md px-6 py-2 text-base hover:bg-gray-50 transition">Leave Seller Feedback</button>
+                        <button className="border border-gray-400 rounded-md px-6 py-2 text-base hover:bg-gray-50 transition">Leave Delivery Feedback</button>
+                        <button className="border border-gray-400 rounded-md px-6 py-2 text-base hover:bg-gray-50 transition">Track Package</button>
+                    </div>
+                </div>
+                    
+                </div>
+            
+        </div>
+    );
+};
+
+
+const OrderSection = () => {
+    return(
+        <div>
+            <Order />
+            <Order />
+        </div>
+    );
+};
+
+const BuyAgain = () => {
+    return(
+        <div className="grid grid-cols-4 gap-6">
+            <ProductCard />
+            <ProductCard />
+            <ProductCard />
+            <ProductCard />
+            <ProductCard />
+            <ProductCard />
+            <ProductCard />
+            <ProductCard />
+            <ProductCard />
+            <ProductCard />
+            <ProductCard />
+        </div>
+    );
+}
+
 
 const Trade: React.FC = () => {
-    const tabLabels = ['Purchase Request Status', 'Purchase Order Status', 'All Orders', 'Buy Again'];
+    const tabLabels = ['Purchase Request Status', 'Purchase Order Status', 'All Trades', 'Buy Again'];
     const [activeTab, setActiveTab] = React.useState(tabLabels[0]);
     
     const handleTabChange = (tab: string): void => {
@@ -247,15 +353,15 @@ const Trade: React.FC = () => {
             tabs={tabLabels}
             activeTab={activeTab}
             onTabChange={handleTabChange}
-            className='scale-110'
+            className='scale-110 !w-[88%]'
             />
 
             {/* Render tab content based on activeTab */}
             <div className="mt-4">
             {activeTab === 'Purchase Request Status' && <PurchaseRequestStatus />}
             {activeTab === 'Purchase Order Status' && <PurchaseOrderStatus />}
-            {activeTab === 'All Orders' && <div>Ongoing Trades Content</div>}
-            {activeTab === 'Buy Again' && <div>Track Trade Content</div>}
+            {activeTab === 'All Trades' && <OrderSection />}
+            {activeTab === 'Buy Again' && <BuyAgain />}
             </div>
         </div>
             
