@@ -82,17 +82,6 @@ const Inbox: React.FC = () => {
             <hr className='h-0 p-[0.3px] mt-3 rounded-2xl bg-[#E7E7E7]' />
 
             <div className='flex mt-2'>
-<<<<<<< Updated upstream
-                <div className='flex flex-col h-full'>
-                    <div className="flex px-36 py-6 bg-[#E7E7E7] border-b border-1 border-[#35353540]">Seller-1</div>
-                    <div className="flex px-36 py-6 bg-[#E7E7E7] border-b border-1 border-[#35353540]">Seller-2</div>
-                    <div className="flex px-36 py-6 bg-[#E7E7E7] border-b border-1 border-[#35353540]">Buyer-1</div>
-                    <div className="flex px-36 py-6 bg-[#E7E7E7] border-b border-1 border-[#35353540]">......</div>
-                    <div className="flex px-36 py-6 bg-[#E7E7E7] border-b border-1 border-[#35353540]">......</div>
-                    <div className="flex px-36 py-6 bg-[#E7E7E7] border-b border-1 border-[#35353540]">......</div>
-                    <div className="flex px-36 py-6 bg-[#E7E7E7] border-b border-1 border-[#35353540]">......</div>
-                    <div className="flex px-36 py-6 bg-[#E7E7E7] border-[#35353540]">......</div>
-=======
                 <div className='flex flex-col h-full min-w-[250px]'>
                     {contacts.map(contact => (
                         <div 
@@ -103,7 +92,6 @@ const Inbox: React.FC = () => {
                             {contact.name}
                         </div>
                     ))}
->>>>>>> Stashed changes
                 </div>
 
                 <div className='flex flex-col m-4 w-full h-[500px]'>
