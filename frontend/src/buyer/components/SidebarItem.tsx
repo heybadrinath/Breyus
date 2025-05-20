@@ -5,9 +5,10 @@ interface SidebarItemProps {
     icon: React.ReactNode;
     label: string;
     path?: string;
+    className?: string;
 }
 
-const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, path }) => {
+const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, path, className = '' }) => {
     const navigate = useNavigate();
 
     const handleClick = () => {
@@ -18,7 +19,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, path }) => {
 
     return (
         <div 
-            className="flex items-center space-x-4 cursor-pointer hover:text-gray-700 transition-colors"
+            className={`flex items-center space-x-4 cursor-pointer hover:text-gray-700 transition-colors ${className}`}
             onClick={handleClick}
         >
             <div>{icon}</div>

@@ -1,0 +1,266 @@
+import React from 'react';
+import { Tabs, Table, TableRow } from '../../seller/trade';
+import TradeHistorySearch from '../components/TradeHistorySearch';
+
+
+const HeadingDescription: React.FC<{ heading: string; description: string }> = ({ heading, description }) => {
+  return (
+    <div className='flex gap-2 flex-col my-2'>
+      <h1 className='text-3xl font-extrabold'>{heading}</h1>
+      <p className='text-gray-400'>{description}</p>
+    </div>
+  );
+
+}
+
+const BlueButton: React.FC<{ text: string }> = ({ text }) => {
+  return (
+    <button className='border-[#0076D3] bg-transparent border-[1.5px] mx-3 text-black rounded-lg px-3 py-1 hover:bg-gray-50 transition-all duration-300 ease-in-out hover:scale-[1.03]'>
+      {text}
+    </button>
+  );
+}
+
+const RedButton: React.FC<{ text: string }> = ({ text }) => {
+  return (
+    <button className='m-auto flex bg-red-400 px-3 py-1 rounded-md cursor-pointer hover:bg-red-500 transition-all duration-300 ease-in-out hover:scale-[1.03]'>{text}</button>
+  );
+}
+
+const GreenButton: React.FC<{ text: string }> = ({ text }) => {
+  return (
+    <button className='m-auto flex bg-green-400  cursor-pointer px-3 py-1 rounded-md hover:bg-green-500 transition-all duration-300 ease-in-out hover:scale-[1.03]'>{text}</button>
+  );
+};
+
+
+const EntriesPerPage: React.FC<{ options: number[]; selected: number; onChange: (value: number) => void }> = ({ options, selected, onChange }) => {
+  return (
+    <div className="flex items-center gap-2 my-6">
+      <select
+        value={selected}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="border-gray-300 border-[1px] rounded-md px-2 py-1 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+      <span className="text-gray-500 text-sm">entries per page</span>
+    </div>
+  );
+};
+
+
+
+const PurchaseRequestStatus: React.FC = () => {
+  return (
+    <div className='flex justify-between flex-col w-[98%] mx-auto my-16 shadow-lg border-[1px] border-gray-300 rounded-lg p-6 bg-white'>
+        <div className='flex w-full justify-between'>
+            <HeadingDescription heading='Purchase Request' description='Check whether the things are their or not' />
+            <div className='flex gap-2 mt-auto mr-2 my-auto'>
+                <BlueButton text='Filter' />
+                <BlueButton text='Export CSV' />
+            </div>
+        </div>
+
+        <EntriesPerPage
+            options={[5, 10, 20, 50]}
+            selected={5}
+            onChange={(value) => console.log("Selected entries per page:", value)}
+        />
+
+        <Table
+            headers={[
+                'ID',
+                'Trade Terms',
+                'Seller',
+                'Product',
+                'Request',
+                'Status',
+                'Purchase order'
+            ]}
+            rows={[
+                <TableRow
+                    cells={[
+                        '123344823',
+                        <a href="#" className="text-blue-600 font-medium underline">Terms Doc</a>,
+                        '-----------',
+                        '-----------',
+                        <div className="flex gap-2 justify-center items-center">
+                            <span className="rounded-full border-2 border-green-400 text-green-400 flex items-center justify-center w-6 h-6">&#10003;</span>
+                            <span className="rounded-full border-2 border-red-400 text-red-400 flex items-center justify-center w-6 h-6">&#10005;</span>
+                        </div>,
+                        <div className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-yellow-400 inline-block"></span>
+                            <span className="text-gray-700">Pending</span>
+                        </div>,
+                        <span className="text-gray-400">NA</span>
+                    ]}
+                />,
+                <TableRow
+                    cells={[
+                        '123344823',
+                        <a href="#" className="text-blue-600 font-medium underline">Terms Doc</a>,
+                        '-----------',
+                        '-----------',
+                        <div className="flex gap-2 justify-center items-center">
+                            <span className="rounded-full border-2 border-green-400 text-green-400 flex items-center justify-center w-6 h-6">&#10003;</span>
+                            <span className="rounded-full border-2 border-red-400 text-red-400 flex items-center justify-center w-6 h-6">&#10005;</span>
+                        </div>,
+                        <div className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-green-400 inline-block"></span>
+                            <span className="text-gray-700">Accepted</span>
+                        </div>,
+                        <button className="border border-black rounded px-4 py-1 hover:bg-gray-100 transition">Proceed</button>
+                    ]}
+                />,
+                <TableRow
+                    cells={[
+                        '123344823',
+                        <a href="#" className="text-blue-600 font-medium underline">Terms Doc</a>,
+                        '-----------',
+                        '-----------',
+                        <span className="text-blue-600 font-medium underline cursor-pointer">Send Again</span>,
+                        <div className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-red-400 inline-block"></span>
+                            <span className="text-gray-700">Declined</span>
+                        </div>,
+                        <div className="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.77 9.77 0 01-4-.8L3 21l1.8-4A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                            <span className="text-gray-700">Chat with seller</span>
+                        </div>
+                    ]}
+                />
+            ]}
+        />
+    </div>
+
+  );
+}
+
+const PurchaseOrderStatus: React.FC = () => {
+  return (
+    <div className='flex justify-between flex-col w-[98%] mx-auto my-16 shadow-lg border-[1px] border-gray-300 rounded-lg p-6 bg-white'>
+        <div className='flex w-full justify-between'>
+            <HeadingDescription heading='Purchase Request' description='Check whether the things are their or not' />
+            <div className='flex gap-2 mt-auto mr-2 my-auto'>
+                <BlueButton text='Filter' />
+                <BlueButton text='Export CSV' />
+            </div>
+        </div>
+
+        <EntriesPerPage
+            options={[5, 10, 20, 50]}
+            selected={5}
+            onChange={(value) => console.log("Selected entries per page:", value)}
+        />
+
+        <Table
+            headers={[
+                'ID',
+                'Trade Terms',
+                'Seller',
+                'Product',
+                'Request',
+                'Status',
+                'Purchase order'
+            ]}
+            rows={[
+                <TableRow
+                    cells={[
+                        '123344823',
+                        <a href="#" className="text-blue-600 font-medium underline">Terms Doc</a>,
+                        '-----------',
+                        '-----------',
+                        <div className="flex gap-2 justify-center items-center">
+                            <span className="rounded-full border-2 border-green-400 text-green-400 flex items-center justify-center w-6 h-6">&#10003;</span>
+                            <span className="rounded-full border-2 border-red-400 text-red-400 flex items-center justify-center w-6 h-6">&#10005;</span>
+                        </div>,
+                        <div className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-yellow-400 inline-block"></span>
+                            <span className="text-gray-700">Pending</span>
+                        </div>,
+                        <span className="text-gray-400">NA</span>
+                    ]}
+                />,
+                <TableRow
+                    cells={[
+                        '123344823',
+                        <a href="#" className="text-blue-600 font-medium underline">Terms Doc</a>,
+                        '-----------',
+                        '-----------',
+                        <div className="flex gap-2 justify-center items-center">
+                            <span className="rounded-full border-2 border-green-400 text-green-400 flex items-center justify-center w-6 h-6">&#10003;</span>
+                            <span className="rounded-full border-2 border-red-400 text-red-400 flex items-center justify-center w-6 h-6">&#10005;</span>
+                        </div>,
+                        <div className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-green-400 inline-block"></span>
+                            <span className="text-gray-700">Accepted</span>
+                        </div>,
+                        <button className="border border-black rounded px-4 py-1 hover:bg-gray-100 transition">Proceed to pay</button>
+                    ]}
+                />,
+                <TableRow
+                    cells={[
+                        '123344823',
+                        <a href="#" className="text-blue-600 font-medium underline">Terms Doc</a>,
+                        '-----------',
+                        '-----------',
+                        <span className="text-blue-600 font-medium underline cursor-pointer">Send Again</span>,
+                        <div className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full bg-red-400 inline-block"></span>
+                            <span className="text-gray-700">Declined</span>
+                        </div>,
+                        <div className="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.77 9.77 0 01-4-.8L3 21l1.8-4A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                            <span className="text-gray-700">Chat with seller</span>
+                        </div>
+                    ]}
+                />
+            ]}
+        />
+    </div>
+
+  );
+}
+
+
+const Trade: React.FC = () => {
+    const tabLabels = ['Purchase Request Status', 'Purchase Order Status', 'All Orders', 'Buy Again'];
+    const [activeTab, setActiveTab] = React.useState(tabLabels[0]);
+    
+    const handleTabChange = (tab: string): void => {
+        setActiveTab(tab);
+    };
+
+    return (
+        <div className="w-[98%] mx-auto text-lg p-8 bg-white rounded-xl shadow-lg">
+            <TradeHistorySearch className="w-fit mx-auto my-8" />
+            <Tabs
+            tabs={tabLabels}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            className='scale-110'
+            />
+
+            {/* Render tab content based on activeTab */}
+            <div className="mt-4">
+            {activeTab === 'Purchase Request Status' && <PurchaseRequestStatus />}
+            {activeTab === 'Purchase Order Status' && <PurchaseOrderStatus />}
+            {activeTab === 'All Orders' && <div>Ongoing Trades Content</div>}
+            {activeTab === 'Buy Again' && <div>Track Trade Content</div>}
+            </div>
+        </div>
+            
+     
+    );
+}
+
+export default Trade;
