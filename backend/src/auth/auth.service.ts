@@ -51,18 +51,43 @@ export class AuthService {
 
     if (!storedOtp || storedOtp !== otp) {
       this.logger.warn(`Invalid OTP attempt for ${email}`);
-      return { message: 'Invalid OTP', success: false };
+      return { message: 'Invalid or expired OTP', success: false };
     }
 
-    this.otpStore.delete(email); // Remove OTP after verification
-    
-    // Fetch user data
+    // Find user for login
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      this.logger.warn(`User not found for email: ${email}`);
       return { message: 'User not found', success: false };
     }
-    
+
+    // Check if user details exist, create if not
+    try {
+      await this.usersService.findUserDetailsById(user.id);
+    } catch (error) {
+      // If no user details exist, create them with empty values
+      if (error instanceof NotFoundException) {
+        await this.usersService.updateUserDetails(user.id, {
+          contactNumber: '',
+          alternateNumber1: '',
+          alternateNumber2: '',
+          alternateEmail: '',
+          address: '',
+          city: '',
+          state: '',
+          country: '',
+          companyName: '',
+          companyWebsite: '',
+          gstin: '',
+          companyAddress: '',
+          socials: '',
+          accountType: '',
+          bankName: '',
+          accountNumber: '',
+          ifscCode: '',
+        });
+      }
+    }
+
     // Generate JWT token
     const token = this.jwtService.generateToken({
       userId: user.id,
@@ -70,7 +95,10 @@ export class AuthService {
       role: user.role
     });
 
-    // Get user data without sensitive information
+    // Remove the used OTP
+    this.otpStore.delete(email);
+
+    // Prepare user data without sensitive information
     const userData = {
       id: user.id,
       email: user.email,
@@ -79,9 +107,8 @@ export class AuthService {
       role: user.role,
     };
     
-    this.logger.log(`OTP verified successfully for ${email}. User authenticated.`);
     return { 
-      message: 'OTP verified successfully', 
+      message: 'Login successful', 
       success: true,
       token,
       user: userData
@@ -200,6 +227,28 @@ export class AuthService {
         lastName: registrationData.userData.lastName,
         role: registrationData.userData.role,
         isEmailVerified: true,
+      });
+
+      // Initialize user details record with empty values
+      await this.usersService.updateUserDetails(newUser.id, {
+        // Default empty fields
+        contactNumber: '',
+        alternateNumber1: '',
+        alternateNumber2: '',
+        alternateEmail: '',
+        address: '',
+        city: '',
+        state: '',
+        country: '',
+        companyName: '',
+        companyWebsite: '',
+        gstin: '',
+        companyAddress: '',
+        socials: '',
+        accountType: '',
+        bankName: '',
+        accountNumber: '',
+        ifscCode: '',
       });
 
       // Remove the used OTP and data

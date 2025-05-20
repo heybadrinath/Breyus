@@ -76,6 +76,7 @@ const AppRoutes = () => {
           <Route path="/seller/sales" element={<Animate page={<Layout Body={<Sales />}/>} />} />
           <Route path="/seller/upgrade" element={<Animate page={<Layout Body={<Upgrade />}/>} />} />
           <Route path="/seller/add-products" element={<Animate page={<Layout Body={<AddProduct/>}/>} />} />
+          <Route path="/seller/add-product" element={<Animate page={<Layout Body={<AddProduct/>}/>} />} />
           <Route path="/seller/Inbox" element={<Animate page={<Layout Body={<Inbox/>}/>} />} />
           <Route path="/seller/inventory" element={<Animate page={<Layout Body={<Inventory/>}/>} />} />
           <Route path="/seller/trade" element={<Animate page={<Layout Body={<Trade/>}/>} />} />

@@ -29,6 +29,39 @@ export class ProductsController {
     }
   }
 
+  // Authenticated endpoint to get current seller's products
+  @Get('seller/me')
+  @UseGuards(JwtAuthGuard)
+  async findCurrentSellerProducts(@Request() req): Promise<Product[]> {
+    try {
+      this.logger.log('GET /products/seller/me request received');
+      const sellerId = req.user?.id;
+      
+      if (!sellerId) {
+        this.logger.warn('No seller ID found in JWT token');
+        throw new HttpException(
+          'Authentication required',
+          HttpStatus.UNAUTHORIZED
+        );
+      }
+      
+      this.logger.log(`Fetching products for seller ID: ${sellerId}`);
+      const products = await this.productsService.findAll(sellerId);
+      this.logger.log(`Found ${products.length} products for seller ID: ${sellerId}`);
+      
+      return products;
+    } catch (error) {
+      this.logger.error(`Error in findCurrentSellerProducts: ${error.message}`, error.stack);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        'Failed to fetch seller products',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
   // Public endpoint - no authentication required
   @Get(':id')
   async findOne(@Param('id') id: string, @Request() req): Promise<Product> {

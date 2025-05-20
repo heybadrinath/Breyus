@@ -15,6 +15,7 @@ import { Product } from './products/entities/product.entity';
 import { Sale } from './sales/entities/sale.entity';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { MessagesModule } from './messages/messages.module';
 
 @Module({
   imports: [
@@ -43,7 +44,8 @@ import { AppService } from './app.service';
     AnalyticsModule,
     ProductsModule,
     SalesModule,
-    SecurityModule
+    SecurityModule,
+    MessagesModule
   ],
   controllers: [AppController],
   providers: [AppService],
