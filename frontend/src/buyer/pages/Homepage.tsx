@@ -33,9 +33,12 @@ const Homepage: React.FC = () => {
             <ProductCard />
           </div>
         </div>
+        
       </div>
     </div>
   );
 };
+
+
 
 export default Homepage;
