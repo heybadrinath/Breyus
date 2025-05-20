@@ -27,7 +27,7 @@ const Sidebar = () => {
           <SidebarItem icon={<Store size={22} />} label="Market" path="/buyer/homepage" />
           <SidebarItem icon={<Inbox size={22} />} label="Inbox" path="/buyer/inbox" />
           <SidebarItem icon={<ShoppingCart size={22} />} label="Cart" path="/buyer/cartpage" />
-          <SidebarItem icon={<Repeat size={22} />} label="Trade" />
+          <SidebarItem icon={<Repeat size={22} />} label="Trade" path="/buyer/trade"/>
           <SidebarItem icon={<Heart size={22} />} label="Wishlist" path="/buyer/wishlist" />
         </nav>
       </div>
