@@ -14,6 +14,7 @@ import Sales from "../seller/sales";
 import Upgrade from "../seller/upgrade";
 import {AddProduct, Inventory, Incoterms} from "../seller/products";
 import ForgotPassword from "../buyer/forgot-password";
+import BuyerLayout from "../buyer/components/layout";
 
 
 
@@ -27,8 +28,12 @@ import {Trade,Feedback} from "../seller/trade";
 import BuyerInbox from "../buyer/pages/Inbox";
 import Homepage from "../buyer/pages/Homepage";
 import Wishlist from "../buyer/pages/Wishlist";
-//import ProductCard from "../buyer/components/ProductCard";
+import ProductCard from "../buyer/components/ProductCard";
 import CartPage from "../buyer/pages/Cartpage";
+import BuyerTrade from "../buyer/pages/trade";
+import ProductPage from "../buyer/pages/product";
+import OrderRequestQuantity from "../buyer/pages/order_request_quantity";
+import BuyerInformation from "../buyer/pages/buyer_information";
 
 const pageVariants = { 
   initial: { opacity: 0, x: -80 },
@@ -79,6 +84,15 @@ const AppRoutes = () => {
           <Route path="/buyer/inbox" element={<Animate page={<BuyerInbox />} />} />
           <Route path="/buyer/wishlist" element={<Animate page={<Wishlist />} />} />
           <Route path="/buyer/cartpage" element={<Animate page={<CartPage />} />} />
+          <Route path="/buyer/trade" element={<Animate page={<BuyerLayout content={<BuyerTrade />} />} />} />
+          <Route path="/buyer/product-page" element={<Animate page={<BuyerLayout content={<ProductPage />} />} />} />
+          <Route path="/buyer/product-request-quantity" element={<Animate page={<BuyerLayout content={<OrderRequestQuantity />} />} />} />
+          <Route path="/buyer/buyer-information" element={<Animate page={<BuyerLayout content={<BuyerInformation />} />} />} />
+
+
+            
+          
+          
           {/* Seller Routes */}
           <Route path="/seller/signin" element={<Animate page={<SellerSignin />} />} />
           <Route path="/seller/signup" element={<Animate page={<SellerSignup />} />} />
@@ -93,7 +107,7 @@ const AppRoutes = () => {
           <Route path="/seller/trade" element={<Animate page={<Layout Body={<Trade/>}/>} />} />
           <Route path="/seller/Product-Feedback" element={<Animate page={<Layout Body={<Feedback/>}/>} />} />
           <Route path="/seller/incoterms" element={<Animate page={<Layout Body={<Incoterms/>}/>} />} />
-          
+      
 
   
          

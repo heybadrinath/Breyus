@@ -87,21 +87,21 @@ const HorizontalLine: React.FC = () => {
   );
 }
 
-const Tab: React.FC<{ label: string; isActive: boolean; onClick: () => void }> = ({ label, isActive, onClick }) => {
+const Tab: React.FC<{ label: string; isActive: boolean; onClick: () => void; className?: string }> = ({ label, isActive, onClick, className = "" }) => {
   return (
     <div
       onClick={onClick}
       className={`cursor-pointer px-4 py-2 text-sm font-semibold transition-all duration-300 ease-in-out ${isActive ? 'text-black border-b-[3px] font-extrabold text-4xl border-gray-300' : 'text-gray-400 text-2xl'
-        }`}
+        } ${className}`}
     >
       {label}
     </div>
   );
 };
 
-const Tabs: React.FC<{ tabs: string[]; activeTab: string; onTabChange: (tab: string) => void }> = ({ tabs, activeTab, onTabChange }) => {
+const Tabs: React.FC<{ tabs: string[]; activeTab: string; onTabChange: (tab: string) => void; className?: string }> = ({ tabs, activeTab, onTabChange, className = "" }) => {
   return (
-    <div className="flex justify-start w-[98%] mx-auto border-b-[2px] border-gray-200">
+    <div className={`flex justify-center w-[98%] mx-auto border-b-[2px] border-gray-200 ${className}`}>
       {tabs.map((tab) => (
         <Tab
           key={tab}
@@ -544,4 +544,4 @@ const Trade: React.FC = () => {
 };
 
 
-export{Trade, Feedback};
+export{Trade,Tabs,Table,TableRow,PurchaseRequestStatus,PurchaseOrder,OngoingTrades,TrackTrade,Trackconsignment,Ratings,ProductName,ProductReviews,Feedback};
