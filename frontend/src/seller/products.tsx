@@ -513,7 +513,7 @@ const Tags: React.FC<ProductProps> = ({ setPageNo, productData = {} }) => {
       : "";
     
     // Combine tags and return max 5
-    const allTags = [...new Set([...nameTags, categoryTag])]
+    const allTags = Array.from(new Set([...nameTags, categoryTag]))
       .filter(tag => tag && tag.length > 2);
     
     return allTags.length > 0 ? allTags.slice(0, 5) : ["product", "item", "new"];
