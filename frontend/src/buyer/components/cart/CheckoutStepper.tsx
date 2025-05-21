@@ -24,7 +24,7 @@ const CheckoutStepper: React.FC<CheckoutStepperProps> = ({ currentStep }) => {
         <React.Fragment key={index}>
           <span
             className={
-              index === currentStep
+              index <= currentStep
                 ? "text-white"
                 : "text-gray-400"
             }
