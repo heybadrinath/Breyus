@@ -178,4 +178,12 @@ export class UsersService {
       throw error;
     }
   }
+
+  async findOneWithPassword(id: string): Promise<User | null> {
+    return this.usersRepository
+      .createQueryBuilder('user')
+      .where('user.id = :id', { id })
+      .addSelect('user.password') // This is needed because password is marked as select: false
+      .getOne();
+  }
 } 
