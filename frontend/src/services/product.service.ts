@@ -19,9 +19,51 @@ class ProductService {
 
       // Get user from localStorage (this will include the ID from JWT)
       const user = authService.getUser();
-      if (!user || !user.id) {
-        console.error('User ID not found in auth data');
-        return { success: false, message: 'User ID not found, please log in again' };
+      console.log('User from localStorage:', user);
+      
+      if (!user) {
+        console.error('No user data found in auth service');
+        return { success: false, message: 'No user data found, please log in again' };
+      }
+      
+      if (!user.id) {
+        console.error('User object found but no ID available:', user);
+        // Check if there's another ID field used in the user object
+        const potentialIdFields = ['_id', 'userId', 'uid'];
+        let foundId = null;
+        
+        for (const field of potentialIdFields) {
+          if (user[field]) {
+            foundId = user[field];
+            console.log(`Found alternative ID field: ${field} with value: ${foundId}`);
+            break;
+          }
+        }
+        
+        if (foundId) {
+          // Use the alternative ID field
+          const dataWithSellerId = {
+            ...productData,
+            sellerId: foundId
+          };
+          
+          console.log('Creating product with alternative seller ID:', foundId, dataWithSellerId);
+          
+          const response = await axios.post(API_URL, dataWithSellerId, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+          
+          console.log('Product created successfully:', response.data);
+          return { 
+            success: true, 
+            message: `Successfully added ${productData.name}`,
+            product: response.data 
+          };
+        } else {
+          return { success: false, message: 'User ID not found, please log in again' };
+        }
       }
 
       // Add the seller ID to the product data
@@ -30,7 +72,8 @@ class ProductService {
         sellerId: user.id
       };
 
-      console.log('Creating new product with seller ID:', user.id, dataWithSellerId);
+      console.log('Creating new product with seller ID:', user.id);
+      console.log('Full product data:', dataWithSellerId);
       
       const response = await axios.post(API_URL, dataWithSellerId, {
         headers: {
@@ -48,7 +91,8 @@ class ProductService {
       console.error('Error creating product:', error);
       
       if (axios.isAxiosError(error)) {
-        console.error('Server response:', error.response?.data);
+        console.error('Server response status:', error.response?.status);
+        console.error('Server response data:', error.response?.data);
         
         // If unauthorized, try to refresh token or log out
         if (error.response?.status === 401) {

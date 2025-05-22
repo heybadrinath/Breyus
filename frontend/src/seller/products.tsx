@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { RefreshCw } from "lucide-react";
 import "../seller/css/product.css";
+import { useNavigate } from "react-router-dom";
 
 // Configuration
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -13,6 +14,21 @@ interface ProductData {
   moq?: string;
   detailedDescription?: string;
   hsnCode?: string;
+  // Price related fields
+  price?: number | string;
+  currency?: string;
+  sku?: string;
+  onSale?: boolean;
+  discount?: number | string;
+  salePrice?: number | string;
+  costOfGoods?: number | string;
+  profit?: number | string;
+  margin?: number | string;
+  // Media related fields
+  productImageUrls?: string[];
+  testReportUrls?: string[];
+  productImageNames?: string[];
+  testReportNames?: string[];
 }
 
 interface PriceData {
@@ -147,7 +163,7 @@ const ProductLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 );
 
 // Product Information Component
-const ProductInformation: React.FC<ProductProps> = ({ setPageNo, updateProductData }) => {
+const ProductInformation: React.FC<ProductProps> = ({ setPageNo, updateProductData, productData = {} }) => {
   const [formData, setFormData] = useState<Omit<ProductData, 'category'> & { category: string }>({
     name: "",
     moq: "",
@@ -157,9 +173,53 @@ const ProductInformation: React.FC<ProductProps> = ({ setPageNo, updateProductDa
     hsnCode: ""
   });
 
+  // Load data from props if editing a product or from localStorage
+  useEffect(() => {
+    // First try to use productData from props (for editing)
+    if (productData && Object.keys(productData).length > 0) {
+      console.log("Initializing form with product data:", productData);
+      setFormData(prevData => ({
+        ...prevData,
+        name: productData.name || "",
+        moq: productData.moq || "",
+        description: productData.description || "",
+        detailedDescription: productData.detailedDescription || "",
+        category: productData.category || "",
+        hsnCode: productData.hsnCode || ""
+      }));
+    } else {
+      // Fall back to localStorage for saved draft data
+      const savedProductData = localStorage.getItem('productFormData');
+      if (savedProductData) {
+        try {
+          const parsedData = JSON.parse(savedProductData);
+          setFormData(prevData => ({
+            ...prevData,
+            name: parsedData.name || "",
+            moq: parsedData.moq || "",
+            description: parsedData.description || "",
+            detailedDescription: parsedData.detailedDescription || "",
+            category: parsedData.category || "",
+            hsnCode: parsedData.hsnCode || ""
+          }));
+        } catch (error) {
+          console.error('Error loading saved product data:', error);
+        }
+      }
+    }
+  }, [productData]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Save to localStorage on every change
+    const savedProductData = localStorage.getItem('productFormData');
+    const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
+    localStorage.setItem('productFormData', JSON.stringify({
+      ...parsedData,
+      [name]: value
+    }));
   };
 
   const stableUpdateProductData = useCallback((data: Partial<ProductData>) => {
@@ -252,9 +312,62 @@ const ProductInformation: React.FC<ProductProps> = ({ setPageNo, updateProductDa
 };
 
 // Media Component
-const Media: React.FC<ProductProps> = ({ setPageNo }) => {
+const Media: React.FC<ProductProps> = ({ setPageNo, productData = {} }) => {
   const [productImages, setProductImages] = useState<File[]>([]);
   const [testReports, setTestReports] = useState<File[]>([]);
+
+  // Store file names in localStorage, actual files can't be stored there
+  const saveFileInfoToLocalStorage = useCallback(() => {
+    const productImageNames = productImages.map(file => file.name);
+    const testReportNames = testReports.map(file => file.name);
+    
+    const savedProductData = localStorage.getItem('productFormData');
+    const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
+    
+    localStorage.setItem('productFormData', JSON.stringify({
+      ...parsedData,
+      productImageNames,
+      testReportNames
+    }));
+  }, [productImages, testReports]);
+  
+  // Load saved file names from localStorage or from product data (when editing)
+  useEffect(() => {
+    // First check if we're in edit mode with product data
+    if (productData && Object.keys(productData).length > 0) {
+      console.log("Editing existing product with media:", productData);
+      // Note: Since we can't restore actual File objects, just log the image URLs
+      // from the product data so we know they exist
+      if (productData.productImageUrls) {
+        console.log("Product images URLs:", productData.productImageUrls);
+      }
+      if (productData.testReportUrls) {
+        console.log("Test report URLs:", productData.testReportUrls);
+      }
+    }
+    
+    // Always check localStorage for any files selected in the current session
+    const savedProductData = localStorage.getItem('productFormData');
+    if (savedProductData) {
+      try {
+        const parsedData = JSON.parse(savedProductData);
+        // We can't restore actual files from localStorage, just show names
+        if (parsedData.productImageNames) {
+          console.log('Previously selected product images:', parsedData.productImageNames);
+        }
+        if (parsedData.testReportNames) {
+          console.log('Previously selected test reports:', parsedData.testReportNames);
+        }
+      } catch (error) {
+        console.error('Error loading saved media data:', error);
+      }
+    }
+  }, [productData]);
+
+  // Update localStorage when files change
+  useEffect(() => {
+    saveFileInfoToLocalStorage();
+  }, [productImages, testReports, saveFileInfoToLocalStorage]);
 
   return (
     <ProductLayout>
@@ -290,7 +403,7 @@ const Media: React.FC<ProductProps> = ({ setPageNo }) => {
 };
 
 // Price Component
-const Price: React.FC<ProductProps> = ({ setPageNo }) => {
+const Price: React.FC<ProductProps> = ({ setPageNo, productData = {} }) => {
   const [priceData, setPriceData] = useState<PriceData>({
     price: "",
     currency: "USD",
@@ -303,13 +416,72 @@ const Price: React.FC<ProductProps> = ({ setPageNo }) => {
     margin: ""
   });
 
+  // Load data from props if editing a product or from localStorage
+  useEffect(() => {
+    // First try to use productData from props (for editing)
+    if (productData && Object.keys(productData).length > 0) {
+      console.log("Initializing price form with product data:", productData);
+      setPriceData(prevData => ({
+        ...prevData,
+        price: productData.price?.toString() || "",
+        currency: productData.currency || "USD",
+        sku: productData.sku || "",
+        onSale: productData.onSale || false,
+        discount: productData.discount?.toString() || "",
+        salePrice: productData.salePrice?.toString() || "",
+        costOfGoods: productData.costOfGoods?.toString() || "",
+        profit: productData.profit?.toString() || "",
+        margin: productData.margin?.toString() || ""
+      }));
+    } else {
+      // Fall back to localStorage for saved draft data
+      const savedProductData = localStorage.getItem('productFormData');
+      if (savedProductData) {
+        try {
+          const parsedData = JSON.parse(savedProductData);
+          setPriceData(prevData => ({
+            ...prevData,
+            price: parsedData.price || "",
+            currency: parsedData.currency || "USD",
+            sku: parsedData.sku || "",
+            onSale: parsedData.onSale || false,
+            discount: parsedData.discount || "",
+            salePrice: parsedData.salePrice || "",
+            costOfGoods: parsedData.costOfGoods || "",
+            profit: parsedData.profit || "",
+            margin: parsedData.margin || ""
+          }));
+        } catch (error) {
+          console.error('Error loading saved price data:', error);
+        }
+      }
+    }
+  }, [productData]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setPriceData(prev => ({ ...prev, [name]: value }));
+    
+    // Save to localStorage on every change
+    const savedProductData = localStorage.getItem('productFormData');
+    const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
+    localStorage.setItem('productFormData', JSON.stringify({
+      ...parsedData,
+      [name]: value
+    }));
   };
 
   const toggleSale = () => {
-    setPriceData(prev => ({ ...prev, onSale: !prev.onSale }));
+    const newOnSale = !priceData.onSale;
+    setPriceData(prev => ({ ...prev, onSale: newOnSale }));
+    
+    // Save to localStorage
+    const savedProductData = localStorage.getItem('productFormData');
+    const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
+    localStorage.setItem('productFormData', JSON.stringify({
+      ...parsedData,
+      onSale: newOnSale
+    }));
   };
 
   useEffect(() => {
@@ -445,8 +617,26 @@ const Tags: React.FC<ProductProps> = ({ setPageNo, productData = {} }) => {
   const [tags, setTags] = useState<string[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const navigate = useNavigate();
 
+  // Load saved data from localStorage when component mounts
+  useEffect(() => {
+    const savedProductData = localStorage.getItem('productFormData');
+    if (savedProductData) {
+      try {
+        const parsedData = JSON.parse(savedProductData);
+        if (parsedData.tags && Array.isArray(parsedData.tags)) {
+          setTags(parsedData.tags);
+        }
+      } catch (error) {
+        console.error('Error loading saved tag data:', error);
+      }
+    }
+  }, []);
+  
   // Cleaner implementation of fetchSuggestedTags function
   const fetchSuggestedTags = useCallback(async () => {
     if (!productData?.name) {
@@ -487,6 +677,14 @@ const Tags: React.FC<ProductProps> = ({ setPageNo, productData = {} }) => {
         .slice(0, 5);
 
       setTags(newTags);
+      
+      // Save to localStorage
+      const savedProductData = localStorage.getItem('productFormData');
+      const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
+      localStorage.setItem('productFormData', JSON.stringify({
+        ...parsedData,
+        tags: newTags
+      }));
     } catch (err) {
       console.error("API Error:", err);
       // Fallback to generate some contextual tags
@@ -524,14 +722,159 @@ const Tags: React.FC<ProductProps> = ({ setPageNo, productData = {} }) => {
       e.preventDefault();
       const newTag = input.trim();
       if (!tags.includes(newTag)) {
-        setTags(prev => [...prev, newTag].slice(0, 5));
+        const updatedTags = [...tags, newTag].slice(0, 5);
+        setTags(updatedTags);
+        
+        // Save to localStorage
+        const savedProductData = localStorage.getItem('productFormData');
+        const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
+        localStorage.setItem('productFormData', JSON.stringify({
+          ...parsedData,
+          tags: updatedTags
+        }));
       }
       setInput("");
     }
   };
 
   const removeTag = (index: number) => {
-    setTags(prev => prev.filter((_, i) => i !== index));
+    const updatedTags = tags.filter((_, i) => i !== index);
+    setTags(updatedTags);
+    
+    // Update localStorage when removing a tag
+    const savedProductData = localStorage.getItem('productFormData');
+    const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
+    localStorage.setItem('productFormData', JSON.stringify({
+      ...parsedData,
+      tags: updatedTags
+    }));
+  };
+  
+  // Function to save product
+  const saveProduct = async () => {
+    if (!productData.name) {
+      setError("Product name is required");
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+    
+    try {
+      // First, check if user is authenticated and has a seller ID
+      const { default: authService } = await import('../services/auth.service');
+      const user = authService.getUser();
+      
+      if (!user) {
+        setError("You must be logged in to save products");
+        console.error("No user data found");
+        return;
+      }
+      
+      console.log("Current user:", user);
+      
+      // Check if user has an ID field
+      const userId = user.id || user._id || user.userId;
+      if (!userId) {
+        setError("User ID not found. Please log in again");
+        console.error("No user ID found in user data:", user);
+        return;
+      }
+      
+      const savedProductData = localStorage.getItem('productFormData');
+      const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
+      
+      // Ensure numeric fields are properly formatted as numbers
+      const completeProductData = {
+        // Required field
+        name: productData.name || '',
+        
+        // String fields from the form
+        category: productData.category || '',
+        moq: parsedData.moq || '',
+        preciseDescription: parsedData.description || '',
+        detailedDescription: parsedData.detailedDescription || '',
+        hsnCode: parsedData.hsnCode || '',
+        sku: parsedData.sku || '',
+        
+        // Numeric fields - ensure they're numbers, not strings
+        price: parsedData.price ? Number(parsedData.price) : 0,
+        discount: parsedData.discount ? Number(parsedData.discount) : 0,
+        salePrice: parsedData.salePrice ? Number(parsedData.salePrice) : 0,
+        costOfGoods: parsedData.costOfGoods ? Number(parsedData.costOfGoods) : 0,
+        profit: parsedData.profit ? Number(parsedData.profit) : 0,
+        margin: parsedData.margin ? Number(parsedData.margin) : 0,
+        quantity: 1, // Default quantity
+        
+        // Boolean fields
+        onSale: parsedData.onSale === true,
+        
+        // Array fields
+        tags: tags || [],
+        
+        // Explicitly add seller ID
+        sellerId: userId
+      };
+      
+      console.log('Saving product with data:', completeProductData);
+      
+      // Use product service to save the product with seller ID from JWT
+      const { default: productService } = await import('../services/product.service');
+      const result = await productService.createProduct(completeProductData);
+      
+      if (result.success) {
+        // Set success message
+        setSuccessMessage(`Successfully added ${productData.name}`);
+        
+        // Clear localStorage
+        localStorage.removeItem('productFormData');
+        
+        // Redirect to inventory page after 2 seconds
+        setTimeout(() => {
+          navigate('/seller/inventory');
+        }, 2000);
+      } else {
+        setError(result.message || 'Failed to save product');
+      }
+    } catch (err) {
+      console.error("Error saving product:", err);
+      setError("Failed to save product. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Add this debug function to the Tags component
+  const debugAuthAndData = () => {
+    try {
+      // Import auth service
+      import('../services/auth.service').then(module => {
+        const authService = module.default;
+        
+        // Check authentication
+        const token = authService.getToken();
+        console.log('AUTH DEBUG - Token exists:', !!token);
+        
+        // Check user data
+        const user = authService.getUser();
+        console.log('AUTH DEBUG - User data:', user);
+        
+        // Check product data
+        const savedProductData = localStorage.getItem('productFormData');
+        const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
+        console.log('AUTH DEBUG - Product data:', parsedData);
+        
+        // Show user data in a message
+        if (user) {
+          setSuccessMessage(`Debug: User ID is ${user.id || 'not found'}. Role: ${user.role || 'unknown'}`);
+        } else {
+          setError('No user data found. Please log in again.');
+        }
+      });
+    } catch (err) {
+      console.error('Debug error:', err);
+      setError('Error in debug function');
+    }
   };
 
   return (
@@ -540,7 +883,13 @@ const Tags: React.FC<ProductProps> = ({ setPageNo, productData = {} }) => {
         <div className="flex flex-col w-full">
           <div className="flex justify-between items-center mb-2">
             <span className="text-gray-500">Tags: {tags.length}/5</span>
-            <div className="flex items-center">
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={debugAuthAndData}
+                className="text-xs text-gray-500 underline"
+              >
+                Debug Auth
+              </button>
               <button 
                 onClick={fetchSuggestedTags}
                 disabled={isLoading || !productData?.name}
@@ -568,6 +917,12 @@ const Tags: React.FC<ProductProps> = ({ setPageNo, productData = {} }) => {
           {error && (
             <div className="text-sm mb-2 p-2 rounded bg-yellow-50 text-yellow-600">
               {error}
+            </div>
+          )}
+          
+          {successMessage && (
+            <div className="text-sm mb-2 p-2 rounded bg-green-50 text-green-600 font-semibold">
+              {successMessage}
             </div>
           )}
           
@@ -617,9 +972,11 @@ const Tags: React.FC<ProductProps> = ({ setPageNo, productData = {} }) => {
             Prev
           </button>
           <button 
+            onClick={saveProduct}
+            disabled={isSaving}
             className="bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md ml-auto w-fit"
           >
-            Add your Terms
+            {isSaving ? 'Saving...' : 'Save Product'}
           </button>
         </div>
       </div>
@@ -631,15 +988,105 @@ const Tags: React.FC<ProductProps> = ({ setPageNo, productData = {} }) => {
 export const AddProduct: React.FC = () => {
   const [pageNo, setPageNo] = useState(0);
   const [productData, setProductData] = useState<Partial<ProductData>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+  
+  // Parse URL parameters
+  const location = window.location;
+  const params = new URLSearchParams(location.search);
+  const isNewProduct = params.get('new') === 'true';
+  const editProductId = params.get('edit');
+  
+  // Load product data - either from localStorage or fetch from API if editing
+  useEffect(() => {
+    const loadProductData = async () => {
+      // If creating a new product, localStorage should already be cleared
+      if (isNewProduct) {
+        console.log("Creating new product");
+        return;
+      }
+      
+      // If editing a product
+      if (editProductId) {
+        setIsLoading(true);
+        try {
+          console.log(`Loading product ${editProductId} for editing`);
+          
+          // Check if we already have the product data in localStorage
+          const savedData = localStorage.getItem('productFormData');
+          if (savedData) {
+            const parsedData = JSON.parse(savedData);
+            setProductData(parsedData);
+            console.log("Loaded product data from localStorage:", parsedData);
+          } else {
+            // Fetch product data if not in localStorage
+            const { default: productService } = await import('../services/product.service');
+            const result = await productService.getProductById(editProductId);
+            
+            if (result.success && result.product) {
+              setProductData(result.product);
+              localStorage.setItem('productFormData', JSON.stringify(result.product));
+              console.log("Loaded product data from API:", result.product);
+            } else {
+              console.error("Failed to load product:", result.message);
+              alert("Could not load product data. Redirecting to inventory.");
+              navigate('/seller/inventory');
+            }
+          }
+        } catch (error) {
+          console.error("Error loading product:", error);
+          alert("An error occurred while loading the product. Redirecting to inventory.");
+          navigate('/seller/inventory');
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        // Neither new nor edit - redirect to inventory
+        console.warn('No product mode specified in URL');
+        navigate('/seller/inventory');
+      }
+    };
+    
+    loadProductData();
+  }, [isNewProduct, editProductId, navigate]);
 
+  // Update product data & save to localStorage
   const updateProductData = useCallback((newData: Partial<ProductData>) => {
-    setProductData(prev => ({ ...prev, ...newData }));
+    setProductData(prev => {
+      const updated = { ...prev, ...newData };
+      
+      // Save to localStorage whenever product data changes
+      try {
+        const savedProductData = localStorage.getItem('productFormData');
+        const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
+        localStorage.setItem('productFormData', JSON.stringify({
+          ...parsedData,
+          ...updated
+        }));
+      } catch (error) {
+        console.error('Error saving product data to localStorage:', error);
+      }
+      
+      return updated;
+    });
   }, []);
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="w-[840px] h-[600px] mx-auto my-14 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-lg text-gray-600">Loading product data...</p>
+        </div>
+      </div>
+    );
+  }
+
   const pages = [
-    <ProductInformation setPageNo={setPageNo} updateProductData={updateProductData} key="info" />,
-    <Media setPageNo={setPageNo} key="media" />,
-    <Price setPageNo={setPageNo} key="price" />,
+    <ProductInformation setPageNo={setPageNo} updateProductData={updateProductData} productData={productData} key="info" />,
+    <Media setPageNo={setPageNo} productData={productData} key="media" />,
+    <Price setPageNo={setPageNo} productData={productData} key="price" />,
     <Tags setPageNo={setPageNo} productData={productData} key="tags" />
   ];
 
@@ -648,13 +1095,67 @@ export const AddProduct: React.FC = () => {
 
 // Inventory Component
 export const Inventory: React.FC = () => {
-  const [products] = useState([
-    { id: 1, name: "Product 1", category: "Oils", price: "$1298", sku: "22423232", quantity: 0, status: "Out of Stock" },
-    { id: 2, name: "Product 2", category: "Oils", price: "$1298", sku: "22423233", quantity: 10, status: "In Stock" },
-    { id: 3, name: "Product 3", category: "Oils", price: "$1298", sku: "22423234", quantity: 5, status: "In Stock" },
-    { id: 4, name: "Product 4", category: "Oils", price: "$1298", sku: "22423235", quantity: 20, status: "In Stock" },
-    { id: 5, name: "Product 5", category: "Oils", price: "$1298", sku: "22423236", quantity: 15, status: "In Stock" }
-  ]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  // Fetch seller's products on component mount
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const { default: productService } = await import('../services/product.service');
+        const result = await productService.getSellerProducts();
+        
+        if (result.success) {
+          console.log('Loaded seller products:', result.products);
+          setProducts(result.products);
+        } else {
+          setError(result.message || 'Failed to load products');
+        }
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        setError('An error occurred while loading products');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  // Navigate to add product page
+  const handleAddNewProduct = () => {
+    // Clear any existing product data in localStorage
+    localStorage.removeItem('productFormData');
+    // Navigate to add product page with new=true parameter
+    navigate('/seller/add-products?new=true');
+  };
+
+  // Handle edit product
+  const handleEditProduct = async (productId: string) => {
+    try {
+      setLoading(true);
+      const { default: productService } = await import('../services/product.service');
+      const result = await productService.getProductById(productId);
+      
+      if (result.success && result.product) {
+        // Save product data to localStorage for form to use
+        localStorage.setItem('productFormData', JSON.stringify(result.product));
+        // Navigate to add product page with edit parameter including product ID
+        navigate(`/seller/add-products?edit=${productId}`);
+      } else {
+        alert(result.message || 'Failed to load product data');
+      }
+    } catch (err) {
+      console.error('Error loading product for edit:', err);
+      alert('An error occurred while loading the product');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col w-[80%] h-fit mx-auto my-14 shadow-lg rounded-lg border-[#00000021] border-[2px] p-8">
@@ -664,7 +1165,10 @@ export const Inventory: React.FC = () => {
           <p className="text-[#00000048]">Manage your product inventory</p>
         </div>
         <div>
-          <button className="mx-3 bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-2 rounded-md w-fit">
+          <button 
+            onClick={handleAddNewProduct}
+            className="mx-3 bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-2 rounded-md w-fit"
+          >
             New Product
           </button>
           <button className="mx-3 border-[1px] text-blue-500 border-blue-500 px-8 py-2 rounded-md w-fit">
@@ -676,47 +1180,72 @@ export const Inventory: React.FC = () => {
         </div>
       </div>
 
-      <div className="overflow-x-auto my-8">
-        <table className="min-w-full">
-          <thead>
-            <tr className="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
-              <th className="py-3 px-6 text-left">Product</th>
-              <th className="py-3 px-6 text-left">Category</th>
-              <th className="py-3 px-6 text-left">Price</th>
-              <th className="py-3 px-6 text-left">SKU</th>
-              <th className="py-3 px-6 text-left">Quantity</th>
-              <th className="py-3 px-6 text-left">Status</th>
-              <th className="py-3 px-6 text-left">Action</th>
-            </tr>
-          </thead>
-          <tbody className="text-gray-600 text-sm font-light">
-            {products.map((product) => (
-              <tr key={product.id} className="border-b border-gray-200 hover:bg-gray-100">
-                <td className="py-6 px-6 text-left">
-                  <input type="checkbox" className="form-checkbox" />
-                  <span className="ml-2">{product.name}</span>
-                </td>
-                <td className="py-6 px-6 text-left">{product.category}</td>
-                <td className="py-6 px-6 text-left">{product.price}</td>
-                <td className="py-6 px-6 text-left">{product.sku}</td>
-                <td className="py-6 px-6 text-left">{product.quantity}</td>
-                <td className="py-6 px-6 text-left">
-                  <span className={`py-1 px-3 rounded-full text-xs ${
-                    product.status === "In Stock" 
-                      ? "bg-green-200 text-green-800" 
-                      : "bg-red-300 text-red-800"
-                  }`}>
-                    {product.status}
-                  </span>
-                </td>
-                <td className="py-6 px-6 text-left">
-                  <button className="text-blue-500 hover:text-blue-700">Edit</button>
-                </td>
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+        </div>
+      ) : error ? (
+        <div className="text-center text-red-500 p-4 my-8">
+          {error} <button className="underline ml-2" onClick={() => window.location.reload()}>Retry</button>
+        </div>
+      ) : products.length === 0 ? (
+        <div className="text-center p-10 my-8 border border-dashed border-gray-300 rounded-lg">
+          <p className="text-gray-500 mb-4">You don't have any products yet</p>
+          <button 
+            onClick={handleAddNewProduct}
+            className="bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-2 rounded-md"
+          >
+            Add Your First Product
+          </button>
+        </div>
+      ) : (
+        <div className="overflow-x-auto my-8">
+          <table className="min-w-full">
+            <thead>
+              <tr className="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                <th className="py-3 px-6 text-left">Product</th>
+                <th className="py-3 px-6 text-left">Category</th>
+                <th className="py-3 px-6 text-left">Price</th>
+                <th className="py-3 px-6 text-left">SKU</th>
+                <th className="py-3 px-6 text-left">Quantity</th>
+                <th className="py-3 px-6 text-left">Status</th>
+                <th className="py-3 px-6 text-left">Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="text-gray-600 text-sm font-light">
+              {products.map((product) => (
+                <tr key={product.id} className="border-b border-gray-200 hover:bg-gray-100">
+                  <td className="py-6 px-6 text-left">
+                    <input type="checkbox" className="form-checkbox" />
+                    <span className="ml-2">{product.name}</span>
+                  </td>
+                  <td className="py-6 px-6 text-left">{product.category}</td>
+                  <td className="py-6 px-6 text-left">${product.price}</td>
+                  <td className="py-6 px-6 text-left">{product.sku || '-'}</td>
+                  <td className="py-6 px-6 text-left">{product.quantity}</td>
+                  <td className="py-6 px-6 text-left">
+                    <span className={`py-1 px-3 rounded-full text-xs ${
+                      product.quantity > 0 
+                        ? "bg-green-200 text-green-800" 
+                        : "bg-red-300 text-red-800"
+                    }`}>
+                      {product.quantity > 0 ? "In Stock" : "Out of Stock"}
+                    </span>
+                  </td>
+                  <td className="py-6 px-6 text-left">
+                    <button 
+                      className="text-blue-500 hover:text-blue-700"
+                      onClick={() => handleEditProduct(product.id)}
+                    >
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };
