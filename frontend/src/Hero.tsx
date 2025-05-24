@@ -35,32 +35,32 @@ const Navbar = () => (
 
 const Section3 = () => (
     <BorderBox>
-        <div className="flex overflow-x-hidden">
-            <div id="left-content" className="mx-12 my-auto">
+        <div className="flex">
+            <div id="left-content" className="mx-auto my-auto">
                 <h1 className="text-5xl font-extrabold">
                     <span>Unlock Efficiency with</span>
-                    <br />
+                    <br/>
                     <span className="text-[#867C5B]">Intelligent Automation.</span>
-                </h1>
-                <Section3Content icons={PersonalisedAnalysisImg} heading="Personalised Analysis." paragraph="Smart insights tailored to your trade data." />
-                <Section3Content icons={IntegratedDashboardImg} heading="Integrated Dashboard." paragraph="All your operations. One clear view." />
-                <Section3Content icons={SeamlessIncotermsImg} heading="Seamless Incoterms." paragraph="Auto-mapped Incoterms for smooth global deals." />
-                <Section3Content icons={AutomatedDocumentationImg} heading="Automated Documentation." paragraph="Instant, error-free document generation." />
-                <Section3Content icons={SecuredTradeDealsImg} heading="Secured Trade Deals." paragraph="AI-backed security for every transaction." />
-                <Section3Content icons={SecureSettlementSystemImg} heading="Secured Settlement System." paragraph="Fast, protected, and reliable settlements." />
+                    </h1>
+                <Section3Content icons={PersonalisedAnalysisImg} heading="Personalised Analysis." paragraph="Smart insights tailored to your trade data."/>
+                <Section3Content icons={IntegratedDashboardImg} heading="Integrated Dashboard." paragraph="All your operations. One clear view."/>
+                <Section3Content icons={SeamlessIncotermsImg} heading="Seamless Incoterms." paragraph="Auto-mapped Incoterms for smooth global deals."/>
+                <Section3Content icons={AutomatedDocumentationImg} heading="Automated Documentation." paragraph="Instant, error-free document generation."/>
+                <Section3Content icons={SecuredTradeDealsImg} heading="Secured Trade Deals." paragraph="AI-backed security for every transaction."/>
+                <Section3Content icons={SecureSettlementSystemImg} heading="Secured Settlement System." paragraph="Fast, protected, and reliable settlements."/>
 
             </div>
 
             <motion.div
-                initial={{ x: '100%', opacity: 0 }}
-                whileInView={{ x: 0, opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.8, ease: 'easeOut' }}
-                className="w-[50vw] overflow-hidden ml-auto flex">
-                <img className="w-full" src={LaptopHero} alt="" />
-            </motion.div>
+            initial={{ x: '100%', opacity: 0 }}
+            whileInView={{ x: '31.5%', opacity: 1 }}
+            viewport={{once: true}}
+            transition={{ duration: 0.8, ease: 'easeOut' }}
+            className="w-[50vw] ml-auto">
+            <img className="w-full" src={LaptopHero} alt="" />
+        </motion.div>
         </div>
-
+        
     </BorderBox>
 );
 
@@ -105,10 +105,10 @@ const BorderBox: React.FC<BorderBoxProps> = ({ className = '', children }) => (
     </div>
 )
 
-const Section3Content: React.FC<Section3ContentProps> = ({ heading, paragraph, icons = '' }) => (
+const Section3Content: React.FC<Section3ContentProps> = ({heading, paragraph, icons= ''}) => (
     <div className="flex my-6">
         <img src={icons} className="mb-auto m-2" alt="" />
-        <p className="px-3 w-[400px] text-xl"><span className="text-black font-bold">{heading}</span> <span className="text-[#696969]">{paragraph}</span></p>
+        <p className="px-3 w-[400px] text-2xl"><span className="text-black font-bold">{heading}</span> <span className="text-[#696969]">{paragraph}</span></p>
     </div>
 )
 
