@@ -38,6 +38,7 @@ import BuyerInformation from "../buyer/pages/buyer_information";
 import BuyerAddress from "../buyer/pages/buyer_address";
 import PurchaseRequest from "../buyer/pages/purchase-request";
 import PurchaseRequestSuccess from "../buyer/pages/PurchaseRequestSuccess";
+// import Aipages from "../buyer/pages/Aipages";
 
 const pageVariants = { 
   initial: { opacity: 0, x: -80 },
@@ -96,6 +97,9 @@ const AppRoutes = () => {
           <Route path="/buyer/buyer-information" element={<Animate page={<BuyerLayout content={<BuyerInformation />} />} />} />
           <Route path="/buyer/purchase-request" element={<Animate page={<PurchaseRequest />} />} />
           <Route path="/buyer/purchase-request-success" element={<Animate page={<PurchaseRequestSuccess />} />} />          
+
+          {/* AI Routes */}
+          {/* <Route path="/buyer/aipage" element={<Animate page={<Aipages />} />} /> */}
           
 
 
