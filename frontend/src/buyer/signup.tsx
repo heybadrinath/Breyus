@@ -100,7 +100,7 @@ const Signup: React.FC = () => {
 
       if (response.data.success) {
         // Registration successful, redirect to dashboard
-        navigate("/buyer/dashboard");
+        navigate("/buyer/homepage");
       } else {
         setError(response.data.message || "Invalid OTP. Please try again.");
       }

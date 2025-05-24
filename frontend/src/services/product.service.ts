@@ -1,5 +1,6 @@
 import axios from 'axios';
 import authService from './auth.service';
+import { Product } from '../types/product';
 
 // Get API URL from environment or use default
 const API_URL = process.env.REACT_APP_API_URL 
@@ -19,51 +20,9 @@ class ProductService {
 
       // Get user from localStorage (this will include the ID from JWT)
       const user = authService.getUser();
-      console.log('User from localStorage:', user);
-      
-      if (!user) {
-        console.error('No user data found in auth service');
-        return { success: false, message: 'No user data found, please log in again' };
-      }
-      
-      if (!user.id) {
-        console.error('User object found but no ID available:', user);
-        // Check if there's another ID field used in the user object
-        const potentialIdFields = ['_id', 'userId', 'uid'];
-        let foundId = null;
-        
-        for (const field of potentialIdFields) {
-          if (user[field]) {
-            foundId = user[field];
-            console.log(`Found alternative ID field: ${field} with value: ${foundId}`);
-            break;
-          }
-        }
-        
-        if (foundId) {
-          // Use the alternative ID field
-          const dataWithSellerId = {
-            ...productData,
-            sellerId: foundId
-          };
-          
-          console.log('Creating product with alternative seller ID:', foundId, dataWithSellerId);
-          
-          const response = await axios.post(API_URL, dataWithSellerId, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-          
-          console.log('Product created successfully:', response.data);
-          return { 
-            success: true, 
-            message: `Successfully added ${productData.name}`,
-            product: response.data 
-          };
-        } else {
-          return { success: false, message: 'User ID not found, please log in again' };
-        }
+      if (!user || !user.id) {
+        console.error('User ID not found in auth data');
+        return { success: false, message: 'User ID not found, please log in again' };
       }
 
       // Add the seller ID to the product data
@@ -72,8 +31,7 @@ class ProductService {
         sellerId: user.id
       };
 
-      console.log('Creating new product with seller ID:', user.id);
-      console.log('Full product data:', dataWithSellerId);
+      console.log('Creating new product with seller ID:', user.id, dataWithSellerId);
       
       const response = await axios.post(API_URL, dataWithSellerId, {
         headers: {
@@ -91,8 +49,7 @@ class ProductService {
       console.error('Error creating product:', error);
       
       if (axios.isAxiosError(error)) {
-        console.error('Server response status:', error.response?.status);
-        console.error('Server response data:', error.response?.data);
+        console.error('Server response:', error.response?.data);
         
         // If unauthorized, try to refresh token or log out
         if (error.response?.status === 401) {
@@ -163,30 +120,39 @@ class ProductService {
 
   async getProductById(productId: string) {
     try {
-      console.log(`Fetching product details for ID: ${productId}`);
+      console.log('Fetching product by ID:', productId);
       
-      // Get product details without authentication for faster loading
-      // (We'll check ownership on the server side for any edits)
       const response = await axios.get(`${API_URL}/${productId}`);
+      
+      console.log('Product details received:', response.data);
+      
+      // Process images based on actual backend structure
+      const productWithImages = {
+        ...response.data,
+        images: response.data.productImage ? [response.data.productImage] : [],
+        primaryImage: response.data.productImage || '/placeholder-product.svg',
+        sellerName: response.data.seller ? 
+          `${response.data.seller.firstName || ''} ${response.data.seller.lastName || ''}`.trim() || 'Unknown Seller' :
+          'Unknown Seller'
+      };
       
       return { 
         success: true, 
-        product: response.data 
+        product: productWithImages 
       };
     } catch (error) {
-      console.error(`Error fetching product ${productId}:`, error);
+      console.error('Error fetching product by ID:', error);
       
       if (axios.isAxiosError(error)) {
-        // If product not found
-        if (error.response?.status === 404) {
-          return { 
-            success: false, 
-            message: 'Product not found' 
-          };
-        }
+        console.error('Server response:', error.response?.data);
+        return { 
+          success: false, 
+          message: error.response?.data?.message || 'Failed to fetch product',
+          product: null 
+        };
       }
       
-      return { success: false, message: 'Failed to fetch product details' };
+      return { success: false, message: 'Failed to fetch product', product: null };
     }
   }
 
@@ -240,6 +206,131 @@ class ProductService {
       }
       
       return { success: false, message: 'Failed to update product' };
+    }
+  }
+
+  // Fetch all products for the marketplace with optional filters
+  async getAllProducts(filters?: { category?: string; search?: string; minPrice?: number; maxPrice?: number }): Promise<{ success: boolean; message?: string; products: Product[] }> {
+    try {
+      console.log('Fetching all products for marketplace');
+      
+      let url = `${API_URL}`;
+      const params = new URLSearchParams();
+      
+      if (filters?.category) params.append('category', filters.category);
+      if (filters?.search) params.append('search', filters.search);
+      if (filters?.minPrice) params.append('minPrice', filters.minPrice.toString());
+      if (filters?.maxPrice) params.append('maxPrice', filters.maxPrice.toString());
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
+      const response = await axios.get(url);
+      
+      console.log('All products received:', response.data.length);
+      
+      // Process images for each product based on actual backend structure
+      const productsWithImages = response.data.map((product: any) => {
+        const sellerName = product.seller ? 
+          `${product.seller.firstName || ''} ${product.seller.lastName || ''}`.trim() :
+          '';
+        
+        return {
+          ...product,
+          images: product.productImage ? [product.productImage] : [],
+          primaryImage: product.productImage || '/placeholder-product.svg',
+          sellerName: sellerName || 'Unknown Seller',
+          // Ensure all required fields are present
+          description: product.preciseDescription || product.description || '',
+          detailedDescription: product.detailedDescription || ''
+        };
+      });
+      
+      return { 
+        success: true, 
+        products: productsWithImages 
+      };
+    } catch (error) {
+      console.error('Error fetching all products:', error);
+      
+      if (axios.isAxiosError(error)) {
+        console.error('Server response:', error.response?.data);
+        return { 
+          success: false, 
+          message: error.response?.data?.message || 'Failed to fetch products',
+          products: [] 
+        };
+      }
+      
+      return { success: false, message: 'Failed to fetch products', products: [] };
+    }
+  }
+
+  // Search products
+  async searchProducts(searchTerm: string, filters?: { category?: string; minPrice?: number; maxPrice?: number }) {
+    try {
+      console.log('Searching products with term:', searchTerm);
+      
+      const params = new URLSearchParams();
+      params.append('search', searchTerm);
+      
+      if (filters?.category) params.append('category', filters.category);
+      if (filters?.minPrice) params.append('minPrice', filters.minPrice.toString());
+      if (filters?.maxPrice) params.append('maxPrice', filters.maxPrice.toString());
+      
+      const response = await axios.get(`${API_URL}/search?${params.toString()}`);
+      
+      console.log('Search results received:', response.data.length);
+      
+      // Process images for each product based on actual backend structure
+      const productsWithImages = response.data.map((product: any) => ({
+        ...product,
+        images: product.productImage ? [product.productImage] : [],
+        primaryImage: product.productImage || '/placeholder-product.svg',
+        sellerName: product.seller ? 
+          `${product.seller.firstName || ''} ${product.seller.lastName || ''}`.trim() || 'Unknown Seller' :
+          'Unknown Seller'
+      }));
+      
+      return { 
+        success: true, 
+        products: productsWithImages 
+      };
+    } catch (error) {
+      console.error('Error searching products:', error);
+      return { success: false, message: 'Failed to search products', products: [] };
+    }
+  }
+
+  // Get featured/recommended products
+  async getFeaturedProducts(limit: number = 10) {
+    try {
+      console.log('Fetching featured products');
+      
+      const response = await axios.get(`${API_URL}/featured?limit=${limit}`);
+      
+      console.log('Featured products received:', response.data.length);
+      
+      // Process images for each product based on actual backend structure
+      const productsWithImages = response.data.map((product: any) => ({
+        ...product,
+        images: product.productImage ? [product.productImage] : [],
+        primaryImage: product.productImage || '/placeholder-product.svg',
+        sellerName: product.seller ? 
+          `${product.seller.firstName || ''} ${product.seller.lastName || ''}`.trim() || 'Unknown Seller' :
+          'Unknown Seller'
+      }));
+      
+      return { 
+        success: true, 
+        products: productsWithImages 
+      };
+    } catch (error) {
+      console.error('Error fetching featured products:', error);
+      
+      // Fallback to getting all products if featured endpoint doesn't exist
+      return this.getAllProducts();
     }
   }
 }

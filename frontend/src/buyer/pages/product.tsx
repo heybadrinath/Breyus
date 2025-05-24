@@ -58,7 +58,8 @@ const ProductPage: React.FC = () => {
                 <div style={{ margin: "24px 0 16px 0", fontSize: 22, fontWeight: 700 }}>
                     Price : <span style={{ fontWeight: 900 }}>₹4,500,000.00</span>
                 </div>
-                <button
+                <button 
+                    onClick={() => {window.location.href=`/buyer/product-request-quantity`}}
                     style={{
                         width: "100%",
                         padding: "18px 0",

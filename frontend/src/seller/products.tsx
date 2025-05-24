@@ -1,34 +1,73 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { RefreshCw } from "lucide-react";
+import React, { useCallback, useEffect, useState, ReactNode } from "react";
+import { motion } from "framer-motion";
+import { RefreshCw, Trash, Package, AlertTriangle, CheckCircle, Edit2 } from "lucide-react";
 import "../seller/css/product.css";
-import { useNavigate } from "react-router-dom";
+import { Layout } from "./components";
+import productService from "../services/product.service";
+import authService from "../services/auth.service";
+import { Product } from "../types/product";
 
-// Configuration
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const variants = {
+  initial: { opacity: 0, x: -100 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: 100 }
+};
 
-// Type Definitions
+// Product Layout Component
+const ProductLayout = ({ productype, Body }: { productype: string, Body: ReactNode }) => {
+  const steps = ["product", "media", "price", "tags"];
+  const currentIndex = steps.indexOf(productype);
+
+  return (
+    <motion.div
+      variants={variants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={{ duration: 0.5 }}
+      className="relative p-6 bg-gray-50 min-h-screen overflow-y-auto"
+    >
+      <div className="step-indicator mb-8">
+        {steps.map((step, index) => (
+          <div
+            key={step}
+            className={`step ${index <= currentIndex ? 'active' : ''}`}
+          >
+            <div className="step-number">{index + 1}</div>
+            <span className="step-label">{step.charAt(0).toUpperCase() + step.slice(1)}</span>
+          </div>
+        ))}
+      </div>
+      
+      <div className="max-w-6xl mx-auto">
+        {Body}
+      </div>
+    </motion.div>
+  );
+};
+
+// Interface to define product data structure
 interface ProductData {
+  id?: string;
   name: string;
   category?: string;
   description?: string;
   moq?: string;
   detailedDescription?: string;
   hsnCode?: string;
-  // Price related fields
-  price?: number | string;
+  productImage?: string;
+  testReports?: string;
+  price?: number;
   currency?: string;
   sku?: string;
   onSale?: boolean;
-  discount?: number | string;
-  salePrice?: number | string;
-  costOfGoods?: number | string;
-  profit?: number | string;
-  margin?: number | string;
-  // Media related fields
-  productImageUrls?: string[];
-  testReportUrls?: string[];
-  productImageNames?: string[];
-  testReportNames?: string[];
+  discount?: number;
+  salePrice?: number;
+  costOfGoods?: number;
+  profit?: number;
+  margin?: number;
+  quantity?: number;
+  tags?: string[];
 }
 
 interface PriceData {
@@ -41,6 +80,7 @@ interface PriceData {
   costOfGoods: string;
   profit: string;
   margin: string;
+  quantity: string;
 }
 
 interface ProductProps {
@@ -110,12 +150,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onChange, value = [] }) => {
   }, [files]);
 
   return (
-    <div className="flex flex-col w-full p-2">
+    <div className="w-full animate-slide-in">
       <label
         htmlFor="image-upload-input"
-        className={`border-2 border-gray-200 rounded-xl w-full h-[220px] p-4 flex flex-col items-center justify-center cursor-pointer transition-colors ${
-          dragActive ? "border-blue-400 bg-blue-50" : ""
-        }`}
+        className={`image-upload-container ${dragActive ? "dragging" : ""}`}
         onDragEnter={handleDrag}
         onDragOver={handleDrag}
         onDragLeave={handleDrag}
@@ -133,17 +171,20 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onChange, value = [] }) => {
           onChange={(e) => handleFiles(e.target.files)}
         />
         {files.length === 0 ? (
-          <span className="text-gray-400 text-lg text-center">
-            Drop image files here and upload<br />or <span className="underline text-blue-500">browse</span>
+          <div className="flex flex-col items-center transition-all duration-300 transform hover:scale-105">
+            <RefreshCw className="w-12 h-12 text-gray-400 mb-3" />
+            <span className="text-gray-500 text-base text-center">
+              Drop image files here<br />or <span className="underline text-blue-500">browse</span>
           </span>
+          </div>
         ) : (
-          <div className="flex flex-wrap gap-2 justify-center">
+          <div className="flex flex-wrap gap-3 justify-center">
             {files.map((file, idx) => (
               <img
                 key={idx}
                 src={URL.createObjectURL(file)}
                 alt={file.name}
-                className="w-20 h-20 object-cover rounded border"
+                className="w-20 h-20 object-cover rounded-md border shadow-sm image-upload-preview"
               />
             ))}
           </div>
@@ -153,131 +194,100 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onChange, value = [] }) => {
   );
 };
 
-// Product Layout Component
-const ProductLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="w-[840px] h-[fit] mx-auto my-14 flex flex-col">
-    <div className="w-[850px] h-[600px] px-4 absolute py-8 translate-y-16 border-[#00000021] shadow-lg rounded-lg border-[2px]">
-      {children}
-    </div>
-  </div>
-);
-
 // Product Information Component
 const ProductInformation: React.FC<ProductProps> = ({ setPageNo, updateProductData, productData = {} }) => {
   const [formData, setFormData] = useState<Omit<ProductData, 'category'> & { category: string }>({
-    name: "",
-    moq: "",
-    description: "",
-    detailedDescription: "",
-    category: "",
-    hsnCode: ""
+    name: productData.name || "",
+    moq: productData.moq || "",
+    description: productData.description || "",
+    detailedDescription: productData.detailedDescription || "",
+    category: productData.category || "",
+    hsnCode: productData.hsnCode || ""
   });
 
-  // Load data from props if editing a product or from localStorage
+  // Determine if we're in edit mode based on whether product has an ID
+  const isEditMode = Boolean(productData?.id);
+
+  // Update local state when productData changes (e.g., navigating back)
+  // Only run on initial mount or when productData.name changes (to avoid circular updates)
   useEffect(() => {
-    // First try to use productData from props (for editing)
-    if (productData && Object.keys(productData).length > 0) {
-      console.log("Initializing form with product data:", productData);
-      setFormData(prevData => ({
-        ...prevData,
-        name: productData.name || "",
-        moq: productData.moq || "",
-        description: productData.description || "",
-        detailedDescription: productData.detailedDescription || "",
-        category: productData.category || "",
-        hsnCode: productData.hsnCode || ""
-      }));
-    } else {
-      // Fall back to localStorage for saved draft data
-      const savedProductData = localStorage.getItem('productFormData');
-      if (savedProductData) {
-        try {
-          const parsedData = JSON.parse(savedProductData);
-          setFormData(prevData => ({
-            ...prevData,
-            name: parsedData.name || "",
-            moq: parsedData.moq || "",
-            description: parsedData.description || "",
-            detailedDescription: parsedData.detailedDescription || "",
-            category: parsedData.category || "",
-            hsnCode: parsedData.hsnCode || ""
-          }));
-        } catch (error) {
-          console.error('Error loading saved product data:', error);
-        }
-      }
-    }
-  }, [productData]);
+    setFormData({
+      name: productData.name || "",
+      moq: productData.moq || "",
+      description: productData.description || "",
+      detailedDescription: productData.detailedDescription || "",
+      category: productData.category || "",
+      hsnCode: productData.hsnCode || ""
+    });
+  }, []);  // Removed productData dependency to avoid glitching
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const updatedData = { ...formData, [name]: value };
+    setFormData(updatedData);
     
-    // Save to localStorage on every change
-    const savedProductData = localStorage.getItem('productFormData');
-    const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
-    localStorage.setItem('productFormData', JSON.stringify({
-      ...parsedData,
-      [name]: value
-    }));
+    // Update parent data immediately, but debounced to prevent too many updates
+    updateProductData?.(updatedData);
   };
 
-  const stableUpdateProductData = useCallback((data: Partial<ProductData>) => {
-    updateProductData?.(data);
-  }, [updateProductData]);
-
-  useEffect(() => {
-    stableUpdateProductData(formData);
-  }, [formData, stableUpdateProductData]);
-
   return (
-    <ProductLayout>
-      <div className="flex flex-col h-full px-4 py-2">
-        <h1 className="font-bold m-4 text-2xl">Product Information</h1>
-        <div className="flex w-full">
+    <ProductLayout productype="product" Body={
+      <div className="flex flex-col h-full">
+        <h1 className="section-title font-bold mb-6 text-2xl">{isEditMode ? 'Edit Product' : 'Product Information'}</h1>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="form-field">
           <input 
-            placeholder="Name" 
-            className="border-b-2 m-4 p-2 focus:outline-none w-full" 
+              placeholder="Product Name" 
+              className="w-full" 
             type="text" 
             name="name" 
             value={formData.name}
             onChange={handleChange}
           />
+          </div>
+          <div className="form-field">
           <select 
-            className="w-full bg-transparent p-3 m-4 outline-none border-b-2 text-gray-800 placeholder-gray-400"
+              className="w-full bg-transparent"
             name="moq"
             value={formData.moq}
             onChange={handleChange}
           >
-            <option value="" disabled>MOQ</option>
+              <option value="" disabled>Minimum Order Quantity (MOQ)</option>
             <option value="100 KG">100 KG</option>
             <option value="200 KG">200 KG</option>
             <option value="500 KG">500 KG</option>
           </select>
         </div>
-        <div className="flex">
-          <div className="flex flex-col mx-4">
-            <h1 className="font-semibold text-md m-4">Description</h1>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="product-card">
+            <h2 className="text-lg font-semibold mb-3">Description</h2>
+            <div className="mb-4">
             <input 
-              placeholder="Precise description" 
-              className="px-2 py-4 border-x border-t focus:outline-none border-[#00000053] rounded-tl-lg rounded-tr-lg" 
+                placeholder="Product summary (short description)" 
+                className="w-full border border-gray-200 rounded-t-lg px-3 py-2" 
               type="text" 
               name="description"
               value={formData.description}
               onChange={handleChange}
             />
+            </div>
             <textarea 
-              placeholder="Detailed Description" 
-              className="px-2 py-2 w-[25vw] h-[20vh] focus:outline-none border-[#00000053] border-x border-y rounded-bl-lg rounded-br-lg" 
+              placeholder="Detailed Description - Include product specifications, features, and benefits" 
+              className="w-full h-[180px] border border-gray-200 rounded-b-lg px-3 py-2" 
               name="detailedDescription"
               value={formData.detailedDescription}
               onChange={handleChange}
             />
           </div>
-          <div className="mx-4 flex w-full flex-col">
-            <h1 className="font-semibold text-md m-4">Category</h1>
+          
+          <div className="product-card flex flex-col">
+            <h2 className="text-lg font-semibold mb-3">Product Details</h2>
+            <div className="form-field mb-6">
             <select 
-              className="bg-transparent p-3 border-b-2 my-4 mx-2 w-[90%]" 
+                className="w-full" 
               name="category"
               value={formData.category}
               onChange={handleChange}
@@ -287,203 +297,149 @@ const ProductInformation: React.FC<ProductProps> = ({ setPageNo, updateProductDa
               <option value="dummy-1">dummy-1</option>
               <option value="dummy-2">dummy-2</option>
             </select>
-            <h1 className="font-semibold text-md m-4">HSN Code:</h1>
+            </div>
+            
+            <div className="form-field">
             <input 
-              className="focus:outline-none border-b-2 p-2 mx-2 w-[90%]" 
-              placeholder="xxxxxxx" 
+                className="w-full" 
+                placeholder="HSN Code" 
               type="text" 
               name="hsnCode"
               value={formData.hsnCode}
               onChange={handleChange}
             />
+              <p className="text-xs text-gray-500 mt-1">Harmonized System Nomenclature code for product classification</p>
           </div>
         </div>
-        <div className="ml-auto mt-auto flex w-fit">
+        </div>
+        
+        <div className="mt-8 flex justify-end">
           <button 
             onClick={() => setPageNo(1)} 
-            className="bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md"
+            className="product-btn"
           >
             Next
           </button>
         </div>
       </div>
-    </ProductLayout>
+    } />
   );
 };
 
 // Media Component
-const Media: React.FC<ProductProps> = ({ setPageNo, productData = {} }) => {
+const Media: React.FC<ProductProps> = ({ setPageNo, updateProductData, productData = {} }) => {
   const [productImages, setProductImages] = useState<File[]>([]);
   const [testReports, setTestReports] = useState<File[]>([]);
 
-  // Store file names in localStorage, actual files can't be stored there
-  const saveFileInfoToLocalStorage = useCallback(() => {
-    const productImageNames = productImages.map(file => file.name);
-    const testReportNames = testReports.map(file => file.name);
-    
-    const savedProductData = localStorage.getItem('productFormData');
-    const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
-    
-    localStorage.setItem('productFormData', JSON.stringify({
-      ...parsedData,
-      productImageNames,
-      testReportNames
-    }));
-  }, [productImages, testReports]);
-  
-  // Load saved file names from localStorage or from product data (when editing)
-  useEffect(() => {
-    // First check if we're in edit mode with product data
-    if (productData && Object.keys(productData).length > 0) {
-      console.log("Editing existing product with media:", productData);
-      // Note: Since we can't restore actual File objects, just log the image URLs
-      // from the product data so we know they exist
-      if (productData.productImageUrls) {
-        console.log("Product images URLs:", productData.productImageUrls);
-      }
-      if (productData.testReportUrls) {
-        console.log("Test report URLs:", productData.testReportUrls);
-      }
+  // When files are selected, update the main product data state
+  const handleProductImagesChange = (files: File[]) => {
+    setProductImages(files);
+    // For now, just store the first file name in product data
+    // In a real app, you'd handle file uploads differently
+    if (files.length > 0) {
+      updateProductData?.({ productImage: files[0].name });
+    } else {
+      updateProductData?.({ productImage: undefined });
     }
-    
-    // Always check localStorage for any files selected in the current session
-    const savedProductData = localStorage.getItem('productFormData');
-    if (savedProductData) {
-      try {
-        const parsedData = JSON.parse(savedProductData);
-        // We can't restore actual files from localStorage, just show names
-        if (parsedData.productImageNames) {
-          console.log('Previously selected product images:', parsedData.productImageNames);
-        }
-        if (parsedData.testReportNames) {
-          console.log('Previously selected test reports:', parsedData.testReportNames);
-        }
-      } catch (error) {
-        console.error('Error loading saved media data:', error);
-      }
-    }
-  }, [productData]);
+  };
 
-  // Update localStorage when files change
-  useEffect(() => {
-    saveFileInfoToLocalStorage();
-  }, [productImages, testReports, saveFileInfoToLocalStorage]);
+  const handleTestReportsChange = (files: File[]) => {
+    setTestReports(files);
+    if (files.length > 0) {
+      updateProductData?.({ testReports: files[0].name });
+    } else {
+      updateProductData?.({ testReports: undefined });
+    }
+  };
 
   return (
-    <ProductLayout>
-      <div className="flex flex-col px-4 py-2 h-full">
-        <h1 className="font-bold m-4 text-2xl">Media</h1>
-        <div className="flex justify-between w-full">
-          <div className="w-[48%]">
-            <p className="font-medium mb-2">Product Image</p>
-            <ImageUpload onChange={setProductImages} value={productImages} />
+    <ProductLayout productype="media" Body={
+      <div className="flex flex-col h-full">
+        <h1 className="section-title font-bold mb-6 text-2xl">Media</h1>
+        <div className="flex flex-col md:flex-row gap-6">
+          <div className="flex-1 product-card">
+            <h2 className="text-lg font-semibold mb-3">Product Images</h2>
+            <p className="text-gray-500 text-sm mb-4">Upload product photos (max 5 images)</p>
+            <ImageUpload onChange={handleProductImagesChange} value={productImages} />
           </div>
-          <div className="w-[48%]">
-            <p className="font-medium mb-2">Test Report Files</p>
-            <ImageUpload onChange={setTestReports} value={testReports} />
+          <div className="flex-1 product-card">
+            <h2 className="text-lg font-semibold mb-3">Test Reports</h2>
+            <p className="text-gray-500 text-sm mb-4">Upload test certificates (PDF, JPG)</p>
+            <ImageUpload onChange={handleTestReportsChange} value={testReports} />
           </div>
         </div>
-        <div className="h-fit full flex mt-auto">
+        <div className="mt-8 flex justify-between">
           <button 
             onClick={() => setPageNo(0)} 
-            className="bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md w-fit"
+            className="product-btn-prev"
           >
-            Prev
+            Previous
           </button>
           <button 
             onClick={() => setPageNo(2)} 
-            className="bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md ml-auto w-fit"
+            className="product-btn"
           >
             Next
           </button>
         </div>
       </div>
-    </ProductLayout>
+    } />
   );
 };
 
 // Price Component
-const Price: React.FC<ProductProps> = ({ setPageNo, productData = {} }) => {
+const Price: React.FC<ProductProps> = ({ setPageNo, updateProductData, productData = {} }) => {
   const [priceData, setPriceData] = useState<PriceData>({
-    price: "",
-    currency: "USD",
-    sku: "",
-    onSale: false,
-    discount: "",
-    salePrice: "",
-    costOfGoods: "",
-    profit: "",
-    margin: ""
+    price: productData.price ? String(productData.price) : "",
+    currency: productData.currency || "USD",
+    sku: productData.sku || "",
+    onSale: productData.onSale || false,
+    discount: productData.discount ? String(productData.discount) : "",
+    salePrice: productData.salePrice ? String(productData.salePrice) : "",
+    costOfGoods: productData.costOfGoods ? String(productData.costOfGoods) : "",
+    profit: productData.profit ? String(productData.profit) : "",
+    margin: productData.margin ? String(productData.margin) : "",
+    quantity: productData.quantity ? String(productData.quantity) : "0"
   });
 
-  // Load data from props if editing a product or from localStorage
+  // Update local state when productData changes - only on initial mount
   useEffect(() => {
-    // First try to use productData from props (for editing)
-    if (productData && Object.keys(productData).length > 0) {
-      console.log("Initializing price form with product data:", productData);
-      setPriceData(prevData => ({
-        ...prevData,
-        price: productData.price?.toString() || "",
-        currency: productData.currency || "USD",
-        sku: productData.sku || "",
-        onSale: productData.onSale || false,
-        discount: productData.discount?.toString() || "",
-        salePrice: productData.salePrice?.toString() || "",
-        costOfGoods: productData.costOfGoods?.toString() || "",
-        profit: productData.profit?.toString() || "",
-        margin: productData.margin?.toString() || ""
-      }));
-    } else {
-      // Fall back to localStorage for saved draft data
-      const savedProductData = localStorage.getItem('productFormData');
-      if (savedProductData) {
-        try {
-          const parsedData = JSON.parse(savedProductData);
-          setPriceData(prevData => ({
-            ...prevData,
-            price: parsedData.price || "",
-            currency: parsedData.currency || "USD",
-            sku: parsedData.sku || "",
-            onSale: parsedData.onSale || false,
-            discount: parsedData.discount || "",
-            salePrice: parsedData.salePrice || "",
-            costOfGoods: parsedData.costOfGoods || "",
-            profit: parsedData.profit || "",
-            margin: parsedData.margin || ""
-          }));
-        } catch (error) {
-          console.error('Error loading saved price data:', error);
-        }
-      }
-    }
-  }, [productData]);
+    setPriceData({
+      price: productData.price ? String(productData.price) : "",
+      currency: productData.currency || "USD",
+      sku: productData.sku || "",
+      onSale: productData.onSale || false,
+      discount: productData.discount ? String(productData.discount) : "",
+      salePrice: productData.salePrice ? String(productData.salePrice) : "",
+      costOfGoods: productData.costOfGoods ? String(productData.costOfGoods) : "",
+      profit: productData.profit ? String(productData.profit) : "",
+      margin: productData.margin ? String(productData.margin) : "",
+      quantity: productData.quantity ? String(productData.quantity) : "0"
+    });
+  }, []); // Removed productData dependency
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setPriceData(prev => ({ ...prev, [name]: value }));
+    const updatedData = { ...priceData, [name]: value };
+    setPriceData(updatedData);
     
-    // Save to localStorage on every change
-    const savedProductData = localStorage.getItem('productFormData');
-    const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
-    localStorage.setItem('productFormData', JSON.stringify({
-      ...parsedData,
-      [name]: value
-    }));
+    // Update parent data immediately after local state changes
+    // Convert string values to numbers for numeric fields
+    const parentUpdate = {
+      [name]: ['price', 'discount', 'salePrice', 'costOfGoods', 'quantity'].includes(name) 
+        ? parseFloat(value) || 0
+        : value
+    };
+    updateProductData?.(parentUpdate);
   };
 
   const toggleSale = () => {
-    const newOnSale = !priceData.onSale;
-    setPriceData(prev => ({ ...prev, onSale: newOnSale }));
-    
-    // Save to localStorage
-    const savedProductData = localStorage.getItem('productFormData');
-    const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
-    localStorage.setItem('productFormData', JSON.stringify({
-      ...parsedData,
-      onSale: newOnSale
-    }));
+    const updatedOnSale = !priceData.onSale;
+    setPriceData(prev => ({ ...prev, onSale: updatedOnSale }));
+    updateProductData?.({ onSale: updatedOnSale });
   };
 
+  // Calculate profit and margin when price or cost changes
   useEffect(() => {
     if (priceData.price && priceData.costOfGoods) {
       const price = parseFloat(priceData.price) || 0;
@@ -491,152 +447,195 @@ const Price: React.FC<ProductProps> = ({ setPageNo, productData = {} }) => {
       const profit = price - cost;
       const margin = price > 0 ? (profit / price) * 100 : 0;
       
-      setPriceData(prev => ({
-        ...prev,
+      const updatedData = {
+        ...priceData,
         profit: profit.toFixed(2),
         margin: margin.toFixed(2)
-      }));
+      };
+      setPriceData(updatedData);
+      
+      // Also update parent with calculated values
+      updateProductData?.({
+        profit: profit,
+        margin: margin
+      });
     }
   }, [priceData.price, priceData.costOfGoods]);
 
   return (
-    <ProductLayout>
-      <div className="flex flex-col px-4 py-2 h-full">
-        <h1 className="font-bold m-4 text-2xl">Price</h1>
-        <div className="grid grid-cols-3 gap-4 price-container">
+    <ProductLayout productype="price" Body={
+      <div className="flex flex-col h-full">
+        <h1 className="section-title font-bold mb-6 text-2xl">Price</h1>
+        
+        <div className="product-card animate-slide-in">
+          <h2 className="text-lg font-semibold mb-4">Basic Pricing</h2>
+          <div className="price-container grid-cols-3">
+            <div className="form-field">
           <input 
             placeholder="Price" 
             type="text" 
             name="price"
             value={priceData.price}
             onChange={handleChange}
-            className="border-b-2 p-2 focus:outline-none"
+                className="w-full"
           />
+            </div>
+            <div className="form-field">
           <select 
-            className="border-b-2 p-2 focus:outline-none"
+                className="w-full"
             name="currency"
             value={priceData.currency}
             onChange={handleChange}
           >
             <option value="USD">USD</option>
+                <option value="INR">INR</option>
             <option value="EUR">EUR</option>
-            <option value="GBP">GBP</option>
           </select>
+            </div>
+            <div className="form-field">
           <input 
             placeholder="SKU" 
             type="text" 
             name="sku"
             value={priceData.sku}
             onChange={handleChange}
-            className="border-b-2 p-2 focus:outline-none"
-          />
-
-          <div className="col-span-3 ml-6 flex items-center">
-            <ToggleButton 
-              isOn={priceData.onSale} 
-              onToggle={toggleSale} 
-              aria-label="Toggle sale status"
-            />
-            <span className="my-auto mx-3">On Sale</span>
+                className="w-full"
+              />
+            </div>
+          </div>
+        </div>
+        
+        <div className="product-card animate-slide-in" style={{ animationDelay: '0.1s' }}>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">Discounts</h2>
+            <div className="flex items-center">
+              <span className="mr-2 text-sm text-gray-700">On Sale</span>
+              <ToggleButton isOn={priceData.onSale} onToggle={toggleSale} />
+            </div>
           </div>
 
-          {priceData.onSale && (
-            <>
+          <div className="price-container grid-cols-2">
+            <div className="form-field">
               <input 
+                placeholder="Discount %" 
                 type="text" 
-                placeholder="Discount" 
                 name="discount"
                 value={priceData.discount}
                 onChange={handleChange}
-                className="border-b-2 p-2 focus:outline-none"
+                disabled={!priceData.onSale}
+                className={`w-full ${!priceData.onSale ? 'opacity-50' : ''}`}
               />
-              <div className="col-span-2">
+            </div>
+            <div className="form-field">
                 <input 
+                placeholder="Sale Price" 
                   type="text" 
-                  placeholder="Sale price" 
                   name="salePrice"
                   value={priceData.salePrice}
                   onChange={handleChange}
-                  className="border-b-2 p-2 w-full focus:outline-none"
+                disabled={!priceData.onSale}
+                className={`w-full ${!priceData.onSale ? 'opacity-50' : ''}`}
                 />
               </div>
-            </>
-          )}
+          </div>
+        </div>
 
+        <div className="product-card animate-slide-in" style={{ animationDelay: '0.2s' }}>
+          <h2 className="text-lg font-semibold mb-4">Inventory & Profit</h2>
+          <div className="price-container grid-cols-3">
+            <div className="form-field">
           <input 
+                placeholder="Cost of Goods" 
             type="text" 
-            placeholder="Cost of goods" 
             name="costOfGoods"
             value={priceData.costOfGoods}
             onChange={handleChange}
-            className="border-b-2 p-2 focus:outline-none"
+                className="w-full"
           />
+            </div>
+            <div className="form-field">
           <input 
-            type="text" 
             placeholder="Profit" 
+                type="text" 
             name="profit"
             value={priceData.profit}
-            onChange={handleChange}
-            className="border-b-2 p-2 focus:outline-none"
             readOnly
+                className="w-full bg-gray-50"
           />
-          <div className="flex items-center">
+            </div>
+            <div className="form-field">
             <input 
+                placeholder="Margin %" 
               type="text" 
-              placeholder="Margin" 
               name="margin"
               value={priceData.margin}
-              onChange={handleChange}
-              className="border-b-2 p-2 w-full focus:outline-none"
               readOnly
+                className="w-full bg-gray-50"
             />
-            <span className="ml-2">%</span>
           </div>
         </div>
-        <div className="h-fit w-full flex mt-auto">
+          
+          <div className="form-field mt-4">
+            <label className="block text-gray-700 font-medium mb-2">Product Quantity</label>
+            <input 
+              placeholder="Enter available product quantity" 
+              type="number" 
+              name="quantity"
+              value={priceData.quantity}
+              onChange={handleChange}
+              className="w-full border p-2 rounded"
+            />
+            <p className="text-sm text-gray-500 mt-1">Number of units currently in stock</p>
+          </div>
+        </div>
+        
+        <div className="mt-8 flex justify-between">
           <button 
             onClick={() => setPageNo(1)} 
-            className="bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md w-fit"
+            className="product-btn-prev"
           >
-            Prev
+            Previous
           </button>
           <button 
             onClick={() => setPageNo(3)} 
-            className="bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md ml-auto w-fit"
+            className="product-btn"
           >
             Next
           </button>
         </div>
       </div>
-    </ProductLayout>
+    } />
   );
 };
 
-// Improved Tags Component with cleaner tag suggestion implementation
-const Tags: React.FC<ProductProps> = ({ setPageNo, productData = {} }) => {
-  const [tags, setTags] = useState<string[]>([]);
+// Updated Tags component with new submit handling
+interface TagsProps extends Omit<ProductProps, 'resetForm'> {
+  onSubmit?: (formData: Partial<ProductData>, tags: string[]) => Promise<boolean>;
+}
+
+const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData = {}, onSubmit }) => {
+  const [tags, setTags] = useState<string[]>(productData.tags || []);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const navigate = useNavigate();
-
-  // Load saved data from localStorage when component mounts
-  useEffect(() => {
-    const savedProductData = localStorage.getItem('productFormData');
-    if (savedProductData) {
-      try {
-        const parsedData = JSON.parse(savedProductData);
-        if (parsedData.tags && Array.isArray(parsedData.tags)) {
-          setTags(parsedData.tags);
-        }
-      } catch (error) {
-        console.error('Error loading saved tag data:', error);
-      }
-    }
-  }, []);
   
+  // Determine if we're in edit mode based on whether product has an ID
+  const isEditMode = Boolean(productData?.id);
+  
+  // Only update tags from productData on initial mount
+  useEffect(() => {
+    if (productData.tags) {
+      setTags(productData.tags);
+    }
+  }, []); // Removed productData.tags dependency
+
+  // Update parent whenever tags change
+  useEffect(() => {
+    updateProductData?.({ tags });
+  }, [tags, updateProductData]);
+
   // Cleaner implementation of fetchSuggestedTags function
   const fetchSuggestedTags = useCallback(async () => {
     if (!productData?.name) {
@@ -677,14 +676,6 @@ const Tags: React.FC<ProductProps> = ({ setPageNo, productData = {} }) => {
         .slice(0, 5);
 
       setTags(newTags);
-      
-      // Save to localStorage
-      const savedProductData = localStorage.getItem('productFormData');
-      const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
-      localStorage.setItem('productFormData', JSON.stringify({
-        ...parsedData,
-        tags: newTags
-      }));
     } catch (err) {
       console.error("API Error:", err);
       // Fallback to generate some contextual tags
@@ -722,181 +713,57 @@ const Tags: React.FC<ProductProps> = ({ setPageNo, productData = {} }) => {
       e.preventDefault();
       const newTag = input.trim();
       if (!tags.includes(newTag)) {
-        const updatedTags = [...tags, newTag].slice(0, 5);
-        setTags(updatedTags);
-        
-        // Save to localStorage
-        const savedProductData = localStorage.getItem('productFormData');
-        const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
-        localStorage.setItem('productFormData', JSON.stringify({
-          ...parsedData,
-          tags: updatedTags
-        }));
+        setTags(prev => [...prev, newTag].slice(0, 5));
       }
       setInput("");
     }
   };
 
   const removeTag = (index: number) => {
-    const updatedTags = tags.filter((_, i) => i !== index);
-    setTags(updatedTags);
-    
-    // Update localStorage when removing a tag
-    const savedProductData = localStorage.getItem('productFormData');
-    const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
-    localStorage.setItem('productFormData', JSON.stringify({
-      ...parsedData,
-      tags: updatedTags
-    }));
+    setTags(prev => prev.filter((_, i) => i !== index));
   };
-  
-  // Function to save product
-  const saveProduct = async () => {
-    if (!productData.name) {
+
+  const handleSubmit = async () => {
+    if (!productData?.name) {
       setError("Product name is required");
       return;
     }
 
-    setIsSaving(true);
+    setIsSubmitting(true);
     setError(null);
-    
-    try {
-      // First, check if user is authenticated and has a seller ID
-      const { default: authService } = await import('../services/auth.service');
-      const user = authService.getUser();
-      
-      if (!user) {
-        setError("You must be logged in to save products");
-        console.error("No user data found");
-        return;
-      }
-      
-      console.log("Current user:", user);
-      
-      // Check if user has an ID field
-      const userId = user.id || user._id || user.userId;
-      if (!userId) {
-        setError("User ID not found. Please log in again");
-        console.error("No user ID found in user data:", user);
-        return;
-      }
-      
-      const savedProductData = localStorage.getItem('productFormData');
-      const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
-      
-      // Ensure numeric fields are properly formatted as numbers
-      const completeProductData = {
-        // Required field
-        name: productData.name || '',
-        
-        // String fields from the form
-        category: productData.category || '',
-        moq: parsedData.moq || '',
-        preciseDescription: parsedData.description || '',
-        detailedDescription: parsedData.detailedDescription || '',
-        hsnCode: parsedData.hsnCode || '',
-        sku: parsedData.sku || '',
-        
-        // Numeric fields - ensure they're numbers, not strings
-        price: parsedData.price ? Number(parsedData.price) : 0,
-        discount: parsedData.discount ? Number(parsedData.discount) : 0,
-        salePrice: parsedData.salePrice ? Number(parsedData.salePrice) : 0,
-        costOfGoods: parsedData.costOfGoods ? Number(parsedData.costOfGoods) : 0,
-        profit: parsedData.profit ? Number(parsedData.profit) : 0,
-        margin: parsedData.margin ? Number(parsedData.margin) : 0,
-        quantity: 1, // Default quantity
-        
-        // Boolean fields
-        onSale: parsedData.onSale === true,
-        
-        // Array fields
-        tags: tags || [],
-        
-        // Explicitly add seller ID
-        sellerId: userId
-      };
-      
-      console.log('Saving product with data:', completeProductData);
-      
-      // Use product service to save the product with seller ID from JWT
-      const { default: productService } = await import('../services/product.service');
-      const result = await productService.createProduct(completeProductData);
-      
-      if (result.success) {
-        // Set success message
-        setSuccessMessage(`Successfully added ${productData.name}`);
-        
-        // Clear localStorage
-        localStorage.removeItem('productFormData');
-        
-        // Redirect to inventory page after 2 seconds
-        setTimeout(() => {
-          navigate('/seller/inventory');
-        }, 2000);
-      } else {
-        setError(result.message || 'Failed to save product');
-      }
-    } catch (err) {
-      console.error("Error saving product:", err);
-      setError("Failed to save product. Please try again.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    setSuccessMessage(null);
 
-  // Add this debug function to the Tags component
-  const debugAuthAndData = () => {
     try {
-      // Import auth service
-      import('../services/auth.service').then(module => {
-        const authService = module.default;
-        
-        // Check authentication
-        const token = authService.getToken();
-        console.log('AUTH DEBUG - Token exists:', !!token);
-        
-        // Check user data
-        const user = authService.getUser();
-        console.log('AUTH DEBUG - User data:', user);
-        
-        // Check product data
-        const savedProductData = localStorage.getItem('productFormData');
-        const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
-        console.log('AUTH DEBUG - Product data:', parsedData);
-        
-        // Show user data in a message
-        if (user) {
-          setSuccessMessage(`Debug: User ID is ${user.id || 'not found'}. Role: ${user.role || 'unknown'}`);
-        } else {
-          setError('No user data found. Please log in again.');
+      // Use the onSubmit callback from parent component
+      if (onSubmit) {
+        const success = await onSubmit(productData, tags);
+        if (success) {
+          setSuccessMessage("Successfully added the product");
         }
-      });
+      }
     } catch (err) {
-      console.error('Debug error:', err);
-      setError('Error in debug function');
+      console.error("Error during submission:", err);
+      setError("An unexpected error occurred");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <ProductLayout>
-      <div className="flex flex-col px-4 py-2 h-full">
-        <div className="flex flex-col w-full">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-gray-500">Tags: {tags.length}/5</span>
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={debugAuthAndData}
-                className="text-xs text-gray-500 underline"
-              >
-                Debug Auth
-              </button>
+    <ProductLayout productype="tags" Body={
+      <div className="flex flex-col h-full">
+        <h1 className="section-title font-bold mb-6 text-2xl">Tags</h1>
+        
+        <div className="product-card">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">Product Tags <span className="text-sm text-gray-500">({tags.length}/5)</span></h2>
               <button 
                 onClick={fetchSuggestedTags}
                 disabled={isLoading || !productData?.name}
-                className={`flex items-center text-sm ${
+              className={`flex items-center text-sm px-3 py-1.5 rounded-md ${
                   isLoading || !productData?.name 
-                    ? 'text-gray-400 cursor-not-allowed' 
-                    : 'text-blue-500 hover:text-blue-700'
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
                 }`}
               >
                 {isLoading ? (
@@ -907,30 +774,29 @@ const Tags: React.FC<ProductProps> = ({ setPageNo, productData = {} }) => {
                 ) : (
                   <>
                     <RefreshCw className="mr-1" size={14} />
-                    <span>Suggest Tags</span>
+                  <span>Auto-Generate Tags</span>
                   </>
                 )}
               </button>
-            </div>
           </div>
           
           {error && (
-            <div className="text-sm mb-2 p-2 rounded bg-yellow-50 text-yellow-600">
+            <div className="text-sm mb-4 p-3 rounded bg-yellow-50 text-yellow-700 border border-yellow-200">
               {error}
             </div>
           )}
           
           {successMessage && (
-            <div className="text-sm mb-2 p-2 rounded bg-green-50 text-green-600 font-semibold">
+            <div className="text-sm mb-4 p-3 rounded bg-green-50 text-green-700 border border-green-200">
               {successMessage}
             </div>
           )}
           
-          <div className="border border-gray-200 rounded-xl w-full min-h-[220px] p-4 flex flex-col">
+          <div className="border border-gray-200 rounded-xl p-4 mb-4">
             <input
               type="text"
-              placeholder={tags.length >= 5 ? "Maximum 5 tags reached" : "Add your tag (press comma or enter)"}
-              className="outline-none px-3 py-2 mb-2 bg-transparent border-b"
+              placeholder={tags.length >= 5 ? "Maximum 5 tags reached" : "Add your tag (press Enter or comma)"}
+              className="outline-none px-3 py-2 mb-4 bg-transparent border-b border-gray-200 w-full focus:border-gray-400 transition-all"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -941,11 +807,11 @@ const Tags: React.FC<ProductProps> = ({ setPageNo, productData = {} }) => {
               {tags.map((tag, idx) => (
                 <div
                   key={`${tag}-${idx}`}
-                  className="flex items-center bg-gradient-to-r from-black to-[#353535] text-white rounded-full px-3 py-1"
+                  className="flex items-center bg-gradient-to-r from-black to-[#353535] text-white rounded-full px-3 py-1.5 transition-all hover:shadow-md"
                 >
                   <span className="mr-1 text-sm">{tag}</span>
                   <button
-                    className="ml-1 text-white focus:outline-none text-sm"
+                    className="ml-1 text-white hover:text-gray-200 focus:outline-none text-sm transition-colors"
                     onClick={() => removeTag(idx)}
                     aria-label={`Remove tag ${tag}`}
                   >
@@ -954,207 +820,342 @@ const Tags: React.FC<ProductProps> = ({ setPageNo, productData = {} }) => {
                 </div>
               ))}
             </div>
+            </div>
             
-            {tags.length === 0 && (
-              <div className="text-gray-400 text-center mt-4">
-                Click "Suggest Tags" to auto-generate tags based on your product details, 
-                or add tags manually.
-              </div>
-            )}
+          <div className="text-sm text-gray-600">
+            <p>Tags help buyers find your products. Choose descriptive words related to your product.</p>
+            <ul className="list-disc ml-5 mt-2">
+              <li>Use specific keywords relevant to your product</li>
+              <li>Include material, usage, and key features</li>
+              <li>Avoid generic terms or irrelevant words</li>
+            </ul>
           </div>
         </div>
 
-        <div className="h-fit w-full flex mt-auto">
+        <div className="mt-8 flex justify-between">
           <button 
             onClick={() => setPageNo(2)} 
-            className="bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md w-fit"
+            className="product-btn-prev"
           >
-            Prev
+            Previous
           </button>
           <button 
-            onClick={saveProduct}
-            disabled={isSaving}
-            className="bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-1 rounded-md ml-auto w-fit"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className={`product-btn ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
-            {isSaving ? 'Saving...' : 'Save Product'}
+            {isSubmitting ? 'Processing...' : isEditMode ? 'Update Product' : 'Add Product'}
           </button>
         </div>
       </div>
-    </ProductLayout>
+    } />
   );
 };
 
-// Main Add Product Component
+// Rename to avoid conflicts with interface ProductProps defined above
+type ProductPropsWithSetter = {
+    setPageNo: (pageNo: number) => void;
+    productData: ProductData;
+    setProductData: React.Dispatch<React.SetStateAction<ProductData>>;
+    saveProduct?: () => void;
+};
+
+// Define initialProductData
+const initialProductData: ProductData = {
+  name: "",
+  description: "",
+  detailedDescription: "",
+  moq: "",
+  category: "",
+  hsnCode: "",
+  price: 0,
+  currency: "USD",
+  sku: "",
+  onSale: false,
+  tags: []
+};
+
+// Main Add Product Component - completely overhaul the form reset functionality
 export const AddProduct: React.FC = () => {
   const [pageNo, setPageNo] = useState(0);
   const [productData, setProductData] = useState<Partial<ProductData>>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
-  
-  // Parse URL parameters
-  const location = window.location;
-  const params = new URLSearchParams(location.search);
-  const isNewProduct = params.get('new') === 'true';
-  const editProductId = params.get('edit');
-  
-  // Load product data - either from localStorage or fetch from API if editing
+  const [formInitialized, setFormInitialized] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // On component mount, check if we should load saved data, fetch an existing product, or create a new form
   useEffect(() => {
-    const loadProductData = async () => {
-      // If creating a new product, localStorage should already be cleared
-      if (isNewProduct) {
-        console.log("Creating new product");
-        return;
-      }
+    const loadForm = async () => {
+      setIsLoading(true);
       
-      // If editing a product
-      if (editProductId) {
-        setIsLoading(true);
+      // Check URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const isNewForm = urlParams.get('new') === 'true';
+      const productId = urlParams.get('id');
+      
+      // If editing an existing product
+      if (productId) {
         try {
-          console.log(`Loading product ${editProductId} for editing`);
+          setIsEditMode(true);
+          console.log(`Editing product with ID: ${productId}`);
           
-          // Check if we already have the product data in localStorage
-          const savedData = localStorage.getItem('productFormData');
-          if (savedData) {
-            const parsedData = JSON.parse(savedData);
-            setProductData(parsedData);
-            console.log("Loaded product data from localStorage:", parsedData);
-          } else {
-            // Fetch product data if not in localStorage
-            const { default: productService } = await import('../services/product.service');
-            const result = await productService.getProductById(editProductId);
+          // Fetch product data from the API
+          const result = await productService.getProductById(productId);
+          
+          if (result.success && result.product) {
+            console.log('Loaded product for editing:', result.product);
             
-            if (result.success && result.product) {
-              setProductData(result.product);
-              localStorage.setItem('productFormData', JSON.stringify(result.product));
-              console.log("Loaded product data from API:", result.product);
-            } else {
-              console.error("Failed to load product:", result.message);
-              alert("Could not load product data. Redirecting to inventory.");
-              navigate('/seller/inventory');
-            }
+            // Map the backend data model to our form model
+            const formData: Partial<ProductData> = {
+              id: result.product.id,
+              name: result.product.name || '',
+              description: result.product.preciseDescription || '',
+              detailedDescription: result.product.detailedDescription || '',
+              category: result.product.category || '',
+              hsnCode: result.product.hsnCode || '',
+              moq: result.product.moq || '',
+              price: result.product.price || 0,
+              currency: result.product.currency || 'USD',
+              sku: result.product.sku || '',
+              quantity: result.product.quantity || 0,
+              onSale: result.product.onSale || false,
+              discount: result.product.discount || 0,
+              salePrice: result.product.salePrice || 0,
+              costOfGoods: result.product.costOfGoods || 0,
+              margin: result.product.margin || 0,
+              profit: result.product.profit || 0,
+              productImage: result.product.productImage || '',
+              testReports: result.product.testReports || '',
+              tags: result.product.tags || []
+            };
+            
+            // Set the form data
+            setProductData(formData);
+            localStorage.setItem('productFormData', JSON.stringify(formData));
+            setFormInitialized(true);
+            setIsLoading(false);
+          } else {
+            console.error('Failed to fetch product:', result.message);
+            setError(`Could not load product: ${result.message}`);
+            setFormInitialized(true);
+            setIsLoading(false);
           }
-        } catch (error) {
-          console.error("Error loading product:", error);
-          alert("An error occurred while loading the product. Redirecting to inventory.");
-          navigate('/seller/inventory');
-        } finally {
+        } catch (err) {
+          console.error('Error while fetching product:', err);
+          setError('Failed to load product details. Please try again.');
+          setFormInitialized(true);
           setIsLoading(false);
         }
-      } else {
-        // Neither new nor edit - redirect to inventory
-        console.warn('No product mode specified in URL');
-        navigate('/seller/inventory');
+      }
+      // If explicitly creating a new form
+      else if (isNewForm) {
+        console.log('Creating new form: clearing all saved data');
+        localStorage.removeItem('productFormData');
+        setProductData(initialProductData);
+        setFormInitialized(true);
+        setIsLoading(false);
+      } 
+      // Otherwise try to load saved data
+      else {
+        const savedData = localStorage.getItem('productFormData');
+        if (savedData) {
+          try {
+            console.log('Loading saved form data');
+            setProductData(JSON.parse(savedData));
+          } catch (e) {
+            console.error('Error parsing saved product data', e);
+            setProductData(initialProductData);
+          }
+        } else {
+          setProductData(initialProductData);
+        }
+        setFormInitialized(true);
+        setIsLoading(false);
       }
     };
-    
-    loadProductData();
-  }, [isNewProduct, editProductId, navigate]);
 
-  // Update product data & save to localStorage
-  const updateProductData = useCallback((newData: Partial<ProductData>) => {
-    setProductData(prev => {
-      const updated = { ...prev, ...newData };
-      
-      // Save to localStorage whenever product data changes
-      try {
-        const savedProductData = localStorage.getItem('productFormData');
-        const parsedData = savedProductData ? JSON.parse(savedProductData) : {};
-        localStorage.setItem('productFormData', JSON.stringify({
-          ...parsedData,
-          ...updated
-        }));
-      } catch (error) {
-        console.error('Error saving product data to localStorage:', error);
-      }
-      
-      return updated;
-    });
+    loadForm();
   }, []);
 
-  // Show loading state
+  // Create a function to completely reset the form
+  const resetForm = useCallback(() => {
+    console.log('Resetting form data completely');
+    localStorage.removeItem('productFormData');
+    setProductData(initialProductData);
+  }, []);
+
+  const updateProductData = useCallback((newData: Partial<ProductData>) => {
+    if (!formInitialized) return; // Don't update until initialization is complete
+    
+    setProductData(prev => {
+      const updatedData = { ...prev, ...newData };
+      // Save to localStorage immediately after state update
+      localStorage.setItem('productFormData', JSON.stringify(updatedData));
+      return updatedData;
+    });
+  }, [formInitialized]);
+
+  // Modify Tags component's handleSubmit function to handle both creating and updating
+  const handleProductSubmit = useCallback(async (formData: Partial<ProductData>, tags: string[]) => {
+    try {
+      // Prepare the data according to the backend DTO format
+      const submitData = {
+        ...formData,
+        preciseDescription: formData.description,
+        tags: tags
+      };
+
+      let result;
+      
+      // If in edit mode, update the existing product
+      if (isEditMode && formData.id) {
+        result = await productService.updateProduct(formData.id, submitData);
+      } 
+      // Otherwise create a new product
+      else {
+        result = await productService.createProduct(submitData);
+      }
+      
+      if (result.success) {
+        // Don't clear form data immediately - removed resetForm() call
+        
+        // Show success message without redirecting
+        const action = isEditMode ? 'updated' : 'added';
+        alert(`Successfully ${action} ${formData.name}!`);
+        
+        // No redirect - just return to the same form
+        return true;
+      } else {
+        alert(result.message || `Failed to ${isEditMode ? 'update' : 'save'} product. Please try again.`);
+        return false;
+      }
+    } catch (err) {
+      console.error(`Error ${isEditMode ? 'updating' : 'submitting'} product:`, err);
+      alert(`Failed to ${isEditMode ? 'update' : 'save'} product. Please try again.`);
+      return false;
+    }
+  }, [isEditMode]); // Removed resetForm dependency
+
+  const pages = [
+    <ProductInformation 
+      setPageNo={setPageNo} 
+      updateProductData={updateProductData} 
+      productData={productData} 
+      key="info" 
+    />,
+    <Media 
+      setPageNo={setPageNo} 
+      updateProductData={updateProductData} 
+      productData={productData} 
+      key="media" 
+    />,
+    <Price 
+      setPageNo={setPageNo} 
+      updateProductData={updateProductData} 
+      productData={productData} 
+      key="price" 
+    />,
+    <Tags 
+      setPageNo={setPageNo} 
+      updateProductData={updateProductData} 
+      productData={productData} 
+      onSubmit={handleProductSubmit}
+      key="tags" 
+    />
+  ];
+
+  // Show loading state while fetching product data
   if (isLoading) {
     return (
-      <div className="w-[840px] h-[600px] mx-auto my-14 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-lg text-gray-600">Loading product data...</p>
+      <ProductLayout productype="product" Body={
+        <div className="flex justify-center items-center h-full">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
         </div>
-      </div>
+      } />
     );
   }
 
-  const pages = [
-    <ProductInformation setPageNo={setPageNo} updateProductData={updateProductData} productData={productData} key="info" />,
-    <Media setPageNo={setPageNo} productData={productData} key="media" />,
-    <Price setPageNo={setPageNo} productData={productData} key="price" />,
-    <Tags setPageNo={setPageNo} productData={productData} key="tags" />
-  ];
+  // Show error message if something went wrong
+  if (error) {
+    return (
+      <ProductLayout productype="product" Body={
+        <div className="flex flex-col justify-center items-center h-full p-4">
+          <div className="text-red-500 mb-4">{error}</div>
+          <a href="/seller/inventory" className="text-blue-500 hover:underline">
+            Return to Inventory
+          </a>
+        </div>
+      } />
+    );
+  }
 
-  return pages[pageNo];
+  // Only render the form once initialization is complete
+  return formInitialized ? pages[pageNo] : (
+    <ProductLayout productype="product" Body={
+      <div className="flex justify-center items-center h-full">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
+      </div>
+    } />
+  );
 };
 
-// Inventory Component
+// Enhance the Inventory component with refresh functionality
+// Update the Inventory component
+
 export const Inventory: React.FC = () => {
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Fetch seller's products on component mount
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const { default: productService } = await import('../services/product.service');
-        const result = await productService.getSellerProducts();
-        
-        if (result.success) {
-          console.log('Loaded seller products:', result.products);
-          setProducts(result.products);
-        } else {
-          setError(result.message || 'Failed to load products');
-        }
-      } catch (err) {
-        console.error('Error fetching products:', err);
-        setError('An error occurred while loading products');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, []);
-
-  // Navigate to add product page
-  const handleAddNewProduct = () => {
-    // Clear any existing product data in localStorage
-    localStorage.removeItem('productFormData');
-    // Navigate to add product page with new=true parameter
-    navigate('/seller/add-products?new=true');
-  };
-
-  // Handle edit product
-  const handleEditProduct = async (productId: string) => {
+  // Fetch products when component mounts
+  const fetchProducts = useCallback(async () => {
+    setIsLoading(true);
     try {
-      setLoading(true);
-      const { default: productService } = await import('../services/product.service');
-      const result = await productService.getProductById(productId);
-      
-      if (result.success && result.product) {
-        // Save product data to localStorage for form to use
-        localStorage.setItem('productFormData', JSON.stringify(result.product));
-        // Navigate to add product page with edit parameter including product ID
-        navigate(`/seller/add-products?edit=${productId}`);
+      // Check if user is authenticated
+      if (!authService.getToken()) {
+        setIsAuthenticated(false);
+        setIsLoading(false);
+        return;
+      }
+
+      const result = await productService.getSellerProducts();
+      if (result.success) {
+        setProducts(result.products);
+        setLastUpdated(new Date());
       } else {
-        alert(result.message || 'Failed to load product data');
+        if (result.message?.includes('Authentication')) {
+          setIsAuthenticated(false);
+        } else {
+          setError(result.message || "Failed to load products");
+        }
       }
     } catch (err) {
-      console.error('Error loading product for edit:', err);
-      alert('An error occurred while loading the product');
+      console.error("Error fetching products:", err);
+      setError("Failed to load products");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
+  }, []);
+
+  // Load products on mount
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  // Function to handle refresh
+  const handleRefresh = () => {
+    setError(null);
+    fetchProducts();
+  };
+
+  // Function to calculate product status based on quantity
+  const getProductStatus = (quantity: number) => {
+    if (quantity <= 0) return { status: "Out of Stock", className: "bg-red-300 text-red-800" };
+    if (quantity < 10) return { status: "Low Stock", className: "bg-yellow-200 text-yellow-800" };
+    return { status: "In Stock", className: "bg-green-200 text-green-800" };
   };
 
   return (
@@ -1162,15 +1163,29 @@ export const Inventory: React.FC = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="font-bold text-2xl">All Products</h1>
-          <p className="text-[#00000048]">Manage your product inventory</p>
+          <p className="text-[#00000048]">
+            Manage your product inventory
+            {lastUpdated && (
+              <span className="ml-2 text-sm">
+                Last updated: {lastUpdated.toLocaleTimeString()}
+              </span>
+            )}
+          </p>
         </div>
-        <div>
+        <div className="flex items-center">
           <button 
-            onClick={handleAddNewProduct}
-            className="mx-3 bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-2 rounded-md w-fit"
+            onClick={handleRefresh} 
+            className="mr-3 flex items-center gap-2 text-blue-500 hover:text-blue-700 px-4 py-2 rounded-md"
+            disabled={isLoading}
           >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+          <a href="/seller/add-products?new=true">
+          <button className="mx-3 bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-2 rounded-md w-fit">
             New Product
           </button>
+          </a>
           <button className="mx-3 border-[1px] text-blue-500 border-blue-500 px-8 py-2 rounded-md w-fit">
             Import CSV File
           </button>
@@ -1180,71 +1195,78 @@ export const Inventory: React.FC = () => {
         </div>
       </div>
 
-      {loading ? (
+      {!isAuthenticated ? (
+        <div className="text-center text-red-500 my-8 p-4 bg-red-50 rounded">
+          <p className="mb-4">You need to be logged in to view your products.</p>
+          <a href="/login" className="bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-2 rounded-md">
+            Login
+          </a>
+        </div>
+      ) : isLoading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
         </div>
       ) : error ? (
-        <div className="text-center text-red-500 p-4 my-8">
-          {error} <button className="underline ml-2" onClick={() => window.location.reload()}>Retry</button>
-        </div>
-      ) : products.length === 0 ? (
-        <div className="text-center p-10 my-8 border border-dashed border-gray-300 rounded-lg">
-          <p className="text-gray-500 mb-4">You don't have any products yet</p>
+        <div className="text-center text-red-500 my-8 p-4 bg-red-50 rounded">
+          {error}
           <button 
-            onClick={handleAddNewProduct}
-            className="bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-2 rounded-md"
+            onClick={handleRefresh}
+            className="ml-4 text-blue-500 hover:text-blue-700 underline"
           >
-            Add Your First Product
+            Try again
           </button>
         </div>
-      ) : (
-        <div className="overflow-x-auto my-8">
-          <table className="min-w-full">
-            <thead>
-              <tr className="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
-                <th className="py-3 px-6 text-left">Product</th>
-                <th className="py-3 px-6 text-left">Category</th>
-                <th className="py-3 px-6 text-left">Price</th>
-                <th className="py-3 px-6 text-left">SKU</th>
-                <th className="py-3 px-6 text-left">Quantity</th>
-                <th className="py-3 px-6 text-left">Status</th>
-                <th className="py-3 px-6 text-left">Action</th>
-              </tr>
-            </thead>
-            <tbody className="text-gray-600 text-sm font-light">
-              {products.map((product) => (
-                <tr key={product.id} className="border-b border-gray-200 hover:bg-gray-100">
-                  <td className="py-6 px-6 text-left">
-                    <input type="checkbox" className="form-checkbox" />
-                    <span className="ml-2">{product.name}</span>
-                  </td>
-                  <td className="py-6 px-6 text-left">{product.category}</td>
-                  <td className="py-6 px-6 text-left">${product.price}</td>
-                  <td className="py-6 px-6 text-left">{product.sku || '-'}</td>
-                  <td className="py-6 px-6 text-left">{product.quantity}</td>
-                  <td className="py-6 px-6 text-left">
-                    <span className={`py-1 px-3 rounded-full text-xs ${
-                      product.quantity > 0 
-                        ? "bg-green-200 text-green-800" 
-                        : "bg-red-300 text-red-800"
-                    }`}>
-                      {product.quantity > 0 ? "In Stock" : "Out of Stock"}
-                    </span>
-                  </td>
-                  <td className="py-6 px-6 text-left">
-                    <button 
-                      className="text-blue-500 hover:text-blue-700"
-                      onClick={() => handleEditProduct(product.id)}
-                    >
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      ) : products.length === 0 ? (
+        <div className="text-center text-gray-500 my-8 p-4">
+          <p className="mb-4">You haven't added any products yet.</p>
+          <a href="/seller/add-products?new=true" className="text-blue-500 hover:underline">
+            Add your first product
+          </a>
         </div>
+      ) : (
+      <div className="overflow-x-auto my-8">
+        <table className="min-w-full">
+          <thead>
+            <tr className="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+              <th className="py-3 px-6 text-left">Product</th>
+              <th className="py-3 px-6 text-left">Category</th>
+              <th className="py-3 px-6 text-left">Price</th>
+              <th className="py-3 px-6 text-left">SKU</th>
+              <th className="py-3 px-6 text-left">Quantity</th>
+              <th className="py-3 px-6 text-left">Status</th>
+              <th className="py-3 px-6 text-left">Action</th>
+            </tr>
+          </thead>
+          <tbody className="text-gray-600 text-sm font-light">
+              {products.map((product) => {
+                // Default quantity to 0 if not provided
+                const quantity = (product as any).quantity || 0;
+                const { status, className } = getProductStatus(quantity);
+                
+                return (
+              <tr key={product.id} className="border-b border-gray-200 hover:bg-gray-100">
+                <td className="py-6 px-6 text-left">
+                  <input type="checkbox" className="form-checkbox" />
+                  <span className="ml-2">{product.name}</span>
+                </td>
+                    <td className="py-6 px-6 text-left">{product.category || 'Uncategorized'}</td>
+                    <td className="py-6 px-6 text-left">${product.price?.toFixed(2) || '0.00'}</td>
+                    <td className="py-6 px-6 text-left">{product.sku || 'N/A'}</td>
+                    <td className="py-6 px-6 text-left">{quantity}</td>
+                <td className="py-6 px-6 text-left">
+                      <span className={`py-1 px-3 rounded-full text-xs ${className}`}>
+                        {status}
+                  </span>
+                </td>
+                <td className="py-6 px-6 text-left">
+                      <a href={`/seller/add-products?id=${product.id}`} className="text-blue-500 hover:text-blue-700">Edit</a>
+                </td>
+              </tr>
+                );
+              })}
+          </tbody>
+        </table>
+      </div>
       )}
     </div>
   );

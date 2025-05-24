@@ -16,10 +16,10 @@ export class ProductsController {
   async findAll(@Request() req): Promise<Product[]> {
     try {
       this.logger.log('GET /products request received');
-      const sellerId = req.user?.id; // Will be undefined for non-authenticated requests
       
-      // Only filter by seller if authenticated and requesting own products
-      return await this.productsService.findAll(sellerId);
+      // For marketplace requests, return all products with seller information
+      // Don't filter by seller ID - we want to show all products
+      return await this.productsService.findAll();
     } catch (error) {
       this.logger.error('Error in findAll', error);
       throw new HttpException(

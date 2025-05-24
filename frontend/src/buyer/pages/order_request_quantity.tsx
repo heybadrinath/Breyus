@@ -145,7 +145,9 @@ export default function OrderRequestQuantity() {
                     }}>
                         &#8592;
                     </button>
-                    <button style={{
+                    <button
+                    onClick={() => {window.location.href=`/buyer/buyer-information`}}
+                    style={{
                         flex: 1,
                         height: 48,
                         borderRadius: 12,

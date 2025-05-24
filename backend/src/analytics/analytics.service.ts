@@ -1,171 +1,157 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Analytics } from './entities/analytics.entity';
+import { Repository, Raw } from 'typeorm';
+import { StoreVisit } from './entities/store-visit.entity';
+import { AnalyticsSale } from './entities/sale.entity';
+import { Task } from './entities/task.entity';
+import { format, subDays, eachDayOfInterval } from 'date-fns';
+
+interface DailyStoreVisit {
+    date: string;
+    dayName: string;
+    visits: number;
+}
+
+interface DailySale {
+    date: string;
+    time: string;
+    amount: number;
+    productName?: string;
+}
+
+interface TaskStatusDistribution {
+    status: string;
+    count: number;
+    percentage: number;
+}
 
 @Injectable()
 export class AnalyticsService {
     private readonly logger = new Logger(AnalyticsService.name);
 
     constructor(
-        @InjectRepository(Analytics)
-        private analyticsRepository: Repository<Analytics>
-    ) {
-        // Initialize default data when service starts
-        this.initializeDefaultData().catch(err => 
-            this.logger.error('Failed to initialize default analytics data:', err)
-        );
-    }
+        @InjectRepository(StoreVisit)
+        private storeVisitRepository: Repository<StoreVisit>,
+        @InjectRepository(AnalyticsSale)
+        private saleRepository: Repository<AnalyticsSale>,
+        @InjectRepository(Task)
+        private taskRepository: Repository<Task>,
+    ) {}
 
-    async getLatestAnalytics(): Promise<Analytics> {
-        try {
-            this.logger.log('Fetching latest analytics data');
-            const latestAnalytics = await this.analyticsRepository.find({
-                order: { created_at: 'DESC' },
-                take: 1,
+    async getDailyStoreVisits(seller_id: string, days: number = 30): Promise<DailyStoreVisit[]> {
+        this.logger.log(`Fetching daily store visits for seller ${seller_id} for the last ${days} days`);
+        const endDate = new Date();
+        const startDate = subDays(endDate, days - 1);
+
+        const dateInterval = eachDayOfInterval({ start: startDate, end: endDate });
+        const dateMap = new Map<string, DailyStoreVisit>();
+        dateInterval.forEach(date => {
+            const formattedDate = format(date, 'yyyy-MM-dd');
+            dateMap.set(formattedDate, {
+                date: formattedDate,
+                dayName: format(date, 'EEE'),
+                visits: 0,
             });
+        });
 
-            if (latestAnalytics.length === 0) {
-                this.logger.log('No analytics found, initializing default data');
-                await this.initializeDefaultData();
-                return this.getLatestAnalytics();
-            }
+        const visits = await this.storeVisitRepository.find({
+            where: {
+                seller_id,
+                visit_date: Raw(alias => `${alias} >= :startDate AND ${alias} <= :endDate`, { 
+                    startDate: format(startDate, 'yyyy-MM-dd'), 
+                    endDate: format(endDate, 'yyyy-MM-dd') 
+                }),
+            },
+            order: { visit_date: 'ASC' },
+        });
 
-            const result = latestAnalytics[0];
+        visits.forEach(visit => {
+            const formattedDate = visit.visit_date;
+            const entry = dateMap.get(formattedDate);
+            if (entry) {
+                entry.visits += visit.visitor_count;
+            }
+        });
             
-            // Parse JSON strings for client use
-            if (result.store_visits) {
-                result.store_visits = JSON.parse(result.store_visits as string);
-            }
-            if (result.daily_sales) {
-                result.daily_sales = JSON.parse(result.daily_sales as string);
-            }
-            if (result.country_sales) {
-                result.country_sales = JSON.parse(result.country_sales as string);
-            }
-            
-            return result;
-        } catch (error) {
-            this.logger.error('Error fetching analytics data', error);
-            throw new Error('Failed to fetch analytics data');
-        }
+        return Array.from(dateMap.values());
     }
 
-    private async initializeDefaultData(): Promise<void> {
-        try {
-            const count = await this.analyticsRepository.count();
-            if (count === 0) {
-                this.logger.log('Initializing default analytics data');
-                
-                const storeVisits = [
-                    { week: 'Mon', storeVisits: 40 },
-                    { week: 'Tue', storeVisits: 30 },
-                    { week: 'Wed', storeVisits: 20 },
-                    { week: 'Thu', storeVisits: 27 },
-                    { week: 'Fri', storeVisits: 18 },
-                    { week: 'Sat', storeVisits: 23 },
-                    { week: 'Sun', storeVisits: 34 },
-                ];
+    async getDailySales(seller_id: string, days: number = 30): Promise<DailySale[]> {
+        this.logger.log(`Fetching daily sales data for seller ${seller_id} for the last ${days} days`);
+        const endDate = new Date();
+        const startDate = subDays(endDate, days - 1);
 
-                const dailySales = [
-                    { x: 1, y: 7 },
-                    { x: 2, y: 10 },
-                    { x: 3, y: 8 },
-                    { x: 4, y: 13 },
-                    { x: 5, y: 11 },
-                    { x: 6, y: 6 },
-                    { x: 7, y: 12 },
-                    { x: 8, y: 8 },
-                ];
+        const sales = await this.saleRepository.find({
+            where: {
+                seller_id,
+                sale_date: Raw(alias => `${alias} >= :startDate AND ${alias} <= :endDate`, { 
+                    startDate: format(startDate, 'yyyy-MM-dd'), 
+                    endDate: format(endDate, 'yyyy-MM-dd') 
+                }),
+            },
+            order: { sale_date: 'ASC', sale_time: 'ASC' },
+        });
 
-                const countrySales = [
-                    {
-                        country: 'United States',
-                        sales: 2500,
-                        value: 894,
-                        bounce: 4.5,
-                        flagUrl: '/flags/us.png',
-                    },
-                    {
-                        country: 'United Kingdom',
-                        sales: 1500,
-                        value: 645,
-                        bounce: 4.7,
-                        flagUrl: '/flags/gb.png',
-                    },
-                    {
-                        country: 'Japan',
-                        sales: 1300,
-                        value: 483,
-                        bounce: 5.6,
-                        flagUrl: '/flags/jp.png',
-                    },
-                    {
-                        country: 'Germany',
-                        sales: 1200,
-                        value: 562,
-                        bounce: 4.8,
-                        flagUrl: '/flags/de.png',
-                    },
-                    {
-                        country: 'Brazil',
-                        sales: 1000,
-                        value: 432,
-                        bounce: 5.7,
-                        flagUrl: '/flags/br.png',
-                    },
-                ];
-
-                const defaultData = this.analyticsRepository.create({
-                    store_visits: JSON.stringify(storeVisits),
-                    daily_sales: JSON.stringify(dailySales),
-                    website_views: 4679,
-                    website_views_increase: 15,
-                    today_users: 16,
-                    today_users_increase: 14,
-                    revenue: 31754,
-                    revenue_increase: 15,
-                    followers: 65,
-                    followers_increase: 9,
-                    country_sales: JSON.stringify(countrySales),
-                });
-
-                await this.analyticsRepository.save(defaultData);
-                this.logger.log('Default analytics data initialized successfully');
-            }
-        } catch (error) {
-            this.logger.error('Error initializing default data', error);
-            throw new Error('Failed to initialize default analytics data');
-        }
+        return sales.map(sale => ({
+            date: sale.sale_date,
+            time: sale.sale_time,
+            amount: sale.amount,
+            productName: sale.product_name,
+        }));
     }
 
-    async updateAnalytics(analyticsData: Partial<Analytics>): Promise<Analytics> {
-        try {
-            this.logger.log('Updating analytics data');
-            const latestAnalytics = await this.getLatestAnalytics();
-            
-            // Convert objects to JSON strings for SQLite storage
-            if (analyticsData.store_visits && typeof analyticsData.store_visits !== 'string') {
-                analyticsData.store_visits = JSON.stringify(analyticsData.store_visits);
-            }
-            
-            if (analyticsData.daily_sales && typeof analyticsData.daily_sales !== 'string') {
-                analyticsData.daily_sales = JSON.stringify(analyticsData.daily_sales);
-            }
-            
-            if (analyticsData.country_sales && typeof analyticsData.country_sales !== 'string') {
-                analyticsData.country_sales = JSON.stringify(analyticsData.country_sales);
-            }
+    async getTasksStatusDistribution(seller_id: string): Promise<TaskStatusDistribution[]> {
+        this.logger.log(`Fetching tasks status distribution for seller ${seller_id}`);
+        const statuses = ['completed', 'pending', 'in_progress', 'cancelled'];
+        const distribution: TaskStatusDistribution[] = [];
 
-            const updatedAnalytics = {
-                ...latestAnalytics,
-                ...analyticsData,
-            };
+        const totalTasksResult = await this.taskRepository
+            .createQueryBuilder("task")
+            .select("COUNT(task.id)", "total")
+            .where("task.seller_id = :seller_id", { seller_id })
+            .getRawOne<{ total?: string }>();
 
-            return this.analyticsRepository.save(updatedAnalytics);
-        } catch (error) {
-            this.logger.error('Error updating analytics data', error);
-            throw new Error('Failed to update analytics data');
+        const totalTasks = parseInt(totalTasksResult?.total ?? '0', 10);
+
+        if (totalTasks === 0) {
+            return statuses.map(status => ({ status, count: 0, percentage: 0 }));
         }
+
+        for (const status of statuses) {
+            const result = await this.taskRepository
+                .createQueryBuilder("task")
+                .select("COUNT(task.id)", "count")
+                .where("task.status = :status", { status })
+                .andWhere("task.seller_id = :seller_id", { seller_id })
+                .getRawOne<{ count?: string }>();
+            
+            const count = parseInt(result?.count ?? '0', 10);
+            distribution.push({
+                status,
+                count,
+                percentage: parseFloat(((count / totalTasks) * 100).toFixed(2)),
+            });
+        }
+
+        return distribution;
+    }
+
+    async getDashboardAnalytics(seller_id: string, days: number = 30): Promise<{
+        dailyVisits: DailyStoreVisit[];
+        dailySales: DailySale[];
+        tasksDistribution: TaskStatusDistribution[];
+    }> {
+        this.logger.log(`Fetching combined dashboard analytics for seller ${seller_id} for the last ${days} days`);
+        const [dailyVisits, dailySales, tasksDistribution] = await Promise.all([
+            this.getDailyStoreVisits(seller_id, days),
+            this.getDailySales(seller_id, days),
+            this.getTasksStatusDistribution(seller_id),
+        ]);
+
+        return {
+            dailyVisits,
+            dailySales,
+            tasksDistribution,
+        };
     }
 } 

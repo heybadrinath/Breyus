@@ -55,37 +55,81 @@ class AuthService {
     return hasRole;
   }
 
-  // Validate token with backend
-  async validateTokenWithBackend(): Promise<boolean> {
+  // Check if user has access to a specific role/portal (for unified accounts)
+  hasAccessToRole(role: string): boolean {
+    const user = this.getUser();
+    // In a unified system, any authenticated user can access any portal
+    // The role will be updated when they sign in to the specific portal
+    return !!user;
+  }
+
+  // Update user profile information (firstName, lastName, profileImage)
+  async updateUserProfile(profileData: { firstName: string; lastName: string; profileImage?: string }): Promise<any> {
     try {
       const token = this.getToken();
       if (!token) {
-        console.log('validateTokenWithBackend: No token found');
-        return false;
+        console.error('Authentication token not found');
+        return null;
       }
 
-      console.log('validateTokenWithBackend: Validating token with backend');
+      console.log('Updating user profile:', profileData);
+      
+      // Update the user in the backend
+      const response = await axios.put(`${API_URL}/profile`, profileData, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      // If successful, update the local user data
+      if (response.data) {
+        const currentUser = this.getUser();
+        const updatedUser = { 
+          ...currentUser, 
+          firstName: profileData.firstName, 
+          lastName: profileData.lastName,
+          ...(profileData.profileImage !== undefined && { profileImage: profileData.profileImage })
+        };
+        this.setUser(updatedUser);
+        console.log('User profile updated successfully:', updatedUser);
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      
+      if (axios.isAxiosError(error)) {
+        console.error('Server response:', error.response?.data);
+        
+        // If unauthorized, try to refresh token or log out
+        if (error.response?.status === 401) {
+          this.logout();
+          window.location.href = '/login';
+        }
+      }
+      
+      throw error; // Rethrow to allow components to handle the error
+    }
+  }
+
+  // Validate token with backend
+  async validateTokenWithBackend(): Promise<boolean> {
+    const token = this.getToken();
+    if (!token) {
+      return false;
+    }
+
+    try {
+      // Configure axios to send the token in the Authorization header
       const response = await axios.get(`${API_URL}/validate-token`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
-
-      console.log('validateTokenWithBackend response:', response.data);
       
-      if (response.data.valid && response.data.user) {
-        // Update user data in localStorage with the latest from server
-        this.setUser(response.data.user);
-        return true;
-      } else {
-        // Token is invalid, clear auth data
-        this.logout();
-        return false;
-      }
+      return response.data.valid === true;
     } catch (error) {
-      console.error('validateTokenWithBackend error:', error);
-      // If there's an error, assume token is invalid
-      this.logout();
+      console.error('Token validation failed:', error);
       return false;
     }
   }
@@ -218,6 +262,71 @@ class AuthService {
     } catch (error) {
       return Promise.reject(error);
     }
+  }
+
+  // Add method to upload profile image
+  async uploadProfileImage(file: File): Promise<string> {
+    try {
+      const formData = new FormData();
+      formData.append('profileImage', file);
+
+      // For now, we'll create a data URL since we don't have a file upload service
+      // In production, you'd upload to a cloud storage service like AWS S3
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          resolve(reader.result as string);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    } catch (error) {
+      console.error('Error uploading profile image:', error);
+      throw error;
+    }
+  }
+
+  // Check if this is a unified account (can access both portals)
+  isUnifiedAccount(): boolean {
+    // For now, all accounts are unified
+    // You can implement business logic here to determine unified accounts
+    return true;
+  }
+
+  // Switch user role (for unified accounts)
+  async switchRole(newRole: 'buyer' | 'seller'): Promise<boolean> {
+    try {
+      const user = this.getUser();
+      if (!user) {
+        throw new Error('No user logged in');
+      }
+
+      // Update the user role locally
+      const updatedUser = { ...user, role: newRole };
+      this.setUser(updatedUser);
+      
+      return true;
+    } catch (error) {
+      console.error('Error switching role:', error);
+      return false;
+    }
+  }
+
+  // Get portal URL based on role
+  getPortalUrl(role: string): string {
+    switch (role) {
+      case 'seller':
+        return '/seller/dashboard';
+      case 'buyer':
+        return '/buyer/homepage';
+      default:
+        return '/';
+    }
+  }
+
+  // Get opposite role
+  getOppositeRole(currentRole: string): string {
+    return currentRole === 'buyer' ? 'seller' : 'buyer';
   }
 }
 

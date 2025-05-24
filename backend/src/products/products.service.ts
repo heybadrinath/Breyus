@@ -14,7 +14,8 @@ export class ProductsService {
   ) {}
 
   async findAll(sellerId?: string): Promise<Product[]> {
-    const query = this.productsRepository.createQueryBuilder('product');
+    const query = this.productsRepository.createQueryBuilder('product')
+      .leftJoinAndSelect('product.seller', 'seller');
     
     if (sellerId) {
       query.where('product.sellerId = :sellerId', { sellerId });
@@ -24,7 +25,10 @@ export class ProductsService {
   }
 
   async findOne(id: string): Promise<Product> {
-    const product = await this.productsRepository.findOne({ where: { id } });
+    const product = await this.productsRepository.findOne({ 
+      where: { id },
+      relations: ['seller']
+    });
     if (!product) {
       this.logger.warn(`Product with ID ${id} not found`);
       throw new NotFoundException(`Product with ID ${id} not found`);

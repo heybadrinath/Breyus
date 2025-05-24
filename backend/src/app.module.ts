@@ -6,7 +6,9 @@ import { MailModule } from './mail/mail.module';
 import { UsersModule } from './users/users.module';
 import { User } from './users/entities/user.entity';
 import { AnalyticsModule } from './analytics/analytics.module';
-import { Analytics } from './analytics/entities/analytics.entity';
+import { StoreVisit } from './analytics/entities/store-visit.entity';
+import { AnalyticsSale } from './analytics/entities/sale.entity';
+import { Task } from './analytics/entities/task.entity';
 import { UserDetails } from './users/entities/user-details.entity';
 import { ProductsModule } from './products/products.module';
 import { SalesModule } from './sales/sales.module';
@@ -16,6 +18,9 @@ import { Sale } from './sales/entities/sale.entity';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { MessagesModule } from './messages/messages.module';
+import { FeedbackModule } from './feedback/feedback.module';
+import { TradesModule } from './trades/trades.module';
+import { Trade } from './trades/entities/trade.entity';
 
 @Module({
   imports: [
@@ -31,7 +36,16 @@ import { MessagesModule } from './messages/messages.module';
         return {
           type: 'sqlite',
           database: configService.get('DB_PATH', 'breyus.sqlite'),
-          entities: [User, UserDetails, Analytics, Product, Sale],
+          entities: [
+            User, 
+            UserDetails, 
+            Product, 
+            Sale,
+            StoreVisit,
+            AnalyticsSale,
+            Task,
+            Trade
+          ],
           synchronize: !isProduction,
           logging: !isProduction,
         };
@@ -45,7 +59,9 @@ import { MessagesModule } from './messages/messages.module';
     ProductsModule,
     SalesModule,
     SecurityModule,
-    MessagesModule
+    MessagesModule,
+    FeedbackModule,
+    TradesModule
   ],
   controllers: [AppController],
   providers: [AppService],

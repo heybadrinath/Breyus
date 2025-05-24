@@ -23,9 +23,9 @@ export class AuthController {
       
       // Simulate immediate OTP verification for development
       // In production, this would be a separate request from the client after user enters OTP
-      const storedOtp = this.authService['otpStore'].get(body.email);
-      if (storedOtp) {
-        return await this.authService.verifyOtp(body.email, storedOtp);
+      const storedData = this.authService['otpStore'].get(body.email);
+      if (storedData) {
+        return await this.authService.verifyOtp(body.email, storedData.otp);
       }
       
       return { message: 'OTP sent successfully', success: true };
@@ -124,7 +124,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   async updateProfile(
     @Request() req,
-    @Body() updateProfileDto: { firstName: string; lastName: string }
+    @Body() updateProfileDto: { firstName: string; lastName: string; profileImage?: string }
   ) {
     try {
       this.logger.log(`User ${req.user.id} updating profile`);
@@ -132,11 +132,19 @@ export class AuthController {
       // The req.user has been populated by the JwtAuthGuard
       const userId = req.user.id;
       
-      // Update only the firstName and lastName fields
-      const updatedUser = await this.usersService.update(userId, {
+      // Prepare the data to update
+      const updateData: any = {
         firstName: updateProfileDto.firstName,
         lastName: updateProfileDto.lastName
-      });
+      };
+
+      // Only include profileImage if it's provided
+      if (updateProfileDto.profileImage !== undefined) {
+        updateData.profileImage = updateProfileDto.profileImage;
+      }
+      
+      // Update the user fields
+      const updatedUser = await this.usersService.update(userId, updateData);
       
       return {
         success: true,
@@ -146,7 +154,8 @@ export class AuthController {
           email: updatedUser.email,
           firstName: updatedUser.firstName,
           lastName: updatedUser.lastName,
-          role: updatedUser.role
+          role: updatedUser.role,
+          profileImage: updatedUser.profileImage
         }
       };
     } catch (error) {

@@ -32,10 +32,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
           return;
         }
 
-        // If a role is required, check if user has that role
+        // If a role is required, check if user has access to that role
         if (requiredRole) {
-          const hasRequiredRole = authService.hasRole(requiredRole);
-          console.log('ProtectedRoute - Role check:', { requiredRole, hasRequiredRole });
+          const hasRequiredRole = authService.hasAccessToRole(requiredRole);
+          console.log('ProtectedRoute - Role access check:', { requiredRole, hasRequiredRole });
           setIsAuthenticated(hasRequiredRole);
         } else {
           console.log('ProtectedRoute - No role required, authenticated');

@@ -1,8 +1,12 @@
+import React from "react";
 import ProductVisual from "../components/ProductVisual";
 import ProductDetails from "../components/ProductDetails";
 import ProductCTA from "../components/ProductCTA";
 
 const ProductDisplay = () => {
+  // Mock product ID for development
+  const productId = "mock-product-id";
+  
   return (
     <div className="p-4 max-w-7xl mx-auto flex flex-col md:flex-row gap-6">
       {/* Left - Image and Visual */}

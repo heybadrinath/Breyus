@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import axios from "axios";
 import authService from "../services/auth.service";
+import AuthMessage from "../components/AuthMessage";
 
 const Signin: React.FC = () => {
   const navigate = useNavigate();
@@ -136,6 +137,7 @@ const Signin: React.FC = () => {
         </div>
 
         <div className="w-full max-w-md">
+          <AuthMessage />
           <h2 className="text-3xl font-bold mb-2">{isOtpSent ? "Enter OTP" : "Sign In"}</h2>
           <p className="text-gray-600 mb-6">
             {isOtpSent ? "We've sent an OTP to your email." : "Fill the fields to continue."}
