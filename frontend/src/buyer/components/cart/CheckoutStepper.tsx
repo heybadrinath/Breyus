@@ -1,36 +1,37 @@
 import React from "react";
-
-interface Step {
-  label: string;
-  isActive: boolean;
-}
+import { useNavigate } from "react-router-dom";
 
 interface CheckoutStepperProps {
   currentStep: number;
 }
 
-const steps: string[] = [
-  "Cart",
-  "Address",
-  "Purchase Request",
-  "Purchase Order",
-  "Payment",
+const steps: { label: string; path: string }[] = [
+  { label: "Cart", path: "/buyer/cartpage" },
+  { label: "Address", path: "/buyer/buyer-address" },
+  { label: "Purchase Request", path: "/buyer/purchase-request" },
+  { label: "Purchase Order", path: "/checkout/purchase-order" },
+  { label: "Payment", path: "/checkout/payment" },
 ];
 
 const CheckoutStepper: React.FC<CheckoutStepperProps> = ({ currentStep }) => {
+  const navigate = useNavigate();
+
   return (
     <div className="flex items-center justify-center gap-6 py-4 bg-black text-white text-sm font-semibold">
       {steps.map((step, index) => (
         <React.Fragment key={index}>
-          <span
+          <button
+            type="button"
+            onClick={() => navigate(step.path)}
             className={
               index <= currentStep
-                ? "text-white"
-                : "text-gray-400"
+                ? "text-white underline focus:outline-none"
+                : "text-gray-400 underline focus:outline-none"
             }
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
           >
-            {step}
-          </span>
+            {step.label}
+          </button>
           {index < steps.length - 1 && <span className="text-gray-500">----</span>}
         </React.Fragment>
       ))}

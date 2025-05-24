@@ -5,6 +5,7 @@ import CheckoutStepper from "../components/cart/CheckoutStepper";
 import BillForCart from "../components/cart/BillForCart";
 import CheckPincode from "../components/cart/CheckPincode";
 import CardCount from "../components/cart/CardCount";
+import ProductCard from "../components/ProductCard";
 
 export default function CartPage() {
   const [allSelected, setAllSelected] = useState(true);
@@ -38,6 +39,18 @@ export default function CartPage() {
             />
           </div>
         </div>
+      </div>
+      
+      <div id="Recommended-for-you" className="grid grid-cols-4 gap-1 px-4 py-2 mx-2 my-10">
+        <h1 className="col-span-4 text-xl font-semibold mb-4">Recommended for you</h1>
+        <ProductCard />
+        <ProductCard />
+        <ProductCard />
+        <ProductCard />
+        <ProductCard />
+        <ProductCard />
+        <ProductCard />
+        <ProductCard />
       </div>
     </div>
   );

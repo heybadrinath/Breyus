@@ -35,6 +35,8 @@ import ProductPage from "../buyer/pages/product";
 import OrderRequestQuantity from "../buyer/pages/order_request_quantity";
 import BuyerInformation from "../buyer/pages/buyer_information";
 import BuyerAddress from "../buyer/pages/buyer_address";
+import PurchaseRequest from "../buyer/pages/purchase-request";
+import PurchaseRequestSuccess from "../buyer/pages/PurchaseRequestSuccess";
 
 const pageVariants = { 
   initial: { opacity: 0, x: -80 },
@@ -85,21 +87,16 @@ const AppRoutes = () => {
           <Route path="/buyer/inbox" element={<Animate page={<BuyerInbox />} />} />
           <Route path="/buyer/wishlist" element={<Animate page={<Wishlist />} />} />
           <Route path="/buyer/cartpage" element={<Animate page={<CartPage />} />} />
-          <Route path="/buyer/buyer-address" element={<Animate page={<BuyerAddress />} />} />
-
-
-
           <Route path="/buyer/trade" element={<Animate page={<BuyerLayout content={<BuyerTrade />} />} />} />
-
+          <Route path="/buyer/buyer-address" element={<Animate page={<BuyerAddress />} />} />
           <Route path="/buyer/product-page" element={<Animate page={<BuyerLayout content={<ProductPage />} />} />} />
           <Route path="/buyer/product-request-quantity" element={<Animate page={<BuyerLayout content={<OrderRequestQuantity />} />} />} />
           <Route path="/buyer/buyer-information" element={<Animate page={<BuyerLayout content={<BuyerInformation />} />} />} />
+          <Route path="/buyer/purchase-request" element={<Animate page={<PurchaseRequest />} />} />
+          <Route path="/buyer/purchase-request-success" element={<Animate page={<PurchaseRequestSuccess />} />} />          
           
 
 
-            
-          
-          
           {/* Seller Routes */}
           <Route path="/seller/signin" element={<Animate page={<SellerSignin />} />} />
           <Route path="/seller/signup" element={<Animate page={<SellerSignup />} />} />
@@ -115,12 +112,6 @@ const AppRoutes = () => {
           <Route path="/seller/Product-Feedback" element={<Animate page={<Layout Body={<Feedback/>}/>} />} />
           <Route path="/seller/incoterms" element={<Animate page={<Layout Body={<Incoterms/>}/>} />} />
       
-
-  
-         
-  
-       
-
           {/* Seller settings with different layout */}
           <Route path="/seller/settings" element={<Animate page={<SellerSettings />} />}/>
 

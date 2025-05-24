@@ -26,7 +26,7 @@ const ProductCard: React.FC = () => {
   }, [showAnimation]);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-4 flex w-[240px] h-[260px] flex-col items-center justify-between">
+    <div onClick={ () =>window.location.href = '/buyer/product-page'} className="bg-white rounded-xl shadow-sm p-4 flex w-[240px] h-[260px] flex-col items-center justify-between">
       {/* Image Area */}
       <div className="relative w-full h-48 bg-gray-50 rounded-lg flex items-center justify-center">
         {/* Heart Icon */}
