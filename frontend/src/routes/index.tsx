@@ -5,7 +5,8 @@ import Signin from "../buyer/signin";  // Buyer Signin
 import Signup from "../buyer/signup";  // Buyer Signup
 import SellerSignin from "../seller/signin";  // Seller Signin
 import SellerSignup from "../seller/signup";  // Seller Signup
-import Hero from "../main/hero";  // Hero Page
+// import Hero from "../main/hero";  // Hero Page
+import Hero from "../Hero";
 import SellerSettings from "../seller/settings";
 import SellerDashboard from "../seller/dashboard";
 import Security from "../seller/security";
@@ -77,7 +78,8 @@ const AppRoutes = () => {
     
           <Routes location={location} key={location.pathname}>
           {/* Hero Page */}
-          <Route path="/" element={<Animate page={<Hero />} />} />
+          {/* <Route path="/" element={<Animate page={<Hero />} />} /> */}
+          <Route path="/" element={<Animate page={<Hero />}/>} />
   
           {/* Buyer Routes */}
           <Route path="/buyer/signin" element={<Animate page={<Signin />} />} />
