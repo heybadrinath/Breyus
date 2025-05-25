@@ -14,7 +14,7 @@ import SecuredTradeDealsImg from "./assets/section-3/secured-trade-deals.svg"
 import SecureSettlementSystemImg from "./assets/section-3/secure-settlements-system.svg"
 
 // Section-4 Image imports
-import TotalTradeVolume  from "./assets/section-4/Total-Trade-Volume.svg";
+import TotalTradeVolume from "./assets/section-4/Total-Trade-Volume.svg";
 import TradeDataTrained from "./assets/section-4/Trade-Data-Trained.svg";
 import TraderTradeEfficiency from "./assets/section-4/Trader-Trade-Efficiency.svg";
 import TraderTradeGrowth from "./assets/section-4/Trader-Trade-Growth.svg";
@@ -23,24 +23,47 @@ import worldmap from "./assets/worldmap.svg";
 
 const Navbar = () => {
     const navigate = useNavigate();
-    return(
-    <div className="border-b border-gray-200 px-2 py-2 flex">
-        <div id="logo" className="my-auto">
-            <img className="h-auto w-[180px]" src={BreyusLogo} alt="Breyus" />
-        </div>
-        <div id="nav" className="flex w-fit justify-between my-auto mx-auto font-[500] xl:text-lg lg:text-md md:text-sm">
-            <Link className="mx-4 text-black my-auto" to={'/features'}>Features</Link>
-            <Link className="mx-4 text-black my-auto" to={'/impact'}>Impact</Link>
-            <Link className="mx-4 text-black my-auto" to={'/schedule'}>Schedule</Link>
-            <Link className="mx-4 text-black my-auto" to={'/conact us'}>Contact Us</Link>
-        </div>
-        <div id="login-signup-btn" className="flex">
-            <Button onClick={() => navigate("/buyer/signup")} className=" md:text-sm md:px-6">Sign Up</Button>
-            <Button onClick={() => navigate("/buyer/signin")} className='bg-black text-white lg:text-sm md:px-6'>Login In</Button>
-        </div>
+    return (
+        <div className="border-b border-gray-200 px-2 py-2 flex">
+            <div id="logo" className="my-auto">
+                <img className="h-auto w-[180px]" src={BreyusLogo} alt="Breyus" />
+            </div>
+            <div id="nav" className="flex w-fit justify-between my-auto mx-auto font-[500] xl:text-lg lg:text-md md:text-sm">
+                <Link className="mx-4 text-black my-auto" to={'/features'}>Features</Link>
+                <Link className="mx-4 text-black my-auto" to={'/impact'}>Impact</Link>
+                <Link className="mx-4 text-black my-auto" to={'/schedule'}>Schedule</Link>
+                <Link className="mx-4 text-black my-auto" to={'/conact us'}>Contact Us</Link>
+            </div>
+            <div id="login-signup-btn" className="flex">
+                <Button onClick={() => navigate("/buyer/signup")} className=" md:text-sm md:px-6">Sign Up</Button>
+                <Button onClick={() => navigate("/buyer/signin")} className='bg-black text-white lg:text-sm md:px-6'>Login In</Button>
+            </div>
 
-    </div>
-)};
+        </div>
+    )
+};
+
+
+const Section1 = () => {
+    return (
+        <BorderBox className="border-t-0">
+            <div className="w-full flex flex-col">
+                <div id="top">
+
+                </div>
+                <div id="bottom-btns" className="flex mx-auto">
+                    <Button className="!border-black border-2">Get Started</Button>
+                    <Button className="bg-black text-white">Schedule Now</Button>
+                </div>
+                <div className="flex mx-auto mt-24 mb-16">
+                    <h1 className="text-3xl font-light"><span className="font-extrabold text-[#867C5B]">Trusted by</span> Global Trader of Sustainable Commodities <span className="font-extrabold text-black">Noval India.</span></h1>
+                </div>
+
+            </div>
+
+        </BorderBox>
+    );
+};
 
 
 const Section2 = () => {
@@ -135,7 +158,7 @@ const Section4 = () => {
         return () => window.removeEventListener("resize", updateOffset);
     }, []);
     return (
-        <BorderBox className='bg-no-repeat bg-cover bg-center' style={{backgroundImage: `url(${worldmap})`}}>
+        <BorderBox className='bg-no-repeat bg-cover bg-center' style={{ backgroundImage: `url(${worldmap})` }}>
             <div className="w-fit mx-auto flex flex-col h-[80vh]">
                 <div className="flex mx-auto">
                     <h1 className="text-4xl font-extrabold mb-24 mt-24">
@@ -147,7 +170,7 @@ const Section4 = () => {
                 <div className="flex">
                     {/* Trade growth metrics */}
                     <div className="flex flex-col gap-2 w-[340px] p-6  rounded-xl">
-                        <img className="w-[60px] h-auto" src={TraderTradeGrowth}/>
+                        <img className="w-[60px] h-auto" src={TraderTradeGrowth} />
                         <div className="flex items-center gap-2">
                             <span className="text-4xl font-extrabold text-black">100%</span>
                             <svg width="24" height="24" className="inline-block" viewBox="0 0 24 24" fill="none">
@@ -165,7 +188,7 @@ const Section4 = () => {
 
                     {/* Trade efficiency metrics */}
                     <div className="flex flex-col gap-2 w-[340px] p-6 rounded-xl">
-                        <img className="w-[60px] h-auto" src={TraderTradeEfficiency}/>
+                        <img className="w-[60px] h-auto" src={TraderTradeEfficiency} />
                         <div className="flex items-center gap-2">
                             <span className="text-4xl font-extrabold text-black">10%</span>
                             <svg width="24" height="24" className="inline-block" viewBox="0 0 24 24" fill="none">
@@ -183,7 +206,7 @@ const Section4 = () => {
 
                     {/* Trade volume metrics */}
                     <div className="flex flex-col gap-2 w-[340px] p-6  rounded-xl">
-                        <img className="w-[60px] h-auto" src={TotalTradeVolume}/>
+                        <img className="w-[60px] h-auto" src={TotalTradeVolume} />
                         <div className="flex items-center gap-2">
                             <span className="text-4xl font-extrabold text-black">100+</span>
                             <svg width="24" height="24" className="inline-block" viewBox="0 0 24 24" fill="none">
@@ -201,7 +224,7 @@ const Section4 = () => {
 
                     {/* Trade Data Trained metrics */}
                     <div className="flex flex-col gap-2 w-[340px] p-6 rounded-xl">
-                        <img className="w-[60px] h-auto" src={TradeDataTrained}/>
+                        <img className="w-[60px] h-auto" src={TradeDataTrained} />
                         <div className="flex items-center gap-2">
                             <span className="text-4xl font-extrabold text-black">3.5 Lakhs+</span>
                             <svg width="24" height="24" className="inline-block" viewBox="0 0 24 24" fill="none">
@@ -267,7 +290,7 @@ const Section5 = () => {
 export default () => (
     <div>
         <Navbar />
-        <div className="h-screen">.</div>
+        <Section1 />
         <Section2 />
         <Section3 />
         <Section4 />
@@ -311,7 +334,7 @@ type Section4ContentProps = {
 
 const Button: React.FC<ButtonProps> = ({ onClick, className = '', children }) => (
     <button onClick={onClick}
-        className={`${className} px-12 py-3 mx-6 my-2 border-gray-300 border rounded-xl font-semibold`}>
+        className={`${className} px-12 py-3 mx-6 my-2 border-gray-300 border rounded-xl font-semibold transition-all hover:scale-105`}>
         {children}
     </button>
 );
