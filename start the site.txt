@@ -1,0 +1,24 @@
+to start it :-
+
+cd backend 
+npm run start 
+
+
+
+cd frontend 
+npm run start 
+
+
+
+cd backend 
+cd ai 
+python -m uvicorn search:app --host 0.0.0.0 --port 7000 --reload   
+(if it gives error then write it with the version of python like python310 -m uvicorn search:app --host 0.0.0.0 --port 7000 --reload etc)
+
+
+cd backend 
+cd tagger-api 
+python -m uvicorn app.mainn:app --reload --port 8000
+(yes its mainn not main)
+(if it gives error then write it with the version of python like python310 -m uvicorn app.mainn:app --reload --port 8000)
+
