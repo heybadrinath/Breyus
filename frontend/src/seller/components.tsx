@@ -135,7 +135,7 @@ const Leftnavdash = ({ username }: { username: String }) => {
                     <Link onClick={toggleproduct} className={` rounded-lg transition-all duration-500 ease-in-out px-4 py-2 ${isproductopen?"bg-[#0004]":"bg-none"}`} to=""> <img alt="" src={productIcon} /> Products <img alt="" className={`down-arrow transition-transform duration-500 !ml-auto ${isproductopen? "rotate-180 ":"hue-rotate-180"}`} src={downArrow} /></Link>
                     <div className={`flex  flex-col overflow-hidden transition-all duration-1000 ease-bounch  ${isproductopen?"max-h-56 opacity-100": "max-h-0 opacity-40"}`}>
                        {/* toggle content  */}
-                       <Link className="!my-y !mx-6" to={"/seller/add-products?new=true"}>Add Products</Link>
+                       <Link className="!my-y !mx-6" to={"/seller/add-products"}>Add Products</Link>
                        <Link className="!my-y !mx-6" to={"/seller/inventory"}>Inventory</Link>
                        <Link className="!my-y !mx-6" to={"/seller/Product-Feedback"}>Feedback</Link>
                        

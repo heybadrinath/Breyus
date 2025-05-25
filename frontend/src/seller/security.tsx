@@ -2,8 +2,6 @@ import React from "react";
 import "../seller/css/components.css";
 import "../seller/css/security.css";
 import { Link } from "react-router-dom";
-import authService from "../services/auth.service";
-import axios from "axios";
 
 interface SecuritySectionProps {
     email?: string;
@@ -85,109 +83,26 @@ const ChangePassword: React.FC<{ className?: string }> = ({ className = "" }) =>
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
     const [success, setSuccess] = React.useState<string | null>(null);
-    const [passwordStrength, setPasswordStrength] = React.useState<"weak" | "medium" | "strong" | null>(null);
 
-    // Calculate password strength
-    React.useEffect(() => {
-        if (!newPassword) {
-            setPasswordStrength(null);
-            return;
-        }
-        
-        // Password strength criteria
-        const hasUpperCase = /[A-Z]/.test(newPassword);
-        const hasLowerCase = /[a-z]/.test(newPassword);
-        const hasNumber = /[0-9]/.test(newPassword);
-        const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword);
-        const isLongEnough = newPassword.length >= 8;
-        
-        const score = [hasUpperCase, hasLowerCase, hasNumber, hasSpecialChar, isLongEnough].filter(Boolean).length;
-        
-        if (score <= 2) setPasswordStrength("weak");
-        else if (score <= 4) setPasswordStrength("medium");
-        else setPasswordStrength("strong");
-    }, [newPassword]);
-
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setSuccess(null);
-
-        // Validate inputs
-        if (!currentPassword) {
-            setError("Current password is required.");
-            return;
-        }
-
-        if (newPassword.length < 8) {
-            setError("New password must be at least 8 characters.");
-            return;
-        }
 
         if (newPassword !== confirmPassword) {
             setError("New passwords do not match.");
             return;
         }
 
-        if (newPassword === currentPassword) {
-            setError("New password must be different from your current password.");
-            return;
-        }
-
         setIsSubmitting(true);
-        
-        try {
-            // Get the token for authentication
-            const token = authService.getToken();
-            if (!token) {
-                setError("Authentication required. Please log in again.");
-                return;
-            }
-
-            // Call the real backend API
-            const response = await axios.post('http://localhost:5000/security/change-password', {
-                currentPassword,
-                newPassword
-            }, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
-
-            if (response.data.message) {
-                // Clear form and show success message
-                setSuccess("Password updated successfully");
-                setCurrentPassword("");
-                setNewPassword("");
-                setConfirmPassword("");
-                setPasswordStrength(null);
-            }
-        } catch (err: any) {
-            console.error('Password change error:', err);
-            
-            // Handle different error cases
-            if (err.response?.data?.message) {
-                setError(err.response.data.message);
-            } else if (err.response?.status === 401) {
-                setError("Current password is incorrect.");
-            } else if (err.response?.status === 403) {
-                setError("Access denied. Please log in again.");
-                authService.logout();
-                window.location.href = '/seller/signin';
-            } else {
-                setError("Failed to update password. Please try again.");
-            }
-        } finally {
+        // Simulate API call
+        setTimeout(() => {
             setIsSubmitting(false);
-        }
-    };
-
-    // Get color for password strength indicator
-    const getPasswordStrengthColor = () => {
-        if (passwordStrength === "weak") return "#ef4444";  // Red
-        if (passwordStrength === "medium") return "#f59e0b"; // Amber
-        if (passwordStrength === "strong") return "#22c55e"; // Green
-        return "#e5e7eb"; // Gray
+            setSuccess("Password changed successfully.");
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+        }, 1200);
     };
 
     return (
@@ -219,44 +134,21 @@ const ChangePassword: React.FC<{ className?: string }> = ({ className = "" }) =>
                     }}
                     required
                 />
-                <div style={{ position: "relative", marginBottom: "12px" }}>
-                    <input
-                        type="password"
-                        placeholder="New Password"
-                        value={newPassword}
-                        onChange={e => setNewPassword(e.target.value)}
-                        style={{
-                            width: "100%",
-                            padding: "12px",
-                            borderRadius: "8px",
-                            border: "1px solid #eee",
-                            fontSize: "15px",
-                        }}
-                        required
-                    />
-                    {passwordStrength && (
-                        <div style={{ marginTop: "4px", fontSize: "12px", display: "flex", alignItems: "center" }}>
-                            <div style={{ 
-                                width: "100px", 
-                                height: "4px", 
-                                backgroundColor: "#e5e7eb", 
-                                borderRadius: "2px",
-                                marginRight: "8px"
-                            }}>
-                                <div style={{ 
-                                    width: passwordStrength === "weak" ? "33%" : passwordStrength === "medium" ? "66%" : "100%", 
-                                    height: "100%", 
-                                    backgroundColor: getPasswordStrengthColor(), 
-                                    borderRadius: "2px",
-                                    transition: "width 0.3s ease"
-                                }} />
-                            </div>
-                            <span style={{ color: getPasswordStrengthColor() }}>
-                                {passwordStrength.charAt(0).toUpperCase() + passwordStrength.slice(1)} password
-                            </span>
-                        </div>
-                    )}
-                </div>
+                <input
+                    type="password"
+                    placeholder="New Password"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    style={{
+                        width: "100%",
+                        padding: "12px",
+                        borderRadius: "8px",
+                        border: "1px solid #eee",
+                        marginBottom: "12px",
+                        fontSize: "15px",
+                    }}
+                    required
+                />
                 <input
                     type="password"
                     placeholder="Confirm New Password"
@@ -280,16 +172,15 @@ const ChangePassword: React.FC<{ className?: string }> = ({ className = "" }) =>
                     width: "100%",
                     padding: "12px",
                     borderRadius: "8px",
-                    border: "none",
-                    background: isSubmitting ? "#f3f4f6" : "#000000",
-                    color: isSubmitting ? "#bdbdbd" : "#ffffff",
+                    border: "1px solid #eee",
+                    background: isSubmitting ? "#f3f4f6" : "#fafbfc",
+                    color: "#bdbdbd",
                     fontWeight: 500,
                     fontSize: "16px",
                     cursor: isSubmitting ? "not-allowed" : "pointer",
-                    transition: "all 0.2s ease"
                 }}
             >
-                {isSubmitting ? "Updating..." : "Update Password"}
+                {isSubmitting ? "Changing..." : "Change Password"}
             </button>
             {error && (
                 <div style={{ color: "#ef4444", marginTop: "12px", fontSize: "14px" }}>
@@ -297,7 +188,7 @@ const ChangePassword: React.FC<{ className?: string }> = ({ className = "" }) =>
                 </div>
             )}
             {success && (
-                <div style={{ color: "#22c55e", marginTop: "12px", fontSize: "14px", fontWeight: "500" }}>
+                <div style={{ color: "#22c55e", marginTop: "12px", fontSize: "14px" }}>
                     {success}
                 </div>
             )}
@@ -335,14 +226,14 @@ const TwoFactorAuthentication: React.FC<{ className?: string }> = ({ className =
             </div>
             <div style={{ fontWeight: 600, marginBottom: "8px" }}>How it works</div>
             <div style={{ fontSize: "15px", marginBottom: "12px" }}>
-                When you log in to Shopify, you'll need to:
+                When you log in to Shopify, you’ll need to:
             </div>
             <ol style={{ paddingLeft: "20px", fontSize: "15px", marginBottom: "12px" }}>
                 <li style={{ marginBottom: "8px" }}>
                     Enter your email and password
                 </li>
                 <li>
-                    Complete a second step to prove that it's you logging in. You can enter a verification code, use a security key, or confirm your login on a trusted device.
+                    Complete a second step to prove that it’s you logging in. You can enter a verification code, use a security key, or confirm your login on a trusted device.
                 </li>
             </ol>
             <button
@@ -410,7 +301,7 @@ const SecuritySection = () => {
             <div className="flex justify-between">
                 <div className="mt-4">
                     <h2 className="text-2xl font-extrabold">Two-step authentication</h2>
-                    <p className="text-md">Learn more about <a className="underline font-bold" href="https://support.google.com/accounts/answer/185839" target="_blank" rel="noopener noreferrer">two-step authentication</a></p>
+                    <p className="text-md">Learn more about <Link className=" underline font-bold" to="">two-step authentication</Link></p>
                 </div>
                 <TwoFactorAuthentication className="!w-[55%] !mx-4 !my-2" />
             </div>
