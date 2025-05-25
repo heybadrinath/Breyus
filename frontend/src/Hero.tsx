@@ -147,6 +147,108 @@ const year = new Date().getFullYear;
         </BorderBox>
     );
 }
+const Section4 = () => {
+    const [xOffset, setXOffset] = useState("95%");
+
+  useEffect(() => {
+    const updateOffset = () => {
+      const width = window.innerWidth;
+      if (width < 1400) setXOffset("55%");
+      else if (width < 1587) setXOffset("70%");
+      else if(width <1675) setXOffset("80%")
+      else setXOffset("95%");
+      
+    };
+    updateOffset();
+    window.addEventListener("resize", updateOffset);
+    return () => window.removeEventListener("resize", updateOffset);
+  }, []);
+    return(
+    <BorderBox className="">
+
+        <div className="flex">
+            <h1 className="text-3xl font-extrabold mb-8">
+                The 4 Ts That Drive <span className="text-[#867C5B] font-extrabold">Global Trade Forward.</span>
+            </h1>
+        </div>
+        
+        {/* Trade growth metrics */}
+            <div className="flex gap-6">
+                
+                <div className="flex flex-col gap-2 w-[340px] p-6 bg-white rounded-xl">
+                    <div className="flex items-center gap-2">
+                        <span className="text-4xl font-extrabold text-black">100%</span>
+                        <svg width="24" height="24" className="inline-block" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 19V5M12 5L7 10M12 5L17 10" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <span className="text-lg font-medium text-black">TRADER <span className="font-extrabold">TRADE GROWTH.</span></span>
+                    </div>
+                    <div className="text-base text-black/80 leading-snug">
+                        Growth in traders trade<br />
+                        volume through <span className="font-extrabold text-[#867C5B]">BREYUS</span>
+                    </div>
+                </div>
+
+                {/* Trade efficiency metrics */}
+                <div className="flex flex-col gap-2 w-[340px] p-6 bg-white rounded-xl">
+                    <div className="flex items-center gap-2">
+                        <span className="text-4xl font-extrabold text-black">10%</span>
+                        <svg width="24" height="24" className="inline-block" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 19V5M12 5L7 10M12 5L17 10" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <span className="text-lg font-medium text-black">TRADER <span className="font-extrabold">TRADE EFFICIENCY.</span></span>
+                    </div>
+                    <div className="text-base text-black/80 leading-snug">
+                        Growth in traders trade<br />
+                        volume through <span className="font-extrabold text-[#867C5B]">BREYUS</span>
+                    </div>
+                </div>
+
+{/* Trade volume metrics */}
+                <div className="flex flex-col gap-2 w-[340px] p-6 bg-white rounded-xl">
+                    <div className="flex items-center gap-2">
+                        <span className="text-4xl font-extrabold text-black">100+</span>
+                        <svg width="24" height="24" className="inline-block" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 19V5M12 5L7 10M12 5L17 10" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <span className="text-lg font-medium text-black">TOTAL <span className="font-extrabold">TRADE VOLUME.</span></span>
+                    </div>
+                    <div className="text-base text-black/80 leading-snug">
+                        Aggregate value of executed <br />
+                        trades in <span className="font-extrabold text-[#867C5B]">BREYUS</span>
+                    </div>
+                </div>
+
+{/* Trade Data Trained metrics */}
+                <div className="flex flex-col gap-2 w-[340px] p-6 bg-white rounded-xl">
+                    <div className="flex items-center gap-2">
+                        <span className="text-4xl font-extrabold text-black">3.5 Lakhs+</span>
+                        <svg width="24" height="24" className="inline-block" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 19V5M12 5L7 10M12 5L17 10" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <span className="text-lg font-medium text-black">TRADER <span className="font-extrabold"> DATA TRAINED.</span></span>
+                    </div>
+                    <div className="text-base text-black/80 leading-snug">
+                        Total number of trade data's <br />
+                        trained to <span className="font-extrabold text-[#867C5B]">BREYUS</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* <img src={worldmap} alt="" className="w-full h-full object-cover" /> */}
+        
+    </BorderBox>
+);
+}
+
 
 export default () => (
     <div>
@@ -154,7 +256,6 @@ export default () => (
         <div className="h-screen">.</div>
         <Section2 />
         <Section3 />
-        <Section5 />
     </div>
 );
 
@@ -184,6 +285,12 @@ type Section3ContentProps = {
     paragraph?: string;
     className?: string;
 }
+type Section4ContentProps = {
+    icons?: string;
+    heading?: string;
+    paragraph?: string;
+    percentage?: string;
+}
 
 const Button: React.FC<ButtonProps> = ({ onClick, className = '', children }) => (
     <button onClick={() => onClick}
@@ -207,3 +314,9 @@ const Section3Content: React.FC<Section3ContentProps> = ({ heading, paragraph, i
     </div>
 )
 
+const Section4Content: React.FC<Section4ContentProps> = ({heading, paragraph, icons= '', percentage= ''}) => (
+    <div className="flex my-6">
+        <img src={icons} className="mb-auto m-2" alt="" />
+        <p className="px-3 w-[400px] text-2xl"><span className="text-black font-bold">{heading}</span> <span className="text-[#696969]">{paragraph}</span></p>
+    </div>
+)
