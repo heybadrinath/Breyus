@@ -20,10 +20,10 @@ const Navbar = () => (
             <img className="h-auto w-[180px]" src={BreyusLogo} alt="Breyus" />
         </div>
         <div id="nav" className="flex w-fit justify-between my-auto mx-auto font-[500] xl:text-lg lg:text-md md:text-sm">
-            <Link className="mx-4 text-black my-auto" to={'/'}>Features</Link>
-            <Link className="mx-4 text-black my-auto" to={'/'}>Testimonials</Link>
-            <Link className="mx-4 text-black my-auto" to={'/'}>Schedule</Link>
-            <Link className="mx-4 text-black my-auto" to={'/'}>Contact Us</Link>
+            <Link className="mx-4 text-black my-auto" to={'/features'}>Features</Link>
+            <Link className="mx-4 text-black my-auto" to={'/impact'}>Impact</Link>
+            <Link className="mx-4 text-black my-auto" to={'/schedule'}>Schedule</Link>
+            <Link className="mx-4 text-black my-auto" to={'/conact us'}>Contact Us</Link>
         </div>
         <div id="login-signup-btn" className="flex">
             <Button className=" md:text-sm md:px-6">Sign Up</Button>
@@ -112,7 +112,7 @@ const Section3 = () => {
 
 
 const Section5 = () => {
-
+const year = new Date().getFullYear;
     return (
         <BorderBox>
             <div className="h-[fit] my-16 w-full">
@@ -131,8 +131,15 @@ const Section5 = () => {
                     <p className="text-center mt-8 text-white">We care about your data. Read our <span className="text-[#0076D3]">privacy policy.</span></p>
                 </div>
                 
-                <footer>
-                    
+                <footer className="font-semibold mx-auto flex flex-col w-fit mt-32 mb-8">
+                    <div className="flex">
+                        <Link className="mx-5 my-2" to={'/'}>Privacy Policy</Link>
+                        <Link className="mx-5 my-2" to={'/'}>Terms of Use</Link>
+                        <Link className="mx-5 my-2" to={'/'}>Trust</Link>
+                    </div>
+                    <div className="flex mx-auto my-2">
+                        &copy; Breyus All rights Reserved
+                    </div>
                 </footer>
 
             </div>
