@@ -13,6 +13,13 @@ import AutomatedDocumentationImg from "./assets/section-3/Automated-documentatio
 import SecuredTradeDealsImg from "./assets/section-3/secured-trade-deals.svg"
 import SecureSettlementSystemImg from "./assets/section-3/secure-settlements-system.svg"
 
+// Section-4 Image imports
+import TotalTradeVolume  from "./assets/section-4/Total-Trade-Volume.svg";
+import TradeDataTrained from "./assets/section-4/Trade-Data-Trained.svg";
+import TraderTradeEfficiency from "./assets/section-4/Trader-Trade-Efficiency.svg";
+import TraderTradeGrowth from "./assets/section-4/Trader-Trade-Growth.svg";
+import worldmap from "./assets/worldmap.svg";
+
 
 const Navbar = () => (
     <div className="border-b border-gray-200 px-2 py-2 flex">
@@ -126,10 +133,10 @@ const Section4 = () => {
         return () => window.removeEventListener("resize", updateOffset);
     }, []);
     return (
-        <BorderBox className="flex flex-col">
-            <div>
-                <div className="flex">
-                    <h1 className="text-3xl font-extrabold mb-8">
+        <BorderBox className='bg-no-repeat bg-cover bg-center' style={{backgroundImage: `url(${worldmap})`}}>
+            <div className="w-fit mx-auto flex flex-col h-[80vh]">
+                <div className="flex mx-auto">
+                    <h1 className="text-4xl font-extrabold mb-24 mt-24">
                         The 4 Ts That Drive <span className="text-[#867C5B] font-extrabold">Global Trade Forward.</span>
                     </h1>
                 </div>
@@ -137,8 +144,8 @@ const Section4 = () => {
                 {/* Bottom section  */}
                 <div className="flex">
                     {/* Trade growth metrics */}
-                    <div className="flex flex-col gap-2 w-[340px] p-6 bg-white rounded-xl">
-                        <img src="" alt="test" />
+                    <div className="flex flex-col gap-2 w-[340px] p-6  rounded-xl">
+                        <img className="w-[60px] h-auto" src={TraderTradeGrowth}/>
                         <div className="flex items-center gap-2">
                             <span className="text-4xl font-extrabold text-black">100%</span>
                             <svg width="24" height="24" className="inline-block" viewBox="0 0 24 24" fill="none">
@@ -155,7 +162,8 @@ const Section4 = () => {
                     </div>
 
                     {/* Trade efficiency metrics */}
-                    <div className="flex flex-col gap-2 w-[340px] p-6 bg-white rounded-xl">
+                    <div className="flex flex-col gap-2 w-[340px] p-6 rounded-xl">
+                        <img className="w-[60px] h-auto" src={TraderTradeEfficiency}/>
                         <div className="flex items-center gap-2">
                             <span className="text-4xl font-extrabold text-black">10%</span>
                             <svg width="24" height="24" className="inline-block" viewBox="0 0 24 24" fill="none">
@@ -172,7 +180,8 @@ const Section4 = () => {
                     </div>
 
                     {/* Trade volume metrics */}
-                    <div className="flex flex-col gap-2 w-[340px] p-6 bg-white rounded-xl">
+                    <div className="flex flex-col gap-2 w-[340px] p-6  rounded-xl">
+                        <img className="w-[60px] h-auto" src={TotalTradeVolume}/>
                         <div className="flex items-center gap-2">
                             <span className="text-4xl font-extrabold text-black">100+</span>
                             <svg width="24" height="24" className="inline-block" viewBox="0 0 24 24" fill="none">
@@ -189,7 +198,8 @@ const Section4 = () => {
                     </div>
 
                     {/* Trade Data Trained metrics */}
-                    <div className="flex flex-col gap-2 w-[340px] p-6 bg-white rounded-xl">
+                    <div className="flex flex-col gap-2 w-[340px] p-6 rounded-xl">
+                        <img className="w-[60px] h-auto" src={TradeDataTrained}/>
                         <div className="flex items-center gap-2">
                             <span className="text-4xl font-extrabold text-black">3.5 Lakhs+</span>
                             <svg width="24" height="24" className="inline-block" viewBox="0 0 24 24" fill="none">
@@ -282,6 +292,7 @@ type ButtonProps = {
 type BorderBoxProps = {
     children: ReactNode;
     className?: string;
+    style?: React.CSSProperties;
 }
 type Section3ContentProps = {
     icons?: string;
@@ -303,9 +314,9 @@ const Button: React.FC<ButtonProps> = ({ onClick, className = '', children }) =>
     </button>
 );
 
-const BorderBox: React.FC<BorderBoxProps> = ({ className = '', children }) => (
+const BorderBox: React.FC<BorderBoxProps> = ({ className = '', children, style }) => (
     <div className={`w-full border-t border-b flex border-dashed border-gray-400 ${className}`}>
-        <div className="mx-20  border-l border-r border-dashed w-full border-gray-400 flex">
+        <div className="mx-20  border-l border-r border-dashed w-full border-gray-400 flex" style={style}>
             {children}
         </div>
     </div>
