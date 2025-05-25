@@ -15,9 +15,6 @@ const variants = {
 
 // Product Layout Component
 const ProductLayout = ({ productype, Body }: { productype: string, Body: ReactNode }) => {
-  const steps = ["product", "media", "price", "tags"];
-  const currentIndex = steps.indexOf(productype);
-
   return (
     <motion.div
       variants={variants}
@@ -25,22 +22,16 @@ const ProductLayout = ({ productype, Body }: { productype: string, Body: ReactNo
       animate="animate"
       exit="exit"
       transition={{ duration: 0.5 }}
-      className="relative p-6 bg-gray-50 min-h-screen overflow-y-auto"
+      className="relative min-h-screen bg-gradient-to-br from-gray-50 to-gray-100"
     >
-      <div className="step-indicator mb-8">
-        {steps.map((step, index) => (
-          <div
-            key={step}
-            className={`step ${index <= currentIndex ? 'active' : ''}`}
-          >
-            <div className="step-number">{index + 1}</div>
-            <span className="step-label">{step.charAt(0).toUpperCase() + step.slice(1)}</span>
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div className="p-8 lg:p-12">
+              {Body}
+            </div>
           </div>
-        ))}
-      </div>
-      
-      <div className="max-w-6xl mx-auto">
-        {Body}
+        </div>
       </div>
     </motion.div>
   );

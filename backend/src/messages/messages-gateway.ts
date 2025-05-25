@@ -88,12 +88,17 @@ export class MessagesGateway {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: SendMessageDto,
   ) {
+    const now = new Date();
     const message: Message = {
       id: uuidv4(),
       senderId: data.senderId,
       receiverId: data.receiverId,
       content: data.content,
-      timestamp: new Date(),
+      type: 'text',
+      isRead: false,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      timestamp: now,
     };
 
     const savedMessage = this.messagesService.addMessage(data.roomId, message);

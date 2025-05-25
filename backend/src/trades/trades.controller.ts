@@ -286,7 +286,7 @@ export class TradesController {
       this.logger.log(`GET /trades/my-requests - Buyer: ${buyerId}`);
       
       // For buyers, we need to fetch trades where they are the buyer
-      return await this.tradesService.getIncomingTrades(buyerId, filters);
+      return await this.tradesService.getMyTradeRequests(buyerId, filters);
     } catch (error) {
       this.logger.error(`Error fetching buyer trade requests: ${error.message}`, error.stack);
       throw new HttpException(

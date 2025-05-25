@@ -94,6 +94,10 @@ export class MessagesGateway {
       receiverId: data.receiverId,
       content: data.content,
       timestamp: new Date(),
+      type: 'text',
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     const savedMessage = this.messagesService.addMessage(data.roomId, message);

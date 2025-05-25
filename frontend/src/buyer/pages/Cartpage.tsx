@@ -23,6 +23,7 @@ export default function CartPage() {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [recommendedProducts, setRecommendedProducts] = useState([]);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     loadCartData();
@@ -97,13 +98,35 @@ export default function CartPage() {
     };
   };
 
-  const handleProceedToCheckout = () => {
+  const handleProceedToCheckout = async () => {
     if (selectedItems.length === 0) {
       alert('Please select items to proceed');
       return;
     }
-    // Navigate to checkout page with selected items
-    window.location.href = '/buyer/checkout';
+
+    setIsProcessing(true);
+
+    try {
+      // Store selected cart items for checkout flow
+      const selectedCartItems = cartSummary.items.filter(item => selectedItems.includes(item.id));
+      
+      // Store checkout data in localStorage for the checkout flow
+      const checkoutData = {
+        selectedItems: selectedCartItems,
+        summary: calculateSelectedItemsTotal(),
+        timestamp: new Date().toISOString()
+      };
+      
+      localStorage.setItem('checkout_data', JSON.stringify(checkoutData));
+      
+      // Navigate to address page
+      window.location.href = '/buyer/buyer-address';
+    } catch (error) {
+      console.error('Error proceeding to checkout:', error);
+      alert('Failed to proceed to checkout. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const selectedItemsCalculation = calculateSelectedItemsTotal();
@@ -186,6 +209,7 @@ export default function CartPage() {
               totalAmount={`₹${selectedItemsCalculation.totalAmount.toLocaleString()}`}
               onProceed={handleProceedToCheckout}
               itemsSelected={selectedItems.length}
+              isProcessing={isProcessing}
             />
           </div>
         </div>

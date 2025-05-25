@@ -10,6 +10,7 @@ interface BillForCartProps {
   onProceed: () => void;
   isCouponApplied?: boolean;
   itemsSelected?: number;
+  isProcessing?: boolean;
 }
 
 const BillForCart: React.FC<BillForCartProps> = ({
@@ -22,11 +23,12 @@ const BillForCart: React.FC<BillForCartProps> = ({
   onProceed,
   isCouponApplied = false,
   itemsSelected = 0,
+  isProcessing = false,
 }) => (
   <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 max-w-md mx-auto border border-gray-200">
     <div className="text-center mb-4 bg-blue-50 p-3 rounded-lg">
-      <span className="font-semibold text-blue-700">Special Offer:</span> 
-      <span className="text-blue-600"> Get up to ₹500 OFF on first order</span>
+      <span className="font-semibold text-blue-700">Checkout Process:</span> 
+      <span className="text-blue-600"> Review items and proceed to address</span>
     </div>
     <div className="border-b pb-4 mb-4">
       <div className="font-bold text-lg mb-2">
@@ -69,14 +71,23 @@ const BillForCart: React.FC<BillForCartProps> = ({
     </div>
     <button
       className={`w-full font-semibold py-3 rounded-lg shadow transition ${
-        itemsSelected > 0
+        itemsSelected > 0 && !isProcessing
           ? 'bg-gradient-to-r from-gray-800 to-black text-white hover:from-black hover:to-gray-800'
           : 'bg-gray-300 text-gray-500 cursor-not-allowed'
       }`}
       onClick={onProceed}
-      disabled={itemsSelected === 0}
+      disabled={itemsSelected === 0 || isProcessing}
     >
-      {itemsSelected > 0 ? 'Proceed to Address' : 'Select items to proceed'}
+      {isProcessing ? (
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-500 mr-2"></div>
+          Processing...
+        </div>
+      ) : itemsSelected > 0 ? (
+        'Proceed to Checkout'
+      ) : (
+        'Select items to proceed'
+      )}
     </button>
   </div>
 );

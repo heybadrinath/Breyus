@@ -98,19 +98,62 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
   // Check if product is already in cart
   const isInCart = cartService.isInCart(product.id);
 
-  // Get the best available image with fallback logic
-  const getProductImage = () => {
-    if (imageError) {
-      return '/placeholder-product.svg';
-    }
+  // Enhanced image component with loading state
+  const ProductImage = () => {
+    const [isLoading, setIsLoading] = useState(true);
+    const [currentImageError, setCurrentImageError] = useState(false);
 
-    // Try primary image first, then first image from array, then product image, then fallback
-    const imageUrl = product.primaryImage || 
-                     (product.images && product.images[0]) || 
-                     product.productImage || 
-                     '/placeholder-product.svg';
-    
-    return imageUrl;
+    const getProductImage = () => {
+      if (currentImageError) {
+        return '/placeholder-product.svg';
+      }
+
+      // Try primary image first, then first image from array, then product image, then fallback
+      const imageUrl = product.primaryImage || 
+                       (product.images && product.images[0]) || 
+                       product.productImage || 
+                       '/placeholder-product.svg';
+      
+      return imageUrl;
+    };
+
+    const handleImageLoad = () => {
+      setIsLoading(false);
+    };
+
+    const handleImageError = () => {
+      setIsLoading(false);
+      setCurrentImageError(true);
+    };
+
+    return (
+      <div className="relative w-full h-48 bg-gray-50 rounded-lg flex items-center justify-center overflow-hidden">
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400"></div>
+          </div>
+        )}
+        <img
+          src={getProductImage()}
+          alt={product.name}
+          className={`w-full h-full object-cover rounded-lg transition-opacity duration-200 ${
+            isLoading ? 'opacity-0' : 'opacity-100'
+          }`}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
+          loading="lazy"
+          style={{
+            objectFit: 'cover',
+            objectPosition: 'center',
+          }}
+        />
+        {currentImageError && getProductImage() === '/placeholder-product.svg' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg text-gray-400 text-sm">
+            No Image
+          </div>
+        )}
+      </div>
+    );
   };
 
   const handleImageError = () => {
@@ -123,15 +166,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
       className="bg-white rounded-xl shadow-sm p-4 flex w-[240px] h-[320px] flex-col cursor-pointer hover:shadow-lg transition-shadow duration-300"
     >
       {/* Image Area */}
-      <div className="relative w-full h-48 bg-gray-50 rounded-lg flex items-center justify-center overflow-hidden">
-        {/* Product Image */}
-        <img
-          src={getProductImage()}
-          alt={product.name}
-          className="w-full h-full object-cover rounded-lg"
-          onError={handleImageError}
-          loading="lazy"
-        />
+      <div className="relative">
+        <ProductImage />
         
         {/* Heart Icon */}
         <div className="absolute top-3 right-3">

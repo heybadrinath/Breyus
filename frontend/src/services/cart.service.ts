@@ -1,5 +1,6 @@
 import axios from 'axios';
 import authService from './auth.service';
+import tradeService from './trade.service';
 import { Product } from '../types/product';
 
 const API_URL = 'http://localhost:5000/cart';
@@ -24,6 +25,13 @@ export interface CartSummary {
   platformFee: number;
   shippingFee: number;
   totalAmount: number;
+}
+
+export interface TradeRequestResult {
+  success: boolean;
+  tradeId?: string;
+  message: string;
+  error?: string;
 }
 
 class CartService {
@@ -77,7 +85,7 @@ class CartService {
           id: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           productId: product.id,
           productName: product.name,
-          productImage: product.images?.[0] || product.primaryImage || '',
+          productImage: product.images?.[0] || product.primaryImage || product.productImage || '',
           price: product.price,
           quantity: quantity,
           sellerId: product.sellerId || '',
@@ -93,6 +101,137 @@ class CartService {
     } catch (error) {
       console.error('Error adding to cart:', error);
       return false;
+    }
+  }
+
+  // Create trade request for a single item
+  async createTradeRequestForItem(cartItem: CartItem, message?: string): Promise<TradeRequestResult> {
+    try {
+      const user = authService.getUser();
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not authenticated'
+        };
+      }
+
+      if (!cartItem.sellerId) {
+        return {
+          success: false,
+          message: 'Seller information not available for this product'
+        };
+      }
+
+      const tradeRequest = {
+        seller_id: cartItem.sellerId,
+        product_id: cartItem.productId,
+        offered_price: cartItem.price,
+        quantity: cartItem.quantity,
+        buyer_message: message || `Purchase request for ${cartItem.productName}`,
+        trade_type: 'purchase_request',
+        is_urgent: false
+      };
+
+      console.log('Creating trade request:', tradeRequest);
+
+      const response = await tradeService.createTradeRequest(tradeRequest);
+      
+      return {
+        success: true,
+        tradeId: response.id,
+        message: `Trade request sent to ${cartItem.sellerName} for ${cartItem.productName}`
+      };
+    } catch (error) {
+      console.error('Error creating trade request:', error);
+      return {
+        success: false,
+        message: 'Failed to create trade request',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  // Convert cart items to trade requests (for checkout)
+  async convertCartToTradeRequests(selectedItemIds?: string[], message?: string): Promise<{
+    successful: TradeRequestResult[];
+    failed: TradeRequestResult[];
+    summary: string;
+  }> {
+    const successful: TradeRequestResult[] = [];
+    const failed: TradeRequestResult[] = [];
+
+    // Get items to process (either selected items or all items)
+    const itemsToProcess = selectedItemIds 
+      ? this.cart.filter(item => selectedItemIds.includes(item.id))
+      : this.cart;
+
+    console.log(`Converting ${itemsToProcess.length} cart items to trade requests`);
+
+    for (const item of itemsToProcess) {
+      const result = await this.createTradeRequestForItem(item, message);
+      
+      if (result.success) {
+        successful.push(result);
+        // Remove from cart after successful trade request
+        this.removeFromCart(item.id);
+      } else {
+        failed.push(result);
+      }
+    }
+
+    const summary = `${successful.length} trade requests sent successfully. ${failed.length} failed.`;
+    
+    return {
+      successful,
+      failed,
+      summary
+    };
+  }
+
+  // Quick purchase (create trade request directly from product)
+  async quickPurchase(product: Product, quantity: number, message?: string): Promise<TradeRequestResult> {
+    try {
+      const user = authService.getUser();
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not authenticated'
+        };
+      }
+
+      if (!product.sellerId) {
+        return {
+          success: false,
+          message: 'Seller information not available for this product'
+        };
+      }
+
+      const tradeRequest = {
+        seller_id: product.sellerId,
+        product_id: product.id,
+        offered_price: product.price,
+        quantity: quantity,
+        buyer_message: message || `Purchase request for ${product.name}`,
+        trade_type: 'purchase_request',
+        is_urgent: false
+      };
+
+      console.log('Creating quick purchase trade request:', tradeRequest);
+
+      const response = await tradeService.createTradeRequest(tradeRequest);
+      
+      return {
+        success: true,
+        tradeId: response.id,
+        message: `Trade request sent to ${product.sellerName || 'seller'} for ${product.name}`
+      };
+    } catch (error) {
+      console.error('Error creating quick purchase trade request:', error);
+      return {
+        success: false,
+        message: 'Failed to create trade request',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
   }
 

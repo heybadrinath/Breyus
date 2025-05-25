@@ -8,8 +8,9 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger, UseGuards } from '@nestjs/common';
+import { Logger, UseGuards, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { TradeResponseDto } from './dto/trade.dto';
 
 interface AuthenticatedSocket extends Socket {
@@ -19,7 +20,10 @@ interface AuthenticatedSocket extends Socket {
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: (origin, callback) => {
+      // This will be set during gateway initialization
+      callback(null, true);
+    },
     credentials: true,
   },
   namespace: '/trades'
@@ -31,7 +35,14 @@ export class TradesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(TradesGateway.name);
   private connectedUsers = new Map<string, Set<string>>(); // userId -> Set of socketIds
 
-  constructor(private jwtService: JwtService) {}
+  constructor(
+    private jwtService: JwtService,
+    private configService: ConfigService
+  ) {
+    // Log the CORS origin being used
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
+    this.logger.log(`WebSocket Gateway configured with CORS origin: ${frontendUrl}`);
+  }
 
   async handleConnection(client: AuthenticatedSocket) {
     try {

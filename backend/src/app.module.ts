@@ -25,7 +25,9 @@ import { Trade } from './trades/entities/trade.entity';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true, // Ensures .env is accessible everywhere
+      isGlobal: true,
+      envFilePath: '.env',
+      
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

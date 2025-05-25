@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, Logger, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { UserDetails } from './entities/user-details.entity';
@@ -9,13 +10,18 @@ import * as bcrypt from 'bcrypt';
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
+  private readonly bcryptRounds: number;
 
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     @InjectRepository(UserDetails)
     private userDetailsRepository: Repository<UserDetails>,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.bcryptRounds = this.configService.get<number>('BCRYPT_ROUNDS', 12);
+    this.logger.log(`Users service initialized with bcrypt rounds: ${this.bcryptRounds}`);
+  }
 
   async findAll(): Promise<User[]> {
     return this.usersRepository.find();
@@ -90,8 +96,7 @@ export class UsersService {
   }
 
   private async hashPassword(password: string): Promise<string> {
-    const salt = await bcrypt.genSalt();
-    return bcrypt.hash(password, salt);
+    return bcrypt.hash(password, this.bcryptRounds);
   }
 
   async validateCredentials(email: string, password: string): Promise<User | null> {

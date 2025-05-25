@@ -99,6 +99,12 @@ const runMigration = async () => {
     await runSqlFile(analyticsSqlPath);
     console.log('Analytics tables migration completed.');
 
+    // Run buyer addresses and chat system migration
+    const buyerAddressesSqlPath = path.join(__dirname, 'migrations', 'create_buyer_addresses.sql');
+    console.log(`Starting migration for: ${buyerAddressesSqlPath}`);
+    await runSqlFile(buyerAddressesSqlPath);
+    console.log('Buyer addresses and chat system migration completed.');
+
     // Run seed data script
     const seedDataSqlPath = path.join(__dirname, 'migrations', 'seed_analytics_data.sql');
     console.log(`Starting data seeding: ${seedDataSqlPath}`);

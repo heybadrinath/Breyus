@@ -1,4 +1,5 @@
 import { Injectable, UnauthorizedException, NotFoundException, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { MailService } from '../mail/mail.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from './jwt/jwt.service';
@@ -10,12 +11,21 @@ export class AuthService {
   private resetOtpStore = new Map<string, string>(); // Separate store for password reset OTPs
   private registrationOtpStore = new Map<string, { otp: string, userData: any }>(); // Store for registration OTPs
   private readonly logger = new Logger(AuthService.name);
+  private readonly otpExpirationTime: number;
+  private readonly bcryptRounds: number;
 
   constructor(
+    private readonly configService: ConfigService,
     private readonly mailService: MailService,
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) {
+    // Get configuration values from environment variables
+    this.otpExpirationTime = this.configService.get<number>('OTP_EXPIRATION_MINUTES', 10) * 60 * 1000; // Convert to milliseconds
+    this.bcryptRounds = this.configService.get<number>('BCRYPT_ROUNDS', 12);
+    
+    this.logger.log(`Auth service initialized with OTP expiration: ${this.otpExpirationTime / 60000} minutes`);
+  }
 
   async generateOtpAndSend(email: string, password: string, requestedRole?: string) {
     // Validate user credentials before sending OTP
@@ -38,7 +48,7 @@ export class AuthService {
       if (stored && stored.otp === otp) {
         this.otpStore.delete(email);
       }
-    }, 10 * 60 * 1000);
+    }, this.otpExpirationTime);
 
     await this.mailService.sendOtp(email, otp);
     return { message: 'OTP sent successfully' };
@@ -139,7 +149,7 @@ export class AuthService {
       if (this.resetOtpStore.get(email) === otp) {
         this.resetOtpStore.delete(email);
       }
-    }, 10 * 60 * 1000);
+    }, this.otpExpirationTime);
 
     await this.mailService.sendPasswordResetOtp(email, otp);
     return { message: 'Password reset instructions sent to your email' };
@@ -203,7 +213,7 @@ export class AuthService {
       if (this.registrationOtpStore.has(email)) {
         this.registrationOtpStore.delete(email);
       }
-    }, 10 * 60 * 1000);
+    }, this.otpExpirationTime);
 
     await this.mailService.sendOtp(email, otp);
     return { message: 'Registration OTP sent successfully' };

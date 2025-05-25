@@ -120,6 +120,51 @@ export class TradesService {
     };
   }
 
+  // Get outgoing trade requests for a buyer
+  async getMyTradeRequests(buyerId: string, filters: TradeFilterDto): Promise<{ trades: TradeResponseDto[], total: number, page: number, totalPages: number }> {
+    this.logger.log(`Fetching trade requests for buyer ${buyerId}`);
+    this.logger.log(`Raw filters received: ${JSON.stringify(filters)}`);
+
+    const queryBuilder = this.tradeRepository
+      .createQueryBuilder('trade')
+      .leftJoinAndSelect('trade.seller', 'seller')
+      .leftJoinAndSelect('trade.product', 'product')
+      .where('trade.buyer_id = :buyerId', { buyerId });
+
+    // Apply filters (same filtering logic but for buyer's outgoing requests)
+    this.applyFilters(queryBuilder, filters);
+
+    // Get total count
+    const total = await queryBuilder.getCount();
+
+    // Apply pagination and sorting with proper defaults
+    const page = filters.page || 1;
+    const limit = filters.limit || 10;
+    const sort_by = filters.sort_by || 'created_at';
+    const sort_order = filters.sort_order || 'DESC';
+    
+    this.logger.log(`Pagination: page=${page}, limit=${limit}, sort_by=${sort_by}, sort_order=${sort_order}`);
+    
+    const skip = (page - 1) * limit;
+
+    queryBuilder
+      .orderBy(`trade.${sort_by}`, sort_order)
+      .skip(skip)
+      .take(limit);
+
+    const trades = await queryBuilder.getMany();
+    const totalPages = Math.ceil(total / limit);
+
+    this.logger.log(`Found ${trades.length} buyer trade requests out of ${total} total`);
+
+    return {
+      trades: trades.map(trade => this.mapToResponseDto(trade)),
+      total,
+      page,
+      totalPages
+    };
+  }
+
   // Accept a trade request
   async acceptTrade(tradeId: string, sellerId: string, message?: string): Promise<TradeResponseDto> {
     this.logger.log(`Accepting trade ${tradeId} by seller ${sellerId}`);

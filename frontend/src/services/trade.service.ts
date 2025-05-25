@@ -1,5 +1,6 @@
 import axios, { AxiosResponse } from 'axios';
 import { io, Socket } from 'socket.io-client';
+import messageService from './message.service';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -117,6 +118,9 @@ class TradeService {
       }
       return config;
     });
+
+    // Set up trade acceptance listener for automatic messaging
+    this.setupTradeAcceptanceListener();
   }
 
   // Initialize WebSocket connection
@@ -257,11 +261,71 @@ class TradeService {
         `${API_BASE_URL}/trades/${tradeId}/accept`,
         { message }
       );
+      
+      // Automatically start conversation between buyer and seller when trade is accepted
+      try {
+        await this.handleTradeAcceptanceMessaging(response.data);
+      } catch (messagingError) {
+        console.warn('Failed to set up messaging for accepted trade:', messagingError);
+        // Don't fail the trade acceptance if messaging setup fails
+      }
+      
       return response.data;
     } catch (error) {
       console.error('Error accepting trade:', error);
       throw error;
     }
+  }
+
+  // Handle messaging setup when trade is accepted
+  private async handleTradeAcceptanceMessaging(trade: TradeRequest): Promise<void> {
+    try {
+      console.log('Setting up messaging for accepted trade:', trade.id);
+      
+      // Get current user to determine who to start conversation with
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const currentUserId = currentUser.id;
+      
+      // Determine the other party (buyer or seller)
+      const otherPartyId = currentUserId === trade.buyer_id ? trade.seller_id : trade.buyer_id;
+      const otherPartyRole = currentUserId === trade.buyer_id ? 'seller' : 'buyer';
+      
+      console.log(`Current user (${currentUserId}) starting conversation with ${otherPartyRole} (${otherPartyId})`);
+      
+      // Start conversation between buyer and seller
+      const conversationResult = await messageService.startConversation(otherPartyId);
+      
+      if (conversationResult.success && conversationResult.conversation) {
+        console.log('Conversation created for trade:', trade.id);
+        
+        // Send initial message about the accepted trade
+        const initialMessage = `🎉 Great news! The trade request for "${trade.product?.name}" has been accepted!\n\nTrade Details:\n• Quantity: ${trade.quantity}\n• Price: ₹${trade.offered_price?.toLocaleString()}\n• Total: ₹${((trade.offered_price || 0) * trade.quantity).toLocaleString()}\n\nYou can now discuss delivery details and coordinate the transaction.`;
+        
+        await messageService.sendMessage(
+          otherPartyId,
+          initialMessage,
+          'text'
+        );
+        
+        console.log('Initial trade acceptance message sent to', otherPartyRole);
+      }
+    } catch (error) {
+      console.error('Error setting up messaging for trade acceptance:', error);
+      throw error;
+    }
+  }
+
+  // Listen for trade acceptance events
+  setupTradeAcceptanceListener(): void {
+    this.addEventListener('trade-status-update', async (data: TradeNotification) => {
+      if (data.trade && data.action === 'accepted') {
+        try {
+          await this.handleTradeAcceptanceMessaging(data.trade);
+        } catch (error) {
+          console.error('Error handling trade acceptance messaging:', error);
+        }
+      }
+    });
   }
 
   // Reject a trade request
@@ -374,15 +438,13 @@ class TradeService {
     try {
       console.log('Fetching trades for buyer:', buyerId);
       
-      let url = `${API_BASE_URL}/buyer/${buyerId}`;
       const params = new URLSearchParams();
-      
       if (filters?.status) params.append('status', filters.status);
-      if (filters?.type) params.append('type', filters.type);
+      if (filters?.type) params.append('trade_type', filters.type);
       
-      if (params.toString()) {
-        url += `?${params.toString()}`;
-      }
+      const url = params.toString() ? 
+        `${API_BASE_URL}/trades/my-requests?${params.toString()}` : 
+        `${API_BASE_URL}/trades/my-requests`;
       
       const response = await axios.get(url, {
         headers: this.getAuthHeaders()
@@ -392,7 +454,7 @@ class TradeService {
       
       return { 
         success: true, 
-        trades: response.data,
+        trades: response.data.trades || response.data,
         message: 'Trades fetched successfully'
       };
     } catch (error) {

@@ -31,7 +31,8 @@ import OrderRequestQuantity from "../buyer/pages/order_request_quantity";
 import BuyerInformation from "../buyer/pages/buyer_information";
 import BuyerAddress from "../buyer/pages/buyer_address";
 import BuyerTrade from "../buyer/pages/trade";
-
+import Payment from "../buyer/pages/Payment"
+import PurchaseRequest from "../buyer/pages/purchase-request";
 // Removed duplicate ReactNode import as it's already available from React
 type PageProps = {
   page: React.ReactNode;
@@ -90,6 +91,7 @@ const AppRoutes = () => {
           <Route path="/buyer/wishlist" element={<Animate page={<Wishlist />} />} />
           <Route path="/buyer/cartpage" element={<Animate page={<CartPage />} />} />
           <Route path="/buyer/trade" element={<Animate page={<BuyerTrade />} />} />
+          <Route path="/buyer/payment" element={<Animate page={<Payment />} />} />
           <Route path="/buyer/buyer-address" element={<Animate page={<BuyerAddress />} />} />
           <Route path="/buyer/product-page" element={<Animate page={<BuyerLayout content={<ProductPage />} />} />} />
           <Route path="/buyer/product-request-quantity" element={<Animate page={<BuyerLayout content={<OrderRequestQuantity />} />} />} />

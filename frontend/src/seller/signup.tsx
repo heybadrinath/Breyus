@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import axios from "axios";
+import authService from "../services/auth.service";
 
 const SellerSignup: React.FC = () => {
   const navigate = useNavigate();
@@ -93,18 +94,16 @@ const SellerSignup: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post("http://localhost:5000/auth/verify-registration-otp", {
-        email: formData.email,
-        otp: otp,
-      });
+      const response = await authService.verifyRegistrationOtp(formData.email, otp);
 
-      if (response.data.success) {
-        // Registration successful, redirect to dashboard
+      if (response.success) {
+        console.log("Registration successful, user logged in automatically");
         navigate("/seller/dashboard");
       } else {
-        setError(response.data.message || "Invalid OTP. Please try again.");
+        setError(response.message || "Invalid OTP. Please try again.");
       }
     } catch (err: any) {
+      console.error("Error verifying OTP:", err);
       setError(err.response?.data?.message || "Error verifying OTP.");
     } finally {
       setIsLoading(false);

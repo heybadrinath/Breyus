@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import CheckoutStepper from "../components/cart/CheckoutStepper";
+import cartService from "../../services/cart.service";
 
 type StepProps = {
     className?: string;
@@ -246,10 +247,97 @@ const Pricing: React.FC<StepProps> = ({ className, onNext, onPrev }) => {
 // Step 4
 const Payment: React.FC<StepProps> = ({ className, onPrev }) => {
     const [selected, setSelected] = useState<null | "advance" | "credit" | "open">(null);
+    const [checkoutData, setCheckoutData] = useState<any>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    useEffect(() => {
+        // Load checkout data from localStorage
+        const savedCheckoutData = localStorage.getItem('checkout_data');
+        if (savedCheckoutData) {
+            setCheckoutData(JSON.parse(savedCheckoutData));
+        }
+    }, []);
+
+    const handleSendPurchaseRequest = async () => {
+        if (selected === null) return;
+        
+        setIsProcessing(true);
+        
+        try {
+            if (!checkoutData || !checkoutData.selectedItems) {
+                alert('No items selected for purchase request');
+                return;
+            }
+
+            // Convert selected cart items to trade requests
+            const selectedItemIds = checkoutData.selectedItems.map((item: any) => item.id);
+            const paymentTerms = getPaymentTermsMessage(selected);
+            
+            const result = await cartService.convertCartToTradeRequests(
+                selectedItemIds,
+                `I would like to purchase these items. Please review and confirm availability and pricing.\n\nPayment Terms: ${paymentTerms}`
+            );
+
+            // Show results to user
+            if (result.successful.length > 0) {
+                let message = `Success! ${result.successful.length} trade request(s) sent to sellers:\n\n`;
+                result.successful.forEach((trade, index) => {
+                    message += `${index + 1}. ${trade.message}\n`;
+                });
+                
+                if (result.failed.length > 0) {
+                    message += `\n${result.failed.length} request(s) failed:\n`;
+                    result.failed.forEach((trade, index) => {
+                        message += `${index + 1}. ${trade.message}\n`;
+                    });
+                }
+                
+                // Clear checkout data
+                localStorage.removeItem('checkout_data');
+                
+                // Redirect to success page
+                window.history.pushState({}, '', '/buyer/purchase-request-success');
+                const navEvent = new PopStateEvent('popstate');
+                window.dispatchEvent(navEvent);
+            } else {
+                alert(`Failed to send trade requests:\n${result.failed.map(f => f.message).join('\n')}`);
+            }
+        } catch (error) {
+            console.error('Error sending purchase requests:', error);
+            alert('Failed to send purchase requests. Please try again.');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const getPaymentTermsMessage = (paymentType: string): string => {
+        switch (paymentType) {
+            case 'advance':
+                return 'Advance payment via RTGS';
+            case 'credit':
+                return 'Credits Period via Letter of Credit';
+            case 'open':
+                return 'Open Account via RTGS';
+            default:
+                return 'Standard payment terms';
+        }
+    };
 
     return (
         <div className={className}>
-            <h2 className="text-3xl font-bold mb-10">Choose Mode of Payment</h2>
+            <h2 className="text-3xl font-bold mb-6">Choose Mode of Payment</h2>
+            
+            {/* Show order summary */}
+            {checkoutData && (
+                <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                    <h3 className="text-lg font-semibold mb-2">Order Summary</h3>
+                    <div className="text-sm text-gray-600">
+                        <p>{checkoutData.selectedItems?.length} items selected</p>
+                        <p className="font-semibold">Total: ₹{checkoutData.summary?.totalAmount?.toLocaleString()}</p>
+                    </div>
+                </div>
+            )}
+            
             <div className="flex flex-col gap-10 mb-10">
                 {/* Advance payment */}
                 <label className="flex items-start gap-4 cursor-pointer">
@@ -341,22 +429,27 @@ const Payment: React.FC<StepProps> = ({ className, onPrev }) => {
                 <button
                     className="bg-gray-200 text-black px-8 py-2 rounded shadow mr-auto"
                     onClick={onPrev}
+                    disabled={isProcessing}
                 >
                     Prev
                 </button>
                 <button
-                    className="bg-gradient-to-b from-black to-gray-700 text-white px-6 py-2 rounded shadow font-semibold"
-                    disabled={selected === null}
-                    onClick={() => {
-                        if (selected !== null) {
-                            // Use React Router for navigation without reload
-                            window.history.pushState({}, '', '/buyer/purchase-request-success');
-                            const navEvent = new PopStateEvent('popstate');
-                            window.dispatchEvent(navEvent);
-                        }
-                    }}
+                    className={`px-6 py-2 rounded shadow font-semibold ${
+                        selected !== null && !isProcessing
+                            ? 'bg-gradient-to-b from-black to-gray-700 text-white'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                    disabled={selected === null || isProcessing}
+                    onClick={handleSendPurchaseRequest}
                 >
-                    Send Purchase Request
+                    {isProcessing ? (
+                        <div className="flex items-center">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-500 mr-2"></div>
+                            Sending Request...
+                        </div>
+                    ) : (
+                        'Send Purchase Request'
+                    )}
                 </button>
             </div>
         </div>
@@ -364,6 +457,33 @@ const Payment: React.FC<StepProps> = ({ className, onPrev }) => {
 };
 const PurchaseRequest: React.FC = () => {
     const [step, setStep] = useState(0);
+
+    useEffect(() => {
+        // Check if this is a resend operation
+        const urlParams = new URLSearchParams(window.location.search);
+        const isResend = urlParams.get('resend') === 'true';
+        const productId = urlParams.get('productId');
+        
+        if (isResend && productId) {
+            // Get resend data from sessionStorage
+            const resendData = sessionStorage.getItem('resendTradeData');
+            if (resendData) {
+                try {
+                    const tradeData = JSON.parse(resendData);
+                    console.log('Resending trade with data:', tradeData);
+                    
+                    // You can pre-fill form fields here based on tradeData
+                    // For now, we'll just show a notification
+                    alert(`Resending offer for ${tradeData.product?.name || 'product'}. Previous offer: ₹${tradeData.offeredPrice?.toLocaleString()}`);
+                    
+                    // Clear the resend data after use
+                    sessionStorage.removeItem('resendTradeData');
+                } catch (error) {
+                    console.error('Error parsing resend data:', error);
+                }
+            }
+        }
+    }, []);
 
     const stepComponents = [
         TradeQueries1,
@@ -395,7 +515,5 @@ const PurchaseRequest: React.FC = () => {
         </div>
     );
 };
-
-
 
 export default PurchaseRequest;
