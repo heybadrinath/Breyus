@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 
@@ -33,10 +33,26 @@ const Navbar = () => (
     </div>
 );
 
-const Section3 = () => (
-    <BorderBox>
-        <div className="flex">
-            <div id="left-content" className="mx-auto my-auto">
+const Section3 = () => {
+    const [xOffset, setXOffset] = useState("95%");
+
+  useEffect(() => {
+    const updateOffset = () => {
+      const width = window.innerWidth;
+      if (width < 1400) setXOffset("55%");
+      else if (width < 1587) setXOffset("70%");
+      else if(width <1675) setXOffset("80%")
+      else setXOffset("95%");
+      
+    };
+    updateOffset();
+    window.addEventListener("resize", updateOffset);
+    return () => window.removeEventListener("resize", updateOffset);
+  }, []);
+    return(
+    <BorderBox className="">
+        <div className="flex h-fit relative w-full overflow-x-hidden">
+            <div id="left-content" className=" w-fit mx-20 my-20">
                 <h1 className="text-5xl font-extrabold">
                     <span>Unlock Efficiency with</span>
                     <br/>
@@ -52,17 +68,18 @@ const Section3 = () => (
             </div>
 
             <motion.div
-            initial={{ x: '100%', opacity: 0 }}
-            whileInView={{ x: '31.5%', opacity: 1 }}
+            initial={{ x: "100%", opacity: 0 }}
+            whileInView={{ x: xOffset, opacity: 1 }}
             viewport={{once: true}}
             transition={{ duration: 0.8, ease: 'easeOut' }}
-            className="w-[50vw] ml-auto">
-            <img className="w-full" src={LaptopHero} alt="" />
+            className="w-[fit] absolute z-[-2]">
+            <img className="w-auto h-[800px] object-contain z-[-3]" src={LaptopHero} alt="" />
         </motion.div>
         </div>
         
     </BorderBox>
 );
+}
 
 export default () => (
     <div>
@@ -71,6 +88,14 @@ export default () => (
         <Section3 />
     </div>
 );
+
+
+
+
+
+
+
+
 
 // components for hero
 
