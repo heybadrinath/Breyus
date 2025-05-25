@@ -1,5 +1,5 @@
 import React, { ReactNode, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
 
@@ -21,7 +21,9 @@ import TraderTradeGrowth from "./assets/section-4/Trader-Trade-Growth.svg";
 import worldmap from "./assets/worldmap.svg";
 
 
-const Navbar = () => (
+const Navbar = () => {
+    const navigate = useNavigate();
+    return(
     <div className="border-b border-gray-200 px-2 py-2 flex">
         <div id="logo" className="my-auto">
             <img className="h-auto w-[180px]" src={BreyusLogo} alt="Breyus" />
@@ -33,12 +35,12 @@ const Navbar = () => (
             <Link className="mx-4 text-black my-auto" to={'/conact us'}>Contact Us</Link>
         </div>
         <div id="login-signup-btn" className="flex">
-            <Button className=" md:text-sm md:px-6">Sign Up</Button>
-            <Button className='bg-black text-white lg:text-sm md:px-6'>Login In</Button>
+            <Button onClick={() => navigate("/buyer/signup")} className=" md:text-sm md:px-6">Sign Up</Button>
+            <Button onClick={() => navigate("/buyer/signin")} className='bg-black text-white lg:text-sm md:px-6'>Login In</Button>
         </div>
 
     </div>
-);
+)};
 
 
 const Section2 = () => {
@@ -308,7 +310,7 @@ type Section4ContentProps = {
 }
 
 const Button: React.FC<ButtonProps> = ({ onClick, className = '', children }) => (
-    <button onClick={() => onClick}
+    <button onClick={onClick}
         className={`${className} px-12 py-3 mx-6 my-2 border-gray-300 border rounded-xl font-semibold`}>
         {children}
     </button>
