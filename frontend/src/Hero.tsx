@@ -51,7 +51,7 @@ const Section1 = () => {
     return (
         <BorderBox className="border-t-0">
             <div className="w-full flex flex-col">
-                <div id="top">
+                <div id="top" className="my-18">
                     <h1 className="mx-auto my-2 w-[50vw] text-center font-extrabold text-6xl">Connecting Commodities via AI, Globally</h1>
                     <p className="w-fit mx-auto my-2 text-2xl text-[#ACACAC]">Explore The Unborn Path Unfazed with Breyus</p>
                     <Section_1_temp />
