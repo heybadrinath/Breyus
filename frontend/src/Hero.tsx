@@ -2,6 +2,9 @@ import React, { ReactNode, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
+// section-1 image imports
+import NovalLogo from "./assets/noval_logo.svg";
+
 
 // Section-3 Image imports 
 import BreyusLogo from "./seller/vectors/full-logo.svg";
@@ -35,8 +38,8 @@ const Navbar = () => {
                 <Link className="mx-4 text-black my-auto" to={'/conact us'}>Contact Us</Link>
             </div>
             <div id="login-signup-btn" className="flex">
-                <Button onClick={() => navigate("/buyer/signup")} className=" md:text-sm md:px-6">Sign Up</Button>
-                <Button onClick={() => navigate("/buyer/signin")} className='bg-black text-white lg:text-sm md:px-6'>Login In</Button>
+                {/* <Button onClick={() => navigate("/buyer/signup")} className=" md:text-sm md:px-6">Sign Up</Button>
+                <Button onClick={() => navigate("/buyer/signin")} className='bg-black text-white lg:text-sm md:px-6'>Login In</Button> */}
             </div>
 
         </div>
@@ -55,11 +58,13 @@ const Section1 = () => {
                 </div>
 
                 <div id="bottom-btns" className="flex mx-auto">
-                    <Button className="!border-black border-2">Get Started</Button>
+                    <Button onClick={() => window.location.href='/buyer/ai'} className="!border-black border-2">Get Started</Button>
                     <Button className="bg-black text-white">Schedule Now</Button>
                 </div>
-                <div className="flex mx-auto mt-24 mb-16">
+                <div className="flex mx-auto mt-24 mb-16 flex-col">
                     <h1 className="text-3xl font-light"><span className="font-extrabold text-[#867C5B]">Trusted by</span> Global Trader of Sustainable Commodities <span className="font-extrabold text-black">Noval India.</span></h1>
+                    <img className="w-44 mx-auto my-4" src={NovalLogo} alt="" />
+                    
                 </div>
 
             </div>
