@@ -59,7 +59,7 @@ const Section1 = () => {
 
                 <div id="bottom-btns" className="flex mx-auto">
                     <Button onClick={() => window.location.href='/buyer/ai'} className="!border-black border-2">Get Started</Button>
-                    <Button className="bg-black text-white">Schedule Now</Button>
+                    <Button onClick={() => window.location.href='https://calendly.com/breyuscrew/30min'} className="bg-black text-white">Schedule Now</Button>
                 </div>
                 <div className="flex mx-auto mt-24 mb-16 flex-col">
                     <h1 className="text-3xl font-light"><span className="font-extrabold text-[#867C5B]">Trusted by</span> Global Trader of Sustainable Commodities <span className="font-extrabold text-black">Noval India.</span></h1>
