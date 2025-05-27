@@ -8,6 +8,12 @@ import { JwtStrategy } from './jwt/jwt.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailModule } from '../mail/mail.module';
 import { JwtService } from './jwt/jwt.service';
+import { PassportModule } from '@nestjs/passport';
+import { JwtModule } from '@nestjs/jwt';
+import { JwtStrategy } from './jwt/jwt.strategy';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MailModule } from '../mail/mail.module';
+import { JwtService } from './jwt/jwt.service';
 
 @Module({
   imports: [
@@ -24,6 +30,8 @@ import { JwtService } from './jwt/jwt.service';
     }),
   ],
   controllers: [AuthController],
+  providers: [AuthService, JwtStrategy, JwtService],
+  exports: [AuthService, JwtService],
   providers: [AuthService, JwtStrategy, JwtService],
   exports: [AuthService, JwtService],
 })

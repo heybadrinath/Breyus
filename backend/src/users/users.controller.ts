@@ -3,15 +3,18 @@ import { UsersService } from './users.service';
 import { User } from './entities/user.entity';
 import { UserDetailsDto } from './dto/user-details.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 // In a real application, you would have authentication guards here
 // @UseGuards(AuthGuard)
 @Controller('users')
 export class UsersController {
   private readonly logger = new Logger(UsersController.name);
+  private readonly logger = new Logger(UsersController.name);
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
+  @UseGuards(JwtAuthGuard) 
   @UseGuards(JwtAuthGuard) 
   findAll(): Promise<User[]> {
     return this.usersService.findAll();
@@ -123,6 +126,7 @@ export class UsersController {
   }
 
   @Put(':id/details')
+  @UseGuards(JwtAuthGuard)
   @UseGuards(JwtAuthGuard)
   async updateUserDetails(
     @Param('id') id: string,
