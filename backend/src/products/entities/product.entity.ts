@@ -57,6 +57,9 @@ export class Product {
   @Column({ nullable: true, type: 'simple-array' })
   tags: string[];
 
+  @Column({ type: 'integer', default: 0 })
+  quantity: number;
+
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'seller_id' })
   seller: User;

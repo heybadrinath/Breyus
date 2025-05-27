@@ -1,0 +1,358 @@
+import { 
+  Controller, 
+  Get, 
+  Post, 
+  Patch, 
+  Param, 
+  Body, 
+  Query, 
+  UseGuards, 
+  Request, 
+  HttpException, 
+  HttpStatus, 
+  Logger,
+  ParseUUIDPipe,
+  ValidationPipe
+} from '@nestjs/common';
+import { TradesService } from './trades.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CreateTradeRequestDto, UpdateTradeStatusDto, CounterOfferDto, TradeFilterDto, TradeResponseDto } from './dto/trade.dto';
+import { TradeStatus, TradeType } from './entities/trade.entity';
+
+@Controller('trades')
+export class TradesController {
+  private readonly logger = new Logger(TradesController.name);
+
+  constructor(private readonly tradesService: TradesService) {}
+
+  // Debug endpoint - no auth required
+  @Get('health')
+  async healthCheck(): Promise<{ status: string; timestamp: string; message: string }> {
+    this.logger.log('GET /trades/health - Health check called');
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      message: 'Trades API is running'
+    };
+  }
+
+  // Debug endpoint to create sample trade data - no auth required
+  @Post('create-sample-data')
+  async createSampleData(): Promise<{ message: string; count: number }> {
+    this.logger.log('POST /trades/create-sample-data - Creating sample trade data');
+    
+    try {
+      // You'll need to replace these UUIDs with actual user and product IDs from your database
+      const sampleTrades = [
+        {
+          buyer_id: '37eb01fc-58b0-426f-9334-8a21f0d9cea5', // Use the authenticated user's ID
+          seller_id: '37eb01fc-58b0-426f-9334-8a21f0d9cea5', // Same for now, you can change this
+          product_id: '11111111-1111-1111-1111-111111111111', // You'll need a real product ID
+          offered_price: 1500.00,
+          quantity: 10,
+          buyer_message: 'Interested in bulk purchase',
+          trade_type: 'purchase_request' as any,
+          is_urgent: false
+        },
+        {
+          buyer_id: '22222222-2222-2222-2222-222222222222', // Another user ID
+          seller_id: '37eb01fc-58b0-426f-9334-8a21f0d9cea5', // Your seller ID
+          product_id: '33333333-3333-3333-3333-333333333333', // Another product ID
+          offered_price: 750.00,
+          quantity: 5,
+          buyer_message: 'Need urgent delivery',
+          trade_type: 'purchase_request' as any,
+          is_urgent: true
+        }
+      ];
+
+      // Create trades directly in the repository for testing
+      const trades = await this.tradesService['tradeRepository'].save(
+        sampleTrades.map(trade => this.tradesService['tradeRepository'].create({
+          ...trade,
+          status: TradeStatus.PENDING,
+          trade_type: TradeType.PURCHASE_REQUEST,
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
+          counter_offer_count: 0
+        }))
+      );
+
+      return {
+        message: 'Sample trade data created successfully',
+        count: trades.length
+      };
+    } catch (error) {
+      this.logger.error(`Error creating sample data: ${error.message}`, error.stack);
+      return {
+        message: `Error creating sample data: ${error.message}`,
+        count: 0
+      };
+    }
+  }
+
+  // GET /trades/incoming - Fetch pending trade requests for authenticated seller
+  @Get('incoming')
+  @UseGuards(JwtAuthGuard)
+  async getIncomingTrades(
+    @Request() req,
+    @Query(new ValidationPipe({ transform: true })) filters: TradeFilterDto
+  ): Promise<{ 
+    trades: TradeResponseDto[], 
+    total: number, 
+    page: number, 
+    totalPages: number 
+  }> {
+    try {
+      this.logger.log(`GET /trades/incoming - Request received`);
+      this.logger.log(`User from request: ${JSON.stringify(req.user)}`);
+      this.logger.log(`Filters: ${JSON.stringify(filters)}`);
+      
+      if (!req.user || !req.user.id) {
+        this.logger.error('No user found in request object');
+        throw new HttpException('Authentication required', HttpStatus.UNAUTHORIZED);
+      }
+
+      const sellerId = req.user.id;
+      this.logger.log(`GET /trades/incoming - Seller: ${sellerId}`);
+      
+      return await this.tradesService.getIncomingTrades(sellerId, filters);
+    } catch (error) {
+      this.logger.error(`Error fetching incoming trades: ${error.message}`, error.stack);
+      throw new HttpException(
+        error.message || 'Failed to fetch incoming trades',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  // POST /trades/:id/accept - Accept a specific trade request
+  @Post(':id/accept')
+  @UseGuards(JwtAuthGuard)
+  async acceptTrade(
+    @Param('id', ParseUUIDPipe) tradeId: string,
+    @Request() req,
+    @Body('message') message?: string
+  ): Promise<TradeResponseDto> {
+    try {
+      const sellerId = req.user.id;
+      this.logger.log(`POST /trades/${tradeId}/accept - Seller: ${sellerId}`);
+      
+      return await this.tradesService.acceptTrade(tradeId, sellerId, message);
+    } catch (error) {
+      this.logger.error(`Error accepting trade ${tradeId}: ${error.message}`, error.stack);
+      throw new HttpException(
+        error.message || 'Failed to accept trade',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  // POST /trades/:id/reject - Reject a trade request with optional reason
+  @Post(':id/reject')
+  @UseGuards(JwtAuthGuard)
+  async rejectTrade(
+    @Param('id', ParseUUIDPipe) tradeId: string,
+    @Request() req,
+    @Body('rejection_reason') rejectionReason?: string
+  ): Promise<TradeResponseDto> {
+    try {
+      const sellerId = req.user.id;
+      this.logger.log(`POST /trades/${tradeId}/reject - Seller: ${sellerId}`);
+      
+      return await this.tradesService.rejectTrade(tradeId, sellerId, rejectionReason);
+    } catch (error) {
+      this.logger.error(`Error rejecting trade ${tradeId}: ${error.message}`, error.stack);
+      throw new HttpException(
+        error.message || 'Failed to reject trade',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  // GET /trades/:id/details - Get detailed trade information
+  @Get(':id/details')
+  @UseGuards(JwtAuthGuard)
+  async getTradeDetails(
+    @Param('id', ParseUUIDPipe) tradeId: string,
+    @Request() req
+  ): Promise<TradeResponseDto> {
+    try {
+      const userId = req.user.id;
+      this.logger.log(`GET /trades/${tradeId}/details - User: ${userId}`);
+      
+      return await this.tradesService.getTradeDetails(tradeId, userId);
+    } catch (error) {
+      this.logger.error(`Error fetching trade details ${tradeId}: ${error.message}`, error.stack);
+      throw new HttpException(
+        error.message || 'Failed to fetch trade details',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  // PATCH /trades/:id/counter-offer - Allow seller to make counter-offers
+  @Patch(':id/counter-offer')
+  @UseGuards(JwtAuthGuard)
+  async makeCounterOffer(
+    @Param('id', ParseUUIDPipe) tradeId: string,
+    @Request() req,
+    @Body(ValidationPipe) counterOfferDto: CounterOfferDto
+  ): Promise<TradeResponseDto> {
+    try {
+      const sellerId = req.user.id;
+      this.logger.log(`PATCH /trades/${tradeId}/counter-offer - Seller: ${sellerId}`);
+      
+      return await this.tradesService.makeCounterOffer(tradeId, sellerId, counterOfferDto);
+    } catch (error) {
+      this.logger.error(`Error making counter offer for trade ${tradeId}: ${error.message}`, error.stack);
+      throw new HttpException(
+        error.message || 'Failed to make counter offer',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  // POST /trades - Create a new trade request (for buyers)
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  async createTradeRequest(
+    @Request() req,
+    @Body(ValidationPipe) createTradeDto: CreateTradeRequestDto
+  ): Promise<TradeResponseDto> {
+    try {
+      const buyerId = req.user.id;
+      this.logger.log(`POST /trades - Buyer: ${buyerId}`);
+      
+      return await this.tradesService.createTradeRequest(buyerId, createTradeDto);
+    } catch (error) {
+      this.logger.error(`Error creating trade request: ${error.message}`, error.stack);
+      throw new HttpException(
+        error.message || 'Failed to create trade request',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  // POST /trades/bulk-accept - Bulk accept multiple trades
+  @Post('bulk-accept')
+  @UseGuards(JwtAuthGuard)
+  async bulkAcceptTrades(
+    @Request() req,
+    @Body('trade_ids') tradeIds: string[]
+  ): Promise<{ successful: TradeResponseDto[], failed: { tradeId: string, error: string }[] }> {
+    try {
+      const sellerId = req.user.id;
+      this.logger.log(`POST /trades/bulk-accept - Seller: ${sellerId}, Trades: ${tradeIds.length}`);
+      
+      if (!Array.isArray(tradeIds) || tradeIds.length === 0) {
+        throw new HttpException('Invalid trade IDs provided', HttpStatus.BAD_REQUEST);
+      }
+
+      const successful = await this.tradesService.bulkAcceptTrades(tradeIds, sellerId);
+      const failed: { tradeId: string, error: string }[] = [];
+
+      // Calculate failed trades
+      const successfulIds = successful.map(trade => trade.id);
+      tradeIds.forEach(id => {
+        if (!successfulIds.includes(id)) {
+          failed.push({ tradeId: id, error: 'Failed to accept' });
+        }
+      });
+
+      return { successful, failed };
+    } catch (error) {
+      this.logger.error(`Error bulk accepting trades: ${error.message}`, error.stack);
+      throw new HttpException(
+        error.message || 'Failed to bulk accept trades',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  // GET /trades/my-requests - Get trade requests created by the authenticated buyer
+  @Get('my-requests')
+  @UseGuards(JwtAuthGuard)
+  async getMyTradeRequests(
+    @Request() req,
+    @Query(new ValidationPipe({ transform: true })) filters: TradeFilterDto
+  ): Promise<{ 
+    trades: TradeResponseDto[], 
+    total: number, 
+    page: number, 
+    totalPages: number 
+  }> {
+    try {
+      const buyerId = req.user.id;
+      this.logger.log(`GET /trades/my-requests - Buyer: ${buyerId}`);
+      
+      // For buyers, we need to fetch trades where they are the buyer
+      return await this.tradesService.getMyTradeRequests(buyerId, filters);
+    } catch (error) {
+      this.logger.error(`Error fetching buyer trade requests: ${error.message}`, error.stack);
+      throw new HttpException(
+        error.message || 'Failed to fetch trade requests',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  // GET /trades/stats - Get trade statistics for seller dashboard
+  @Get('stats')
+  @UseGuards(JwtAuthGuard)
+  async getTradeStats(@Request() req): Promise<{
+    total_incoming: number,
+    pending: number,
+    accepted: number,
+    rejected: number,
+    expired: number,
+    today_incoming: number
+  }> {
+    try {
+      this.logger.log(`GET /trades/stats - Request received`);
+      this.logger.log(`User from request: ${JSON.stringify(req.user)}`);
+      
+      if (!req.user || !req.user.id) {
+        this.logger.error('No user found in request object for stats');
+        throw new HttpException('Authentication required', HttpStatus.UNAUTHORIZED);
+      }
+
+      const sellerId = req.user.id;
+      this.logger.log(`GET /trades/stats - Seller: ${sellerId}`);
+      
+      // Get basic stats using the service
+      const [
+        totalIncoming,
+        pending,
+        accepted,
+        rejected,
+        expired,
+        todayIncoming
+      ] = await Promise.all([
+        this.tradesService.getIncomingTrades(sellerId, { page: 1, limit: 1 }),
+        this.tradesService.getIncomingTrades(sellerId, { status: 'pending' as any, page: 1, limit: 1 }),
+        this.tradesService.getIncomingTrades(sellerId, { status: 'accepted' as any, page: 1, limit: 1 }),
+        this.tradesService.getIncomingTrades(sellerId, { status: 'rejected' as any, page: 1, limit: 1 }),
+        this.tradesService.getIncomingTrades(sellerId, { status: 'expired' as any, page: 1, limit: 1 }),
+        this.tradesService.getIncomingTrades(sellerId, { page: 1, limit: 1 }) // Would need date filter for today
+      ]);
+
+      const stats = {
+        total_incoming: totalIncoming.total,
+        pending: pending.total,
+        accepted: accepted.total,
+        rejected: rejected.total,
+        expired: expired.total,
+        today_incoming: todayIncoming.total // Simplified for now
+      };
+
+      this.logger.log(`Stats result: ${JSON.stringify(stats)}`);
+      return stats;
+    } catch (error) {
+      this.logger.error(`Error fetching trade stats: ${error.message}`, error.stack);
+      throw new HttpException(
+        error.message || 'Failed to fetch trade statistics',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+} 

@@ -15,6 +15,7 @@ export class CreateProductDto {
   costOfGoods?: number;
   profit?: number;
   margin?: number;
+  quantity?: number;
   tags?: string[];
 }
 
@@ -35,5 +36,6 @@ export class UpdateProductDto {
   costOfGoods?: number;
   profit?: number;
   margin?: number;
+  quantity?: number;
   tags?: string[];
 } 

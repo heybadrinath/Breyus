@@ -1,4 +1,5 @@
 import { Injectable, UnauthorizedException, NotFoundException, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { MailService } from '../mail/mail.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from './jwt/jwt.service';
@@ -6,16 +7,25 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
-  private otpStore = new Map<string, string>(); // Temporary OTP storage
+  private otpStore = new Map<string, { otp: string; requestedRole?: string }>(); // Store OTP with requested role
   private resetOtpStore = new Map<string, string>(); // Separate store for password reset OTPs
   private registrationOtpStore = new Map<string, { otp: string, userData: any }>(); // Store for registration OTPs
   private readonly logger = new Logger(AuthService.name);
+  private readonly otpExpirationTime: number;
+  private readonly bcryptRounds: number;
 
   constructor(
+    private readonly configService: ConfigService,
     private readonly mailService: MailService,
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) {
+    // Get configuration values from environment variables
+    this.otpExpirationTime = this.configService.get<number>('OTP_EXPIRATION_MINUTES', 10) * 60 * 1000; // Convert to milliseconds
+    this.bcryptRounds = this.configService.get<number>('BCRYPT_ROUNDS', 12);
+    
+    this.logger.log(`Auth service initialized with OTP expiration: ${this.otpExpirationTime / 60000} minutes`);
+  }
 
   async generateOtpAndSend(email: string, password: string, requestedRole?: string) {
     // Validate user credentials before sending OTP
@@ -26,62 +36,94 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    // Check if the requested role matches the user's role
-    if (requestedRole && user.role !== requestedRole) {
-      this.logger.warn(`Role mismatch for ${email}. User is a ${user.role}, but tried to log in as ${requestedRole}`);
-      throw new UnauthorizedException(`Access denied. This login is for ${requestedRole}s only.`);
-    }
+    // Remove role validation - allow users to access any portal with their credentials
+    // This enables unified account access across buyer and seller portals
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate 6-digit OTP
-    this.otpStore.set(email, otp);
+    this.otpStore.set(email, { otp, requestedRole });
 
     // Set OTP expiration (10 minutes)
     setTimeout(() => {
-      if (this.otpStore.get(email) === otp) {
+      const stored = this.otpStore.get(email);
+      if (stored && stored.otp === otp) {
         this.otpStore.delete(email);
       }
-    }, 10 * 60 * 1000);
+    }, this.otpExpirationTime);
 
     await this.mailService.sendOtp(email, otp);
     return { message: 'OTP sent successfully' };
   }
 
   async verifyOtp(email: string, otp: string) {
-    const storedOtp = this.otpStore.get(email);
+    const storedData = this.otpStore.get(email);
 
-    if (!storedOtp || storedOtp !== otp) {
+    if (!storedData || storedData.otp !== otp) {
       this.logger.warn(`Invalid OTP attempt for ${email}`);
-      return { message: 'Invalid OTP', success: false };
+      return { message: 'Invalid or expired OTP', success: false };
     }
 
-    this.otpStore.delete(email); // Remove OTP after verification
-    
-    // Fetch user data
+    // Find user for login
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      this.logger.warn(`User not found for email: ${email}`);
       return { message: 'User not found', success: false };
     }
-    
-    // Generate JWT token
+
+    // Update user's role to match the portal they're accessing
+    const roleToSet = storedData.requestedRole || user.role;
+    if (roleToSet !== user.role) {
+      await this.usersService.update(user.id, { role: roleToSet });
+      this.logger.log(`Updated user ${email} role from ${user.role} to ${roleToSet}`);
+    }
+
+    // Check if user details exist, create if not
+    try {
+      await this.usersService.findUserDetailsById(user.id);
+    } catch (error) {
+      // If no user details exist, create them with empty values
+      if (error instanceof NotFoundException) {
+        await this.usersService.updateUserDetails(user.id, {
+          contactNumber: '',
+          alternateNumber1: '',
+          alternateNumber2: '',
+          alternateEmail: '',
+          address: '',
+          city: '',
+          state: '',
+          country: '',
+          companyName: '',
+          companyWebsite: '',
+          gstin: '',
+          companyAddress: '',
+          socials: '',
+          accountType: '',
+          bankName: '',
+          accountNumber: '',
+          ifscCode: '',
+        });
+      }
+    }
+
+    // Generate JWT token with the updated role
     const token = this.jwtService.generateToken({
       userId: user.id,
       email: user.email,
-      role: user.role
+      role: roleToSet
     });
 
-    // Get user data without sensitive information
+    // Remove the used OTP
+    this.otpStore.delete(email);
+
+    // Prepare user data without sensitive information, using the updated role
     const userData = {
       id: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      role: user.role,
+      role: roleToSet,
     };
     
-    this.logger.log(`OTP verified successfully for ${email}. User authenticated.`);
     return { 
-      message: 'OTP verified successfully', 
+      message: 'Login successful', 
       success: true,
       token,
       user: userData
@@ -96,11 +138,8 @@ export class AuthService {
       throw new NotFoundException('Email not found');
     }
 
-    // Check if role matches if provided
-    if (role && user.role !== role) {
-      this.logger.warn(`Password reset attempt with incorrect role for ${email}. Requested: ${role}, Actual: ${user.role}`);
-      throw new UnauthorizedException('Invalid account role. Please use the correct portal.');
-    }
+    // Remove role validation - allow password reset from any portal
+    // This enables unified account access across buyer and seller portals
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate 6-digit OTP
     this.resetOtpStore.set(email, otp);
@@ -110,7 +149,7 @@ export class AuthService {
       if (this.resetOtpStore.get(email) === otp) {
         this.resetOtpStore.delete(email);
       }
-    }, 10 * 60 * 1000);
+    }, this.otpExpirationTime);
 
     await this.mailService.sendPasswordResetOtp(email, otp);
     return { message: 'Password reset instructions sent to your email' };
@@ -130,11 +169,8 @@ export class AuthService {
       throw new NotFoundException('User not found');
     }
 
-    // Check if role matches if provided
-    if (role && user.role !== role) {
-      this.logger.warn(`Password reset attempt with incorrect role for ${email}. Requested: ${role}, Actual: ${user.role}`);
-      throw new UnauthorizedException('Invalid account role. Please use the correct portal.');
-    }
+    // Remove role validation - allow password reset from any portal
+    // This enables unified account access across buyer and seller portals
 
     // Update the password
     await this.usersService.updatePassword(user.id, newPassword);
@@ -177,7 +213,7 @@ export class AuthService {
       if (this.registrationOtpStore.has(email)) {
         this.registrationOtpStore.delete(email);
       }
-    }, 10 * 60 * 1000);
+    }, this.otpExpirationTime);
 
     await this.mailService.sendOtp(email, otp);
     return { message: 'Registration OTP sent successfully' };
@@ -200,6 +236,28 @@ export class AuthService {
         lastName: registrationData.userData.lastName,
         role: registrationData.userData.role,
         isEmailVerified: true,
+      });
+
+      // Initialize user details record with empty values
+      await this.usersService.updateUserDetails(newUser.id, {
+        // Default empty fields
+        contactNumber: '',
+        alternateNumber1: '',
+        alternateNumber2: '',
+        alternateEmail: '',
+        address: '',
+        city: '',
+        state: '',
+        country: '',
+        companyName: '',
+        companyWebsite: '',
+        gstin: '',
+        companyAddress: '',
+        socials: '',
+        accountType: '',
+        bankName: '',
+        accountNumber: '',
+        ifscCode: '',
       });
 
       // Remove the used OTP and data

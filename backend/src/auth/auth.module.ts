@@ -18,13 +18,13 @@ import { JwtService } from './jwt/jwt.service';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET') || 'defaultSecret',
-        signOptions: { expiresIn: '30d' },
+        signOptions: { expiresIn: '7d' },
       }),
       inject: [ConfigService],
     }),
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, JwtService],
-  exports: [AuthService, JwtService],
+  exports: [AuthService, JwtService]
 })
 export class AuthModule {}

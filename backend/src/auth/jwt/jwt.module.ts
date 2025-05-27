@@ -1,20 +1,26 @@
 import { Module } from '@nestjs/common';
-import { JwtModule as NestJwtModule } from '@nestjs/jwt';
-import { JwtService } from './jwt.service';
+import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtService as CustomJwtService } from './jwt.service';
 import { JwtStrategy } from './jwt.strategy';
 import { UsersModule } from '../../users/users.module';
-import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
     ConfigModule,
     UsersModule,
-    NestJwtModule.register({
-      secret: process.env.JWT_SECRET || 'super-secret-jwt-key-for-breyus-app',
-      signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '7d' },
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET', 'super-secret-jwt-key-for-breyus-app'),
+        signOptions: { 
+          expiresIn: configService.get<string>('JWT_EXPIRES_IN', '7d') 
+        },
+      }),
+      inject: [ConfigService],
     }),
   ],
-  providers: [JwtService, JwtStrategy],
-  exports: [JwtService, NestJwtModule],
+  providers: [CustomJwtService, JwtStrategy],
+  exports: [CustomJwtService, JwtModule],
 })
-export class JwtModule {} 
+export class JwtModuleConfig {} 

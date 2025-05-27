@@ -1,13 +1,19 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, Headers, UseGuards, Request, HttpException } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, Headers, UseGuards, Request, HttpException, Put } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ForgotPasswordDto, ResetPasswordDto, RegistrationDto } from './dto';
 import { Logger } from '@nestjs/common';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { UsersService } from '../users/users.service';
 
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly usersService: UsersService
+  ) {}
+
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -18,7 +24,7 @@ export class AuthController {
       
       // Simulate immediate OTP verification for development
       // In production, this would be a separate request from the client after user enters OTP
-      const storedOtp = this.authService['otpStore'].get(body.email);
+      const storedOtp = this.authService['otpStore'].get(body.email)?.otp;
       if (storedOtp) {
         return await this.authService.verifyOtp(body.email, storedOtp);
       }
@@ -111,6 +117,53 @@ export class AuthController {
       throw new HttpException(
         'OTP verification failed. Please try again.',
         HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Put('/profile')
+  @UseGuards(JwtAuthGuard)
+  async updateProfile(
+    @Request() req,
+    @Body() updateProfileDto: { firstName: string; lastName: string; profileImage?: string }
+  ) {
+    try {
+      this.logger.log(`User ${req.user.id} updating profile`);
+      
+      // The req.user has been populated by the JwtAuthGuard
+      const userId = req.user.id;
+      
+      // Prepare the data to update
+      const updateData: any = {
+        firstName: updateProfileDto.firstName,
+        lastName: updateProfileDto.lastName
+      };
+
+      // Only include profileImage if it's provided
+      if (updateProfileDto.profileImage !== undefined) {
+        updateData.profileImage = updateProfileDto.profileImage;
+      }
+      
+      // Update the user fields
+      const updatedUser = await this.usersService.update(userId, updateData);
+      
+      return {
+        success: true,
+        message: 'Profile updated successfully',
+        user: {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          firstName: updatedUser.firstName,
+          lastName: updatedUser.lastName,
+          role: updatedUser.role,
+          profileImage: updatedUser.profileImage
+        }
+      };
+    } catch (error) {
+      this.logger.error(`Failed to update profile: ${error.message}`);
+      throw new HttpException(
+        'Failed to update profile information',
+        HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
   }

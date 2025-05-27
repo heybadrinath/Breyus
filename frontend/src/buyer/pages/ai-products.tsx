@@ -1,167 +1,211 @@
-import React, { JSX, ReactNode, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
-
-
-// logo imports 
 import BreyusLogo from "../../seller/vectors/full-logo.svg";
 
-const Navbar = () => {
+interface SellerCardProps {
+    company: string;
+    country: string;
+    contactNumber: string;
+    productDescription: string;
+    product: string;
+    companyAddress: string;
+    price: string;
+    hsnCode: string;
+}
+
+const Navbar = ({ onSearchResults }: { onSearchResults: (results: SellerCardProps[]) => void }) => {
     const navigate = useNavigate();
     return (
         <div className="border-b border-gray-200 px-2 py-2 flex">
-            <div id="logo" className="my-auto">
+            <div className="my-auto">
                 <img className="h-auto w-[180px]" src={BreyusLogo} alt="Breyus" />
             </div>
-            <div id="Search" className="flex w-[40%] justify-between my-auto mx-auto font-[500] xl:text-lg lg:text-md md:text-sm">
-                <SearchBar />
-                <Button onClick={() => navigate("/buyer/signup")} className=" md:text-sm md:px-8">Filter</Button>
-
+            <div className="flex w-[40%] justify-between my-auto mx-auto font-[500] xl:text-lg lg:text-md md:text-sm">
+                <SearchBar onSearchResults={onSearchResults} />
             </div>
-
         </div>
-    )
+    );
 };
 
+const SearchBar = ({ onSearchResults }: { onSearchResults: (results: SellerCardProps[]) => void }) => {
+    const [query, setQuery] = useState('');
+    const location = useLocation();
 
-const SellerCard = () => {
+    const fetchResults = async (input: string) => {
+        try {
+            const res = await fetch("https://breyus.com/search/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query: input }),
+            });
+	    console.log(res);
+            const data = await res.json();
+            const formattedResults = data.matches?.map((item: any) => ({
+                company: item.Company,
+                country: item.Country,
+                contactNumber: item["Contact number"],
+                productDescription: item["Product description"],
+                product: item.Product,
+                companyAddress: item["Company address"],
+                price: item.Price,
+                hsnCode: item["HS Code"]
+            }));
+            onSearchResults(formattedResults || []);
+        } catch (error) {
+            console.error("Search failed", error);
+            onSearchResults([]);
+        }
+    };
+
+    useEffect(() => {
+        const state = location.state as { query?: string };
+        state?.query && fetchResults(state.query);
+    }, [location.state]);
+
+    const handleSearch = () => query.trim() && fetchResults(query);
+
+    return (
+        <div className="w-full">
+            <div className="flex items-center border border-gray-200 rounded-full px-4 py-2 w-full max-w-xl shadow-sm">
+                <svg className="mr-6" width="22" height="22" viewBox="0 0 22 22" fill="none">
+                    <path d="M9.66667 16.3333C13.3486 16.3333 16.3333 13.3486 16.3333 9.66667C16.3333 5.98477 13.3486 3 9.66667 3C5.98477 3 3 5.98477 3 9.66667C3 13.3486 5.98477 16.3333 9.66667 16.3333Z" stroke="#667085" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M19 19L14.375 14.375" stroke="#667085" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    placeholder="Animal Protein Trader"
+                    className="w-full outline-none text-gray-700 placeholder-gray-400 bg-transparent"
+                />
+            </div>
+        </div>
+    );
+};
+
+const SellerCard = ({
+    company,
+    country,
+    contactNumber,
+    productDescription,
+    product,
+    companyAddress,
+    price,
+    hsnCode
+}: SellerCardProps) => {
   return (
-    <div className="flex flex-col md:flex-row p-6 border rounded-xl gap-6 max-w-6xl mx-auto w-fit absolute top-[20%] py-24 bg-white shadow-lg left-[20%]">
-      {/* Sidebar and Main Image */}
-      <div className="flex gap-4">
-        {/* Sidebar Images */}
+    <div className="flex flex-col md:flex-row p-6 border rounded-xl gap-6 max-w-6xl mx-auto bg-white shadow-lg my-8">
+      <div className="flex gap-4 min-w-[400px]">
         <div className="flex flex-col gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="w-10 h-10 border rounded-md bg-gray-100"></div>
+            <div key={i} className="w-16 h-16 border-2 rounded-lg bg-gray-50"></div>
           ))}
         </div>
-
-        {/* Main Image */}
-        <div className="w-80 h-80 border rounded-xl bg-gray-100"></div>
+        <div className="w-80 h-80 border-2 rounded-xl bg-gray-50"></div>
       </div>
 
-      {/* Right Content */}
-      <div className="flex flex-col justify-between flex-1 gap-6">
-        {/* Info Section */}
+      <div className="flex flex-col justify-between flex-1 gap-6 p-4">
         <div>
-          <h2 className="text-xl font-semibold">Noval Pvt LTD :</h2>
-          <p className="mt-1">
-            <strong>Country of Origin:</strong> India, Karntaka, Bengluru
-          </p>
-          <p>
-            <strong>Contact number :</strong> +91 xxxxxxxx52
-          </p>
-
-          {/* About Section */}
-          <div className="mt-4 p-4 border rounded-lg bg-gray-50">
-            <h3 className="font-semibold">
-              About <span className="text-black">Noval</span> :
-            </h3>
-            <p className="text-sm text-gray-700 mt-2 leading-relaxed">
-              At Noval Sustainability Solutions, we believe that sustainability and commerce can coexist harmoniously. 
-              By leveraging our waste management expertise and global trade capabilities, we strive to create a circular economy, 
-              where waste is minimized, and resources are optimized for maximum efficiency and minimal environmental impact.
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold">{product}</h1>
+            <h2 className="text-xl text-gray-600">{company}</h2>
+          </div>
+          
+          <div className="space-y-3 mb-8">
+            <p className="text-lg">
+              <strong>HSN Code:</strong> {hsnCode}
             </p>
+            <p className="text-lg">
+              <strong>Country of Origin:</strong> {country}
+            </p>
+            <p className="text-lg">
+              <strong>Address:</strong> {companyAddress}
+            </p>
+            <p className="text-lg">
+              <strong>Price:</strong> Negotiable
+            </p>
+            <p className="text-lg">
+              <strong>Contact:</strong> N/A
+            </p>
+          </div>
+
+          <div className="mb-8">
+            <h3 className="text-xl font-semibold mb-4">Product Description:</h3>
+            <p className="text-gray-700 leading-relaxed text-justify">
+              {productDescription}
+            </p>
+          </div>
+
+          <div className="flex gap-4">
+            <div className="bg-gray-100 px-4 py-2 rounded-lg border border-gray-200">
+              Seller Quality of Trade
+            </div>
+            <div className="bg-gray-100 px-4 py-2 rounded-lg border border-gray-200">
+              Price Fluctuation Predictions
+            </div>
           </div>
         </div>
 
-        {/* Buttons */}
-        <div className="flex flex-col gap-3">
-          <button className="flex items-center gap-3 px-4 py-3 border rounded-md bg-gray-100 font-semibold text-left">
-            <div className="w-8 h-8 bg-gray-300 rounded"></div>
-            Seller Quality of Trade
+        <div className="flex items-center space-x-6 mt-8 pt-6 border-t border-gray-200">
+          <button className="flex items-center space-x-2 text-blue-600 hover:text-blue-800">
+            <span className="text-xl">💬</span>
+            <span className="font-medium">Chat</span>
           </button>
-          <button className="flex items-center gap-3 px-4 py-3 border rounded-md bg-gray-100 font-semibold text-left">
-            <div className="w-8 h-8 bg-gray-300 rounded"></div>
-            Price Fluctuation Predections
+          
+          <div className="h-6 w-px bg-gray-300"></div>
+          
+          <button className="flex items-center space-x-2 text-pink-600 hover:text-pink-800">
+            <span className="text-xl">♡</span>
+            <span className="font-medium">Wishlist</span>
           </button>
-        </div>
-
-        {/* Bottom Actions */}
-        <div className="flex items-center gap-6 text-sm text-gray-600 mt-2">
-          <button className="flex items-center gap-1">💬 Chat</button>
-          <div className="h-4 w-px bg-gray-400"></div>
-          <button className="flex items-center gap-1">♡ Wishlist</button>
-          <div className="h-4 w-px bg-gray-400"></div>
-          <button className="flex items-center gap-1">🔗 Share</button>
+          
+          <div className="h-6 w-px bg-gray-300"></div>
+          
+          <button className="flex items-center space-x-2 text-gray-600 hover:text-gray-800">
+            <span className="text-xl">🔗</span>
+            <span className="font-medium">Share</span>
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
-const Products = () =>(
+const Products = () => (
     <div className="grid grid-cols-4 mx-24 justify-center my-8">
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-        <ProductCard />
-
+        {[...Array(16)].map((_, i) => <ProductCard key={i} />)}
     </div>
-)
-
-export default () => {
-    return (
-        <div>
-            <Navbar />
-            <Products />
-            <SellerCard />
-        </div>
-    );
-}
-
-
-// components 
-
-type ButtonProps = {
-    onClick?: () => void;
-    className?: string;
-    children: ReactNode;
-};
-
-const Button: React.FC<ButtonProps> = ({ onClick, className = '', children }) => (
-    <button onClick={onClick}
-        className={`${className} px-12 py-3 mx-6 my-2 border-gray-300 border rounded-xl font-semibold transition-all hover:scale-105`}>
-        {children}
-    </button>
 );
 
-const SearchBar = (): JSX.Element => {
-    const [query, setQuery] = useState('');
-
-    const handleSearch = () => {
-        console.log('Search for:', query);
-    };
+const App = () => {
+    const [searchResults, setSearchResults] = useState<SellerCardProps[]>([]);
 
     return (
-        <div className="flex items-center border border-gray-200 rounded-full px-4 py-2 w-full max-w-xl shadow-sm">
-            <svg className="mr-6" width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <g opacity="0.5">
-                    <path d="M10.0169 19.0313C14.9968 19.0313 19.0337 14.9945 19.0337 10.0147C19.0337 5.03485 14.9968 0.998047 10.0169 0.998047C5.0369 0.998047 1 5.03485 1 10.0147C1 14.9945 5.0369 19.0313 10.0169 19.0313Z" stroke="black" stroke-width="2" stroke-linejoin="round" />
-                    <path d="M13.0176 6.4849C12.6239 6.09042 12.1562 5.77758 11.6413 5.56432C11.1264 5.35106 10.5744 5.24159 10.0171 5.24219C9.45977 5.24159 8.90782 5.35106 8.39291 5.56432C7.87801 5.77758 7.41029 6.09042 7.0166 6.4849M16.4997 16.4981L21.0002 20.9985" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                </g>
-            </svg>
-            <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Animal Protein Trader"
-                className="w-full outline-none text-gray-700 placeholder-gray-400 bg-transparent"
-            />
+        <div className="container mx-auto px-4">
+            <Navbar onSearchResults={setSearchResults} />
+            {searchResults.length > 0 ? (
+                <div className="space-y-8">
+                    {searchResults.map((result, i) => (
+                        <SellerCard 
+                            key={i}
+                            company={result.company}
+                            country={result.country}
+                            contactNumber={result.contactNumber}
+                            productDescription={result.productDescription}
+                            product={result.product}
+                            companyAddress={result.companyAddress}
+                            price={result.price}
+                            hsnCode={result.hsnCode}
+                        />
+                    ))}
+                </div>
+            ) : (
+                <Products />
+            )}
         </div>
     );
 };
+
+export default App;

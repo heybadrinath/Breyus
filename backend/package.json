@@ -18,10 +18,12 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "migrate": "node scripts/migrate-data.js"
+    "migrate": "node scripts/migrate-data.js",
+    "add-quantity-column": "node scripts/add-quantity-column.js"
   },
   "dependencies": {
     "@nestjs-modules/mailer": "^1.6.1",
+    "@nestjs/axios": "^4.0.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.1",
     "@nestjs/core": "^11.0.12",
@@ -29,15 +31,21 @@
     "@nestjs/mongoose": "^11.0.1",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/platform-socket.io": "^11.1.1",
+    "@nestjs/schedule": "^6.0.0",
     "@nestjs/typeorm": "^11.0.0",
+    "@nestjs/websockets": "^11.1.1",
     "@prisma/client": "^6.5.0",
+    "@types/uuid": "^10.0.0",
     "axios": "^1.8.3",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.2",
     "better-sqlite3": "^11.9.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "commander": "^14.0.0",
     "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.12.1",
@@ -48,8 +56,10 @@
     "pg": "^8.14.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "socket.io": "^4.8.1",
     "sqlite3": "^5.1.6",
-    "typeorm": "^0.3.21"
+    "typeorm": "^0.3.21",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

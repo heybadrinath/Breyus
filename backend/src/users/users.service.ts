@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, Logger, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { UserDetails } from './entities/user-details.entity';
@@ -9,13 +10,18 @@ import * as bcrypt from 'bcrypt';
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
+  private readonly bcryptRounds: number;
 
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     @InjectRepository(UserDetails)
     private userDetailsRepository: Repository<UserDetails>,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.bcryptRounds = this.configService.get<number>('BCRYPT_ROUNDS', 12);
+    this.logger.log(`Users service initialized with bcrypt rounds: ${this.bcryptRounds}`);
+  }
 
   async findAll(): Promise<User[]> {
     return this.usersRepository.find();
@@ -90,8 +96,7 @@ export class UsersService {
   }
 
   private async hashPassword(password: string): Promise<string> {
-    const salt = await bcrypt.genSalt();
-    return bcrypt.hash(password, salt);
+    return bcrypt.hash(password, this.bcryptRounds);
   }
 
   async validateCredentials(email: string, password: string): Promise<User | null> {
@@ -122,12 +127,30 @@ export class UsersService {
       
       // If user details don't exist, create an empty record
       if (!userDetails) {
+        this.logger.log(`Creating new empty user details for user ${userId}`);
         userDetails = this.userDetailsRepository.create({
           userId,
-          // Initialize with default empty values
-          country: 'Enter your country'
+          // Initialize with empty strings instead of null
+          contactNumber: '',
+          alternateNumber1: '',
+          alternateNumber2: '',
+          alternateEmail: '',
+          address: '',
+          city: '',
+          state: '',
+          country: '',
+          companyName: '',
+          companyWebsite: '',
+          gstin: '',
+          companyAddress: '',
+          socials: '',
+          accountType: '',
+          bankName: '',
+          accountNumber: '',
+          ifscCode: '',
         });
         await this.userDetailsRepository.save(userDetails);
+        this.logger.log(`Empty user details created for user ${userId}`);
       }
       
       return userDetails;
@@ -139,6 +162,8 @@ export class UsersService {
 
   async updateUserDetails(userId: string, userDetailsDto: UserDetailsDto): Promise<UserDetails> {
     try {
+      this.logger.log(`Updating details for user ${userId}: ${JSON.stringify(userDetailsDto)}`);
+      
       // First, check if user exists
       await this.findOne(userId);
       
@@ -148,16 +173,28 @@ export class UsersService {
       });
       
       if (!userDetails) {
+        // Create new user details with the provided data
         userDetails = this.userDetailsRepository.create({
           userId,
           ...userDetailsDto
         });
+        this.logger.log(`Creating new user details for ${userId}`);
       } else {
-        // Update existing details
-        this.userDetailsRepository.merge(userDetails, userDetailsDto);
+        // Update only the fields provided in the DTO
+        // This ensures we don't overwrite existing data with undefined values
+        for (const key in userDetailsDto) {
+          if (userDetailsDto[key] !== undefined) {
+            userDetails[key] = userDetailsDto[key];
+          }
+        }
+        this.logger.log(`Updating existing user details for ${userId}`);
       }
       
-      return this.userDetailsRepository.save(userDetails);
+      // Save the updated user details to the database
+      const savedDetails = await this.userDetailsRepository.save(userDetails);
+      this.logger.log(`Successfully saved user details: ${JSON.stringify(savedDetails)}`);
+      
+      return savedDetails;
     } catch (error) {
       this.logger.error(`Error updating user details: ${error.message}`, error.stack);
       throw error;

@@ -16,14 +16,47 @@ export class ProductsController {
   async findAll(@Request() req): Promise<Product[]> {
     try {
       this.logger.log('GET /products request received');
-      const sellerId = req.user?.id; // Will be undefined for non-authenticated requests
       
-      // Only filter by seller if authenticated and requesting own products
-      return await this.productsService.findAll(sellerId);
+      // For marketplace requests, return all products with seller information
+      // Don't filter by seller ID - we want to show all products
+      return await this.productsService.findAll();
     } catch (error) {
       this.logger.error('Error in findAll', error);
       throw new HttpException(
         'Failed to fetch products',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  // Authenticated endpoint to get current seller's products
+  @Get('seller/me')
+  @UseGuards(JwtAuthGuard)
+  async findCurrentSellerProducts(@Request() req): Promise<Product[]> {
+    try {
+      this.logger.log('GET /products/seller/me request received');
+      const sellerId = req.user?.id;
+      
+      if (!sellerId) {
+        this.logger.warn('No seller ID found in JWT token');
+        throw new HttpException(
+          'Authentication required',
+          HttpStatus.UNAUTHORIZED
+        );
+      }
+      
+      this.logger.log(`Fetching products for seller ID: ${sellerId}`);
+      const products = await this.productsService.findAll(sellerId);
+      this.logger.log(`Found ${products.length} products for seller ID: ${sellerId}`);
+      
+      return products;
+    } catch (error) {
+      this.logger.error(`Error in findCurrentSellerProducts: ${error.message}`, error.stack);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        'Failed to fetch seller products',
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
