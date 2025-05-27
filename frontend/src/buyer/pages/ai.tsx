@@ -27,7 +27,7 @@ const Navbar = () => {
           Contact Us
         </Link>
       </div>
-      <div id="login-signup-btn" className="flex">
+      {/* <div id="login-signup-btn" className="flex">
         <Button onClick={() => navigate("/buyer/signup")} className=" md:text-sm md:px-6">
           Sign Up
         </Button>
@@ -37,7 +37,7 @@ const Navbar = () => {
         >
           Login In
         </Button>
-      </div>
+      </div> */}
     </div>
   );
 };
