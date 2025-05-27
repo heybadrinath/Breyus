@@ -4,6 +4,7 @@ import "../seller/css/security.css";
 import { Link } from "react-router-dom";
 import authService from "../services/auth.service";
 import axios from "axios";
+import userDetailsService from "../services/user-details.service";
 
 interface SecuritySectionProps {
     email?: string;
@@ -23,8 +24,8 @@ const HorizontalLine: React.FC<{ style?: React.CSSProperties }> = ({ style }) =>
 );
 
 const CreatePasskey: React.FC<SecuritySectionProps & { className?: string }> = ({
-    email = "jainulivukush@gmail.com",
-    isEmailVerified = false,
+    email= "test@gmail.com",
+    isEmailVerified= false,
     onResendVerification,
     className = "",
 }) => {
@@ -335,7 +336,7 @@ const TwoFactorAuthentication: React.FC<{ className?: string }> = ({ className =
             </div>
             <div style={{ fontWeight: 600, marginBottom: "8px" }}>How it works</div>
             <div style={{ fontSize: "15px", marginBottom: "12px" }}>
-                When you log in to Shopify, you'll need to:
+                When you log in to BREYUS, you'll need to:
             </div>
             <ol style={{ paddingLeft: "20px", fontSize: "15px", marginBottom: "12px" }}>
                 <li style={{ marginBottom: "8px" }}>
@@ -372,7 +373,7 @@ const TwoFactorAuthentication: React.FC<{ className?: string }> = ({ className =
                     fontSize: "15px",
                 }}
             >
-                Verify your email address jainulivukush@gmail.com to create a passkey.{" "}
+                Verify your email address TEST@GMAIL.COM to create a passkey.{" "}
                 <a
                     href="#"
                     style={{ color: "#3b82f6", textDecoration: "underline" }}

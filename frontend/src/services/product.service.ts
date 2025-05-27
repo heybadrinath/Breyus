@@ -333,7 +333,117 @@ class ProductService {
       return this.getAllProducts();
     }
   }
+
+  // Delete a product
+  async deleteProduct(productId: string) {
+    try {
+      const token = authService.getToken();
+      if (!token) {
+        console.error('Authentication token not found');
+        return { success: false, message: 'Authentication token not found' };
+      }
+
+      console.log(`Deleting product ${productId}`);
+      
+      const response = await axios.delete(`${API_URL}/${productId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      console.log('Product deleted successfully:', response.data);
+      return { 
+        success: true, 
+        message: 'Product deleted successfully'
+      };
+    } catch (error) {
+      console.error(`Error deleting product ${productId}:`, error);
+      
+      if (axios.isAxiosError(error)) {
+        console.error('Server response:', error.response?.data);
+        
+        // If unauthorized, try to refresh token or log out
+        if (error.response?.status === 401) {
+          authService.logout();
+          window.location.href = '/login';
+          return { success: false, message: 'Authentication failed' };
+        }
+        
+        // If forbidden (not the owner)
+        if (error.response?.status === 403) {
+          return { 
+            success: false, 
+            message: 'You are not authorized to delete this product' 
+          };
+        }
+        
+        // If not found
+        if (error.response?.status === 404) {
+          return { 
+            success: false, 
+            message: 'Product not found' 
+          };
+        }
+        
+        return { 
+          success: false, 
+          message: error.response?.data?.message || 'Failed to delete product' 
+        };
+      }
+      
+      return { success: false, message: 'Failed to delete product' };
+    }
+  }
+
+  // Bulk delete products
+  async bulkDeleteProducts(productIds: string[]) {
+    try {
+      const token = authService.getToken();
+      if (!token) {
+        console.error('Authentication token not found');
+        return { success: false, message: 'Authentication token not found' };
+      }
+
+      console.log(`Bulk deleting products:`, productIds);
+      
+      // Delete products one by one (since we don't have a bulk delete endpoint)
+      const results = await Promise.allSettled(
+        productIds.map(id => 
+          axios.delete(`${API_URL}/${id}`, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          })
+        )
+      );
+      
+      const successful = results.filter(result => result.status === 'fulfilled').length;
+      const failed = results.length - successful;
+      
+      console.log(`Bulk delete completed: ${successful} successful, ${failed} failed`);
+      
+      if (failed === 0) {
+        return { 
+          success: true, 
+          message: `Successfully deleted ${successful} product(s)`
+        };
+      } else if (successful > 0) {
+        return { 
+          success: true, 
+          message: `Deleted ${successful} product(s), ${failed} failed`
+        };
+      } else {
+        return { 
+          success: false, 
+          message: `Failed to delete all ${failed} product(s)`
+        };
+      }
+    } catch (error) {
+      console.error('Error in bulk delete:', error);
+      return { success: false, message: 'Failed to delete products' };
+    }
+  }
 }
 
 const productService = new ProductService();
-export default productService; 
+export default productService;

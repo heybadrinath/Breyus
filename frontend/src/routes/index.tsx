@@ -1,10 +1,12 @@
 import React from "react";
+import { ReactNode } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import Signin from "../buyer/signin";  // Buyer Signin
 import Signup from "../buyer/signup";  // Buyer Signup
 import SellerSignin from "../seller/signin";  // Seller Signin
 import SellerSignup from "../seller/signup";  // Seller Signup
-import Hero from "../main/hero";  // Hero Page
+// import Hero from "../main/hero";  // Hero Page
+import Hero from "../Hero";
 import SellerSettings from "../seller/settings";
 import SellerDashboard from "../seller/dashboard";
 import Security from "../seller/security";
@@ -14,7 +16,10 @@ import Upgrade from "../seller/upgrade";
 import {AddProduct, Inventory, Incoterms} from "../seller/products";
 import ForgotPassword from "../buyer/forgot-password";
 import BuyerLayout from "../buyer/components/layout";
-import ProtectedRoute from "../components/ProtectedRoute"; // Import ProtectedRoute component
+
+
+
+
 
 import SellerForgotPassword from "../seller/forgot-password";
 import { Layout } from "../seller/components";
@@ -26,17 +31,17 @@ import Homepage from "../buyer/pages/Homepage";
 import Wishlist from "../buyer/pages/Wishlist";
 import ProductCard from "../buyer/components/ProductCard";
 import CartPage from "../buyer/pages/Cartpage";
+import BuyerTrade from "../buyer/pages/trade";
 import ProductPage from "../buyer/pages/product";
 import OrderRequestQuantity from "../buyer/pages/order_request_quantity";
 import BuyerInformation from "../buyer/pages/buyer_information";
 import BuyerAddress from "../buyer/pages/buyer_address";
-import BuyerTrade from "../buyer/pages/trade";
-import Payment from "../buyer/pages/Payment"
 import PurchaseRequest from "../buyer/pages/purchase-request";
-// Removed duplicate ReactNode import as it's already available from React
-type PageProps = {
-  page: React.ReactNode;
-};
+import PurchaseRequestSuccess from "../buyer/pages/PurchaseRequestSuccess";
+
+// ai imports 
+import BuyerAi from "../buyer/pages/ai";
+import BuyerAiproduct from "../buyer/pages/ai-products";
 
 const pageVariants = { 
   initial: { opacity: 0, x: -80 },
@@ -45,7 +50,7 @@ const pageVariants = {
 };
 
 // wrapper for seller div is already available 
-const Animate = ({ page }: PageProps) => {
+const Animate = ({ page }: { page: ReactNode }) => {
   return (
     <motion.div
       variants={pageVariants}
@@ -77,34 +82,36 @@ const AppRoutes = () => {
     
           <Routes location={location} key={location.pathname}>
           {/* Hero Page */}
-          <Route path="/" element={<Animate page={<Hero />} />} />
+          {/* <Route path="/" element={<Animate page={<Hero />} />} /> */}
+          <Route path="/" element={<Animate page={<Hero />}/>} />
   
-          {/* Public Buyer Routes - Authentication */}
+          {/* Buyer Routes */}
           <Route path="/buyer/signin" element={<Animate page={<Signin />} />} />
           <Route path="/buyer/signup" element={<Animate page={<Signup />} />} />
           <Route path="/buyer/forgot-password" element={<Animate page={<ForgotPassword />} />} />
-          
-          {/* Protected Buyer Routes */}
-          <Route element={<ProtectedRoute />}>
           <Route path="/buyer/homepage" element={<Animate page={<Homepage />} />} />
           <Route path="/buyer/inbox" element={<Animate page={<BuyerInbox />} />} />
           <Route path="/buyer/wishlist" element={<Animate page={<Wishlist />} />} />
           <Route path="/buyer/cartpage" element={<Animate page={<CartPage />} />} />
-          <Route path="/buyer/trade" element={<Animate page={<BuyerTrade />} />} />
-          <Route path="/buyer/payment" element={<Animate page={<Payment />} />} />
+          <Route path="/buyer/trade" element={<Animate page={<BuyerLayout content={<BuyerTrade />} />} />} />
           <Route path="/buyer/buyer-address" element={<Animate page={<BuyerAddress />} />} />
           <Route path="/buyer/product-page" element={<Animate page={<BuyerLayout content={<ProductPage />} />} />} />
           <Route path="/buyer/product-request-quantity" element={<Animate page={<BuyerLayout content={<OrderRequestQuantity />} />} />} />
           <Route path="/buyer/buyer-information" element={<Animate page={<BuyerLayout content={<BuyerInformation />} />} />} />
-          </Route>
+          <Route path="/buyer/purchase-request" element={<Animate page={<PurchaseRequest />} />} />
+          <Route path="/buyer/purchase-request-success" element={<Animate page={<PurchaseRequestSuccess />} />} />          
+
+          {/* AI Routes */}
+          <Route path="/buyer/ai" element={<Animate page={<BuyerAi />} />} />
+          <Route path="/buyer/ai-product" element={<Animate page={<BuyerAiproduct />} />} />
+
           
-          {/* Public Seller Routes - Authentication */}
+
+
+          {/* Seller Routes */}
           <Route path="/seller/signin" element={<Animate page={<SellerSignin />} />} />
           <Route path="/seller/signup" element={<Animate page={<SellerSignup />} />} />
           <Route path="/seller/forgot-password" element={<Animate page={<SellerForgotPassword />} />} />
-          
-          {/* Protected Seller Routes */}
-          <Route element={<ProtectedRoute redirectPath="/seller/signin" requiredRole="seller" />}>
           <Route path="/seller/dashboard" element={<Animate page={<Layout Body={<SellerDashboard />}/>} />} />
           <Route path="/seller/security" element={<Animate page={<Layout Body={<Security />}/>} />} />
           <Route path="/seller/sales" element={<Animate page={<Layout Body={<Sales />}/>} />} />
@@ -114,9 +121,12 @@ const AppRoutes = () => {
           <Route path="/seller/inventory" element={<Animate page={<Layout Body={<Inventory/>}/>} />} />
           <Route path="/seller/trade" element={<Animate page={<Layout Body={<Trade/>}/>} />} />
           <Route path="/seller/Product-Feedback" element={<Animate page={<Layout Body={<Feedback/>}/>} />} />
-          <Route path="/seller/incoterms" element={<Animate page={<Layout Body={<Incoterms/>}/>} />} />
+          {/*<Route path="/seller/incoterms" element={<Animate page={<Layout Body={<Incoterms/>}/>} />} />*/}
+      
+          {/* Seller settings with different layout */}
           <Route path="/seller/settings" element={<Animate page={<SellerSettings />} />}/>
-          </Route>
+
+  
   
           {/* 404 page  */}
           <Route path="*" element={<Notfoundpage />} />

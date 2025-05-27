@@ -7,6 +7,27 @@ import productService from "../services/product.service";
 import authService from "../services/auth.service";
 import { Product } from "../types/product";
 
+// Get API URL from environment or use default
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+// Helper function to get proper image URL from different sources
+const getImageUrl = (imagePath: string | undefined | null): string => {
+  if (!imagePath) {
+    return '/placeholder-product.svg';
+  }
+  
+  // Handle URLs - blob URLs for local file preview, http/https for remote files, or data URLs
+  if (imagePath.startsWith('blob:') || 
+      imagePath.startsWith('http:') || 
+      imagePath.startsWith('https:') ||
+      imagePath.startsWith('data:')) {
+    return imagePath;
+  }
+  
+  // Handle relative paths that need server URL prefix
+  return `${API_URL}/uploads/${imagePath}`;
+};
+
 const variants = {
   initial: { opacity: 0, x: -100 },
   animate: { opacity: 1, x: 0 },
@@ -61,6 +82,24 @@ interface ProductData {
   tags?: string[];
 }
 
+// ProgressBar Component
+const ProgressBar: React.FC<{ currentPage: number }> = ({ currentPage }) => {
+  const steps = ["Product Info", "Media", "Pricing", "Tags"];
+  return (
+    <div className="progress-bar-container">
+      {steps.map((step, index) => (
+        <React.Fragment key={step}>
+          <div className={`progress-step ${index <= currentPage ? "active" : ""}`}>
+            <div className="progress-dot"></div>
+            <div className="progress-label">{step}</div>
+          </div>
+          {index < steps.length - 1 && <div className={`progress-line ${index < currentPage ? "active" : ""}`}></div>}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
+
 interface PriceData {
   price: string;
   currency: string;
@@ -75,7 +114,7 @@ interface PriceData {
 }
 
 interface ProductProps {
-  setPageNo: (pageNo: number) => void;
+  setPageNo?: (pageNo: number) => void; // Made setPageNo optional
   updateProductData?: (data: Partial<ProductData>) => void;
   productData?: Partial<ProductData>;
 }
@@ -187,20 +226,19 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onChange, value = [] }) => {
 
 // Product Information Component
 const ProductInformation: React.FC<ProductProps> = ({ setPageNo, updateProductData, productData = {} }) => {
-  const [formData, setFormData] = useState<Omit<ProductData, 'category'> & { category: string }>({
+  const [formData, setFormData] = useState<Omit<ProductData, 'category'> & { category: string }>(() => ({
     name: productData.name || "",
     moq: productData.moq || "",
     description: productData.description || "",
     detailedDescription: productData.detailedDescription || "",
     category: productData.category || "",
     hsnCode: productData.hsnCode || ""
-  });
+  }));
 
   // Determine if we're in edit mode based on whether product has an ID
   const isEditMode = Boolean(productData?.id);
 
-  // Update local state when productData changes (e.g., navigating back)
-  // Only run on initial mount or when productData.name changes (to avoid circular updates)
+  // Update local state when relevant productData props change
   useEffect(() => {
     setFormData({
       name: productData.name || "",
@@ -210,7 +248,14 @@ const ProductInformation: React.FC<ProductProps> = ({ setPageNo, updateProductDa
       category: productData.category || "",
       hsnCode: productData.hsnCode || ""
     });
-  }, []);  // Removed productData dependency to avoid glitching
+  }, [
+    productData.name, 
+    productData.moq, 
+    productData.description, 
+    productData.detailedDescription, 
+    productData.category, 
+    productData.hsnCode
+  ]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -219,6 +264,10 @@ const ProductInformation: React.FC<ProductProps> = ({ setPageNo, updateProductDa
     
     // Update parent data immediately, but debounced to prevent too many updates
     updateProductData?.(updatedData);
+  };
+
+  const handleNext = () => {
+    if (setPageNo) setPageNo(1); // Check if setPageNo is defined
   };
 
   return (
@@ -306,7 +355,8 @@ const ProductInformation: React.FC<ProductProps> = ({ setPageNo, updateProductDa
         
         <div className="mt-8 flex justify-end">
           <button 
-            onClick={() => setPageNo(1)} 
+            onClick={handleNext}
+            type="button"
             className="product-btn"
           >
             Next
@@ -325,12 +375,18 @@ const Media: React.FC<ProductProps> = ({ setPageNo, updateProductData, productDa
   // When files are selected, update the main product data state
   const handleProductImagesChange = (files: File[]) => {
     setProductImages(files);
-    // For now, just store the first file name in product data
-    // In a real app, you'd handle file uploads differently
+    
     if (files.length > 0) {
-      updateProductData?.({ productImage: files[0].name });
+      // Create a local object URL for temporary display purposes during form editing
+      const localImageUrl = URL.createObjectURL(files[0]);
+      // Store the local URL in product data for preview
+      updateProductData?.({ 
+        productImage: localImageUrl
+      });
     } else {
-      updateProductData?.({ productImage: undefined });
+      updateProductData?.({ 
+        productImage: undefined
+      });
     }
   };
 
@@ -341,6 +397,14 @@ const Media: React.FC<ProductProps> = ({ setPageNo, updateProductData, productDa
     } else {
       updateProductData?.({ testReports: undefined });
     }
+  };
+
+  const handleNext = () => {
+    if (setPageNo) setPageNo(2); // Go directly to Price (skip removed Inventory and Incoterms)
+  };
+
+  const handlePrev = () => {
+    if (setPageNo) setPageNo(0); // Check if setPageNo is defined
   };
 
   return (
@@ -361,13 +425,15 @@ const Media: React.FC<ProductProps> = ({ setPageNo, updateProductData, productDa
         </div>
         <div className="mt-8 flex justify-between">
           <button 
-            onClick={() => setPageNo(0)} 
+            onClick={handlePrev}
+            type="button"
             className="product-btn-prev"
           >
             Previous
           </button>
           <button 
-            onClick={() => setPageNo(2)} 
+            onClick={handleNext}
+            type="button"
             className="product-btn"
           >
             Next
@@ -380,7 +446,7 @@ const Media: React.FC<ProductProps> = ({ setPageNo, updateProductData, productDa
 
 // Price Component
 const Price: React.FC<ProductProps> = ({ setPageNo, updateProductData, productData = {} }) => {
-  const [priceData, setPriceData] = useState<PriceData>({
+  const [priceData, setPriceData] = useState<PriceData>(() => ({
     price: productData.price ? String(productData.price) : "",
     currency: productData.currency || "USD",
     sku: productData.sku || "",
@@ -391,9 +457,9 @@ const Price: React.FC<ProductProps> = ({ setPageNo, updateProductData, productDa
     profit: productData.profit ? String(productData.profit) : "",
     margin: productData.margin ? String(productData.margin) : "",
     quantity: productData.quantity ? String(productData.quantity) : "0"
-  });
+  }));
 
-  // Update local state when productData changes - only on initial mount
+  // Update local state when relevant productData props change
   useEffect(() => {
     setPriceData({
       price: productData.price ? String(productData.price) : "",
@@ -407,7 +473,18 @@ const Price: React.FC<ProductProps> = ({ setPageNo, updateProductData, productDa
       margin: productData.margin ? String(productData.margin) : "",
       quantity: productData.quantity ? String(productData.quantity) : "0"
     });
-  }, []); // Removed productData dependency
+  }, [
+    productData.price,
+    productData.currency,
+    productData.sku,
+    productData.onSale,
+    productData.discount,
+    productData.salePrice,
+    productData.costOfGoods,
+    productData.profit,
+    productData.margin,
+    productData.quantity
+  ]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -438,21 +515,29 @@ const Price: React.FC<ProductProps> = ({ setPageNo, updateProductData, productDa
       const profit = price - cost;
       const margin = price > 0 ? (profit / price) * 100 : 0;
       
-      const updatedData = {
-        ...priceData,
+      const updatedCalculatedData = {
         profit: profit.toFixed(2),
         margin: margin.toFixed(2)
       };
-      setPriceData(updatedData);
+      setPriceData(prev => ({ ...prev, ...updatedCalculatedData }));
       
       // Also update parent with calculated values
-      updateProductData?.({
-        profit: profit,
-        margin: margin
-      });
+      if (updateProductData) {
+        updateProductData({
+          profit: profit,
+          margin: margin
+        });
+      }
     }
-  }, [priceData.price, priceData.costOfGoods]);
+  }, [priceData.price, priceData.costOfGoods, updateProductData]);
 
+  const handleNext = () => {
+    if (setPageNo) setPageNo(3); // Go directly to Tags (skip Inventory and Incoterms)
+  };
+
+  const handlePrev = () => {
+    if (setPageNo) setPageNo(1); // Check if setPageNo is defined
+  };
   return (
     <ProductLayout productype="price" Body={
       <div className="flex flex-col h-full">
@@ -582,13 +667,15 @@ const Price: React.FC<ProductProps> = ({ setPageNo, updateProductData, productDa
         
         <div className="mt-8 flex justify-between">
           <button 
-            onClick={() => setPageNo(1)} 
+            onClick={handlePrev}
+            type="button"
             className="product-btn-prev"
           >
             Previous
           </button>
           <button 
-            onClick={() => setPageNo(3)} 
+            onClick={handleNext}
+            type="button"
             className="product-btn"
           >
             Next
@@ -599,13 +686,661 @@ const Price: React.FC<ProductProps> = ({ setPageNo, updateProductData, productDa
   );
 };
 
+// Inventory Management Component - Product Listing Page
+export const Inventory: React.FC = () => {
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5); // Changed from 10 to 5 to match image
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await productService.getSellerProducts();
+      if (response.success) {
+        setProducts(response.products);
+      } else {
+        setError(response.message || 'Failed to fetch products');
+      }
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      setError('Failed to load inventory');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    try {
+      const response = await productService.deleteProduct(productId);
+      if (response.success) {
+        setShowDeleteModal(false);
+        setProductToDelete(null);
+        // Refresh products after deletion
+        await fetchProducts();
+        // Show success message briefly
+        setError(null);
+      } else {
+        setError(response.message || 'Failed to delete product');
+      }
+    } catch (err) {
+      console.error('Error deleting product:', err);
+      setError('Failed to delete product');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedProducts.size === 0) return;
+    
+    try {
+      const productIds = Array.from(selectedProducts);
+      const response = await productService.bulkDeleteProducts(productIds);
+      
+      if (response.success) {
+        setSelectedProducts(new Set());
+        await fetchProducts();
+        setError(null);
+        // Could show a success message here if needed
+      } else {
+        setError(response.message || 'Failed to delete selected products');
+      }
+    } catch (err) {
+      console.error('Error bulk deleting products:', err);
+      setError('Failed to delete selected products');
+    }
+  };
+
+  const toggleProductSelection = (productId: string) => {
+    const newSelected = new Set(selectedProducts);
+    if (newSelected.has(productId)) {
+      newSelected.delete(productId);
+    } else {
+      newSelected.add(productId);
+    }
+    setSelectedProducts(newSelected);
+  };
+
+  const selectAllProducts = () => {
+    if (selectedProducts.size === filteredProducts.length) {
+      setSelectedProducts(new Set());
+    } else {
+      setSelectedProducts(new Set(filteredProducts.map(p => p.id)));
+    }
+  };
+
+  // Filter and sort products
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = !filterCategory || product.category === filterCategory;
+    const matchesStatus = !filterStatus || 
+                         (filterStatus === 'in-stock' && product.quantity > 0) ||
+                         (filterStatus === 'out-of-stock' && product.quantity === 0) ||
+                         (filterStatus === 'low-stock' && product.quantity > 0 && product.quantity <= 10);
+    
+    return matchesSearch && matchesCategory && matchesStatus;
+  }).sort((a, b) => {
+    let aValue = a[sortBy];
+    let bValue = b[sortBy];
+    
+    if (sortBy === 'price') {
+      aValue = parseFloat(aValue) || 0;
+      bValue = parseFloat(bValue) || 0;
+    } else if (sortBy === 'quantity') {
+      aValue = parseInt(aValue) || 0;
+      bValue = parseInt(bValue) || 0;
+    } else {
+      aValue = String(aValue).toLowerCase();
+      bValue = String(bValue).toLowerCase();
+    }
+    
+    if (sortOrder === 'asc') {
+      return aValue > bValue ? 1 : -1;
+    } else {
+      return aValue < bValue ? 1 : -1;
+    }
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+
+  const getStockStatus = (quantity: number) => {
+    if (quantity === 0) return { status: 'Out of Stock', color: 'bg-red-100 text-red-800' };
+    if (quantity <= 10) return { status: 'Low Stock', color: 'bg-yellow-100 text-yellow-800' };
+    return { status: 'In Stock', color: 'bg-green-100 text-green-800' };
+  };
+
+  const formatPrice = (price: number | string) => {
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(numPrice || 0);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading inventory...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex flex-col mb-4">
+            <div className="mb-4">
+              <h1 className="text-3xl font-bold text-gray-900">Product Inventory</h1>
+              <p className="text-gray-600 mt-1">Manage your product listings and stock levels</p>
+            </div>
+            <div className="flex justify-center gap-4">
+              <a
+                href='/seller/add-products?new=true'
+                className="bg-black hover:bg-gray-800 text-white px-6 py-2 rounded-none font-medium transition-colors duration-200"
+              >
+                New Product
+              </a>
+              <a
+                href='#'
+                className="border border-blue-600 text-blue-600 hover:bg-blue-50 px-6 py-2 rounded-none font-medium transition-colors duration-200"
+              >
+                Import CSV File
+              </a>
+              <a
+                href='#'
+                className="border border-blue-600 text-blue-600 hover:bg-blue-50 px-6 py-2 rounded-none font-medium transition-colors duration-200"
+              >
+                Export CSV File
+              </a>
+              <button
+                onClick={fetchProducts}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors duration-200 ml-4"
+                title="Refresh inventory"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="text-blue-600 text-sm font-medium">Total Products</div>
+              <div className="text-2xl font-bold text-blue-900">{products.length}</div>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg">
+              <div className="text-green-600 text-sm font-medium">In Stock</div>
+              <div className="text-2xl font-bold text-green-900">
+                {products.filter(p => p.quantity > 10).length}
+              </div>
+            </div>
+            <div className="bg-yellow-50 p-4 rounded-lg">
+              <div className="text-yellow-600 text-sm font-medium">Low Stock</div>
+              <div className="text-2xl font-bold text-yellow-900">
+                {products.filter(p => p.quantity > 0 && p.quantity <= 10).length}
+              </div>
+            </div>
+            <div className="bg-red-50 p-4 rounded-lg">
+              <div className="text-red-600 text-sm font-medium">Out of Stock</div>
+              <div className="text-2xl font-bold text-red-900">
+                {products.filter(p => p.quantity === 0).length}
+              </div>
+            </div>
+          </div>
+
+          {/* Filters and Search */}
+          <div className="flex flex-col lg:flex-row gap-4 mb-4">
+            <div className="flex-1">
+              <div className="relative">
+                <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              >
+                <option value="">All Categories</option>
+                <option value="Oils">Oils</option>
+                <option value="dummy-1">Category 1</option>
+                <option value="dummy-2">Category 2</option>
+              </select>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              >
+                <option value="">All Stock Status</option>
+                <option value="in-stock">In Stock</option>
+                <option value="low-stock">Low Stock</option>
+                <option value="out-of-stock">Out of Stock</option>
+              </select>
+              <select
+                value={`${sortBy}-${sortOrder}`}
+                onChange={(e) => {
+                  const [field, order] = e.target.value.split('-');
+                  setSortBy(field);
+                  setSortOrder(order as 'asc' | 'desc');
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              >
+                <option value="name-asc">Name A-Z</option>
+                <option value="name-desc">Name Z-A</option>
+                <option value="price-asc">Price Low-High</option>
+                <option value="price-desc">Price High-Low</option>
+                <option value="quantity-asc">Stock Low-High</option>
+                <option value="quantity-desc">Stock High-Low</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Bulk Actions */}
+          {selectedProducts.size > 0 && (
+            <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg mb-4">
+              <span className="text-blue-700 font-medium">
+                {selectedProducts.size} product(s) selected
+              </span>
+              <button
+                onClick={handleBulkDelete}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-medium transition-colors duration-200"
+              >
+                Delete Selected
+              </button>
+              <button
+                onClick={() => setSelectedProducts(new Set())}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Clear Selection
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+            {error}
+          </div>
+        )}
+
+        {/* Products Table */}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          {filteredProducts.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="text-gray-400 text-6xl mb-4">📦</div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Products Found</h3>
+              <p className="text-gray-600 mb-6">
+                {products.length === 0 
+                  ? "You haven't added any products yet. Start by adding your first product!"
+                  : "No products match your current filters. Try adjusting your search criteria."
+                }
+              </p>
+              {products.length === 0 && (
+                <a
+                  href='/seller/add-products?new=true'
+                  className="bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-none font-medium transition-colors duration-200 inline-block"
+                >
+                  New Product
+                </a>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-4 text-left">
+                        <input
+                          type="checkbox"
+                          checked={filteredProducts.length > 0 && selectedProducts.size === filteredProducts.length}
+                          onChange={selectAllProducts}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                        Product
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                        Category
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                        Price
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                        Stock
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {currentProducts.map((product) => {
+                      const stockStatus = getStockStatus(product.quantity || 0);
+                      return (
+                        <tr key={product.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedProducts.has(product.id)}
+                              onChange={() => toggleProductSelection(product.id)}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center">
+                              <div className="h-16 w-16 flex-shrink-0">
+                                <img
+                                  className="h-16 w-16 rounded-lg object-cover border"
+                                  src={getImageUrl(product.productImage)}
+                                  alt={product.name}
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = '/placeholder-product.svg';
+                                  }}
+                                />
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900 line-clamp-2">
+                                  {product.name || 'Untitled Product'}
+                                </div>
+                                <div className="text-sm text-gray-500 line-clamp-1">
+                                  {product.description || 'No description'}
+                                </div>
+                                {product.hsnCode && (
+                                  <div className="text-xs text-gray-400">
+                                    HSN: {product.hsnCode}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              {product.category || 'Uncategorized'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-900">
+                            <div className="font-medium">{formatPrice(product.price)}</div>
+                            {product.salePrice && product.onSale && (
+                              <div className="text-xs text-green-600">
+                                Sale: {formatPrice(product.salePrice)}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-900">
+                            <div className="font-medium">{product.quantity || 0} units</div>
+                            {product.moq && (
+                              <div className="text-xs text-gray-500">
+                                MOQ: {product.moq}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${stockStatus.color}`}>
+                              {stockStatus.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm font-medium">
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={`/seller/product/${product.id}`}
+                                className="text-blue-600 hover:text-blue-900 transition-colors duration-200"
+                                title="View Details"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                              </a>
+                              <a
+                                href={`/seller/add-products?id=${product.id}`}
+                                className="text-gray-600 hover:text-gray-900 transition-colors duration-200"
+                                title="Edit Product"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </a>
+                              <button
+                                onClick={() => {
+                                  setProductToDelete(product.id);
+                                  setShowDeleteModal(true);
+                                }}
+                                className="text-red-600 hover:text-red-900 transition-colors duration-200"
+                                title="Delete Product"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              <div className="bg-white px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-gray-700">
+                    Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredProducts.length)} of {filteredProducts.length} products
+                  </div>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="border border-gray-300 rounded px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  >
+                    <option value={5}>5 per page</option>
+                    <option value={10}>10 per page</option>
+                    <option value={25}>25 per page</option>
+                    <option value={50}>50 per page</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum: number;
+                      if (totalPages === 0) return null; // No pages to display
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`px-3 py-2 border text-sm font-medium rounded-md ${
+                            currentPage === pageNum
+                              ? 'border-blue-500 bg-blue-50 text-blue-600'
+                              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Delete Product</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone.</p>
+              </div>
+            </div>
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to delete this product? This will permanently remove the product from your inventory.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setProductToDelete(null);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => productToDelete && handleDeleteProduct(productToDelete)}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md"
+              >
+                Delete Product
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Placeholder for Incoterms Component
+export const Incoterms: React.FC<ProductProps> = ({ setPageNo, updateProductData, productData }) => {
+  // Add actual incoterms form fields and logic here
+  const handleNext = () => {
+    if (setPageNo) setPageNo(5); // Check if setPageNo is defined
+  };
+
+  const handlePrev = () => {
+    if (setPageNo) setPageNo(3); // Check if setPageNo is defined
+  };
+
+  return (
+    <ProductLayout productype="incoterms" Body={
+      <div className="flex flex-col h-full">
+        <h1 className="section-title font-bold mb-6 text-2xl">Incoterms</h1>
+        <p className="text-gray-600 mb-4">
+          Specify International Commercial Terms for shipping and delivery.
+        </p>
+        {/* Example Field (to be replaced with actual incoterms fields) */}
+        <div className="form-field mb-6">
+          <label htmlFor="incoterm" className="block text-sm font-medium text-gray-700 mb-1">Select Incoterm</label>
+          <select 
+            name="incoterm" 
+            id="incoterm"
+            // value={productData?.incoterm || ''} // Assuming an 'incoterm' field in ProductData
+            // onChange={(e) => updateProductData?.({ incoterm: e.target.value })}
+            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="" disabled>Select an Incoterm</option>
+            <option value="EXW">EXW (Ex Works)</option>
+            <option value="FOB">FOB (Free On Board)</option>
+            <option value="CIF">CIF (Cost, Insurance and Freight)</option>
+            {/* Add other incoterms as needed */}
+          </select>
+        </div>
+
+        <div className="mt-8 flex justify-between">
+          <button 
+            onClick={handlePrev}
+            type="button"
+            className="mr-2 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          >
+            Previous
+          </button>
+          <button 
+            onClick={handleNext}
+            type="button"
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    } />
+  );
+};
+
+
 // Updated Tags component with new submit handling
 interface TagsProps extends Omit<ProductProps, 'resetForm'> {
   onSubmit?: (formData: Partial<ProductData>, tags: string[]) => Promise<boolean>;
 }
 
 const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData = {}, onSubmit }) => {
-  const [tags, setTags] = useState<string[]>(productData.tags || []);
+  const [tags, setTags] = useState<string[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -615,17 +1350,15 @@ const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData =
   // Determine if we're in edit mode based on whether product has an ID
   const isEditMode = Boolean(productData?.id);
   
-  // Only update tags from productData on initial mount
+  // Sync local tags state with productData.tags prop
   useEffect(() => {
-    if (productData.tags) {
+    if (productData.tags && JSON.stringify(productData.tags) !== JSON.stringify(tags)) {
       setTags(productData.tags);
     }
-  }, []); // Removed productData.tags dependency
+  }, [productData.tags]); // Removed tags from dependency to avoid loop with parent update
 
-  // Update parent whenever tags change
-  useEffect(() => {
-    updateProductData?.({ tags });
-  }, [tags, updateProductData]);
+  // Removed the useEffect that was previously here to sync tags back to parent immediately.
+  // updateProductData will be called directly in handlers.
 
   // Cleaner implementation of fetchSuggestedTags function
   const fetchSuggestedTags = useCallback(async () => {
@@ -667,19 +1400,25 @@ const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData =
         .slice(0, 5);
 
       setTags(newTags);
+      if (updateProductData) {
+        updateProductData({ tags: newTags });
+      }
     } catch (err) {
       console.error("API Error:", err);
       // Fallback to generate some contextual tags
       const fallbackTags = generateContextualTags(productData);
       setTags(fallbackTags);
+      if (updateProductData) {
+        updateProductData({ tags: fallbackTags });
+      }
       setError("Error fetching tags. Using default suggestions instead.");
     } finally {
       setIsLoading(false);
     }
-  }, [productData]);
+  }, [productData, updateProductData]); // Added updateProductData
 
   // Fallback function to generate tags if API fails
-  const generateContextualTags = (data: Partial<ProductData>): string[] => {
+  const generateContextualTags = useCallback((data: Partial<ProductData>): string[] => {
     if (!data.name) return ["product", "item", "new"];
     
     // Extract tags from product name and category
@@ -697,21 +1436,29 @@ const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData =
       .filter(tag => tag && tag.length > 2);
     
     return allTags.length > 0 ? allTags.slice(0, 5) : ["product", "item", "new"];
-  };
+  }, []); // No dependencies needed if it only relies on its arguments
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.key === "Enter" || e.key === ",") && input.trim() && tags.length < 5) {
       e.preventDefault();
       const newTag = input.trim();
       if (!tags.includes(newTag)) {
-        setTags(prev => [...prev, newTag].slice(0, 5));
+        const newTags = [...tags, newTag].slice(0, 5);
+        setTags(newTags);
+        if (updateProductData) {
+          updateProductData({ tags: newTags });
+        }
       }
       setInput("");
     }
   };
 
   const removeTag = (index: number) => {
-    setTags(prev => prev.filter((_, i) => i !== index));
+    const newTags = tags.filter((_, i) => i !== index);
+    setTags(newTags);
+    if (updateProductData) {
+      updateProductData({ tags: newTags });
+    }
   };
 
   const handleSubmit = async () => {
@@ -740,6 +1487,9 @@ const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData =
     }
   };
 
+  const handlePrev = () => {
+    if (setPageNo) setPageNo(2); // Go back to Price page (was previously pointing to removed Inventory page)
+  };
   return (
     <ProductLayout productype="tags" Body={
       <div className="flex flex-col h-full">
@@ -825,7 +1575,7 @@ const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData =
 
         <div className="mt-8 flex justify-between">
           <button 
-            onClick={() => setPageNo(2)} 
+            onClick={handlePrev} 
             className="product-btn-prev"
           >
             Previous
@@ -869,404 +1619,198 @@ const initialProductData: ProductData = {
 // Main Add Product Component - completely overhaul the form reset functionality
 export const AddProduct: React.FC = () => {
   const [pageNo, setPageNo] = useState(0);
-  const [productData, setProductData] = useState<Partial<ProductData>>({});
+  const [productData, setProductData] = useState<Partial<ProductData>>(initialProductData);
   const [formInitialized, setFormInitialized] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // On component mount, check if we should load saved data, fetch an existing product, or create a new form
   useEffect(() => {
     const loadForm = async () => {
       setIsLoading(true);
-      
-      // Check URL parameters
+      setError(null);
       const urlParams = new URLSearchParams(window.location.search);
       const isNewForm = urlParams.get('new') === 'true';
       const productId = urlParams.get('id');
-      
-      // If editing an existing product
+
       if (productId) {
         try {
           setIsEditMode(true);
-          console.log(`Editing product with ID: ${productId}`);
-          
-          // Fetch product data from the API
           const result = await productService.getProductById(productId);
-          
           if (result.success && result.product) {
-            console.log('Loaded product for editing:', result.product);
-            
-            // Map the backend data model to our form model
+            const fetchedProduct = result.product as Product; // Cast to full Product type
             const formData: Partial<ProductData> = {
-              id: result.product.id,
-              name: result.product.name || '',
-              description: result.product.preciseDescription || '',
-              detailedDescription: result.product.detailedDescription || '',
-              category: result.product.category || '',
-              hsnCode: result.product.hsnCode || '',
-              moq: result.product.moq || '',
-              price: result.product.price || 0,
-              currency: result.product.currency || 'USD',
-              sku: result.product.sku || '',
-              quantity: result.product.quantity || 0,
-              onSale: result.product.onSale || false,
-              discount: result.product.discount || 0,
-              salePrice: result.product.salePrice || 0,
-              costOfGoods: result.product.costOfGoods || 0,
-              margin: result.product.margin || 0,
-              profit: result.product.profit || 0,
-              productImage: result.product.productImage || '',
-              testReports: result.product.testReports || '',
-              tags: result.product.tags || []
+              id: fetchedProduct.id,
+              name: fetchedProduct.name || '',
+              description: fetchedProduct.preciseDescription || fetchedProduct.description || '',
+              detailedDescription: fetchedProduct.detailedDescription || '',
+              category: fetchedProduct.category || '',
+              hsnCode: fetchedProduct.hsnCode || '',
+              moq: fetchedProduct.moq || '',
+              price: fetchedProduct.price || 0,
+              currency: (fetchedProduct as any).currency || 'USD', // Assuming currency might not be in Product type
+              sku: fetchedProduct.sku || '',
+              quantity: fetchedProduct.quantity || 0,
+              onSale: fetchedProduct.onSale || false,
+              discount: fetchedProduct.discount || 0,
+              salePrice: fetchedProduct.salePrice || 0,
+              costOfGoods: fetchedProduct.costOfGoods || 0,
+              margin: fetchedProduct.margin || 0,
+              profit: fetchedProduct.profit || 0,
+              productImage: fetchedProduct.productImage || '',
+              testReports: fetchedProduct.testReports || '',
+              tags: fetchedProduct.tags || []
             };
-            
-            // Set the form data
             setProductData(formData);
             localStorage.setItem('productFormData', JSON.stringify(formData));
-            setFormInitialized(true);
-            setIsLoading(false);
           } else {
-            console.error('Failed to fetch product:', result.message);
             setError(`Could not load product: ${result.message}`);
-            setFormInitialized(true);
-            setIsLoading(false);
           }
         } catch (err) {
-          console.error('Error while fetching product:', err);
           setError('Failed to load product details. Please try again.');
-          setFormInitialized(true);
-          setIsLoading(false);
         }
-      }
-      // If explicitly creating a new form
-      else if (isNewForm) {
-        console.log('Creating new form: clearing all saved data');
+      } else if (isNewForm) {
         localStorage.removeItem('productFormData');
         setProductData(initialProductData);
-        setFormInitialized(true);
-        setIsLoading(false);
-      } 
-      // Otherwise try to load saved data
-      else {
+        setPageNo(0);
+      } else {
         const savedData = localStorage.getItem('productFormData');
         if (savedData) {
           try {
-            console.log('Loading saved form data');
             setProductData(JSON.parse(savedData));
           } catch (e) {
-            console.error('Error parsing saved product data', e);
+            localStorage.removeItem('productFormData');
             setProductData(initialProductData);
           }
         } else {
           setProductData(initialProductData);
         }
-        setFormInitialized(true);
-        setIsLoading(false);
       }
+      setFormInitialized(true);
+      setIsLoading(false);
     };
-
     loadForm();
   }, []);
 
-  // Create a function to completely reset the form
+  const updateProductData = useCallback((data: Partial<ProductData>) => {
+    setProductData(prev => {
+      const newData = { ...prev, ...data };
+      if (!isEditMode || (isEditMode && formInitialized)) {
+        localStorage.setItem('productFormData', JSON.stringify(newData));
+      }
+      return newData;
+    });
+  }, [isEditMode, formInitialized]);
+
   const resetForm = useCallback(() => {
-    console.log('Resetting form data completely');
     localStorage.removeItem('productFormData');
     setProductData(initialProductData);
+    setPageNo(0);
+    setIsEditMode(false);
+    // Consider navigating to ?new=true to ensure a full reset via useEffect
+    // window.location.search = '?new=true'; 
   }, []);
 
-  const updateProductData = useCallback((newData: Partial<ProductData>) => {
-    if (!formInitialized) return; // Don't update until initialization is complete
+  const handleProductSubmit = useCallback(async (currentProductData: Partial<ProductData>, tagsToSubmit: string[]) => {
+    setError(null);
     
-    setProductData(prev => {
-      const updatedData = { ...prev, ...newData };
-      // Save to localStorage immediately after state update
-      localStorage.setItem('productFormData', JSON.stringify(updatedData));
-      return updatedData;
-    });
-  }, [formInitialized]);
+    // Prepare data for submission, aligning with the Product type as much as possible
+    // The service methods will handle adding/managing id, sellerId, createdAt, updatedAt
+    const dataForApi: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'sellerId' | 'sellerName' | 'rating' | 'reviewCount' | 'images' | 'primaryImage'> & { id?: string; currency?: string } = {
+      name: currentProductData.name || "",
+      preciseDescription: currentProductData.description, // Assuming description maps to preciseDescription
+      detailedDescription: currentProductData.detailedDescription,
+      category: currentProductData.category,
+      hsnCode: currentProductData.hsnCode,
+      moq: currentProductData.moq,
+      // Ensure we don't pass blob or temporary URLs to the server
+      productImage: currentProductData.productImage?.startsWith('blob:') 
+        ? `product-${Date.now()}.jpg` // Generate a unique filename for the image
+        : currentProductData.productImage,
+      testReports: currentProductData.testReports,
+      price: Number(currentProductData.price) || 0,
+      currency: currentProductData.currency || "USD",
+      sku: currentProductData.sku,
+      onSale: currentProductData.onSale || false,
+      discount: Number(currentProductData.discount) || 0,
+      salePrice: Number(currentProductData.salePrice) || 0,
+      costOfGoods: Number(currentProductData.costOfGoods) || 0,
+      profit: Number(currentProductData.profit) || 0,
+      margin: Number(currentProductData.margin) || 0,
+      quantity: Number(currentProductData.quantity) || 0,
+      tags: tagsToSubmit,
+      // sellerId will be added by the service
+    };
 
-  // Modify Tags component's handleSubmit function to handle both creating and updating
-  const handleProductSubmit = useCallback(async (formData: Partial<ProductData>, tags: string[]) => {
+    if (isEditMode && currentProductData.id) {
+      dataForApi.id = currentProductData.id;
+    }
+
     try {
-      // Prepare the data according to the backend DTO format
-      const submitData = {
-        ...formData,
-        preciseDescription: formData.description,
-        tags: tags
-      };
-
       let result;
-      
-      // If in edit mode, update the existing product
-      if (isEditMode && formData.id) {
-        result = await productService.updateProduct(formData.id, submitData);
-      } 
-      // Otherwise create a new product
-      else {
-        result = await productService.createProduct(submitData);
+      if (isEditMode && dataForApi.id) {
+        // The updateProduct service method expects the full product data, potentially.
+        // However, we only send what's editable by the form.
+        // The backend should handle merging this with existing data.
+        result = await productService.updateProduct(dataForApi.id, dataForApi);
+      } else {
+        // createProduct expects data without an ID.
+        const { id, ...newData } = dataForApi;
+        result = await productService.createProduct(newData);
       }
-      
+
       if (result.success) {
-        // Don't clear form data immediately - removed resetForm() call
-        
-        // Show success message without redirecting
-        const action = isEditMode ? 'updated' : 'added';
-        alert(`Successfully ${action} ${formData.name}!`);
-        
-        // No redirect - just return to the same form
+        resetForm();
+        // Navigate or show success message
         return true;
       } else {
-        alert(result.message || `Failed to ${isEditMode ? 'update' : 'save'} product. Please try again.`);
+        setError(result.message || 'Failed to submit product.');
         return false;
       }
-    } catch (err) {
-      console.error(`Error ${isEditMode ? 'updating' : 'submitting'} product:`, err);
-      alert(`Failed to ${isEditMode ? 'update' : 'save'} product. Please try again.`);
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred during submission.');
       return false;
     }
-  }, [isEditMode]); // Removed resetForm dependency
+  }, [resetForm, isEditMode, initialProductData]); // Added initialProductData to deps
 
-  const pages = [
-    <ProductInformation 
-      setPageNo={setPageNo} 
-      updateProductData={updateProductData} 
-      productData={productData} 
-      key="info" 
-    />,
-    <Media 
-      setPageNo={setPageNo} 
-      updateProductData={updateProductData} 
-      productData={productData} 
-      key="media" 
-    />,
-    <Price 
-      setPageNo={setPageNo} 
-      updateProductData={updateProductData} 
-      productData={productData} 
-      key="price" 
-    />,
-    <Tags 
-      setPageNo={setPageNo} 
-      updateProductData={updateProductData} 
-      productData={productData} 
-      onSubmit={handleProductSubmit}
-      key="tags" 
-    />
-  ];
-
-  // Show loading state while fetching product data
   if (isLoading) {
-    return (
-      <ProductLayout productype="product" Body={
-        <div className="flex justify-center items-center h-full">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
-        </div>
-      } />
-    );
+    return <ProductLayout productype="loading" Body={<div>Loading form...</div>} />;
   }
 
-  // Show error message if something went wrong
-  if (error) {
-    return (
-      <ProductLayout productype="product" Body={
-        <div className="flex flex-col justify-center items-center h-full p-4">
-          <div className="text-red-500 mb-4">{error}</div>
-          <a href="/seller/inventory" className="text-blue-500 hover:underline">
-            Return to Inventory
-          </a>
-        </div>
-      } />
-    );
+  if (error && !formInitialized) { 
+    return <ProductLayout productype="error" Body={<div>Error: {error} <button onClick={() => { localStorage.removeItem('productFormData'); window.location.reload();}}>Clear Cache & Try again</button></div>} />;
   }
-
-  // Only render the form once initialization is complete
-  return formInitialized ? pages[pageNo] : (
-    <ProductLayout productype="product" Body={
-      <div className="flex justify-center items-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
-      </div>
-    } />
-  );
-};
-
-// Enhance the Inventory component with refresh functionality
-// Update the Inventory component
-
-export const Inventory: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-
-  // Fetch products when component mounts
-  const fetchProducts = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      // Check if user is authenticated
-      if (!authService.getToken()) {
-        setIsAuthenticated(false);
-        setIsLoading(false);
-        return;
-      }
-
-      const result = await productService.getSellerProducts();
-      if (result.success) {
-        setProducts(result.products);
-        setLastUpdated(new Date());
-      } else {
-        if (result.message?.includes('Authentication')) {
-          setIsAuthenticated(false);
-        } else {
-          setError(result.message || "Failed to load products");
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching products:", err);
-      setError("Failed to load products");
-    } finally {
-      setIsLoading(false);
+  
+  // Render the appropriate page based on pageNo
+  const renderPage = () => {
+    switch (pageNo) {
+      case 0:
+        return <ProductInformation setPageNo={setPageNo} updateProductData={updateProductData} productData={productData} />;
+      case 1:
+        return <Media setPageNo={setPageNo} updateProductData={updateProductData} productData={productData} />;
+      case 2:
+        return <Price setPageNo={setPageNo} updateProductData={updateProductData} productData={productData} />;
+      case 3:
+        return <Tags setPageNo={setPageNo} updateProductData={updateProductData} productData={productData} onSubmit={handleProductSubmit} />;
+      default:
+        return <div>Page not found</div>;
     }
-  }, []);
-
-  // Load products on mount
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
-
-  // Function to handle refresh
-  const handleRefresh = () => {
-    setError(null);
-    fetchProducts();
-  };
-
-  // Function to calculate product status based on quantity
-  const getProductStatus = (quantity: number) => {
-    if (quantity <= 0) return { status: "Out of Stock", className: "bg-red-300 text-red-800" };
-    if (quantity < 10) return { status: "Low Stock", className: "bg-yellow-200 text-yellow-800" };
-    return { status: "In Stock", className: "bg-green-200 text-green-800" };
   };
 
   return (
-    <div className="flex flex-col w-[80%] h-fit mx-auto my-14 shadow-lg rounded-lg border-[#00000021] border-[2px] p-8">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="font-bold text-2xl">All Products</h1>
-          <p className="text-[#00000048]">
-            Manage your product inventory
-            {lastUpdated && (
-              <span className="ml-2 text-sm">
-                Last updated: {lastUpdated.toLocaleTimeString()}
-              </span>
-            )}
-          </p>
-        </div>
-        <div className="flex items-center">
-          <button 
-            onClick={handleRefresh} 
-            className="mr-3 flex items-center gap-2 text-blue-500 hover:text-blue-700 px-4 py-2 rounded-md"
-            disabled={isLoading}
-          >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
+    <ProductLayout 
+      productype="add-product"
+      Body={
+        <>
+          <ProgressBar currentPage={pageNo} />
+          {error && <div className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">{error}</div>} 
+          {renderPage()}
+          <button onClick={resetForm} title="Reset Form Data" className="fixed bottom-4 right-4 bg-red-500 hover:bg-red-600 text-white p-3 rounded-full shadow-lg flex items-center justify-center">
+            <Trash size={18} /> 
+            <span className="ml-2 text-sm">Reset Form</span>
           </button>
-          <a href="/seller/add-products?new=true">
-          <button className="mx-3 bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-2 rounded-md w-fit">
-            New Product
-          </button>
-          </a>
-          <button className="mx-3 border-[1px] text-blue-500 border-blue-500 px-8 py-2 rounded-md w-fit">
-            Import CSV File
-          </button>
-          <button className="mx-3 border-[1px] text-blue-500 border-blue-500 px-8 py-2 rounded-md w-fit">
-            Export CSV File
-          </button>
-        </div>
-      </div>
-
-      {!isAuthenticated ? (
-        <div className="text-center text-red-500 my-8 p-4 bg-red-50 rounded">
-          <p className="mb-4">You need to be logged in to view your products.</p>
-          <a href="/login" className="bg-gradient-to-r from-[#000000] to-[#353535D9] text-white px-8 py-2 rounded-md">
-            Login
-          </a>
-        </div>
-      ) : isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
-        </div>
-      ) : error ? (
-        <div className="text-center text-red-500 my-8 p-4 bg-red-50 rounded">
-          {error}
-          <button 
-            onClick={handleRefresh}
-            className="ml-4 text-blue-500 hover:text-blue-700 underline"
-          >
-            Try again
-          </button>
-        </div>
-      ) : products.length === 0 ? (
-        <div className="text-center text-gray-500 my-8 p-4">
-          <p className="mb-4">You haven't added any products yet.</p>
-          <a href="/seller/add-products?new=true" className="text-blue-500 hover:underline">
-            Add your first product
-          </a>
-        </div>
-      ) : (
-      <div className="overflow-x-auto my-8">
-        <table className="min-w-full">
-          <thead>
-            <tr className="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
-              <th className="py-3 px-6 text-left">Product</th>
-              <th className="py-3 px-6 text-left">Category</th>
-              <th className="py-3 px-6 text-left">Price</th>
-              <th className="py-3 px-6 text-left">SKU</th>
-              <th className="py-3 px-6 text-left">Quantity</th>
-              <th className="py-3 px-6 text-left">Status</th>
-              <th className="py-3 px-6 text-left">Action</th>
-            </tr>
-          </thead>
-          <tbody className="text-gray-600 text-sm font-light">
-              {products.map((product) => {
-                // Default quantity to 0 if not provided
-                const quantity = (product as any).quantity || 0;
-                const { status, className } = getProductStatus(quantity);
-                
-                return (
-              <tr key={product.id} className="border-b border-gray-200 hover:bg-gray-100">
-                <td className="py-6 px-6 text-left">
-                  <input type="checkbox" className="form-checkbox" />
-                  <span className="ml-2">{product.name}</span>
-                </td>
-                    <td className="py-6 px-6 text-left">{product.category || 'Uncategorized'}</td>
-                    <td className="py-6 px-6 text-left">${product.price?.toFixed(2) || '0.00'}</td>
-                    <td className="py-6 px-6 text-left">{product.sku || 'N/A'}</td>
-                    <td className="py-6 px-6 text-left">{quantity}</td>
-                <td className="py-6 px-6 text-left">
-                      <span className={`py-1 px-3 rounded-full text-xs ${className}`}>
-                        {status}
-                  </span>
-                </td>
-                <td className="py-6 px-6 text-left">
-                      <a href={`/seller/add-products?id=${product.id}`} className="text-blue-500 hover:text-blue-700">Edit</a>
-                </td>
-              </tr>
-                );
-              })}
-          </tbody>
-        </table>
-      </div>
-      )}
-    </div>
+        </>
+      }
+    />
   );
 };
-
-// Incoterms Component
-export const Incoterms: React.FC = () => (
-  <div className="flex flex-col w-[80%] h-fit mx-auto my-14 shadow-lg rounded-lg border-[#00000021] border-[2px] p-8">
-    <h1 className="font-bold text-2xl mb-4">Incoterms</h1>
-    <p className="text-gray-500">Incoterms configuration will be available soon.</p>
-  </div>
-);
