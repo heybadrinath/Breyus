@@ -14,26 +14,6 @@ export class AuthController {
     private readonly usersService: UsersService
   ) {}
 
-  @Post('login')
-  @HttpCode(HttpStatus.OK)
-  async login(@Body() body: { email: string; password: string; role?: string }) {
-    try {
-      // First generate and send OTP
-      await this.authService.generateOtpAndSend(body.email, body.password, body.role);
-      
-      // Simulate immediate OTP verification for development
-      // In production, this would be a separate request from the client after user enters OTP
-      const storedData = this.authService['otpStore'].get(body.email);
-      if (storedData) {
-        return await this.authService.verifyOtp(body.email, storedData.otp);
-      }
-      
-      return { message: 'OTP sent successfully', success: true };
-    } catch (error) {
-      this.logger.error(`Login error: ${error.message}`);
-      throw error;
-    }
-  }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -44,7 +24,7 @@ export class AuthController {
       
       // Simulate immediate OTP verification for development
       // In production, this would be a separate request from the client after user enters OTP
-      const storedOtp = this.authService['otpStore'].get(body.email);
+      const storedOtp = this.authService['otpStore'].get(body.email)?.otp;
       if (storedOtp) {
         return await this.authService.verifyOtp(body.email, storedOtp);
       }
