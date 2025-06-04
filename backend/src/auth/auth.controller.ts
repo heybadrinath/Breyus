@@ -46,15 +46,21 @@ export class AuthController {
   }
 
   @Get('validate-token')
-  async validateToken(@Headers('authorization') authHeader: string) {
-    if (!authHeader) {
-      return { valid: false, message: 'No token provided' };
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    return this.authService.validateToken(token);
+@HttpCode(HttpStatus.OK)
+async validateToken(@Headers('authorization') authHeader: string) {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw new HttpException('No token provided', HttpStatus.UNAUTHORIZED);
   }
 
+  const token = authHeader.replace('Bearer ', '');
+  const result = await this.authService.validateToken(token);
+
+  if (!result.valid) {
+    throw new HttpException(result.message || 'Unauthorized access', HttpStatus.UNAUTHORIZED);
+  }
+
+  return result; // includes user info
+}
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {

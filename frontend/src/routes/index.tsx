@@ -1,6 +1,6 @@
 import React from "react";
 import { ReactNode } from "react";
-import ProtedtedRoute from "./ProtectedRoute"; // Protected Route for authenticated users
+import {SellerProtectedRoute, BuyerProtectedRoute} from "./ProtectedRoute"; // Protected Route for authenticated users
 import { Routes, Route, useLocation } from "react-router-dom";
 import Signin from "../buyer/signin";  // Buyer Signin
 import Signup from "../buyer/signup";  // Buyer Signup
@@ -86,17 +86,17 @@ const AppRoutes = () => {
             <Route path="/buyer/signup" element={<Animate page={<Signup />} />} />
             <Route path="/buyer/forgot-password" element={<Animate page={<ForgotPassword />} />} />
             
-            <Route path="/buyer/homepage" element={<ProtedtedRoute><Animate page={<Homepage />} /></ProtedtedRoute>} />
-            <Route path="/buyer/inbox" element={<ProtedtedRoute><Animate page={<BuyerLayout content={<BuyerInbox />}/>} /></ProtedtedRoute>} />
-            <Route path="/buyer/wishlist" element={<ProtedtedRoute><Animate page={<Wishlist />} /></ProtedtedRoute>} />
-            <Route path="/buyer/cartpage" element={<ProtedtedRoute><Animate page={<CartPage />} /></ProtedtedRoute>} />
-            <Route path="/buyer/trade" element={<ProtedtedRoute><Animate page={<BuyerLayout content={<BuyerTrade />} />} /></ProtedtedRoute>} />
-            <Route path="/buyer/buyer-address" element={<ProtedtedRoute><Animate page={<BuyerAddress />} /></ProtedtedRoute>} />
-            <Route path="/buyer/product-page" element={<ProtedtedRoute><Animate page={<BuyerLayout content={<ProductPage />} />} /></ProtedtedRoute>} />
-            <Route path="/buyer/product-request-quantity" element={<ProtedtedRoute><Animate page={<BuyerLayout content={<OrderRequestQuantity />} />} /></ProtedtedRoute>} />
-            <Route path="/buyer/buyer-information" element={<ProtedtedRoute><Animate page={<BuyerLayout content={<BuyerInformation />} />} /></ProtedtedRoute>} />
-            <Route path="/buyer/purchase-request" element={<ProtedtedRoute><Animate page={<PurchaseRequest />} /></ProtedtedRoute>} />
-            <Route path="/buyer/purchase-request-success" element={<ProtedtedRoute><Animate page={<PurchaseRequestSuccess />} /></ProtedtedRoute>} />
+            <Route path="/buyer/homepage" element={<BuyerProtectedRoute><Animate page={<Homepage />} /></BuyerProtectedRoute>} />
+            <Route path="/buyer/inbox" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<BuyerInbox />}/>} /></BuyerProtectedRoute>} />
+            <Route path="/buyer/wishlist" element={<BuyerProtectedRoute><Animate page={<Wishlist />} /></BuyerProtectedRoute>} />
+            <Route path="/buyer/cartpage" element={<BuyerProtectedRoute><Animate page={<CartPage />} /></BuyerProtectedRoute>} />
+            <Route path="/buyer/trade" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<BuyerTrade />} />} /></BuyerProtectedRoute>} />
+            <Route path="/buyer/buyer-address" element={<BuyerProtectedRoute><Animate page={<BuyerAddress />} /></BuyerProtectedRoute>} />
+            <Route path="/buyer/product-page" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<ProductPage />} />} /></BuyerProtectedRoute>} />
+            <Route path="/buyer/product-request-quantity" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<OrderRequestQuantity />} />} /></BuyerProtectedRoute>} />
+            <Route path="/buyer/buyer-information" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<BuyerInformation />} />} /></BuyerProtectedRoute>} />
+            <Route path="/buyer/purchase-request" element={<BuyerProtectedRoute><Animate page={<PurchaseRequest />} /></BuyerProtectedRoute>} />
+            <Route path="/buyer/purchase-request-success" element={<BuyerProtectedRoute><Animate page={<PurchaseRequestSuccess />} /></BuyerProtectedRoute>} />
 
           {/* AI Routes */}
           <Route path="/buyer/ai" element={<Animate page={<BuyerAi />} />} />
@@ -106,22 +106,23 @@ const AppRoutes = () => {
 
 
           {/* Seller Routes */}
-          <Route path="/seller/signin" element={<Animate page={<SellerSignin />} />} />
-          <Route path="/seller/signup" element={<Animate page={<SellerSignup />} />} />
-          <Route path="/seller/forgot-password" element={<Animate page={<SellerForgotPassword />} />} />
-          <Route path="/seller/dashboard" element={<Animate page={<Layout Body={<SellerDashboard />}/>} />} />
-          <Route path="/seller/security" element={<Animate page={<Layout Body={<Security />}/>} />} />
-          <Route path="/seller/sales" element={<Animate page={<Layout Body={<Sales />}/>} />} />
-          <Route path="/seller/upgrade" element={<Animate page={<Layout Body={<Upgrade />}/>} />} />
-          <Route path="/seller/add-products" element={<Animate page={<Layout Body={<AddProduct/>}/>} />} />
-          <Route path="/seller/Inbox" element={<Animate page={<Layout Body={<Inbox/>}/>} />} />
-          <Route path="/seller/inventory" element={<Animate page={<Layout Body={<Inventory/>}/>} />} />
-          <Route path="/seller/trade" element={<Animate page={<Layout Body={<Trade/>}/>} />} />
-          <Route path="/seller/Product-Feedback" element={<Animate page={<Layout Body={<Feedback/>}/>} />} />
-          <Route path="/seller/incoterms" element={<Animate page={<Layout Body={<Incoterms/>}/>} />} />
-      
-          {/* Seller settings with different layout */}
-          <Route path="/seller/settings" element={<Animate page={<SellerSettings />} />}/>
+            <Route path="/seller/signin" element={<Animate page={<SellerSignin />} />} />
+            <Route path="/seller/signup" element={<Animate page={<SellerSignup />} />} />
+            <Route path="/seller/forgot-password" element={<Animate page={<SellerForgotPassword />} />} />
+            
+            <Route path="/seller/dashboard" element={<SellerProtectedRoute><Animate page={<Layout Body={<SellerDashboard />}/>} /></SellerProtectedRoute>} />
+            <Route path="/seller/security" element={<SellerProtectedRoute><Animate page={<Layout Body={<Security />}/>} /></SellerProtectedRoute>} />
+            <Route path="/seller/sales" element={<SellerProtectedRoute><Animate page={<Layout Body={<Sales />}/>} /></SellerProtectedRoute>} />
+            <Route path="/seller/upgrade" element={<SellerProtectedRoute><Animate page={<Layout Body={<Upgrade />}/>} /></SellerProtectedRoute>} />
+            <Route path="/seller/add-products" element={<SellerProtectedRoute><Animate page={<Layout Body={<AddProduct/>}/>} /></SellerProtectedRoute>} />
+            <Route path="/seller/Inbox" element={<SellerProtectedRoute><Animate page={<Layout Body={<Inbox/>}/>} /></SellerProtectedRoute>} />
+            <Route path="/seller/inventory" element={<SellerProtectedRoute><Animate page={<Layout Body={<Inventory/>}/>} /></SellerProtectedRoute>} />
+            <Route path="/seller/trade" element={<SellerProtectedRoute><Animate page={<Layout Body={<Trade/>}/>} /></SellerProtectedRoute>} />
+            <Route path="/seller/Product-Feedback" element={<SellerProtectedRoute><Animate page={<Layout Body={<Feedback/>}/>} /></SellerProtectedRoute>} />
+            <Route path="/seller/incoterms" element={<SellerProtectedRoute><Animate page={<Layout Body={<Incoterms/>}/>} /></SellerProtectedRoute>} />
+          
+            {/* Seller settings with different layout */}
+            <Route path="/seller/settings" element={<SellerProtectedRoute><Animate page={<SellerSettings />} /></SellerProtectedRoute>}/>
 
   
 
@@ -129,7 +130,7 @@ const AppRoutes = () => {
           <Route path="*" element={<Notfoundpage />} />
 
           {/* Internal Error  */}
-          <Route path="/internal-error" element={<div className="shadow-2xl max-w-fit whitespace-nowrap flex p-5 my-72 mx-auto max-h-fit text-3xl">Internal Server Error</div>} />
+          <Route path="/internal-error" element={<div className="shadow-2xl max-w-fit whitespace-nowrap flex p-5 my-72 mx-auto max-h-fit text-3xl rounded-lg text-center">Error code 500 <br/> Internal Server Error</div>} />
         </Routes>
        
       
