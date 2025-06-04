@@ -52,7 +52,6 @@ export const getDashboardAnalytics = async (days: number = 30): Promise<Dashboar
         // Token might be expired or invalid
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        window.location.href = '/seller/signin'; // Redirect to seller login
         throw new Error('Authentication failed. Please log in again.');
       }
       throw new Error(error.response?.data?.message || 'Failed to fetch dashboard analytics');

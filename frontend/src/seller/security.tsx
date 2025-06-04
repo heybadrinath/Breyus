@@ -174,7 +174,6 @@ const ChangePassword: React.FC<{ className?: string }> = ({ className = "" }) =>
             } else if (err.response?.status === 403) {
                 setError("Access denied. Please log in again.");
                 authService.logout();
-                window.location.href = '/seller/signin';
             } else {
                 setError("Failed to update password. Please try again.");
             }

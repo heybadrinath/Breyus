@@ -54,7 +54,6 @@ class ProductService {
         // If unauthorized, try to refresh token or log out
         if (error.response?.status === 401) {
           authService.logout();
-          window.location.href = '/login';
           return { success: false, message: 'Authentication failed' };
         }
         
