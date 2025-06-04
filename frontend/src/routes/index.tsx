@@ -1,5 +1,6 @@
 import React from "react";
 import { ReactNode } from "react";
+import ProtedtedRoute from "./ProtectedRoute"; // Protected Route for authenticated users
 import { Routes, Route, useLocation } from "react-router-dom";
 import Signin from "../buyer/signin";  // Buyer Signin
 import Signup from "../buyer/signup";  // Buyer Signup
@@ -81,20 +82,21 @@ const AppRoutes = () => {
           <Route path="/" element={<Animate page={<Hero />}/>} />
   
           {/* Buyer Routes */}
-          <Route path="/buyer/signin" element={<Animate page={<Signin />} />} />
-          <Route path="/buyer/signup" element={<Animate page={<Signup />} />} />
-          <Route path="/buyer/forgot-password" element={<Animate page={<ForgotPassword />} />} />
-          <Route path="/buyer/homepage" element={<Animate page={<Homepage />} />} />
-          <Route path="/buyer/inbox" element={<Animate page={<BuyerInbox />} />} />
-          <Route path="/buyer/wishlist" element={<Animate page={<Wishlist />} />} />
-          <Route path="/buyer/cartpage" element={<Animate page={<CartPage />} />} />
-          <Route path="/buyer/trade" element={<Animate page={<BuyerLayout content={<BuyerTrade />} />} />} />
-          <Route path="/buyer/buyer-address" element={<Animate page={<BuyerAddress />} />} />
-          <Route path="/buyer/product-page" element={<Animate page={<BuyerLayout content={<ProductPage />} />} />} />
-          <Route path="/buyer/product-request-quantity" element={<Animate page={<BuyerLayout content={<OrderRequestQuantity />} />} />} />
-          <Route path="/buyer/buyer-information" element={<Animate page={<BuyerLayout content={<BuyerInformation />} />} />} />
-          <Route path="/buyer/purchase-request" element={<Animate page={<PurchaseRequest />} />} />
-          <Route path="/buyer/purchase-request-success" element={<Animate page={<PurchaseRequestSuccess />} />} />          
+            <Route path="/buyer/signin" element={<Animate page={<Signin />} />} />
+            <Route path="/buyer/signup" element={<Animate page={<Signup />} />} />
+            <Route path="/buyer/forgot-password" element={<Animate page={<ForgotPassword />} />} />
+            
+            <Route path="/buyer/homepage" element={<ProtedtedRoute><Animate page={<Homepage />} /></ProtedtedRoute>} />
+            <Route path="/buyer/inbox" element={<ProtedtedRoute><Animate page={<BuyerLayout content={<BuyerInbox />}/>} /></ProtedtedRoute>} />
+            <Route path="/buyer/wishlist" element={<ProtedtedRoute><Animate page={<Wishlist />} /></ProtedtedRoute>} />
+            <Route path="/buyer/cartpage" element={<ProtedtedRoute><Animate page={<CartPage />} /></ProtedtedRoute>} />
+            <Route path="/buyer/trade" element={<ProtedtedRoute><Animate page={<BuyerLayout content={<BuyerTrade />} />} /></ProtedtedRoute>} />
+            <Route path="/buyer/buyer-address" element={<ProtedtedRoute><Animate page={<BuyerAddress />} /></ProtedtedRoute>} />
+            <Route path="/buyer/product-page" element={<ProtedtedRoute><Animate page={<BuyerLayout content={<ProductPage />} />} /></ProtedtedRoute>} />
+            <Route path="/buyer/product-request-quantity" element={<ProtedtedRoute><Animate page={<BuyerLayout content={<OrderRequestQuantity />} />} /></ProtedtedRoute>} />
+            <Route path="/buyer/buyer-information" element={<ProtedtedRoute><Animate page={<BuyerLayout content={<BuyerInformation />} />} /></ProtedtedRoute>} />
+            <Route path="/buyer/purchase-request" element={<ProtedtedRoute><Animate page={<PurchaseRequest />} /></ProtedtedRoute>} />
+            <Route path="/buyer/purchase-request-success" element={<ProtedtedRoute><Animate page={<PurchaseRequestSuccess />} /></ProtedtedRoute>} />
 
           {/* AI Routes */}
           <Route path="/buyer/ai" element={<Animate page={<BuyerAi />} />} />
@@ -122,9 +124,12 @@ const AppRoutes = () => {
           <Route path="/seller/settings" element={<Animate page={<SellerSettings />} />}/>
 
   
-  
+
           {/* 404 page  */}
           <Route path="*" element={<Notfoundpage />} />
+
+          {/* Internal Error  */}
+          <Route path="/internal-error" element={<div className="shadow-2xl max-w-fit whitespace-nowrap flex p-5 my-72 mx-auto max-h-fit text-3xl">Internal Server Error</div>} />
         </Routes>
        
       

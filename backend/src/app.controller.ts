@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Logger, Res } from '@nestjs/common';
 import { AppService } from './app.service';
+import { Response } from 'express';
 import { UsersService } from './users/users.service';
 
 @Controller()
@@ -12,9 +13,20 @@ export class AppController {
   ) {}
 
   @Get()
-  getHello(): string {
-    return this.appService.getHello();
+ getRoot(@Res() res: Response) {
+    res
+      .status(403)
+      .send(`
+        <html>
+          <head><title>Invalid API Access</title></head>
+          <body style="font-family: sans-serif; text-align: center; padding-top: 100px;">
+            <h1>🚫 Invalid use of API</h1>
+            <p>Please access the proper endpoints via application or client.</p>
+          </body>
+        </html>
+      `);
   }
+
 
   @Get('health')
   healthCheck() {
@@ -25,47 +37,5 @@ export class AppController {
       version: '1.0.0'
     };
   }
-
-  @Post('setup-default-user')
-  async setupDefaultUser() {
-    try {
-      // Check if default seller already exists
-      const existingUser = await this.usersService.findByEmail('seller@example.com');
-      
-      if (existingUser) {
-        return { 
-          message: 'Default seller already exists', 
-          user: {
-            id: existingUser.id,
-            email: existingUser.email,
-            role: existingUser.role
-          }
-        };
-      }
-
-      // Create default seller user
-      const newUser = await this.usersService.create({
-        email: 'seller@example.com',
-        password: 'password123',
-        firstName: 'Default',
-        lastName: 'Seller',
-        role: 'seller',
-        isEmailVerified: true
-      });
-
-      this.logger.log('Default seller account created successfully');
-      
-      return { 
-        message: 'Default seller created successfully',
-        user: {
-          id: newUser.id,
-          email: newUser.email,
-          role: newUser.role
-        }
-      };
-    } catch (error) {
-      this.logger.error(`Error creating default user: ${error.message}`);
-      return { error: 'Failed to create default user', message: error.message };
-    }
-  }
+  
 }
