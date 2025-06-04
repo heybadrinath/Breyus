@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Scatter, Line, ResponsiveContainer, ComposedChart, TooltipProps } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Scatter, Line, ResponsiveContainer, ComposedChart } from 'recharts';
 import "../seller/css/components.css";
 import { PieChart, Pie, Cell, Label, Sector } from 'recharts';
 import { getDashboardAnalytics, DashboardAnalyticsData, DailyStoreVisitData, DailySaleData, TaskStatusDistributionData } from "../services/analytics.service"; // Corrected path
@@ -37,10 +37,10 @@ const Bargraph = ({ data }: { data: BarGraphDataType[] }) => {
 const Scattergraph = ({ data }: { data: ScatterGraphDataType[] }) => {
   if (!data || data.length === 0) return <p className="text-center p-4">No sales data available for the selected period.</p>;
   
-  const customTooltipFormatter = (value: any, name: string, props: TooltipProps<number, string>) => {
-    if (props && props.payload && props.payload.length > 0) {
-      const dataPoint = props.payload[0].payload as ScatterGraphDataType; // Cast to our specific type
-      if (name === 'y') { // Assuming 'y' is the dataKey for amount in Scatter component
+  const customTooltipFormatter = (value: any, name: string, item: any) => {
+    if (item && item.payload) {
+      const dataPoint = item.payload as ScatterGraphDataType;
+      if (name === 'y') {
         return [
           `Amount: ${dataPoint.y.toFixed(2)}`,
           `Product: ${dataPoint.productName || 'N/A'}`,
@@ -49,7 +49,7 @@ const Scattergraph = ({ data }: { data: ScatterGraphDataType[] }) => {
         ];
       }
     }
-    return [value, name]; // Default tooltip for other elements like the Line
+    return [value, name];
   };
 
   return (
@@ -96,8 +96,8 @@ const renderActiveShape = (props: any) => {
 
   const sin = Math.sin(-RADIAN * midAngle);
   const cos = Math.cos(-RADIAN * midAngle);
-  const sx = cx + (outerRadius + 10) * cos;
-  const sy = cy + (outerRadius + 10) * sin;
+  // const sx = cx + (outerRadius + 10) * cos;
+  // const sy = cy + (outerRadius + 10) * sin;
   const mx = cx + (outerRadius + 30) * cos;
   const my = cy + (outerRadius + 30) * sin;
   const ex = mx + (cos >= 0 ? 1 : -1) * 22;
