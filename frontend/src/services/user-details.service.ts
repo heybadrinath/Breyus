@@ -1,7 +1,7 @@
 import axios, { AxiosError } from 'axios';
 import authService from './auth.service';
 
-const API_URL = 'http://localhost:5000/users';
+const API_URL = 'http://localhost:5000/backend/users';
 
 class UserDetailsService {
   async getUserDetails() {

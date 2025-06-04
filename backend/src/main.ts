@@ -1,4 +1,9 @@
-(global as any).crypto = require('crypto');
+// Initialize crypto for the application
+if (typeof global.crypto === 'undefined') {
+  const { webcrypto } = require('node:crypto');
+  global.crypto = webcrypto;
+}
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
@@ -31,7 +36,10 @@ async function bootstrap() {
     });
   }
 
+  // Set global prefix to /backend
+  app.setGlobalPrefix('backend');
+
   await app.listen(port);
-  logger.log(`Application is running on: http://localhost:${port}`);
+  logger.log(`Application is running on: http://localhost:${port}/backend`);
 }
 bootstrap();

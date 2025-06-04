@@ -146,7 +146,7 @@ const ChangePassword: React.FC<{ className?: string }> = ({ className = "" }) =>
             }
 
             // Call the real backend API
-            const response = await axios.post('http://localhost:5000/security/change-password', {
+            const response = await axios.post('http://localhost:5000/backend/security/change-password', {
                 currentPassword,
                 newPassword
             }, {

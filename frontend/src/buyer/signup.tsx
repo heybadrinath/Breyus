@@ -67,7 +67,7 @@ const Signup: React.FC = () => {
     }
 
     try {
-      const response = await axios.post("http://localhost:5000/auth/register", {
+      const response = await axios.post("http://localhost:5000/backend/auth/register", {
         email: formData.email,
         password: formData.password,
         firstName: formData.firstName,

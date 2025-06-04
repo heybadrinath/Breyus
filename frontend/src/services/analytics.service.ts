@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'; // Corrected Port and generic name
+const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000/backend'; // Corrected Port and generic name
 
 export interface DailyStoreVisitData {
   date: string; // "yyyy-MM-dd"

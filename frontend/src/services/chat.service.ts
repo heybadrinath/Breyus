@@ -1,6 +1,7 @@
 import authService from './auth.service';
+import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/chat';
+const API_URL = 'http://localhost:5000/backend/chat';
 
 export interface ChatMessage {
   id: string;

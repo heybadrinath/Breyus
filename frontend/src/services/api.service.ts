@@ -9,7 +9,7 @@ declare module 'axios' {
   }
 }
 
-const API_URL = 'http://localhost:5000';
+const API_URL = 'http://localhost:5000/backend';
 
 // Create axios instance with default config
 const api = axios.create({

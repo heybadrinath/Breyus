@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/auth';
+const API_URL = 'http://localhost:5000/backend/auth';
 
 class AuthService {
   // Store the token in localStorage
