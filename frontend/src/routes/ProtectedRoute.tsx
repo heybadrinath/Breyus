@@ -5,7 +5,7 @@ import axios from 'axios';
 const BuyerProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthed, setIsAuthed] = useState(false);
-  const [backendUp, setBackendUp] = useState(true);
+
 
   useEffect(() => {
     const checkAuthAndBackend = async () => {
@@ -50,7 +50,7 @@ const BuyerProtectedRoute = ({ children }: { children: JSX.Element }) => {
 const SellerProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthed, setIsAuthed] = useState(false);
-  const [backendUp, setBackendUp] = useState(true);
+  
 
   useEffect(() => {
     const checkAuthAndBackend = async () => {
@@ -86,7 +86,7 @@ const SellerProtectedRoute = ({ children }: { children: JSX.Element }) => {
   }, []);
 
   if (loading) return <div className='w-fit m-auto h-fit mt-[40vh]'>Loading.....</div>;
-  // if (!isAuthed) return <Navigate to="/seller/signin" />;
+  if (!isAuthed) return <Navigate to="/seller/signin" />;
   return children;
 };
 
