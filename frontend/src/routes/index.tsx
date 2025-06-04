@@ -5,7 +5,6 @@ import Signin from "../buyer/signin";  // Buyer Signin
 import Signup from "../buyer/signup";  // Buyer Signup
 import SellerSignin from "../seller/signin";  // Seller Signin
 import SellerSignup from "../seller/signup";  // Seller Signup
-// import Hero from "../main/hero";  // Hero Page
 import Hero from "../Hero";
 import SellerSettings from "../seller/settings";
 import SellerDashboard from "../seller/dashboard";
@@ -18,9 +17,6 @@ import ForgotPassword from "../buyer/forgot-password";
 import BuyerLayout from "../buyer/components/layout";
 
 
-
-
-
 import SellerForgotPassword from "../seller/forgot-password";
 import { Layout } from "../seller/components";
 import Inbox from "../seller/inbox"; 
@@ -29,7 +25,6 @@ import {Trade,Feedback} from "../seller/trade";
 import BuyerInbox from "../buyer/pages/Inbox";
 import Homepage from "../buyer/pages/Homepage";
 import Wishlist from "../buyer/pages/Wishlist";
-import ProductCard from "../buyer/components/ProductCard";
 import CartPage from "../buyer/pages/Cartpage";
 import BuyerTrade from "../buyer/pages/trade";
 import ProductPage from "../buyer/pages/product";
@@ -121,7 +116,7 @@ const AppRoutes = () => {
           <Route path="/seller/inventory" element={<Animate page={<Layout Body={<Inventory/>}/>} />} />
           <Route path="/seller/trade" element={<Animate page={<Layout Body={<Trade/>}/>} />} />
           <Route path="/seller/Product-Feedback" element={<Animate page={<Layout Body={<Feedback/>}/>} />} />
-          {/*<Route path="/seller/incoterms" element={<Animate page={<Layout Body={<Incoterms/>}/>} />} />*/}
+          <Route path="/seller/incoterms" element={<Animate page={<Layout Body={<Incoterms/>}/>} />} />
       
           {/* Seller settings with different layout */}
           <Route path="/seller/settings" element={<Animate page={<SellerSettings />} />}/>

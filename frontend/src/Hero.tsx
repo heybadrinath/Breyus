@@ -38,8 +38,8 @@ const Navbar = () => {
                 <Link className="mx-4 text-black my-auto" to={'/conact us'}>Contact Us</Link>
             </div>
             <div id="login-signup-btn" className="flex">
-                {/* <Button onClick={() => navigate("/buyer/signup")} className=" md:text-sm md:px-6">Sign Up</Button>
-                <Button onClick={() => navigate("/buyer/signin")} className='bg-black text-white lg:text-sm md:px-6'>Login In</Button> */}
+                <Button onClick={() => navigate("/buyer/signup")} className=" md:text-sm md:px-6">Sign Up</Button>
+                <Button onClick={() => navigate("/buyer/signin")} className='bg-black text-white lg:text-sm md:px-6'>Login In</Button>
             </div>
 
         </div>
@@ -54,7 +54,7 @@ const Section1 = () => {
                 <div id="top" className="my-18">
                     <h1 className="mx-auto my-2 w-[50vw] text-center font-extrabold text-6xl">Connecting Commodities via AI, Globally</h1>
                     <p className="w-fit mx-auto my-2 text-2xl text-[#ACACAC]">Explore The Unborn Path Unfazed with Breyus</p>
-                    <Section_1_temp />
+                    <Section1Temp />
                 </div>
 
                 <div id="bottom-btns" className="flex mx-auto">
@@ -79,7 +79,7 @@ const Section2 = () => {
     return (
         <BorderBox className="flex">
             <div id="left" className="mx-auto w-fit">
-                <Section_2_temp />
+                <Section2Temp />
             </div>
             <div id="content" className="flex flex-col m-4 ml-auto w-fit">
                 <h1 className="text-5xl font-extrabold">
@@ -139,7 +139,7 @@ const Section3 = () => {
                 </div>
 
                 <motion.div
-                    initial={{ x: "100%", opacity: 0 }}
+                    initial={{ x: "120%", opacity: 0 }}
                     whileInView={{ x: xOffset, opacity: 1 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -153,21 +153,7 @@ const Section3 = () => {
 }
 
 const Section4 = () => {
-    const [xOffset, setXOffset] = useState("95%");
-
-    useEffect(() => {
-        const updateOffset = () => {
-            const width = window.innerWidth;
-            if (width < 1400) setXOffset("55%");
-            else if (width < 1587) setXOffset("70%");
-            else if (width < 1675) setXOffset("80%")
-            else setXOffset("95%");
-
-        };
-        updateOffset();
-        window.addEventListener("resize", updateOffset);
-        return () => window.removeEventListener("resize", updateOffset);
-    }, []);
+    
     return (
         <BorderBox className='bg-no-repeat bg-cover bg-center' style={{ backgroundImage: `url(${worldmap})` }}>
             <div className="w-fit mx-auto flex flex-col h-[80vh]">
@@ -181,7 +167,7 @@ const Section4 = () => {
                 <div className="flex">
                     {/* Trade growth metrics */}
                     <div className="flex flex-col gap-2 w-[340px] p-6  rounded-xl">
-                        <img className="w-[60px] h-auto" src={TraderTradeGrowth} />
+                        <img className="w-[60px] h-auto" alt="" src={TraderTradeGrowth} />
                         <div className="flex items-center gap-2">
                             <span className="text-4xl font-extrabold text-black">100%</span>
                             <svg width="24" height="24" className="inline-block" viewBox="0 0 24 24" fill="none">
@@ -199,7 +185,7 @@ const Section4 = () => {
 
                     {/* Trade efficiency metrics */}
                     <div className="flex flex-col gap-2 w-[340px] p-6 rounded-xl">
-                        <img className="w-[60px] h-auto" src={TraderTradeEfficiency} />
+                        <img className="w-[60px] h-auto" alt="" src={TraderTradeEfficiency} />
                         <div className="flex items-center gap-2">
                             <span className="text-4xl font-extrabold text-black">10%</span>
                             <svg width="24" height="24" className="inline-block" viewBox="0 0 24 24" fill="none">
@@ -217,7 +203,7 @@ const Section4 = () => {
 
                     {/* Trade volume metrics */}
                     <div className="flex flex-col gap-2 w-[340px] p-6  rounded-xl">
-                        <img className="w-[60px] h-auto" src={TotalTradeVolume} />
+                        <img className="w-[60px] h-auto" alt="" src={TotalTradeVolume} />
                         <div className="flex items-center gap-2">
                             <span className="text-4xl font-extrabold text-black">100+</span>
                             <svg width="24" height="24" className="inline-block" viewBox="0 0 24 24" fill="none">
@@ -235,7 +221,7 @@ const Section4 = () => {
 
                     {/* Trade Data Trained metrics */}
                     <div className="flex flex-col gap-2 w-[340px] p-6 rounded-xl">
-                        <img className="w-[60px] h-auto" src={TradeDataTrained} />
+                        <img className="w-[60px] h-auto" alt="" src={TradeDataTrained} />
                         <div className="flex items-center gap-2">
                             <span className="text-4xl font-extrabold text-black">3.5 Lakhs+</span>
                             <svg width="24" height="24" className="inline-block" viewBox="0 0 24 24" fill="none">
@@ -298,7 +284,7 @@ const Section5 = () => {
 
 
 
-export default () => (
+const Hero = () => (
     <div>
         <Navbar />
         <Section1 />
@@ -308,6 +294,8 @@ export default () => (
         <Section5 />
     </div>
 );
+
+export default Hero;
 
 
 
@@ -336,12 +324,6 @@ type Section3ContentProps = {
     paragraph?: string;
     className?: string;
 }
-type Section4ContentProps = {
-    icons?: string;
-    heading?: string;
-    paragraph?: string;
-    percentage?: string;
-}
 
 const Button: React.FC<ButtonProps> = ({ onClick, className = '', children }) => (
     <button onClick={onClick}
@@ -365,16 +347,9 @@ const Section3Content: React.FC<Section3ContentProps> = ({ heading, paragraph, i
     </div>
 )
 
-const Section4Content: React.FC<Section4ContentProps> = ({ heading, paragraph, icons = '', percentage = '' }) => (
-    <div className="flex my-6">
-        <img src={icons} className="mb-auto m-2" alt="" />
-        <p className="px-3 w-[400px] text-2xl"><span className="text-black font-bold">{heading}</span> <span className="text-[#696969]">{paragraph}</span></p>
-    </div>
-)
 
 
-
-const Section_1_temp = () =>(
+const Section1Temp = () =>(
     <svg className="flex mx-auto my-2" width="1019" height="455" viewBox="0 0 1019 455" fill="none" xmlns="http://www.w3.org/2000/svg">
 <line x1="626.077" y1="449.572" x2="626.077" y2="-0.000152588" stroke="url(#paint0_linear_2_95)"/>
 <line x1="698.079" y1="449.574" x2="698.079" y2="0.00180054" stroke="url(#paint1_linear_2_95)"/>
@@ -557,7 +532,7 @@ const Section_1_temp = () =>(
 </svg>
 )
 
-const Section_2_temp = () =>(
+const Section2Temp = () =>(
     <svg className="flex mx-auto my-3" width="702" height="456" viewBox="0 0 702 456" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g filter="url(#filter0_f_3_28)">
 <ellipse cx="351" cy="243" rx="251" ry="78" fill="#867C5B" fill-opacity="0.5"/>
