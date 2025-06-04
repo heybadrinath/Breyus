@@ -1,8 +1,0 @@
-{
-  "dependencies": {
-    "@types/date-fns": "^2.5.3",
-    "date-fns": "^4.1.0",
-    "lucide-react": "^0.511.0",
-    "react-toastify": "^11.0.5"
-  }
-}
