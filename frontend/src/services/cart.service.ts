@@ -3,7 +3,7 @@ import authService from './auth.service';
 import tradeService from './trade.service';
 import { Product } from '../types/product';
 
-const API_URL = 'http://localhost:5000/backend/cart';
+const API_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:5000/backend'}/cart`;
 
 export interface CartItem {
   id: string;

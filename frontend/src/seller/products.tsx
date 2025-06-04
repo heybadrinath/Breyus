@@ -8,7 +8,7 @@ import authService from "../services/auth.service";
 import { Product } from "../types/product";
 
 // Get API URL from environment or use default
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_URL = process.env.REACT_APP_API_URL || 'https://breyus.com';
 
 // Helper function to get proper image URL from different sources
 const getImageUrl = (imagePath: string | undefined | null): string => {
