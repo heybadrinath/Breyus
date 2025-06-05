@@ -34,7 +34,7 @@ const SellerForgotPassword: React.FC = () => {
 
     try {
       console.log("Sending forgot password request for seller:", email);
-      const response = await axios.post("http://localhost:5000/backend/auth/forgot-password", {
+      const response = await axios.post("https://breyus.com/backend/auth/forgot-password", {
         email,
         role: "seller"
       });
@@ -70,7 +70,7 @@ const SellerForgotPassword: React.FC = () => {
 
     try {
       console.log("Sending reset password request with OTP:", otp);
-      const response = await axios.post("http://localhost:5000/backend/auth/reset-password", {
+      const response = await axios.post("https://breyus.com/backend/auth/reset-password", {
         email,
         otp,
         newPassword,

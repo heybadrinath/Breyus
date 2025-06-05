@@ -10,7 +10,7 @@ const BuyerProtectedRoute = ({ children }: { children: JSX.Element }) => {
   useEffect(() => {
     const checkAuthAndBackend = async () => {
       try {
-        await axios.get('http://localhost:5000/backend/health');
+        await axios.get('https://breyus.com/backend/health');
 
         const token = localStorage.getItem('token');
         if (!token) {
@@ -19,7 +19,7 @@ const BuyerProtectedRoute = ({ children }: { children: JSX.Element }) => {
           return;
         }
 
-        const res = await axios.get('http://localhost:5000/backend/auth/validate-token', {
+        const res = await axios.get('https://breyus.com/backend/auth/validate-token', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -55,7 +55,7 @@ const SellerProtectedRoute = ({ children }: { children: JSX.Element }) => {
   useEffect(() => {
     const checkAuthAndBackend = async () => {
       try {
-        await axios.get('http://localhost:5000/backend/health');
+        await axios.get('https://breyus.com/backend/health');
 
         const token = localStorage.getItem('token');
         if (!token) {
@@ -64,7 +64,7 @@ const SellerProtectedRoute = ({ children }: { children: JSX.Element }) => {
           return;
         }
 
-        const res = await axios.get('http://localhost:5000/backend/auth/validate-token', {
+        const res = await axios.get('https://breyus.com/backend/auth/validate-token', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
