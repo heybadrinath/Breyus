@@ -27,7 +27,7 @@ async function bootstrap() {
       allowedHeaders: 'Content-Type,Accept,Authorization',
     });
   } else {
-    const origin = configService.get<string>('ORIGIN', 'http://localhost:3000');
+    const origin = configService.get<string[]>('ORIGIN') || ['http://localhost:3000', 'https://breyus.com'];
     logger.log(`Configuring CORS for production origin: ${origin}`);
     app.enableCors({
       origin: origin,
