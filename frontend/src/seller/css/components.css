@@ -90,7 +90,7 @@ header #right-header button.bg-red-500 img {
     display: flex;
     flex-direction: column;
     padding: 20px;
-    border-right: 3.5px solid #0000001A;
+    border-right: 1.5px solid #0000000e;
     white-space: nowrap;
 
 }
@@ -99,16 +99,14 @@ header #right-header button.bg-red-500 img {
     border-top: 2.8px solid transparent;
     border-bottom: 2.8px solid transparent;
     border-image: linear-gradient(to left, #ECECEC, #0000007e, #ECECEC) 1;
-    padding: 10px 0px;
+    /* padding: 10px 0px;
     justify-content: center;
     margin: 20px 0px;
-    display: flex;
+    display: flex; */
 
 }
 
-#left-nav #profile-name svg{
-    margin: 0px 15px;
-}
+
 #left-nav #profile-name h1{
     margin: auto 0px;
     font-weight: 700;
@@ -117,13 +115,13 @@ header #right-header button.bg-red-500 img {
 #left-nav a, #left-nav button, #link-left-nav-dash-bottom a{
     display: flex;
     margin: 5px 0px;
-    font-weight: 540;
+    /* font-weight: 540; */
     text-decoration: none;
-    color: inherit;
+    /* color: inherit; */
     align-items: center;
     background: none;
     border: none;
-    padding: 5px 0;
+    padding: 6px 0px;
     cursor: pointer;
 }
 #links-left-nav-dash{
@@ -137,6 +135,7 @@ display: flex;
     display: inline;
     margin: auto 6px;
     height: 22px;
+    @apply opacity-80;
 }
 
 #links-left-nav-dash-bottom{

@@ -25,7 +25,7 @@ const Header = () => {
 
     return (
         <>
-            <header className="w-[96%]">
+            <header className="w-[96%] mt-6">
                 <div id="left-header">
                     <select className="sort-select bg-transparent">
                         <option value="last-week">Last week</option>
@@ -37,7 +37,7 @@ const Header = () => {
                 <div id="right-header">
                     <img src={notifications} alt="Notifications" />
                     <button className="breyus-core-animated-border">Try Breyus Core</button>
-        
+
                 </div>
             </header>
         </>
@@ -86,7 +86,7 @@ const LeftnavSettings = ({ username }: { username: String }) => {
 }
 
 const Leftnavdash = ({ username }: { username: String }) => {
-    
+
     const [isdashopen, setdash] = useState(false);
     const [isproductopen, setproduct] = useState(false);
 
@@ -97,52 +97,55 @@ const Leftnavdash = ({ username }: { username: String }) => {
         setdash(isdashopen => !isdashopen);
     };
 
-    
+
     return (
         <>
-            <div id="left-nav">
-                <img src={fullLogo} alt="Logo" />
+            <div id="left-nav" className="!w-[fit-content]">
+                <img className="h-9 !my-6" src={fullLogo} alt="Logo" />
 
-                <div id="profile-name">
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 256 256"
-                        width="32"
-                        height="32"
-                        xmlSpace="preserve"
-                    >
-                        <g transform="translate(1.4 1.4) scale(2.81 2.81)">
-                            <path
-                                d="M 45 0 C 20.147 0 0 20.147 0 45 c 0 24.853 20.147 45 45 45 s 45 -20.147 45 -45 C 90 20.147 69.853 0 45 0 z M 45 22.007 c 8.899 0 16.14 7.241 16.14 16.14 c 0 8.9 -7.241 16.14 -16.14 16.14 c -8.9 0 -16.14 -7.24 -16.14 -16.14 C 28.86 29.248 36.1 22.007 45 22.007 z M 45 83.843 c -11.135 0 -21.123 -4.885 -27.957 -12.623 c 3.177 -5.75 8.144 -10.476 14.05 -13.341 c 2.009 -0.974 4.354 -0.958 6.435 0.041 c 2.343 1.126 4.857 1.696 7.473 1.696 c 2.615 0 5.13 -0.571 7.473 -1.696 c 2.083 -1 4.428 -1.015 6.435 -0.041 c 5.906 2.864 10.872 7.591 14.049 13.341 C 66.123 78.957 56.135 83.843 45 83.843 z"
-                                fill="black"
-                            />
-                        </g>
-                    </svg>
-                    <h1>{username}</h1>
+                <div id="profile-name" className="flex mb-6 py-2">
+                    <div className="flex mx-auto">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 256 256"
+                            width="40"
+                            height="40"
+                            xmlSpace="preserve"
+                            className="mr-[18px]"
+                        >
+                            <g transform="translate(1.4 1.4) scale(2.81 2.81)">
+                                <path
+                                    d="M 45 0 C 20.147 0 0 20.147 0 45 c 0 24.853 20.147 45 45 45 s 45 -20.147 45 -45 C 90 20.147 69.853 0 45 0 z M 45 22.007 c 8.899 0 16.14 7.241 16.14 16.14 c 0 8.9 -7.241 16.14 -16.14 16.14 c -8.9 0 -16.14 -7.24 -16.14 -16.14 C 28.86 29.248 36.1 22.007 45 22.007 z M 45 83.843 c -11.135 0 -21.123 -4.885 -27.957 -12.623 c 3.177 -5.75 8.144 -10.476 14.05 -13.341 c 2.009 -0.974 4.354 -0.958 6.435 0.041 c 2.343 1.126 4.857 1.696 7.473 1.696 c 2.615 0 5.13 -0.571 7.473 -1.696 c 2.083 -1 4.428 -1.015 6.435 -0.041 c 5.906 2.864 10.872 7.591 14.049 13.341 C 66.123 78.957 56.135 83.843 45 83.843 z"
+                                    fill="black"
+                                />
+                            </g>
+                        </svg>
+                        <h1>{username}</h1>
+                    </div>
                 </div>
 
-                <div id="links-left-nav-dash">
-                    <Link onClick={toggle} className={` rounded-lg transition-all duration-500 ease-in-out px-4 py-2 ${isdashopen?"bg-[#0004]":"bg-none"}`} to=""> <img alt="" src={dashIcon} /> Dashboard <img alt="" className={`down-arrow transition-transform duration-500 !ml-auto ${isdashopen? "rotate-180 ":"hue-rotate-180"}`} src={downArrow} /></Link>
-                    <div className={`flex  flex-col overflow-hidden transition-all duration-1000 ease-bounch  ${isdashopen?"max-h-56 opacity-100": "max-h-0 opacity-40"}`}>
-                       {/* toggle content  */}
-                       <Link className="!my-y !mx-6" to={"/seller/dashboard"}>Analytics</Link>
-                       <Link className="!my-y !mx-6" to={"/seller/sales"}>Sales</Link>
-                       <Link className="!my-y !mx-6" to={"/seller/upgrade"}>Product Analysis</Link>
-                       <Link className="!my-y !mx-6" to={"/seller/upgrade"}>Advanced Analysis</Link>
+                <div id="links-left-nav-dash" className="!w-fit mx-auto !text-md !font-medium">
+                    <Link onClick={toggle} className={` rounded-lg transition-all duration-500 ease-in-out !px-2 py-2 !my-2 hover:!bg-[#00000025] ${isdashopen ? "bg-[#0004]" : "bg-none"}`} to=""> <img alt="" src={dashIcon} /> Dashboard <img alt="" className={`down-arrow transition-transform duration-500 !ml-auto ${isdashopen ? "rotate-180 " : "hue-rotate-180"}`} src={downArrow} /></Link>
+                    <div className={`flex  flex-col overflow-hidden transition-all duration-1000 ease-bounch  ${isdashopen ? "max-h-56 opacity-100" : "max-h-0 opacity-40"}`}>
+                        {/* toggle content  */}
+                        <Link className="!my-y !mx-6" to={"/seller/dashboard"}>Analytics</Link>
+                        <Link className="!my-y !mx-6" to={"/seller/sales"}>Sales</Link>
+                        <Link className="!my-y !mx-6" to={"/seller/upgrade"}>Product Analysis</Link>
+                        <Link className="!my-y !mx-6" to={"/seller/upgrade"}>Advanced Analysis</Link>
                     </div>
-                    {/* <Link className="px-4 py-2" to="/seller/product"> <img alt="" src={productIcon} /> Product <img alt="" className={`down-arrow down-arrow transition-transform duration-500 !ml-auto ${false? "rotate-180 ":"hue-rotate-180"}`} src={downArrow} /></Link> */}
 
-                    <Link onClick={toggleproduct} className={` rounded-lg transition-all duration-500 ease-in-out px-4 py-2 ${isproductopen?"bg-[#0004]":"bg-none"}`} to=""> <img alt="" src={productIcon} /> Products <img alt="" className={`down-arrow transition-transform duration-500 !ml-auto ${isproductopen? "rotate-180 ":"hue-rotate-180"}`} src={downArrow} /></Link>
-                    <div className={`flex  flex-col overflow-hidden transition-all duration-1000 ease-bounch  ${isproductopen?"max-h-56 opacity-100": "max-h-0 opacity-40"}`}>
-                       {/* toggle content  */}
-                       <Link className="!my-y !mx-6" to={"/seller/add-products?new=true"}>Add Products</Link>
-                       <Link className="!my-y !mx-6" to={"/seller/inventory"}>Inventory</Link>
-                       <Link className="!my-y !mx-6" to={"/seller/Product-Feedback"}>Feedback</Link>
-                       
-                       
+                    <Link onClick={toggleproduct} className={` rounded-lg transition-all duration-500 ease-in-out !px-2 py-2 !my-2 hover:!bg-[#00000025] ${isproductopen ? "bg-[#0004]" : "bg-none"}`} to=""> <img alt="" src={productIcon} /> Products <img alt="" className={`down-arrow transition-transform duration-500 !ml-auto ${isproductopen ? "rotate-180 " : "hue-rotate-180"}`} src={downArrow} /></Link>
+                    <div className={`flex  flex-col overflow-hidden transition-all duration-1000 ease-bounch  ${isproductopen ? "max-h-56 opacity-100" : "max-h-0 opacity-40"}`}>
+                        {/* toggle content  */}
+                        <Link className="!my-y !mx-6" to={"/seller/add-products?new=true"}>Add Products</Link>
+                        <Link className="!my-y !mx-6" to={"/seller/inventory"}>Inventory</Link>
+                        <Link className="!my-y !mx-6" to={"/seller/Product-Feedback"}>Feedback</Link>
+
+
                     </div>
-                    <Link className="px-4 py-2" to="/seller/inbox"><img alt="" src={securityIcon} />Inbox</Link>
-                    <Link className="px-4 py-2" to="/seller/trade"><img alt="" src={logoutIcon} />Trade</Link>
+                    <Link className="!px-2 py-2 flex !my-2 hover:!bg-[#00000025] rounded-lg transition-all duration-500 ease-in-out" to="/seller/inbox"><img alt="" src={securityIcon} />Inbox</Link>
+                    <Link className="!px-2 py-2 flex !my-2 hover:!bg-[#00000025] rounded-lg transition-all duration-500 ease-in-out" to="/seller/trade"><img alt="" src={logoutIcon} />Trade</Link>
+
 
                     <div id="links-left-nav-dash-bottom">
                         <Link className="px-4 py-2" to="/seller/support"><img alt="" src={helpIcon} />Help</Link>
@@ -157,36 +160,36 @@ const Leftnavdash = ({ username }: { username: String }) => {
     );
 };
 
-const Layout = ({Body}: {Body: ReactNode}) =>{
+const Layout = ({ Body }: { Body: ReactNode }) => {
     // Get user data from localStorage
     const userStr = localStorage.getItem('user');
     const user = userStr ? JSON.parse(userStr) : null;
     const firstName = user?.firstName || 'User';
 
-    return(
+    return (
         <div className="layout">
-            <Leftnavdash username={firstName}/>
+            <Leftnavdash username={firstName} />
             <div id="right-section">
                 <Header/>
-            {Body}
+                {Body}
             </div>
         </div>
     );
 };
 
 
-const SettingsLayout = ({Body}: {Body: ReactNode}) =>{
+const SettingsLayout = ({ Body }: { Body: ReactNode }) => {
     // Get user data from localStorage
     const userStr = localStorage.getItem('user');
     const user = userStr ? JSON.parse(userStr) : null;
     const firstName = user?.firstName || 'User';
 
-    return(
+    return (
         <div className="layout">
-            <LeftnavSettings username={firstName}/>
+            <LeftnavSettings username={firstName} />
             <div id="right-section">
-                <Header/>
-            {Body}
+                <Header />
+                {Body}
             </div>
         </div>
     );
@@ -194,21 +197,19 @@ const SettingsLayout = ({Body}: {Body: ReactNode}) =>{
 
 function Togglebutton() {
     const [enabled, setEnabled] = useState(false);
-  
-    return (
-      <button
-        onClick={() => setEnabled(!enabled)}
-        className={`w-14 h-8 flex items-center p-1 rounded-full transition-all ${
-          enabled ? 'bg-[#0076D3]' : 'bg-gray-300'
-        }`}
-      >
-        <div
-          className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-            enabled ? 'translate-x-6' : ''
-          }`}
-        />
-      </button>
-    );
-  }
 
-export {Layout, SettingsLayout, Togglebutton };
+    return (
+        <button
+            onClick={() => setEnabled(!enabled)}
+            className={`w-14 h-8 flex items-center p-1 rounded-full transition-all ${enabled ? 'bg-[#0076D3]' : 'bg-gray-300'
+                }`}
+        >
+            <div
+                className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${enabled ? 'translate-x-6' : ''
+                    }`}
+            />
+        </button>
+    );
+}
+
+export { Layout, SettingsLayout, Togglebutton };
