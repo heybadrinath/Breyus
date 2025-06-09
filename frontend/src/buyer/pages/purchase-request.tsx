@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import CheckoutStepper from "../components/cart/CheckoutStepper";
 import cartService from "../../services/cart.service";
+import PurchaseRequestProgress from "../components/cart/PurchaseRequestProgress";
 
 type StepProps = {
     className?: string;
@@ -500,7 +501,9 @@ const PurchaseRequest: React.FC = () => {
 
             <div className="w-full flex flex-col items-center min-h-screen bg-gray-50 py-12">
                 <div className="w-full max-w-4xl">
-                    <ProgressBar className="" step={step} />
+                    {/* <ProgressBar className="" step={step} /> */}
+                    <PurchaseRequestProgress />
+                   
                 </div>
                 <div className="relative">
                     <div className="w-fit rounded-xl shadow-xl p-10 mt-[-60px] w-max-[900px] z-10 relative">

@@ -12,7 +12,7 @@ const Sidebar = () => {
       {/* Top Section */}
       <div>
         {/* Logo */}
-        <div className="px-6 py-8">
+        <div className="px-6 py-8 mx-auto w-fit">
           <img
             src={BreyusLogo}
             alt="BREYUS Logo"
@@ -24,7 +24,7 @@ const Sidebar = () => {
         <UserProfile name="Max Sharma" />
 
         {/* Navigation Links */}
-        <nav className="mt-8 space-y-6 px-6">
+        <nav className="mt-8 space-y-4 w-fit px-6 mx-auto">
           <SidebarItem icon={<Store size={22} />} label="Market" path="/buyer/homepage" />
           <SidebarItem icon={<Inbox size={22} />} label="Inbox" path="/buyer/inbox" />
           <SidebarItem icon={<ShoppingCart size={22} />} label="Cart" path="/buyer/cartpage" />

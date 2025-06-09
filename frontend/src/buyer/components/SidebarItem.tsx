@@ -18,11 +18,11 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, path, className 
     };
 
     return (
-        <div 
-            className={`flex items-center space-x-4 cursor-pointer hover:text-gray-700 transition-colors ${className}`}
+        <div
+            className={`flex w-fit cursor-pointer px-10 py-2 rounded-xl hover:bg-[#00000021] transition-colors ${className}`}
             onClick={handleClick}
         >
-            <div>{icon}</div>
+            <div className='mr-4'>{icon}</div>
             <span className="text-md font-medium">{label}</span>
         </div>
     );

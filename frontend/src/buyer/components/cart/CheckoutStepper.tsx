@@ -17,18 +17,18 @@ const CheckoutStepper: React.FC<CheckoutStepperProps> = ({ currentStep }) => {
   const navigate = useNavigate();
 
   return (
-    <div className="flex items-center justify-center gap-6 py-4 bg-black text-white text-sm font-semibold">
+    <div className="flex items-center justify-center gap-8 py-4 mb-12 bg-black text-white text-lg font-semibold ">
       {steps.map((step, index) => (
         <React.Fragment key={index}>
           <button
             type="button"
-            onClick={() => navigate(step.path)}
+            onClick={() => {}}
             className={
               index <= currentStep
-                ? "text-white underline focus:outline-none"
-                : "text-gray-400 underline focus:outline-none"
+                ? "text-white underline focus:outline-none cursor-default transition-colors"
+                : "text-gray-400 underline focus:outline-none cursor-default transition-colors"
             }
-            style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            style={{ background: "none", border: "none", padding: "0.5rem 1rem" }}
           >
             {step.label}
           </button>
