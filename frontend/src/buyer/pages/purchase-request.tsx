@@ -12,65 +12,11 @@ type StepProps = {
 const steps = [
     { label: "Trade Queries-1" },
     { label: "Trade Queries-2" },
-    { label: "Pricing" },
-    { label: "Payment" },
+    { label: "Inco-Terms" },
+    { label: "Mode of payment" },
 ];
 
-const ProgressBar: React.FC<{ step: number; className?: string }> = ({
-    step,
-    className = "",
-}) => {
-    return (
-        <div className={`w-full mb-8 ${className}`}>
-            <div className="flex items-center justify-between w-full px-6 pt-5 pb-4 bg-black rounded-xl">
-                {steps.map((s, i) => (
-                    <React.Fragment key={i}>
-                        <div className="flex flex-col items-center flex-1">
-                            <div
-                                className={`rounded-full flex items-center justify-center transition-all duration-300
-                                    ${step >= i ? "bg-white border-2 border-white" : "bg-gray-400 border-2 border-gray-400"}
-                                    ${step === i ? "shadow-lg scale-110" : "scale-100"}
-                                `}
-                                style={{
-                                    width: 12,
-                                    height: 12,
-                                }}
-                            />
-                            <span
-                                className={`mt-2 text-xs font-light transition-all duration-300 ${step === i
-                                    ? "text-white font-semibold"
-                                    : step > i
-                                        ? "text-gray-300"
-                                        : "text-gray-400"
-                                    }`}
-                                style={{
-                                    fontWeight: step === i ? 600 : 400,
-                                    letterSpacing: 0.5,
-                                    minHeight: 18,
-                                    textAlign: "center",
-                                    marginTop: 8,
-                                    whiteSpace: "nowrap",
-                                }}
-                            >
-                                {s.label}
-                            </span>
-                        </div>
-                        {i < steps.length - 1 && (
-                            <div className="flex-1 h-0.5 mb-6  bg-gray-500 relative">
-                                <div
-                                    className="h-0.5 bg-white absolute  top-0 left-0 transition-all duration-500"
-                                    style={{
-                                        width: step > i ? "100%" : "0%",
-                                    }}
-                                />
-                            </div>
-                        )}
-                    </React.Fragment>
-                ))}
-            </div>
-        </div>
-    );
-};
+
 
 // Step 1
 const TradeQueries1: React.FC<StepProps> = ({ className, onNext }) => (
@@ -81,7 +27,7 @@ const TradeQueries1: React.FC<StepProps> = ({ className, onNext }) => (
                 What's your company revenue range :<span className="text-red-500">*</span>
             </label>
             <div className="flex items-center gap-2 mb-2">
-                <input className="border rounded px-2 py-1 w-20" type="number" placeholder="" />
+                {/* <input className="border rounded px-2 py-1 w-20 appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" type="number" placeholder="" /> */}
                 <span className="text-gray-500">to</span>
                 <input className="border rounded px-2 py-1 w-20" type="number" placeholder="" />
                 <select className="border rounded px-2 py-1 w-20">
@@ -502,7 +448,7 @@ const PurchaseRequest: React.FC = () => {
             <div className="w-full flex flex-col items-center min-h-screen bg-gray-50 py-12">
                 <div className="w-full max-w-4xl">
                     {/* <ProgressBar className="" step={step} /> */}
-                    <PurchaseRequestProgress />
+                    <PurchaseRequestProgress className="mx-auto my-6" step1="Trade Queries - 1" step2="Trade Queries - 2" step3="Incoterms" step4="Mode of Payment" currentStep={step}/>
                    
                 </div>
                 <div className="relative">
