@@ -17,6 +17,7 @@ import {
 import { TradesService } from './trades.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateTradeRequestDto, UpdateTradeStatusDto, CounterOfferDto, TradeFilterDto, TradeResponseDto } from './dto/trade.dto';
+import { PurchaseRequestDto, ValidatePurchaseRequestStepDto } from './dto/purchase-request.dto';
 import { TradeStatus, TradeType } from './entities/trade.entity';
 
 @Controller('trades')
@@ -355,4 +356,85 @@ export class TradesController {
       );
     }
   }
-} 
+
+  // POST /trades/purchase-request/validate-step - Validate individual purchase request steps
+  @Post('purchase-request/validate-step')
+  @UseGuards(JwtAuthGuard)
+  async validatePurchaseRequestStep(
+    @Request() req,
+    @Body(ValidationPipe) validateStepDto: ValidatePurchaseRequestStepDto
+  ): Promise<{ valid: boolean; errors?: string[] }> {
+    try {
+      const userId = req.user.id;
+      this.logger.log(`POST /trades/purchase-request/validate-step - User: ${userId}, Step: ${validateStepDto.step}`);
+      
+      return await this.tradesService.validatePurchaseRequestStep(validateStepDto);
+    } catch (error) {
+      this.logger.error(`Error validating purchase request step: ${error.message}`, error.stack);
+      throw new HttpException(
+        error.message || 'Failed to validate purchase request step',
+        error.status || HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  // POST /trades/purchase-request/validate-complete - Validate complete purchase request
+  @Post('purchase-request/validate-complete')
+  @UseGuards(JwtAuthGuard)
+  async validateCompletePurchaseRequest(
+    @Request() req,
+    @Body(ValidationPipe) purchaseRequestDto: PurchaseRequestDto
+  ): Promise<{ valid: boolean; errors?: string[] }> {
+    try {
+      const userId = req.user.id;
+      this.logger.log(`POST /trades/purchase-request/validate-complete - User: ${userId}`);
+      
+      return await this.tradesService.validateCompletePurchaseRequest(purchaseRequestDto);
+    } catch (error) {
+      this.logger.error(`Error validating complete purchase request: ${error.message}`, error.stack);
+      throw new HttpException(
+        error.message || 'Failed to validate complete purchase request',
+        error.status || HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  // POST /trades/purchase-request/submit - Submit validated purchase request
+  @Post('purchase-request/submit')
+  @UseGuards(JwtAuthGuard)
+  async submitPurchaseRequest(
+    @Request() req,
+    @Body(ValidationPipe) purchaseRequestDto: PurchaseRequestDto
+  ): Promise<{ message: string; requestId: string }> {
+    try {
+      const userId = req.user.id;
+      this.logger.log(`POST /trades/purchase-request/submit - User: ${userId}`);
+      
+      return await this.tradesService.submitPurchaseRequest(userId, purchaseRequestDto);
+    } catch (error) {
+      this.logger.error(`Error submitting purchase request: ${error.message}`, error.stack);
+      throw new HttpException(
+        error.message || 'Failed to submit purchase request',
+        error.status || HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  // Debug endpoint for validation - no auth required
+  @Post('purchase-request/validate-step-debug')
+  async validatePurchaseRequestStepDebug(
+    @Body(ValidationPipe) validateStepDto: ValidatePurchaseRequestStepDto
+  ): Promise<{ valid: boolean; errors?: string[] }> {
+    try {
+      this.logger.log(`POST /trades/purchase-request/validate-step-debug - Step: ${validateStepDto.step}`);
+      
+      return await this.tradesService.validatePurchaseRequestStep(validateStepDto);
+    } catch (error) {
+      this.logger.error(`Error validating purchase request step: ${error.message}`, error.stack);
+      throw new HttpException(
+        error.message || 'Failed to validate purchase request step',
+        error.status || HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+}

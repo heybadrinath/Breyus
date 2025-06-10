@@ -434,12 +434,18 @@ const PurchaseRequestStatus: React.FC = () => {
   const [notification, setNotification] = useState<TradeNotification | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-
   // Load trades data
   const loadTrades = useCallback(async () => {
     setLoading(true);
     try {
       const response = await tradeService.getIncomingTrades(filters);
+      console.log('🔍 Seller trades received:', response);
+      console.log('🔍 First trade data:', response.trades[0]);
+      if (response.trades[0]) {
+        console.log('🔍 Offered price:', response.trades[0].offered_price);
+        console.log('🔍 Product data:', response.trades[0].product);
+        console.log('🔍 Buyer data:', response.trades[0].buyer);
+      }
       setTrades(response.trades);
       setTotalPages(response.totalPages);
     } catch (error) {

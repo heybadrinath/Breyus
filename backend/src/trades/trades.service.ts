@@ -4,8 +4,10 @@ import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Trade, TradeStatus, TradeType } from './entities/trade.entity';
 import { Product } from '../products/entities/product.entity';
 import { CreateTradeRequestDto, UpdateTradeStatusDto, CounterOfferDto, TradeResponseDto, TradeFilterDto } from './dto/trade.dto';
+import { PurchaseRequestDto, ValidatePurchaseRequestStepDto } from './dto/purchase-request.dto';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { TradesGateway } from './trades.gateway';
+import { validate } from 'class-validator';
 
 @Injectable()
 export class TradesService {
@@ -353,6 +355,207 @@ export class TradesService {
     this.logger.log(`Expired ${expiredTrades.length} trades`);
   }
 
+  // Purchase Request Validation Methods
+  async validatePurchaseRequestStep(validateStepDto: ValidatePurchaseRequestStepDto): Promise<{ valid: boolean; errors?: string[] }> {
+    this.logger.log(`Validating purchase request step ${validateStepDto.step}`);
+    
+    const { step, data } = validateStepDto;
+    const errors: string[] = [];    try {
+      switch (step) {
+        case 1: // Step 1: Trade Queries 1
+          await this.validateStep1(data, errors);
+          break;
+        case 2: // Step 2: Trade Queries 2
+          await this.validateStep2(data, errors);
+          break;
+        case 3: // Step 3: Pricing (Inco-Terms)
+          await this.validateStep3(data, errors);
+          break;
+        case 4: // Step 4: Payment Mode
+          await this.validateStep4(data, errors);
+          break;
+        default:
+          errors.push('Invalid step number');
+      }
+
+      return {
+        valid: errors.length === 0,
+        errors: errors.length > 0 ? errors : undefined
+      };
+    } catch (error) {
+      this.logger.error(`Error validating step ${step}: ${error.message}`);
+      return {
+        valid: false,
+        errors: ['Validation failed due to server error']
+      };
+    }
+  }
+
+  async validateCompletePurchaseRequest(purchaseRequestDto: PurchaseRequestDto): Promise<{ valid: boolean; errors?: string[] }> {
+    this.logger.log('Validating complete purchase request');
+    
+    try {
+      const validationErrors = await validate(purchaseRequestDto);
+      
+      if (validationErrors.length > 0) {
+        const errors = validationErrors.map(error => 
+          Object.values(error.constraints || {}).join(', ')
+        ).filter(Boolean);
+        
+        return {
+          valid: false,
+          errors
+        };
+      }
+
+      return {
+        valid: true
+      };
+    } catch (error) {
+      this.logger.error(`Error validating complete purchase request: ${error.message}`);
+      return {
+        valid: false,
+        errors: ['Validation failed due to server error']
+      };
+    }
+  }
+
+  async submitPurchaseRequest(userId: string, purchaseRequestDto: PurchaseRequestDto): Promise<{ message: string; requestId: string }> {
+    this.logger.log(`Submitting purchase request for user ${userId}`);
+    
+    try {
+      // First validate the complete request
+      const validation = await this.validateCompletePurchaseRequest(purchaseRequestDto);
+      if (!validation.valid) {
+        throw new BadRequestException(`Invalid purchase request: ${validation.errors?.join(', ')}`);
+      }
+
+      // Generate a unique request ID
+      const requestId = `PR-${Date.now()}-${userId.slice(-6)}`;
+      
+      // Here you would typically save the purchase request to database
+      // For now, we'll just log it and return success
+      this.logger.log(`Purchase request submitted successfully: ${requestId}`);
+      
+      return {
+        message: 'Purchase request submitted successfully',
+        requestId
+      };
+    } catch (error) {
+      this.logger.error(`Error submitting purchase request: ${error.message}`);
+      throw new BadRequestException('Failed to submit purchase request');
+    }
+  }
+
+  // Step validation methods
+  private async validateStep1(data: any, errors: string[]): Promise<void> {
+    if (!data) {
+      errors.push('Step 1 data is required');
+      return;
+    }
+
+    if (!data.companyRevenueRange || data.companyRevenueRange <= 0) {
+      errors.push('Company revenue range is required and must be greater than 0');
+    }
+
+    if (!data.currency || !['USD', 'INR'].includes(data.currency)) {
+      errors.push('Currency is required and must be USD or INR');
+    }
+
+    if (!data.revenueUnit || !['Crore', 'Million'].includes(data.revenueUnit)) {
+      errors.push('Revenue unit is required and must be Crore or Million');
+    }
+
+    if (!data.tradeDurationYears || data.tradeDurationYears < 1) {
+      errors.push('Trade duration is required and must be at least 1 year');
+    }
+
+    if (!data.productUsage || typeof data.productUsage !== 'string' || data.productUsage.trim().length === 0) {
+      errors.push('Product usage description is required');
+    }
+  }
+
+  private async validateStep2(data: any, errors: string[]): Promise<void> {
+    if (!data) {
+      errors.push('Step 2 data is required');
+      return;
+    }
+
+    if (!data.industry || typeof data.industry !== 'string' || data.industry.trim().length === 0) {
+      errors.push('Industry information is required');
+    }
+
+    if (data.marketExperienceYears === undefined || data.marketExperienceYears < 0) {
+      errors.push('Market experience is required and cannot be negative');
+    }
+
+    if (data.marketCapturePercentage === undefined || data.marketCapturePercentage < 0 || data.marketCapturePercentage > 100) {
+      errors.push('Market capture percentage is required and must be between 0 and 100');
+    }
+  }
+
+  private async validateStep3(data: any, errors: string[]): Promise<void> {
+    if (!data) {
+      errors.push('Step 3 data is required');
+      return;
+    }
+
+    if (!data.price || data.price <= 0) {
+      errors.push('Price is required and must be greater than 0');
+    }
+
+    if (!data.priceCurrency || !['USD', 'INR', 'EUR'].includes(data.priceCurrency)) {
+      errors.push('Price currency is required and must be USD, INR, or EUR');
+    }
+
+    // Optional fields validation
+    if (data.discount !== undefined && (data.discount < 0 || data.discount > 100)) {
+      errors.push('Discount must be between 0 and 100%');
+    }
+
+    if (data.margin !== undefined && (data.margin < 0 || data.margin > 100)) {
+      errors.push('Margin must be between 0 and 100%');
+    }
+
+    if (data.salePrice !== undefined && data.salePrice < 0) {
+      errors.push('Sale price cannot be negative');
+    }
+
+    if (data.costOfGoods !== undefined && data.costOfGoods < 0) {
+      errors.push('Cost of goods cannot be negative');
+    }
+  }
+
+  private async validateStep4(data: any, errors: string[]): Promise<void> {
+    if (!data) {
+      errors.push('Step 4 data is required');
+      return;
+    }
+
+    if (!data.paymentMode || !['advance', 'credit', 'open'].includes(data.paymentMode)) {
+      errors.push('Payment mode is required and must be advance, credit, or open');
+    }
+
+    // Validate payment mode specific fields
+    if (data.paymentMode === 'advance') {
+      if (data.advancePercentage === undefined || data.advancePercentage < 0 || data.advancePercentage > 100) {
+        errors.push('Advance percentage is required and must be between 0 and 100%');
+      }
+    }
+
+    if (data.paymentMode === 'credit') {
+      if (!data.creditTimelineDays || data.creditTimelineDays < 1) {
+        errors.push('Credit timeline is required and must be at least 1 day');
+      }
+    }
+
+    if (data.paymentMode === 'open') {
+      if (!data.paymentTimelineDays || data.paymentTimelineDays < 1) {
+        errors.push('Payment timeline is required and must be at least 1 day');
+      }
+    }
+  }
+
   // Private helper methods
   private async findTradeForSeller(tradeId: string, sellerId: string): Promise<Trade> {
     const trade = await this.tradeRepository.findOne({
@@ -383,9 +586,8 @@ export class TradesService {
       );
     }
   }
-
   private mapToResponseDto(trade: Trade): TradeResponseDto {
-    return {
+    const result = {
       id: trade.id,
       buyer_id: trade.buyer_id,
       seller_id: trade.seller_id,
@@ -428,5 +630,8 @@ export class TradesService {
         productImage: trade.product.productImage
       } : undefined
     };
+    
+    this.logger.log(`🔍 Mapping trade ${trade.id} to response: offered_price=${trade.offered_price}`);
+    return result;
   }
-} 
+}
