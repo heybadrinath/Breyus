@@ -34,7 +34,7 @@ input[type="text"], input[type="number"], select, textarea {
 
 /* Form field styling */
 .form-field {
-    @apply transition-all duration-300 ease-in-out relative mb-6;
+    @apply transition-all duration-300 ease-in-out relative mb-1;
 }
 
 .form-field input, .form-field select, .form-field textarea {
@@ -78,13 +78,13 @@ input[type="text"], input[type="number"], select, textarea {
 
 .price-container input:focus, .price-container select:focus {
     background-color: white;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  
 }
 
 /* Product card styling */
 .product-card {
     @apply bg-gradient-to-br from-white to-gray-50 rounded-2xl transition-all duration-300 ease-in-out mb-8;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
     padding: 32px;
     border: 1px solid rgba(0, 0, 0, 0.05);
 }
@@ -112,15 +112,12 @@ input[type="text"], input[type="number"], select, textarea {
 
 /* Button styling */
 .product-btn {
-    @apply bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-3 rounded-xl font-semibold;
+    @apply bg-black text-white px-8 py-3 rounded-xl font-semibold;
     @apply transition-all duration-300 ease-in-out;
     @apply hover:from-blue-700 hover:to-blue-800 hover:shadow-lg hover:scale-105 active:scale-100;
     box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
 }
 
-.product-btn:hover {
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
-}
 
 .product-btn-prev {
     @apply bg-gradient-to-r from-gray-500 to-gray-600 text-white px-8 py-3 rounded-xl font-semibold;

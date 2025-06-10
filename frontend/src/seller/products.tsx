@@ -6,6 +6,7 @@ import { Layout } from "./components";
 import productService from "../services/product.service";
 import authService from "../services/auth.service";
 import { Product } from "../types/product";
+import ProgressBar from "../buyer/components/cart/PurchaseRequestProgress";
 
 // Get API URL from environment or use default
 const API_URL = process.env.REACT_APP_API_URL || 'https://breyus.com';
@@ -15,15 +16,15 @@ const getImageUrl = (imagePath: string | undefined | null): string => {
   if (!imagePath) {
     return '/placeholder-product.svg';
   }
-  
+
   // Handle URLs - blob URLs for local file preview, http/https for remote files, or data URLs
-  if (imagePath.startsWith('blob:') || 
-      imagePath.startsWith('http:') || 
-      imagePath.startsWith('https:') ||
-      imagePath.startsWith('data:')) {
+  if (imagePath.startsWith('blob:') ||
+    imagePath.startsWith('http:') ||
+    imagePath.startsWith('https:') ||
+    imagePath.startsWith('data:')) {
     return imagePath;
   }
-  
+
   // Handle relative paths that need server URL prefix
   return `${API_URL}/uploads/${imagePath}`;
 };
@@ -43,17 +44,9 @@ const ProductLayout = ({ productype, Body }: { productype: string, Body: ReactNo
       animate="animate"
       exit="exit"
       transition={{ duration: 0.5 }}
-      className="relative min-h-screen bg-gradient-to-br from-gray-50 to-gray-100"
+      className="mx-auto  rounded-lg w-[60%] px-12 relative pt-14 pb-8 border-gray-200 border"
     >
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div className="p-8 lg:p-12">
-              {Body}
-            </div>
-          </div>
-        </div>
-      </div>
+      {Body}
     </motion.div>
   );
 };
@@ -82,23 +75,7 @@ interface ProductData {
   tags?: string[];
 }
 
-// ProgressBar Component
-const ProgressBar: React.FC<{ currentPage: number }> = ({ currentPage }) => {
-  const steps = ["Product Info", "Media", "Pricing", "Tags"];
-  return (
-    <div className="progress-bar-container">
-      {steps.map((step, index) => (
-        <React.Fragment key={step}>
-          <div className={`progress-step ${index <= currentPage ? "active" : ""}`}>
-            <div className="progress-dot"></div>
-            <div className="progress-label">{step}</div>
-          </div>
-          {index < steps.length - 1 && <div className={`progress-line ${index < currentPage ? "active" : ""}`}></div>}
-        </React.Fragment>
-      ))}
-    </div>
-  );
-};
+
 
 interface PriceData {
   price: string;
@@ -131,26 +108,24 @@ interface ImageUploadProps {
 }
 
 // ToggleButton Component
-const ToggleButton: React.FC<ToggleButtonProps> = ({ 
-  isOn, 
-  onToggle, 
-  className = '', 
-  ...props 
+const ToggleButton: React.FC<ToggleButtonProps> = ({
+  isOn,
+  onToggle,
+  className = '',
+  ...props
 }) => (
   <button
     type="button"
     role="switch"
     aria-checked={isOn}
     onClick={onToggle}
-    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-      isOn ? 'bg-blue-600' : 'bg-gray-200'
-    } ${className}`}
+    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isOn ? 'bg-blue-600' : 'bg-gray-200'
+      } ${className}`}
     {...props}
   >
     <span
-      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-        isOn ? 'translate-x-6' : 'translate-x-1'
-      }`}
+      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isOn ? 'translate-x-6' : 'translate-x-1'
+        }`}
     />
   </button>
 );
@@ -205,7 +180,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onChange, value = [] }) => {
             <RefreshCw className="w-12 h-12 text-gray-400 mb-3" />
             <span className="text-gray-500 text-base text-center">
               Drop image files here<br />or <span className="underline text-blue-500">browse</span>
-          </span>
+            </span>
           </div>
         ) : (
           <div className="flex flex-wrap gap-3 justify-center">
@@ -214,7 +189,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onChange, value = [] }) => {
                 key={idx}
                 src={URL.createObjectURL(file)}
                 alt={file.name}
-                className="w-20 h-20 object-cover rounded-md border shadow-sm image-upload-preview"
+                className="w-20 h-20 object-cover rounded-md border  image-upload-preview"
               />
             ))}
           </div>
@@ -249,11 +224,11 @@ const ProductInformation: React.FC<ProductProps> = ({ setPageNo, updateProductDa
       hsnCode: productData.hsnCode || ""
     });
   }, [
-    productData.name, 
-    productData.moq, 
-    productData.description, 
-    productData.detailedDescription, 
-    productData.category, 
+    productData.name,
+    productData.moq,
+    productData.description,
+    productData.detailedDescription,
+    productData.category,
     productData.hsnCode
   ]);
 
@@ -261,7 +236,7 @@ const ProductInformation: React.FC<ProductProps> = ({ setPageNo, updateProductDa
     const { name, value } = e.target;
     const updatedData = { ...formData, [name]: value };
     setFormData(updatedData);
-    
+
     // Update parent data immediately, but debounced to prevent too many updates
     updateProductData?.(updatedData);
   };
@@ -274,87 +249,87 @@ const ProductInformation: React.FC<ProductProps> = ({ setPageNo, updateProductDa
     <ProductLayout productype="product" Body={
       <div className="flex flex-col h-full">
         <h1 className="section-title font-bold mb-6 text-2xl">{isEditMode ? 'Edit Product' : 'Product Information'}</h1>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div className="form-field">
-          <input 
-              placeholder="Product Name" 
-              className="w-full" 
-            type="text" 
-            name="name" 
-            value={formData.name}
-            onChange={handleChange}
-          />
+            <input
+              placeholder="Product Name"
+              className="w-full"
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+            />
           </div>
           <div className="form-field">
-          <select 
+            <select
               className="w-full bg-transparent"
-            name="moq"
-            value={formData.moq}
-            onChange={handleChange}
-          >
+              name="moq"
+              value={formData.moq}
+              onChange={handleChange}
+            >
               <option value="" disabled>Minimum Order Quantity (MOQ)</option>
-            <option value="100 KG">100 KG</option>
-            <option value="200 KG">200 KG</option>
-            <option value="500 KG">500 KG</option>
-          </select>
+              <option value="100 KG">100 KG</option>
+              <option value="200 KG">200 KG</option>
+              <option value="500 KG">500 KG</option>
+            </select>
+          </div>
         </div>
-        </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="product-card">
             <h2 className="text-lg font-semibold mb-3">Description</h2>
             <div className="mb-4">
-            <input 
-                placeholder="Product summary (short description)" 
-                className="w-full border border-gray-200 rounded-t-lg px-3 py-2" 
-              type="text" 
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-            />
+              <input
+                placeholder="Product summary (short description)"
+                className="w-full border border-gray-200 rounded-t-lg px-3 py-2"
+                type="text"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+              />
             </div>
-            <textarea 
-              placeholder="Detailed Description - Include product specifications, features, and benefits" 
-              className="w-full h-[180px] border border-gray-200 rounded-b-lg px-3 py-2" 
+            <textarea
+              placeholder="Detailed Description - Include product specifications, features, and benefits"
+              className="w-full h-[180px] border border-gray-200 rounded-b-lg px-3 py-2"
               name="detailedDescription"
               value={formData.detailedDescription}
               onChange={handleChange}
             />
           </div>
-          
+
           <div className="product-card flex flex-col">
             <h2 className="text-lg font-semibold mb-3">Product Details</h2>
             <div className="form-field mb-6">
-            <select 
-                className="w-full" 
-              name="category"
-              value={formData.category}
-              onChange={handleChange}
-            >
-              <option value="">Select Category</option>
-              <option value="Oils">Oils</option>
-              <option value="dummy-1">dummy-1</option>
-              <option value="dummy-2">dummy-2</option>
-            </select>
+              <select
+                className="w-full"
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+              >
+                <option value="">Select Category</option>
+                <option value="Oils">Oils</option>
+                <option value="dummy-1">dummy-1</option>
+                <option value="dummy-2">dummy-2</option>
+              </select>
             </div>
-            
+
             <div className="form-field">
-            <input 
-                className="w-full" 
-                placeholder="HSN Code" 
-              type="text" 
-              name="hsnCode"
-              value={formData.hsnCode}
-              onChange={handleChange}
-            />
+              <input
+                className="w-full"
+                placeholder="HSN Code"
+                type="text"
+                name="hsnCode"
+                value={formData.hsnCode}
+                onChange={handleChange}
+              />
               <p className="text-xs text-gray-500 mt-1">Harmonized System Nomenclature code for product classification</p>
+            </div>
           </div>
         </div>
-        </div>
-        
+
         <div className="mt-8 flex justify-end">
-          <button 
+          <button
             onClick={handleNext}
             type="button"
             className="product-btn"
@@ -375,16 +350,16 @@ const Media: React.FC<ProductProps> = ({ setPageNo, updateProductData, productDa
   // When files are selected, update the main product data state
   const handleProductImagesChange = (files: File[]) => {
     setProductImages(files);
-    
+
     if (files.length > 0) {
       // Create a local object URL for temporary display purposes during form editing
       const localImageUrl = URL.createObjectURL(files[0]);
       // Store the local URL in product data for preview
-      updateProductData?.({ 
+      updateProductData?.({
         productImage: localImageUrl
       });
     } else {
-      updateProductData?.({ 
+      updateProductData?.({
         productImage: undefined
       });
     }
@@ -424,14 +399,14 @@ const Media: React.FC<ProductProps> = ({ setPageNo, updateProductData, productDa
           </div>
         </div>
         <div className="mt-8 flex justify-between">
-          <button 
+          <button
             onClick={handlePrev}
             type="button"
             className="product-btn-prev"
           >
             Previous
           </button>
-          <button 
+          <button
             onClick={handleNext}
             type="button"
             className="product-btn"
@@ -490,11 +465,11 @@ const Price: React.FC<ProductProps> = ({ setPageNo, updateProductData, productDa
     const { name, value } = e.target;
     const updatedData = { ...priceData, [name]: value };
     setPriceData(updatedData);
-    
+
     // Update parent data immediately after local state changes
     // Convert string values to numbers for numeric fields
     const parentUpdate = {
-      [name]: ['price', 'discount', 'salePrice', 'costOfGoods', 'quantity'].includes(name) 
+      [name]: ['price', 'discount', 'salePrice', 'costOfGoods', 'quantity'].includes(name)
         ? parseFloat(value) || 0
         : value
     };
@@ -514,13 +489,13 @@ const Price: React.FC<ProductProps> = ({ setPageNo, updateProductData, productDa
       const cost = parseFloat(priceData.costOfGoods) || 0;
       const profit = price - cost;
       const margin = price > 0 ? (profit / price) * 100 : 0;
-      
+
       const updatedCalculatedData = {
         profit: profit.toFixed(2),
         margin: margin.toFixed(2)
       };
       setPriceData(prev => ({ ...prev, ...updatedCalculatedData }));
-      
+
       // Also update parent with calculated values
       if (updateProductData) {
         updateProductData({
@@ -542,47 +517,47 @@ const Price: React.FC<ProductProps> = ({ setPageNo, updateProductData, productDa
     <ProductLayout productype="price" Body={
       <div className="flex flex-col h-full">
         <h1 className="section-title font-bold mb-6 text-2xl">Price</h1>
-        
-        <div className="product-card animate-slide-in">
-          <h2 className="text-lg font-semibold mb-4">Basic Pricing</h2>
+
+        <div className="product-card animate-slide-in shadow-none">
+          {/* Section-1 */}
+          <h2 className="text-lg font-semibold mb-2">Basic Pricing</h2>
           <div className="price-container grid-cols-3">
             <div className="form-field">
-          <input 
-            placeholder="Price" 
-            type="text" 
-            name="price"
-            value={priceData.price}
-            onChange={handleChange}
+              <input
+                placeholder="Price"
+                type="text"
+                name="price"
+                value={priceData.price}
+                onChange={handleChange}
                 className="w-full"
-          />
+              />
             </div>
             <div className="form-field">
-          <select 
+              <select
                 className="w-full"
-            name="currency"
-            value={priceData.currency}
-            onChange={handleChange}
-          >
-            <option value="USD">USD</option>
+                name="currency"
+                value={priceData.currency}
+                onChange={handleChange}
+              >
+                <option value="USD">USD</option>
                 <option value="INR">INR</option>
-            <option value="EUR">EUR</option>
-          </select>
+                <option value="EUR">EUR</option>
+              </select>
             </div>
             <div className="form-field">
-          <input 
-            placeholder="SKU" 
-            type="text" 
-            name="sku"
-            value={priceData.sku}
-            onChange={handleChange}
+              <input
+                placeholder="SKU"
+                type="text"
+                name="sku"
+                value={priceData.sku}
+                onChange={handleChange}
                 className="w-full"
               />
             </div>
           </div>
-        </div>
-        
-        <div className="product-card animate-slide-in" style={{ animationDelay: '0.1s' }}>
-          <div className="flex justify-between items-center mb-4">
+
+          {/* Section -2  */}
+          <div className="flex justify-between items-center mb-2">
             <h2 className="text-lg font-semibold">Discounts</h2>
             <div className="flex items-center">
               <span className="mr-2 text-sm text-gray-700">On Sale</span>
@@ -592,9 +567,9 @@ const Price: React.FC<ProductProps> = ({ setPageNo, updateProductData, productDa
 
           <div className="price-container grid-cols-2">
             <div className="form-field">
-              <input 
-                placeholder="Discount %" 
-                type="text" 
+              <input
+                placeholder="Discount %"
+                type="text"
                 name="discount"
                 value={priceData.discount}
                 onChange={handleChange}
@@ -603,59 +578,58 @@ const Price: React.FC<ProductProps> = ({ setPageNo, updateProductData, productDa
               />
             </div>
             <div className="form-field">
-                <input 
-                placeholder="Sale Price" 
-                  type="text" 
-                  name="salePrice"
-                  value={priceData.salePrice}
-                  onChange={handleChange}
+              <input
+                placeholder="Sale Price"
+                type="text"
+                name="salePrice"
+                value={priceData.salePrice}
+                onChange={handleChange}
                 disabled={!priceData.onSale}
                 className={`w-full ${!priceData.onSale ? 'opacity-50' : ''}`}
-                />
-              </div>
+              />
+            </div>
           </div>
-        </div>
 
-        <div className="product-card animate-slide-in" style={{ animationDelay: '0.2s' }}>
-          <h2 className="text-lg font-semibold mb-4">Inventory & Profit</h2>
+          {/* Section -3 */}
+          <h2 className="text-lg font-semibold mb-2">Inventory & Profit</h2>
           <div className="price-container grid-cols-3">
             <div className="form-field">
-          <input 
-                placeholder="Cost of Goods" 
-            type="text" 
-            name="costOfGoods"
-            value={priceData.costOfGoods}
-            onChange={handleChange}
+              <input
+                placeholder="Cost of Goods"
+                type="text"
+                name="costOfGoods"
+                value={priceData.costOfGoods}
+                onChange={handleChange}
                 className="w-full"
-          />
+              />
             </div>
             <div className="form-field">
-          <input 
-            placeholder="Profit" 
-                type="text" 
-            name="profit"
-            value={priceData.profit}
-            readOnly
+              <input
+                placeholder="Profit"
+                type="text"
+                name="profit"
+                value={priceData.profit}
+                readOnly
                 className="w-full bg-gray-50"
-          />
+              />
             </div>
             <div className="form-field">
-            <input 
-                placeholder="Margin %" 
-              type="text" 
-              name="margin"
-              value={priceData.margin}
-              readOnly
+              <input
+                placeholder="Margin %"
+                type="text"
+                name="margin"
+                value={priceData.margin}
+                readOnly
                 className="w-full bg-gray-50"
-            />
+              />
+            </div>
           </div>
-        </div>
-          
-          <div className="form-field mt-4">
+
+          <div className="form-field">
             <label className="block text-gray-700 font-medium mb-2">Product Quantity</label>
-            <input 
-              placeholder="Enter available product quantity" 
-              type="number" 
+            <input
+              placeholder="Enter available product quantity"
+              type="number"
               name="quantity"
               value={priceData.quantity}
               onChange={handleChange}
@@ -663,17 +637,19 @@ const Price: React.FC<ProductProps> = ({ setPageNo, updateProductData, productDa
             />
             <p className="text-sm text-gray-500 mt-1">Number of units currently in stock</p>
           </div>
+         
+
         </div>
-        
-        <div className="mt-8 flex justify-between">
-          <button 
+
+        <div className="mt-2 flex justify-between">
+          <button
             onClick={handlePrev}
             type="button"
             className="product-btn-prev"
           >
             Previous
           </button>
-          <button 
+          <button
             onClick={handleNext}
             type="button"
             className="product-btn"
@@ -745,11 +721,11 @@ export const Inventory: React.FC = () => {
 
   const handleBulkDelete = async () => {
     if (selectedProducts.size === 0) return;
-    
+
     try {
       const productIds = Array.from(selectedProducts);
       const response = await productService.bulkDeleteProducts(productIds);
-      
+
       if (response.success) {
         setSelectedProducts(new Set());
         await fetchProducts();
@@ -785,18 +761,18 @@ export const Inventory: React.FC = () => {
   // Filter and sort products
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      product.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = !filterCategory || product.category === filterCategory;
-    const matchesStatus = !filterStatus || 
-                         (filterStatus === 'in-stock' && product.quantity > 0) ||
-                         (filterStatus === 'out-of-stock' && product.quantity === 0) ||
-                         (filterStatus === 'low-stock' && product.quantity > 0 && product.quantity <= 10);
-    
+    const matchesStatus = !filterStatus ||
+      (filterStatus === 'in-stock' && product.quantity > 0) ||
+      (filterStatus === 'out-of-stock' && product.quantity === 0) ||
+      (filterStatus === 'low-stock' && product.quantity > 0 && product.quantity <= 10);
+
     return matchesSearch && matchesCategory && matchesStatus;
   }).sort((a, b) => {
     let aValue = a[sortBy];
     let bValue = b[sortBy];
-    
+
     if (sortBy === 'price') {
       aValue = parseFloat(aValue) || 0;
       bValue = parseFloat(bValue) || 0;
@@ -807,7 +783,7 @@ export const Inventory: React.FC = () => {
       aValue = String(aValue).toLowerCase();
       bValue = String(bValue).toLowerCase();
     }
-    
+
     if (sortOrder === 'asc') {
       return aValue > bValue ? 1 : -1;
     } else {
@@ -1006,7 +982,7 @@ export const Inventory: React.FC = () => {
               <div className="text-gray-400 text-6xl mb-4">📦</div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">No Products Found</h3>
               <p className="text-gray-600 mb-6">
-                {products.length === 0 
+                {products.length === 0
                   ? "You haven't added any products yet. Start by adding your first product!"
                   : "No products match your current filters. Try adjusting your search criteria."
                 }
@@ -1204,16 +1180,15 @@ export const Inventory: React.FC = () => {
                       } else {
                         pageNum = currentPage - 2 + i;
                       }
-                      
+
                       return (
                         <button
                           key={pageNum}
                           onClick={() => setCurrentPage(pageNum)}
-                          className={`px-3 py-2 border text-sm font-medium rounded-md ${
-                            currentPage === pageNum
-                              ? 'border-blue-500 bg-blue-50 text-blue-600'
-                              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                          }`}
+                          className={`px-3 py-2 border text-sm font-medium rounded-md ${currentPage === pageNum
+                            ? 'border-blue-500 bg-blue-50 text-blue-600'
+                            : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                            }`}
                         >
                           {pageNum}
                         </button>
@@ -1297,8 +1272,8 @@ export const Incoterms: React.FC<ProductProps> = ({ setPageNo, updateProductData
         {/* Example Field (to be replaced with actual incoterms fields) */}
         <div className="form-field mb-6">
           <label htmlFor="incoterm" className="block text-sm font-medium text-gray-700 mb-1">Select Incoterm</label>
-          <select 
-            name="incoterm" 
+          <select
+            name="incoterm"
             id="incoterm"
             // value={productData?.incoterm || ''} // Assuming an 'incoterm' field in ProductData
             // onChange={(e) => updateProductData?.({ incoterm: e.target.value })}
@@ -1313,14 +1288,14 @@ export const Incoterms: React.FC<ProductProps> = ({ setPageNo, updateProductData
         </div>
 
         <div className="mt-8 flex justify-between">
-          <button 
+          <button
             onClick={handlePrev}
             type="button"
             className="mr-2 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
           >
             Previous
           </button>
-          <button 
+          <button
             onClick={handleNext}
             type="button"
             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
@@ -1346,10 +1321,10 @@ const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData =
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  
+
   // Determine if we're in edit mode based on whether product has an ID
   const isEditMode = Boolean(productData?.id);
-  
+
   // Sync local tags state with productData.tags prop
   useEffect(() => {
     if (productData.tags && JSON.stringify(productData.tags) !== JSON.stringify(tags)) {
@@ -1369,12 +1344,12 @@ const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData =
 
     setIsLoading(true);
     setError(null);
-    
+
     try {
       // Using the endpoint from your instructions
       const response = await fetch("http://localhost:8000/suggest-tags", {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -1389,7 +1364,7 @@ const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData =
       }
 
       const data = await response.json();
-      
+
       if (!Array.isArray(data.suggested_tags)) {
         throw new Error('Invalid tags data format from server');
       }
@@ -1420,21 +1395,21 @@ const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData =
   // Fallback function to generate tags if API fails
   const generateContextualTags = useCallback((data: Partial<ProductData>): string[] => {
     if (!data.name) return ["product", "item", "new"];
-    
+
     // Extract tags from product name and category
     const nameTags = data.name.toLowerCase()
       .split(/[\s\-_]+/)
       .filter(word => word.length > 3)
       .map(word => word.replace(/[^a-z0-9-]/g, ''));
-    
-    const categoryTag = data.category 
+
+    const categoryTag = data.category
       ? data.category.toLowerCase().replace(/\s+/g, '-')
       : "";
-    
+
     // Combine tags and return max 5
     const allTags = Array.from(new Set([...nameTags, categoryTag]))
       .filter(tag => tag && tag.length > 2);
-    
+
     return allTags.length > 0 ? allTags.slice(0, 5) : ["product", "item", "new"];
   }, []); // No dependencies needed if it only relies on its arguments
 
@@ -1494,45 +1469,44 @@ const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData =
     <ProductLayout productype="tags" Body={
       <div className="flex flex-col h-full">
         <h1 className="section-title font-bold mb-6 text-2xl">Tags</h1>
-        
+
         <div className="product-card">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Product Tags <span className="text-sm text-gray-500">({tags.length}/5)</span></h2>
-              <button 
-                onClick={fetchSuggestedTags}
-                disabled={isLoading || !productData?.name}
-              className={`flex items-center text-sm px-3 py-1.5 rounded-md ${
-                  isLoading || !productData?.name 
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                  : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+            <button
+              onClick={fetchSuggestedTags}
+              disabled={isLoading || !productData?.name}
+              className={`flex items-center text-sm px-3 py-1.5 rounded-md ${isLoading || !productData?.name
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
                 }`}
-              >
-                {isLoading ? (
-                  <span className="flex items-center">
-                    <RefreshCw className="mr-1 animate-spin" size={14} />
-                    Generating...
-                  </span>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-1" size={14} />
+            >
+              {isLoading ? (
+                <span className="flex items-center">
+                  <RefreshCw className="mr-1 animate-spin" size={14} />
+                  Generating...
+                </span>
+              ) : (
+                <>
+                  <RefreshCw className="mr-1" size={14} />
                   <span>Auto-Generate Tags</span>
-                  </>
-                )}
-              </button>
+                </>
+              )}
+            </button>
           </div>
-          
+
           {error && (
             <div className="text-sm mb-4 p-3 rounded bg-yellow-50 text-yellow-700 border border-yellow-200">
               {error}
             </div>
           )}
-          
+
           {successMessage && (
             <div className="text-sm mb-4 p-3 rounded bg-green-50 text-green-700 border border-green-200">
               {successMessage}
             </div>
           )}
-          
+
           <div className="border border-gray-200 rounded-xl p-4 mb-4">
             <input
               type="text"
@@ -1543,7 +1517,7 @@ const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData =
               onKeyDown={handleKeyDown}
               disabled={tags.length >= 5}
             />
-            
+
             <div className="flex flex-wrap gap-2 mt-2">
               {tags.map((tag, idx) => (
                 <div
@@ -1561,8 +1535,8 @@ const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData =
                 </div>
               ))}
             </div>
-            </div>
-            
+          </div>
+
           <div className="text-sm text-gray-600">
             <p>Tags help buyers find your products. Choose descriptive words related to your product.</p>
             <ul className="list-disc ml-5 mt-2">
@@ -1574,13 +1548,13 @@ const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData =
         </div>
 
         <div className="mt-8 flex justify-between">
-          <button 
-            onClick={handlePrev} 
+          <button
+            onClick={handlePrev}
             className="product-btn-prev"
           >
             Previous
           </button>
-          <button 
+          <button
             onClick={handleSubmit}
             disabled={isSubmitting}
             className={`product-btn ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
@@ -1595,10 +1569,10 @@ const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData =
 
 // Rename to avoid conflicts with interface ProductProps defined above
 type ProductPropsWithSetter = {
-    setPageNo: (pageNo: number) => void;
-    productData: ProductData;
-    setProductData: React.Dispatch<React.SetStateAction<ProductData>>;
-    saveProduct?: () => void;
+  setPageNo: (pageNo: number) => void;
+  productData: ProductData;
+  setProductData: React.Dispatch<React.SetStateAction<ProductData>>;
+  saveProduct?: () => void;
 };
 
 // Define initialProductData
@@ -1713,7 +1687,7 @@ export const AddProduct: React.FC = () => {
 
   const handleProductSubmit = useCallback(async (currentProductData: Partial<ProductData>, tagsToSubmit: string[]) => {
     setError(null);
-    
+
     // Prepare data for submission, aligning with the Product type as much as possible
     // The service methods will handle adding/managing id, sellerId, createdAt, updatedAt
     const dataForApi: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'sellerId' | 'sellerName' | 'rating' | 'reviewCount' | 'images' | 'primaryImage'> & { id?: string; currency?: string } = {
@@ -1724,7 +1698,7 @@ export const AddProduct: React.FC = () => {
       hsnCode: currentProductData.hsnCode,
       moq: currentProductData.moq,
       // Ensure we don't pass blob or temporary URLs to the server
-      productImage: currentProductData.productImage?.startsWith('blob:') 
+      productImage: currentProductData.productImage?.startsWith('blob:')
         ? `product-${Date.now()}.jpg` // Generate a unique filename for the image
         : currentProductData.productImage,
       testReports: currentProductData.testReports,
@@ -1777,10 +1751,10 @@ export const AddProduct: React.FC = () => {
     return <ProductLayout productype="loading" Body={<div>Loading form...</div>} />;
   }
 
-  if (error && !formInitialized) { 
-    return <ProductLayout productype="error" Body={<div>Error: {error} <button onClick={() => { localStorage.removeItem('productFormData'); window.location.reload();}}>Clear Cache & Try again</button></div>} />;
+  if (error && !formInitialized) {
+    return <ProductLayout productype="error" Body={<div>Error: {error} <button onClick={() => { localStorage.removeItem('productFormData'); window.location.reload(); }}>Clear Cache & Try again</button></div>} />;
   }
-  
+
   // Render the appropriate page based on pageNo
   const renderPage = () => {
     switch (pageNo) {
@@ -1798,19 +1772,27 @@ export const AddProduct: React.FC = () => {
   };
 
   return (
-    <ProductLayout 
-      productype="add-product"
-      Body={
-        <>
-          <ProgressBar currentPage={pageNo} />
-          {error && <div className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">{error}</div>} 
+
+    <>
+      <div className="relative w-full my-16">
+        <ProgressBar
+          className="absolute left-1/2 -translate-y-1/2 -translate-x-1/2 top-0 z-20"
+          step1="Product Info"
+          step2="Media"
+          step3="Pricing"
+          step4="Tags"
+          currentStep={pageNo}
+        />
+        <div className="your-content-class">
+          {/* Your main content here */}
           {renderPage()}
-          <button onClick={resetForm} title="Reset Form Data" className="fixed bottom-4 right-4 bg-red-500 hover:bg-red-600 text-white p-3 rounded-full shadow-lg flex items-center justify-center">
-            <Trash size={18} /> 
-            <span className="ml-2 text-sm">Reset Form</span>
-          </button>
-        </>
-      }
-    />
+        </div>
+      </div>
+      <button onClick={resetForm} title="Reset Form Data" className="fixed bottom-4 right-4 bg-red-500 hover:bg-red-600 text-white p-3 rounded-full shadow-lg flex items-center justify-center">
+        <Trash size={18} />
+        <span className="ml-2 text-sm">Reset Form</span>
+      </button>
+    </>
+
   );
 };
