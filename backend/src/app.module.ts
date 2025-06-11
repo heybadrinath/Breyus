@@ -21,13 +21,17 @@ import { MessagesModule } from './messages/messages.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { TradesModule } from './trades/trades.module';
 import { Trade } from './trades/entities/trade.entity';
+import { SellerGraphModule } from './seller-graph/seller-graph.module';
+import { BarGraph } from './seller-graph/entities/bar-graph.entity';
+import { ScatterGraph } from './seller-graph/entities/scatter-graph.entity';
+import { PieChart } from './seller-graph/entities/pie-chart.entity';
+import { CountrySales } from './seller-graph/entities/country-sales.entity';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
-      
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -46,7 +50,11 @@ import { Trade } from './trades/entities/trade.entity';
             StoreVisit,
             AnalyticsSale,
             Task,
-            Trade
+            Trade,
+            BarGraph,
+            ScatterGraph,
+            PieChart,
+            CountrySales
           ],
           synchronize: !isProduction,
           logging: !isProduction,
@@ -63,7 +71,8 @@ import { Trade } from './trades/entities/trade.entity';
     SecurityModule,
     MessagesModule,
     FeedbackModule,
-    TradesModule
+    TradesModule,
+    SellerGraphModule
   ],
   controllers: [AppController],
   providers: [AppService],
