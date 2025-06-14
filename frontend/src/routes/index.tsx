@@ -2,12 +2,17 @@ import React from "react";
 import { ReactNode } from "react";
 import {SellerProtectedRoute, BuyerProtectedRoute} from "./ProtectedRoute"; // Protected Route for authenticated users
 import { Routes, Route, useLocation } from "react-router-dom";
+
+
+// Signin imports
 import Signin from "../buyer/signin";  // Buyer Signin
-// import Signup from "../buyer/signup";  // Buyer Signup
 import SellerSignin from "../seller/signin";  // Seller Signin
+
+// import Signup from "../buyer/signup";  // Buyer Signup
 // import SellerSignup from "../seller/signup";  // Seller Signup
 
-import { OnBoarding } from "../main/OnBoarding"; // Buyer and seller onboarding
+// Onboarding
+import { OnBoarding } from "../main/OnBoarding";
 
 import Hero from "../main/Hero";
 import SellerSettings from "../seller/settings";
@@ -83,6 +88,8 @@ const AppRoutes = () => {
           {/* Hero Page */}
           {/* <Route path="/" element={<Animate page={<Hero />} />} /> */}
           <Route path="/" element={<Animate page={<Hero />}/>} />
+
+
 
           {/* OnBoarding */}
           <Route path="/onboarding" element={<Animate page={<OnBoarding />} />} />

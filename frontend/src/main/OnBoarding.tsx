@@ -217,28 +217,35 @@ const OnBoarding: React.FC = () => {
                 );
                 case 5:
                     return (
-                        <motion.div variants={itemVariants}>
-                        <label className="block text-2xl font-bold text-black">What's your business roll in the market?<span className="text-red-500">*</span></label>
-                        <div className="mt-4 space-y-4">
-                            {['Seller', 'Buyer', 'Seller and Buyer'].map((option) => (
-                                <motion.div
-                                    key={option}
-                                    className="flex items-center"
-                                    variants={itemVariants}
-                                >
-                                    <input
-                                        id={option.replace(/\s/g, '')}
-                                        name="financialRange"
-                                        type="radio"
-                                        className="focus:ring-black h-4 w-4 text-black border-gray-300"
-                                    />
-                                    <label htmlFor={option.replace(/\s/g, '')} className="ml-3 block text-sm text-black font-semibold">
-                                        {option}
-                                    </label>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </motion.div>
+                        <motion.div
+                            variants={containerVariants}
+                            initial="hidden"
+                            animate="visible"
+                            className="space-y-8"
+                        >
+                            <motion.div variants={itemVariants}>
+                                <label className="block text-2xl font-bold text-black">What's your business roll in the market?<span className="text-red-500">*</span></label>
+                                <div className="mt-4 space-y-4">
+                                    {['Seller', 'Buyer', 'Seller and Buyer'].map((option, index) => (
+                                        <motion.div
+                                            key={option}
+                                            className="flex items-center"
+                                            variants={itemVariants}
+                                        >
+                                            <input
+                                                id={option.replace(/\s/g, '')}
+                                                name="businessRole"
+                                                type="radio"
+                                                className="focus:ring-black h-4 w-4 text-black border-gray-300"
+                                            />
+                                            <label htmlFor={option.replace(/\s/g, '')} className="ml-3 block text-sm text-black font-semibold">
+                                                {option}
+                                            </label>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        </motion.div>
                     );
             default:
                 return null;

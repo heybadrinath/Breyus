@@ -32,13 +32,13 @@ const Navbar = () => {
                 <img className="h-auto w-[180px]" src={BreyusLogo} alt="Breyus" />
             </div>
             <div id="nav" className="flex w-fit justify-between my-auto mx-auto font-[500] xl:text-lg lg:text-md md:text-sm">
-                <Link className="mx-4 text-black my-auto" to={'/features'}>Features</Link>
-                <Link className="mx-4 text-black my-auto" to={'/impact'}>Impact</Link>
+                <a className="mx-4 text-black my-auto" href="#features">Features</a>
+                <a className="mx-4 text-black my-auto" href='#impact'>Impact</a>
                 <Link className="mx-4 text-black my-auto" to={'/schedule'}>Schedule</Link>
-                <Link className="mx-4 text-black my-auto" to={'/conact us'}>Contact Us</Link>
+                <a className="mx-4 text-black my-auto" href="#contact-us">Contact Us</a>
             </div>
             <div id="login-signup-btn" className="flex">
-                <Button onClick={() => navigate("/buyer/signup")} className=" md:text-sm md:px-6">Sign Up</Button>
+                <Button onClick={() => navigate("/onboarding")} className=" md:text-sm md:px-6">Sign Up</Button>
                 <Button onClick={() => navigate("/buyer/signin")} className='bg-black text-white lg:text-sm md:px-6'>Login In</Button>
             </div>
 
@@ -58,7 +58,7 @@ const Section1 = () => {
                 </div>
 
                 <div id="bottom-btns" className="flex mx-auto">
-                    <Button onClick={() => window.location.href='/buyer/ai'} className="!border-black border-2">Get Started</Button>
+                    <Button onClick={() => window.location.href='/onboarding'} className="!border-black border-2">Get Started</Button>
                     <Button onClick={() => window.location.href='https://calendly.com/breyuscrew/30min'} className="bg-black text-white">Schedule Now</Button>
                 </div>
                 <div className="flex mx-auto mt-24 mb-16 flex-col">
@@ -78,7 +78,7 @@ const Section2 = () => {
 
     return (
         <BorderBox className="flex">
-            <div id="left" className="mx-auto w-fit">
+            <div id="features" className="mx-auto w-fit">
                 <Section2Temp />
             </div>
             <div id="content" className="flex flex-col m-4 ml-auto w-fit">
@@ -156,7 +156,7 @@ const Section4 = () => {
     
     return (
         <BorderBox className='bg-no-repeat bg-cover bg-center' style={{ backgroundImage: `url(${worldmap})` }}>
-            <div className="w-fit mx-auto flex flex-col h-[80vh]">
+            <div id="impact" className="w-fit mx-auto flex flex-col h-[80vh]">
                 <div className="flex mx-auto">
                     <h1 className="text-4xl font-extrabold mb-24 mt-24">
                         The 4 Ts That Drive <span className="text-[#867C5B] font-extrabold">Global Trade Forward.</span>
@@ -249,7 +249,7 @@ const Section5 = () => {
     const year = new Date().getFullYear();
     return (
         <BorderBox>
-            <div className="h-[fit] my-16 w-full">
+            <div id={"contact-us"} className="h-[fit] my-16 w-full">
                 <div className="bg-[#2c2727] w-[50vw] h-[fit] py-12 rounded-xl mx-auto my-auto flex flex-col">
                     <h1 className="text-white mx-auto my-10 text-3xl font-extrabold">Understand Breyus Better!</h1>
                     <div className="flex items-center bg-white rounded-full p-1 w-full max-w-xl mx-auto">
@@ -285,7 +285,7 @@ const Section5 = () => {
 
 
 const Hero = () => (
-    <div>
+    <div className=" !scroll-smooth">
         <Navbar />
         <Section1 />
         <Section2 />
