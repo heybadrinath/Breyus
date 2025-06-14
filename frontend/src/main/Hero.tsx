@@ -34,7 +34,7 @@ const Navbar = () => {
             <div id="nav" className="flex w-fit justify-between my-auto mx-auto font-[500] xl:text-lg lg:text-md md:text-sm">
                 <a className="mx-4 text-black my-auto" href="#features">Features</a>
                 <a className="mx-4 text-black my-auto" href='#impact'>Impact</a>
-                <Link className="mx-4 text-black my-auto" to={'/schedule'}>Schedule</Link>
+                <Link className="mx-4 text-black my-auto" to={'https://calendly.com/breyuscrew/30min'}>Schedule</Link>
                 <a className="mx-4 text-black my-auto" href="#contact-us">Contact Us</a>
             </div>
             <div id="login-signup-btn" className="flex">
