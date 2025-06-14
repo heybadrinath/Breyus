@@ -3,10 +3,13 @@ import { ReactNode } from "react";
 import {SellerProtectedRoute, BuyerProtectedRoute} from "./ProtectedRoute"; // Protected Route for authenticated users
 import { Routes, Route, useLocation } from "react-router-dom";
 import Signin from "../buyer/signin";  // Buyer Signin
-import Signup from "../buyer/signup";  // Buyer Signup
+// import Signup from "../buyer/signup";  // Buyer Signup
 import SellerSignin from "../seller/signin";  // Seller Signin
-import SellerSignup from "../seller/signup";  // Seller Signup
-import Hero from "../Hero";
+// import SellerSignup from "../seller/signup";  // Seller Signup
+
+import { OnBoarding } from "../main/OnBoarding"; // Buyer and seller onboarding
+
+import Hero from "../main/Hero";
 import SellerSettings from "../seller/settings";
 import SellerDashboard from "../seller/dashboard";
 import Security from "../seller/security";
@@ -80,10 +83,15 @@ const AppRoutes = () => {
           {/* Hero Page */}
           {/* <Route path="/" element={<Animate page={<Hero />} />} /> */}
           <Route path="/" element={<Animate page={<Hero />}/>} />
+
+          {/* OnBoarding */}
+          <Route path="/onboarding" element={<Animate page={<OnBoarding />} />} />
+
+         
   
           {/* Buyer Routes */}
             <Route path="/buyer/signin" element={<Animate page={<Signin />} />} />
-            <Route path="/buyer/signup" element={<Animate page={<Signup />} />} />
+            {/* <Route path="/buyer/signup" element={<Animate page={<Signup />} />} /> */}
             <Route path="/buyer/forgot-password" element={<Animate page={<ForgotPassword />} />} />
             
             <Route path="/buyer/homepage" element={<BuyerProtectedRoute><Animate page={<Homepage />} /></BuyerProtectedRoute>} />
@@ -107,7 +115,7 @@ const AppRoutes = () => {
 
           {/* Seller Routes */}
             <Route path="/seller/signin" element={<Animate page={<SellerSignin />} />} />
-            <Route path="/seller/signup" element={<Animate page={<SellerSignup />} />} />
+            {/* <Route path="/seller/signup" element={<Animate page={<SellerSignup />} />} /> */}
             <Route path="/seller/forgot-password" element={<Animate page={<SellerForgotPassword />} />} />
             
             <Route path="/seller/dashboard" element={<SellerProtectedRoute><Animate page={<Layout Body={<SellerDashboard />}/>} /></SellerProtectedRoute>} />

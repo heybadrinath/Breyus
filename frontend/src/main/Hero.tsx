@@ -3,25 +3,25 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
 // section-1 image imports
-import NovalLogo from "./assets/noval_logo.svg";
+import NovalLogo from "../assets/noval_logo.svg";
 
 
 // Section-3 Image imports 
-import BreyusLogo from "./seller/vectors/full-logo.svg";
-import LaptopHero from "./assets/laptop-hero.svg";
-import PersonalisedAnalysisImg from "./assets/section-3/personalised-analysis.svg"
-import IntegratedDashboardImg from "./assets/section-3/integrated-dashboard.svg"
-import SeamlessIncotermsImg from "./assets/section-3/seamless-incoterms.svg"
-import AutomatedDocumentationImg from "./assets/section-3/Automated-documentation.svg"
-import SecuredTradeDealsImg from "./assets/section-3/secured-trade-deals.svg"
-import SecureSettlementSystemImg from "./assets/section-3/secure-settlements-system.svg"
+import BreyusLogo from "../seller/vectors/full-logo.svg";
+import LaptopHero from "../assets/laptop-hero.svg";
+import PersonalisedAnalysisImg from "../assets/section-3/personalised-analysis.svg"
+import IntegratedDashboardImg from "../assets/section-3/integrated-dashboard.svg"
+import SeamlessIncotermsImg from "../assets/section-3/seamless-incoterms.svg"
+import AutomatedDocumentationImg from "../assets/section-3/Automated-documentation.svg"
+import SecuredTradeDealsImg from "../assets/section-3/secured-trade-deals.svg"
+import SecureSettlementSystemImg from "../assets/section-3/secure-settlements-system.svg"
 
 // Section-4 Image imports
-import TotalTradeVolume from "./assets/section-4/Total-Trade-Volume.svg";
-import TradeDataTrained from "./assets/section-4/Trade-Data-Trained.svg";
-import TraderTradeEfficiency from "./assets/section-4/Trader-Trade-Efficiency.svg";
-import TraderTradeGrowth from "./assets/section-4/Trader-Trade-Growth.svg";
-import worldmap from "./assets/worldmap.svg";
+import TotalTradeVolume from "../assets/section-4/Total-Trade-Volume.svg";
+import TradeDataTrained from "../assets/section-4/Trade-Data-Trained.svg";
+import TraderTradeEfficiency from "../assets/section-4/Trader-Trade-Efficiency.svg";
+import TraderTradeGrowth from "../assets/section-4/Trader-Trade-Growth.svg";
+import worldmap from "../assets/worldmap.svg";
 
 
 const Navbar = () => {
