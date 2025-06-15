@@ -1,1 +1,1 @@
-python -m uvicorn app.mainn:app --reload --port 8000
+python -m uvicorn app.mainn:app --reload --host 0.0.0.0 --host :: --port 8000

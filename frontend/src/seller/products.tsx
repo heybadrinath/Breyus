@@ -1367,7 +1367,7 @@ const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData =
 
     try {
       // Using the endpoint from your instructions
-      const response = await fetch("http://localhost:8000/suggest-tags", {
+      const response = await fetch("https://breyus.com/suggest-tags", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
