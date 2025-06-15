@@ -1755,6 +1755,8 @@ export const AddProduct: React.FC = () => {
 
       if (result.success) {
         resetForm();
+        // Redirect to inventory page after successful submission
+        window.location.href = '/seller/inventory';
         return true;
       } else {
         setError(result.message || 'Failed to submit product.');
