@@ -38,8 +38,15 @@ const Navbar = () => {
                 <a className="mx-4 text-black my-auto" href="#contact-us">Contact Us</a>
             </div>
             <div id="login-signup-btn" className="flex">
-                <Button onClick={() => navigate("/onboarding")} className=" md:text-sm md:px-6">Sign Up</Button>
-                <Button onClick={() => navigate("/buyer/signin")} className='bg-black text-white lg:text-sm md:px-6'>Login In</Button>
+                {/* <Button onClick={() => navigate("/onboarding")} className=" md:text-sm md:px-6">Sign Up</Button> */}
+                {/* <Button onClick={() => navigate("/buyer/signin")} className='bg-black text-white lg:text-sm md:px-6'>Login In</Button> */}
+
+                {/* Temp buttons for signin and signup */}
+                 <Button onClick={() => navigate("/seller/signup")} className=" md:text-sm md:px-6">Sign Up</Button>
+                 <Button onClick={() => navigate("/buyer/signin")} className='bg-black text-white lg:text-sm md:px-2'>Buyer Login In</Button>
+                 <Button onClick={() => navigate("/seller/signin")} className='bg-black text-white lg:text-sm md:px-6'>Seller Login In</Button>
+
+
             </div>
 
         </div>

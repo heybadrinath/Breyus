@@ -9,7 +9,7 @@ import { Product } from "../types/product";
 import ProgressBar from "../buyer/components/cart/PurchaseRequestProgress";
 
 // Get API URL from environment or use default
-const API_URL = process.env.REACT_APP_API_URL || 'https://breyus.com';
+const API_URL = process.env.REACT_APP_API_URL || 'https://breyus.com/backend';
 
 // Helper function to get proper image URL from different sources
 const getImageUrl = (imagePath: string | undefined | null): string => {
