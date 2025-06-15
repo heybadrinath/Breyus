@@ -75,8 +75,6 @@ interface ProductData {
   tags?: string[];
 }
 
-
-
 interface PriceData {
   price: string;
   currency: string;
@@ -88,6 +86,28 @@ interface PriceData {
   profit: string;
   margin: string;
   quantity: string;
+}
+
+interface ProductApiData {
+  id?: string;
+  name: string;
+  preciseDescription?: string;
+  detailedDescription?: string;
+  category?: string;
+  hsnCode?: string;
+  moq?: string;
+  productImage?: string;
+  testReports?: string;
+  price?: number;
+  sku?: string;
+  onSale?: boolean;
+  discount?: number;
+  salePrice?: number;
+  costOfGoods?: number;
+  profit?: number;
+  margin?: number;
+  quantity?: number;
+  tags?: string[];
 }
 
 interface ProductProps {
@@ -1688,23 +1708,20 @@ export const AddProduct: React.FC = () => {
   const handleProductSubmit = useCallback(async (currentProductData: Partial<ProductData>, tagsToSubmit: string[]) => {
     setError(null);
 
-    // Prepare data for submission, aligning with the Product type as much as possible
-    // The service methods will handle adding/managing id, sellerId, createdAt, updatedAt
-    const dataForApi: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'sellerId' | 'sellerName' | 'rating' | 'reviewCount' | 'images' | 'primaryImage'> & { id?: string; currency?: string } = {
+    // Prepare data for submission, aligning with the CreateProductDto
+    const dataForApi: ProductApiData = {
       name: currentProductData.name || "",
-      preciseDescription: currentProductData.description, // Assuming description maps to preciseDescription
-      detailedDescription: currentProductData.detailedDescription,
-      category: currentProductData.category,
-      hsnCode: currentProductData.hsnCode,
-      moq: currentProductData.moq,
-      // Ensure we don't pass blob or temporary URLs to the server
+      preciseDescription: currentProductData.description || "",
+      detailedDescription: currentProductData.detailedDescription || "",
+      category: currentProductData.category || "",
+      hsnCode: currentProductData.hsnCode || "",
+      moq: currentProductData.moq || "",
       productImage: currentProductData.productImage?.startsWith('blob:')
-        ? `product-${Date.now()}.jpg` // Generate a unique filename for the image
-        : currentProductData.productImage,
-      testReports: currentProductData.testReports,
+        ? `product-${Date.now()}.jpg`
+        : currentProductData.productImage || "",
+      testReports: currentProductData.testReports || "",
       price: Number(currentProductData.price) || 0,
-      currency: currentProductData.currency || "USD",
-      sku: currentProductData.sku,
+      sku: currentProductData.sku || "",
       onSale: currentProductData.onSale || false,
       discount: Number(currentProductData.discount) || 0,
       salePrice: Number(currentProductData.salePrice) || 0,
@@ -1712,40 +1729,43 @@ export const AddProduct: React.FC = () => {
       profit: Number(currentProductData.profit) || 0,
       margin: Number(currentProductData.margin) || 0,
       quantity: Number(currentProductData.quantity) || 0,
-      tags: tagsToSubmit,
-      // sellerId will be added by the service
+      tags: tagsToSubmit || []
     };
 
+    // Only include id if we're in edit mode
     if (isEditMode && currentProductData.id) {
       dataForApi.id = currentProductData.id;
     }
 
+    // Remove any undefined or null values
+    const cleanData = Object.fromEntries(
+      Object.entries(dataForApi).filter(([_, value]) => value !== undefined && value !== null)
+    );
+
+    console.log('Submitting product data:', cleanData);
+
     try {
       let result;
       if (isEditMode && dataForApi.id) {
-        // The updateProduct service method expects the full product data, potentially.
-        // However, we only send what's editable by the form.
-        // The backend should handle merging this with existing data.
-        result = await productService.updateProduct(dataForApi.id, dataForApi);
+        result = await productService.updateProduct(dataForApi.id, cleanData);
       } else {
-        // createProduct expects data without an ID.
-        const { id, ...newData } = dataForApi;
+        const { id, ...newData } = cleanData;
         result = await productService.createProduct(newData);
       }
 
       if (result.success) {
         resetForm();
-        // Navigate or show success message
         return true;
       } else {
         setError(result.message || 'Failed to submit product.');
         return false;
       }
     } catch (err: any) {
+      console.error('Error submitting product:', err);
       setError(err.message || 'An unexpected error occurred during submission.');
       return false;
     }
-  }, [resetForm, isEditMode, initialProductData]); // Added initialProductData to deps
+  }, [resetForm, isEditMode]);
 
   if (isLoading) {
     return <ProductLayout productype="loading" Body={<div>Loading form...</div>} />;

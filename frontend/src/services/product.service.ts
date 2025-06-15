@@ -25,15 +25,20 @@ class ProductService {
         return { success: false, message: 'User ID not found, please log in again' };
       }
 
-      // Add the seller ID to the product data
-      const dataWithSellerId = {
-        ...productData,
-        sellerId: user.id
-      };
-
-      console.log('Creating new product with seller ID:', user.id, dataWithSellerId);
+      // Remove any fields not in CreateProductDto
+      const allowedFields = [
+        'name', 'moq', 'preciseDescription', 'detailedDescription', 'category',
+        'hsnCode', 'productImage', 'testReports', 'price', 'sku', 'onSale',
+        'discount', 'salePrice', 'costOfGoods', 'profit', 'margin', 'quantity', 'tags'
+      ];
       
-      const response = await axios.post(API_URL, dataWithSellerId, {
+      const cleanData = Object.fromEntries(
+        Object.entries(productData).filter(([key]) => allowedFields.includes(key))
+      );
+
+      console.log('Creating new product:', cleanData);
+      
+      const response = await axios.post(API_URL, cleanData, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -42,7 +47,7 @@ class ProductService {
       console.log('Product created successfully:', response.data);
       return { 
         success: true, 
-        message: `Successfully added ${productData.name}`,
+        message: `Successfully added ${cleanData.name}`,
         product: response.data 
       };
     } catch (error) {
