@@ -82,44 +82,8 @@ const TradeQueries1: React.FC<StepProps> = ({ className, onNext, formData, setFo
             }
         });
     };    const validateAndProceed = async () => {
-        try {
-            // Clear previous errors
-            if (onErrorUpdate) {
-                onErrorUpdate([]);
-            }
-
-            // Update form data first
-            setFormData({
-                ...formData,
-                step1: step1Data
-            });
-
-            console.log('Validating Step 1 with data:', {
-                companyRevenueRange: parseFloat(step1Data.companyRevenueRange) || 0,
-                currency: step1Data.currency,
-                revenueUnit: step1Data.revenueUnit,
-                tradeDurationYears: parseFloat(step1Data.tradeDurationYears) || 0,
-                productUsage: step1Data.productUsage
-            });
-
-            // Call backend validation
-            const isValid = await purchaseRequestValidationService.validateStep(1, {
-                companyRevenueRange: parseFloat(step1Data.companyRevenueRange) || 0,
-                currency: step1Data.currency,
-                revenueUnit: step1Data.revenueUnit,
-                tradeDurationYears: parseFloat(step1Data.tradeDurationYears) || 0,
-                productUsage: step1Data.productUsage
-            });
-
-            if (isValid) {
-                onNext();
-            }
-        } catch (error: any) {
-            console.error('Step 1 validation failed:', error);
-            if (onErrorUpdate) {
-                onErrorUpdate([error.message || 'Validation failed']);
-            }
-        }
+        // Remove validation - just proceed to next step
+        onNext();
     };
 
     const isFormValid = () => {
@@ -243,34 +207,8 @@ const TradeQueries2: React.FC<StepProps> = ({ className, onNext, onPrev, formDat
     };
 
     const validateAndProceed = async () => {
-        try {
-            // Clear previous errors
-            if (onErrorUpdate) {
-                onErrorUpdate([]);
-            }
-
-            // Update form data
-            setFormData({
-                ...formData,
-                step2: step2Data
-            });
-
-            // Call backend validation
-            const isValid = await purchaseRequestValidationService.validateStep(2, {
-                industry: step2Data.industry,
-                marketExperienceYears: parseFloat(step2Data.marketExperienceYears) || 0,
-                marketCapturePercentage: parseFloat(step2Data.marketCapturePercentage) || 0
-            });
-
-            if (isValid) {
-                onNext();
-            }
-        } catch (error: any) {
-            console.error('Step 2 validation failed:', error);
-            if (onErrorUpdate) {
-                onErrorUpdate([error.message || 'Validation failed']);
-            }
-        }
+        // Remove validation - just proceed to next step
+        onNext();
     };
 
     const isFormValid = () => {
@@ -337,13 +275,8 @@ const TradeQueries2: React.FC<StepProps> = ({ className, onNext, onPrev, formDat
                     Prev
                 </button>
                 <button
-                    className={`px-8 py-2 rounded shadow ${
-                        isFormValid() 
-                            ? 'bg-gradient-to-b from-black to-gray-700 text-white cursor-pointer' 
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
+                    className="px-8 py-2 rounded shadow bg-gradient-to-b from-black to-gray-700 text-white cursor-pointer"
                     onClick={validateAndProceed}
-                    disabled={!isFormValid()}
                 >
                     Next
                 </button>
@@ -372,40 +305,8 @@ const Pricing: React.FC<StepProps> = ({ className, onNext, onPrev, formData, set
     };
 
     const validateAndProceed = async () => {
-        try {
-            // Clear previous errors
-            if (onErrorUpdate) {
-                onErrorUpdate([]);
-            }
-
-            // Update form data
-            setFormData({
-                ...formData,
-                step3: step3Data
-            });
-
-            // Call backend validation
-            const isValid = await purchaseRequestValidationService.validateStep(3, {
-                price: parseFloat(step3Data.price) || 0,
-                onSale: step3Data.onSale,
-                priceCurrency: step3Data.priceCurrency,
-                sku: step3Data.sku,
-                discount: step3Data.discount ? parseFloat(step3Data.discount) : undefined,
-                salePrice: step3Data.salePrice ? parseFloat(step3Data.salePrice) : undefined,
-                costOfGoods: step3Data.costOfGoods ? parseFloat(step3Data.costOfGoods) : undefined,
-                profit: step3Data.profit ? parseFloat(step3Data.profit) : undefined,
-                margin: step3Data.margin ? parseFloat(step3Data.margin) : undefined
-            });
-
-            if (isValid) {
-                onNext();
-            }
-        } catch (error: any) {
-            console.error('Step 3 validation failed:', error);
-            if (onErrorUpdate) {
-                onErrorUpdate([error.message || 'Validation failed']);
-            }
-        }
+        // Remove validation - just proceed to next step
+        onNext();
     };
 
     const isFormValid = () => {
@@ -557,7 +458,6 @@ const Pricing: React.FC<StepProps> = ({ className, onNext, onPrev, formData, set
                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
                     onClick={validateAndProceed}
-                    disabled={!isFormValid()}
                 >
                     Next
                 </button>
@@ -589,49 +489,7 @@ const Payment: React.FC<StepProps> = ({ className, onPrev, formData, setFormData
             }
         });
     };    const handleSendPurchaseRequest = async () => {
-        // First validate step 4
-        try {
-            await purchaseRequestValidationService.validateStep(4, {
-                paymentMode: step4Data.paymentMode,
-                advancePercentage: step4Data.advancePercentage ? parseFloat(step4Data.advancePercentage) : undefined,
-                creditTimelineDays: step4Data.creditTimelineDays ? parseFloat(step4Data.creditTimelineDays) : undefined,
-                paymentTimelineDays: step4Data.paymentTimelineDays ? parseFloat(step4Data.paymentTimelineDays) : undefined
-            });
-        } catch (error: any) {
-            alert('Please fill all required payment details: ' + error.message);
-            return;
-        }
-
-        // Validate complete form
-        try {
-            await purchaseRequestValidationService.validateComplete({
-                companyRevenueRange: parseFloat(formData.step1.companyRevenueRange),
-                currency: formData.step1.currency,
-                revenueUnit: formData.step1.revenueUnit,
-                tradeDurationYears: parseFloat(formData.step1.tradeDurationYears),
-                productUsage: formData.step1.productUsage,
-                industry: formData.step2.industry,
-                marketExperienceYears: parseFloat(formData.step2.marketExperienceYears),
-                marketCapturePercentage: parseFloat(formData.step2.marketCapturePercentage),
-                price: parseFloat(formData.step3.price),
-                onSale: formData.step3.onSale,
-                priceCurrency: formData.step3.priceCurrency,
-                sku: formData.step3.sku,
-                discount: formData.step3.discount ? parseFloat(formData.step3.discount) : undefined,
-                salePrice: formData.step3.salePrice ? parseFloat(formData.step3.salePrice) : undefined,
-                costOfGoods: formData.step3.costOfGoods ? parseFloat(formData.step3.costOfGoods) : undefined,
-                profit: formData.step3.profit ? parseFloat(formData.step3.profit) : undefined,
-                margin: formData.step3.margin ? parseFloat(formData.step3.margin) : undefined,
-                paymentMode: step4Data.paymentMode,
-                advancePercentage: step4Data.advancePercentage ? parseFloat(step4Data.advancePercentage) : undefined,
-                creditTimelineDays: step4Data.creditTimelineDays ? parseFloat(step4Data.creditTimelineDays) : undefined,
-                paymentTimelineDays: step4Data.paymentTimelineDays ? parseFloat(step4Data.paymentTimelineDays) : undefined
-            });
-        } catch (error: any) {
-            alert(`Form validation failed: ${error.message}`);
-            return;
-        }
-        
+        // Remove validation - just proceed with the request
         setIsProcessing(true);
         
         try {
@@ -832,11 +690,11 @@ const Payment: React.FC<StepProps> = ({ className, onPrev, formData, setFormData
                 </button>
                 <button
                     className={`px-6 py-2 rounded shadow font-semibold ${
-                        isFormValid() && !isProcessing
+                        !isProcessing
                             ? 'bg-gradient-to-b from-black to-gray-700 text-white cursor-pointer'
                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
-                    disabled={!isFormValid() || isProcessing}
+                    disabled={isProcessing}
                     onClick={handleSendPurchaseRequest}
                 >
                     {isProcessing ? (
