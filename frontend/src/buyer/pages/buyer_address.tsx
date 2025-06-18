@@ -54,8 +54,8 @@ const BuyerAddress: React.FC = () => {
             console.log('Loading user details for user:', user.id);
 
             // Use the correct endpoint that fetches from user_details table
-            // const response = await fetch(`https://breyus.com/backend/users/me/details`, {
             const response = await fetch(`https://breyus.com/backend/users/me/details`, {
+                // const response = await fetch(`https://breyus.com/backend/users/me/details`, {
                 headers: {
                     'Authorization': `Bearer ${authService.getToken()}`,
                     'Content-Type': 'application/json'
