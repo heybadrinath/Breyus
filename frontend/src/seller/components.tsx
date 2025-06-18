@@ -36,7 +36,11 @@ const Header = () => {
                 <div className="sa"></div>
                 <div id="right-header">
                     <img src={notifications} alt="Notifications" />
-                    <button className="breyus-core-animated-border">Try Breyus Core</button>
+                    {/* <button className="breyus-core-animated-border">Try Breyus Core</button> */}
+                    <button className="bg-gradient-to-tr from-[#bca86b] to-[#3d3729] text-white font-semibold px-6 py-2 rounded-full shadow-inner hover:scale-105 transition-transform"
+                        onClick={() => window.location.href = '/buyer/ai'}>
+                        Try Breyus Core
+                    </button>
 
                 </div>
             </header>
@@ -170,7 +174,7 @@ const Layout = ({ Body }: { Body: ReactNode }) => {
         <div className="layout">
             <Leftnavdash username={firstName} />
             <div id="right-section">
-                <Header/>
+                <Header />
                 {Body}
             </div>
         </div>
