@@ -1472,6 +1472,7 @@ const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData =
         const success = await onSubmit(productData, tags);
         if (success) {
           setSuccessMessage("Successfully added the product");
+          window.location.href = '/seller/add-product-terms'; // Redirect to products page
         }
       }
     } catch (err) {

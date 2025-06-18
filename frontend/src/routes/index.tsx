@@ -30,6 +30,7 @@ import SellerForgotPassword from "../seller/forgot-password";
 import { Layout } from "../seller/components";
 import Inbox from "../seller/inbox"; 
 import {Trade,Feedback} from "../seller/trade";
+import SellerAddProductTerms from "../seller/add-products-trade-terms";
 
 import BuyerInbox from "../buyer/pages/Inbox";
 import Homepage from "../buyer/pages/Homepage";
@@ -135,6 +136,9 @@ const AppRoutes = () => {
             <Route path="/seller/trade" element={<SellerProtectedRoute><Animate page={<Layout Body={<Trade/>}/>} /></SellerProtectedRoute>} />
             <Route path="/seller/Product-Feedback" element={<SellerProtectedRoute><Animate page={<Layout Body={<Feedback/>}/>} /></SellerProtectedRoute>} />
             <Route path="/seller/incoterms" element={<SellerProtectedRoute><Animate page={<Layout Body={<Incoterms/>}/>} /></SellerProtectedRoute>} />
+            <Route path="/seller/add-product-terms" element={<SellerProtectedRoute><Animate page={<Layout Body={<SellerAddProductTerms />}/>} /></SellerProtectedRoute>} />
+            
+            {/* Seller settings with default layout */}
           
             {/* Seller settings with different layout */}
             <Route path="/seller/settings" element={<SellerProtectedRoute><Animate page={<SellerSettings />} /></SellerProtectedRoute>}/>
