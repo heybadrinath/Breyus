@@ -2,27 +2,6 @@ import React, { useState, useEffect } from "react";
 import CheckoutStepper from "../components/cart/CheckoutStepper";
 import authService from "../../services/auth.service";
 
-interface UserDetails {
-    id: string;
-    userId: string;
-    contactNumber: string;
-    alternateNumber1: string;
-    alternateNumber2: string;
-    alternateEmail: string;
-    address: string;
-    city: string;
-    state: string;
-    country: string;
-    companyName: string;
-    companyWebsite: string;
-    gstin: string;
-    companyAddress: string;
-    socials: string;
-    accountType: string;
-    bankName: string;
-    accountNumber: string;
-    ifscCode: string;
-}
 
 interface Address {
     id: string;
@@ -35,16 +14,15 @@ interface Address {
 }
 
 const BuyerAddress: React.FC = () => {
-    const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
     const [addresses, setAddresses] = useState<Address[]>([]);
     const [selectedAddressId, setSelectedAddressId] = useState<string>("");
     const [checkoutData, setCheckoutData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingAddress, setEditingAddress] = useState<Address | null>(null);
-    const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null);
+    const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
     const [saving, setSaving] = useState(false);
-    
+
     // Form state for new/edit address
     const [formData, setFormData] = useState({
         address: "",
@@ -76,7 +54,8 @@ const BuyerAddress: React.FC = () => {
             console.log('Loading user details for user:', user.id);
 
             // Use the correct endpoint that fetches from user_details table
-            const response = await fetch(`https://breyus.com/backend/users/me/details`, {
+            // const response = await fetch(`https://breyus.com/backend/users/me/details`, {
+            const response = await fetch(`http://breyus.com/backend/users/me/details`, {
                 headers: {
                     'Authorization': `Bearer ${authService.getToken()}`,
                     'Content-Type': 'application/json'
@@ -86,16 +65,16 @@ const BuyerAddress: React.FC = () => {
             if (response.ok) {
                 const userData = await response.json();
                 console.log('Loaded user data with details:', userData);
-                
+
                 // Extract the details object from the response
                 // Backend returns: { ...user, details: userDetails }
                 const details = userData.details || {};
                 console.log('Extracted user details:', details);
-                setUserDetails(details);
-                
+                // setUserDetails(details);
+
                 // Create address list from user details
                 const addressList: Address[] = [];
-                
+
                 // Check if user has any address information
                 if (details.address || details.city || details.state || details.country || details.contactNumber) {
                     const userAddress: Address = {
@@ -113,9 +92,9 @@ const BuyerAddress: React.FC = () => {
                 } else {
                     console.log('No address information found in user details');
                 }
-                
+
                 setAddresses(addressList);
-                
+
                 // If no address exists, show the add form
                 if (addressList.length === 0) {
                     console.log('No address found, showing add form');
@@ -179,12 +158,12 @@ const BuyerAddress: React.FC = () => {
             if (response.ok) {
                 const updatedDetails = await response.json();
                 console.log('Address saved successfully:', updatedDetails);
-                
+
                 showNotification('success', 'Address saved successfully!');
                 setShowAddForm(false);
                 setEditingAddress(null);
                 setFormData({ address: "", city: "", state: "", country: "", contactNumber: "" });
-                
+
                 // Reload user details to refresh the address list
                 await loadUserDetails();
             } else {
@@ -276,21 +255,21 @@ const BuyerAddress: React.FC = () => {
             )}
 
             <CheckoutStepper currentStep={1} />
-            
+
             {/* Main Content */}
             <div style={{ maxWidth: 1100, margin: "40px auto", display: "flex", gap: 40, padding: "0 20px" }}>
                 {/* Address Section */}
                 <div style={{ flex: 1 }}>
                     <h3 style={{ fontWeight: 700, fontSize: 18, marginBottom: 20 }}>Select Delivery Address</h3>
-                    
+
                     {/* Show selected items summary */}
                     {checkoutData && (
-                        <div style={{ 
-                            background: "#fff", 
-                            border: "1px solid #eee", 
-                            borderRadius: 8, 
-                            padding: 20, 
-                            marginBottom: 20 
+                        <div style={{
+                            background: "#fff",
+                            border: "1px solid #eee",
+                            borderRadius: 8,
+                            padding: 20,
+                            marginBottom: 20
                         }}>
                             <h4 style={{ fontWeight: 600, marginBottom: 15 }}>Order Summary</h4>
                             <div style={{ fontSize: 14, color: "#666" }}>
@@ -299,7 +278,7 @@ const BuyerAddress: React.FC = () => {
                             </div>
                         </div>
                     )}
-                    
+
                     {/* Add Address Button */}
                     {!showAddForm && (
                         <button
@@ -342,7 +321,7 @@ const BuyerAddress: React.FC = () => {
                             <h4 style={{ fontWeight: 600, marginBottom: 20, color: "#333" }}>
                                 {editingAddress ? 'Edit Address' : 'Add New Address'}
                             </h4>
-                            
+
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 15, marginBottom: 15 }}>
                                 <div>
                                     <label style={{ display: "block", marginBottom: 5, fontWeight: 500, fontSize: 14 }}>
@@ -352,7 +331,7 @@ const BuyerAddress: React.FC = () => {
                                         type="text"
                                         placeholder="Enter your contact number"
                                         value={formData.contactNumber}
-                                        onChange={(e) => setFormData({...formData, contactNumber: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
                                         style={{
                                             width: "100%",
                                             padding: "12px",
@@ -374,7 +353,7 @@ const BuyerAddress: React.FC = () => {
                                         type="text"
                                         placeholder="Enter country"
                                         value={formData.country}
-                                        onChange={(e) => setFormData({...formData, country: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                                         style={{
                                             width: "100%",
                                             padding: "12px",
@@ -389,7 +368,7 @@ const BuyerAddress: React.FC = () => {
                                     />
                                 </div>
                             </div>
-                            
+
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 15, marginBottom: 15 }}>
                                 <div>
                                     <label style={{ display: "block", marginBottom: 5, fontWeight: 500, fontSize: 14 }}>
@@ -399,7 +378,7 @@ const BuyerAddress: React.FC = () => {
                                         type="text"
                                         placeholder="Enter state"
                                         value={formData.state}
-                                        onChange={(e) => setFormData({...formData, state: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                                         style={{
                                             width: "100%",
                                             padding: "12px",
@@ -421,7 +400,7 @@ const BuyerAddress: React.FC = () => {
                                         type="text"
                                         placeholder="Enter city"
                                         value={formData.city}
-                                        onChange={(e) => setFormData({...formData, city: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                                         style={{
                                             width: "100%",
                                             padding: "12px",
@@ -436,7 +415,7 @@ const BuyerAddress: React.FC = () => {
                                     />
                                 </div>
                             </div>
-                            
+
                             <div style={{ marginBottom: 20 }}>
                                 <label style={{ display: "block", marginBottom: 5, fontWeight: 500, fontSize: 14 }}>
                                     Full Address *
@@ -444,7 +423,7 @@ const BuyerAddress: React.FC = () => {
                                 <textarea
                                     placeholder="Enter your complete address (House/Flat no, Street, Area, Landmark)"
                                     value={formData.address}
-                                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                                     rows={3}
                                     style={{
                                         width: "100%",
@@ -461,7 +440,7 @@ const BuyerAddress: React.FC = () => {
                                     onBlur={(e) => e.target.style.borderColor = "#ddd"}
                                 />
                             </div>
-                            
+
                             <div style={{ display: "flex", gap: 12 }}>
                                 <button
                                     onClick={handleSaveAddress}
@@ -542,19 +521,19 @@ const BuyerAddress: React.FC = () => {
                                     transition: "all 0.2s",
                                     boxShadow: selectedAddressId === address.id ? "0 4px 12px rgba(0,123,255,0.15)" : "0 2px 4px rgba(0,0,0,0.1)"
                                 }}
-                                onClick={() => setSelectedAddressId(address.id)}
+                                    onClick={() => setSelectedAddressId(address.id)}
                                 >
                                     <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                                         <input
                                             type="radio"
                                             checked={selectedAddressId === address.id}
                                             onChange={() => setSelectedAddressId(address.id)}
-                                            style={{ 
+                                            style={{
                                                 accentColor: "#007bff",
                                                 marginTop: "2px"
                                             }}
                                         />
-                                        
+
                                         <div style={{ flex: 1 }}>
                                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                                                 <span style={{ fontWeight: 600, fontSize: 16, color: "#333" }}>
@@ -571,7 +550,7 @@ const BuyerAddress: React.FC = () => {
                                                     }}>DEFAULT</span>
                                                 )}
                                             </div>
-                                            
+
                                             <div style={{
                                                 color: "#555",
                                                 fontSize: 14,
@@ -580,14 +559,14 @@ const BuyerAddress: React.FC = () => {
                                             }}>
                                                 {formatAddress(address)}
                                             </div>
-                                            
+
                                             {address.contactNumber && (
                                                 <div style={{ fontSize: 13, color: "#666", marginBottom: 12 }}>
                                                     <span style={{ fontWeight: 600 }}>Mobile: </span>
                                                     <span>{address.contactNumber}</span>
                                                 </div>
                                             )}
-                                            
+
                                             <div style={{ display: "flex", gap: 8 }}>
                                                 <button
                                                     onClick={(e) => {

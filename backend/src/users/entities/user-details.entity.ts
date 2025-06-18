@@ -38,6 +38,13 @@ export class UserDetails {
   @Column({ nullable: true })
   country: string;
 
+  //Address information
+  @Column({ nullable: true })
+  contactPhone: string;
+
+  @Column({ nullable: true })
+  fullAddress: string;
+
   // Company Information
   @Column({ nullable: true })
   companyName: string;
