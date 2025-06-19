@@ -67,6 +67,24 @@ export class Product {
   @Column({ name: 'seller_id', nullable: true })
   sellerId: string;
 
+  @Column('text', { nullable: true })
+  preferred_buyer_revenue_range: string;
+
+  @Column('varchar', { length: 255, nullable: true })
+  potential_years_to_trade: string;
+
+  @Column('varchar', { length: 255, nullable: true })
+  industry_using_product: string;
+
+  @Column('varchar', { length: 255, nullable: true })
+  years_in_market: string;
+
+  @Column('varchar', { length: 255, nullable: true })
+  buyer_market_duration: string;
+
+  @Column('decimal', { precision: 5, scale: 2, nullable: true })
+  market_capture: number;
+
   @CreateDateColumn()
   createdAt: Date;
 

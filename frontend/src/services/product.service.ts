@@ -5,7 +5,7 @@ import { Product } from '../types/product';
 // Get API URL from environment or use default
 const API_URL = process.env.REACT_APP_API_URL 
   ? `${process.env.REACT_APP_API_URL}/products`
-  : 'https://breyus.com/backend/products';
+  : 'http://localhost:5000/backend/products';
 
 console.log('Product service using API URL:', API_URL);
 
@@ -29,7 +29,10 @@ class ProductService {
       const allowedFields = [
         'name', 'moq', 'preciseDescription', 'detailedDescription', 'category',
         'hsnCode', 'productImage', 'testReports', 'price', 'sku', 'onSale',
-        'discount', 'salePrice', 'costOfGoods', 'profit', 'margin', 'quantity', 'tags'
+        'discount', 'salePrice', 'costOfGoods', 'profit', 'margin', 'quantity', 'tags',
+        // Trade terms fields
+        'preferred_buyer_revenue_range', 'potential_years_to_trade', 'industry_using_product',
+        'years_in_market', 'buyer_market_duration', 'market_capture'
       ];
       
       const cleanData = Object.fromEntries(

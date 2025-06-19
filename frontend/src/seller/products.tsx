@@ -1467,14 +1467,11 @@ const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData =
     setSuccessMessage(null);
 
     try {
-      // Use the onSubmit callback from parent component
-      if (onSubmit) {
-        const success = await onSubmit(productData, tags);
-        if (success) {
-          setSuccessMessage("Successfully added the product");
-          window.location.href = '/seller/add-product-terms'; // Redirect to products page
-        }
-      }
+      // Save product data and tags to localStorage
+      const mergedData = { ...productData, tags };
+      localStorage.setItem('productFormData', JSON.stringify(mergedData));
+      // Redirect to trade terms page
+      window.location.href = '/seller/add-product-terms';
     } catch (err) {
       console.error("Error during submission:", err);
       setError("An unexpected error occurred");
