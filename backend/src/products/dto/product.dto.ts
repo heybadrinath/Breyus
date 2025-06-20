@@ -81,6 +81,32 @@ export class CreateProductDto {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  // trade terms 
+  @IsOptional()
+  @IsString()
+  preferred_buyer_revenue_range?: string;
+
+  @IsOptional()
+  @IsString()
+  potential_years_to_trade?: string;
+
+  @IsOptional()
+  @IsString()
+  industry_using_product?: string;
+
+  @IsOptional()
+  @IsString()
+  years_in_market?: string;
+
+  @IsOptional()
+  @IsString()
+  buyer_market_duration?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  market_capture?: number;
 }
 
 export class UpdateProductDto {
@@ -164,4 +190,30 @@ export class UpdateProductDto {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
-} 
+
+  // trade terms
+  @IsOptional()
+  @IsString()
+  preferred_buyer_revenue_range?: string;
+
+  @IsOptional()
+  @IsString()
+  potential_years_to_trade?: string;
+
+  @IsOptional()
+  @IsString()
+  industry_using_product?: string;
+
+  @IsOptional()
+  @IsString()
+  years_in_market?: string;
+
+  @IsOptional()
+  @IsString()
+  buyer_market_duration?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  market_capture?: number;
+}

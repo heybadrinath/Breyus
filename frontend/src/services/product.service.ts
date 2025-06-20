@@ -29,7 +29,10 @@ class ProductService {
       const allowedFields = [
         'name', 'moq', 'preciseDescription', 'detailedDescription', 'category',
         'hsnCode', 'productImage', 'testReports', 'price', 'sku', 'onSale',
-        'discount', 'salePrice', 'costOfGoods', 'profit', 'margin', 'quantity', 'tags'
+        'discount', 'salePrice', 'costOfGoods', 'profit', 'margin', 'quantity', 'tags',
+        // Trade terms fields
+        'preferred_buyer_revenue_range', 'potential_years_to_trade', 'industry_using_product',
+        'years_in_market', 'buyer_market_duration', 'market_capture'
       ];
       
       const cleanData = Object.fromEntries(

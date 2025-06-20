@@ -27,4 +27,11 @@ export interface Product {
   rating?: number;
   reviewCount?: number;
   description?: string;
+  // Trade terms fields
+  preferred_buyer_revenue_range?: string;
+  potential_years_to_trade?: string;
+  industry_using_product?: string;
+  years_in_market?: string;
+  buyer_market_duration?: string;
+  market_capture?: number;
 } 

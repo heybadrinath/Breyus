@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Star, Heart, Share2, MessageCircle, ShoppingCart, Package, Shield, Truck } from "lucide-react";
+import { Star, Heart, Share2, MessageCircle, ShoppingCart, Package, Shield, Truck, X } from "lucide-react";
 import productService from "../../services/product.service";
 import cartService from "../../services/cart.service";
 import wishlistService from "../../services/wishlist.service";
@@ -19,6 +19,7 @@ const ProductPage: React.FC = () => {
     type: 'success' | 'error' | 'info';
     message: string;
   } | null>(null);
+  const [showTradeTerms, setShowTradeTerms] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -274,6 +275,8 @@ const ProductPage: React.FC = () => {
                 )}
               </div>
 
+              
+
               {/* Description */}
               {product.preciseDescription && (
                 <div>
@@ -340,7 +343,7 @@ const ProductPage: React.FC = () => {
                   )}
                 </button>
 
-                <button
+                {/* <button
                   onClick={handleBuyNow}
                   disabled={product.quantity === 0 || isAddingToCart || tradeRequestSent}
                   className={`w-full py-3 px-6 rounded-lg text-lg font-semibold border transition-all ${
@@ -351,6 +354,7 @@ const ProductPage: React.FC = () => {
                       : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                   }`}
                 >
+                  
                   {tradeRequestSent ? (
                     <>
                       <Package className="inline w-5 h-5 mr-2" />
@@ -367,7 +371,20 @@ const ProductPage: React.FC = () => {
                       Send Purchase Request
                     </>
                   )}
-                </button>
+                </button> */}
+                <button
+                className="w-full py-3 px-6 border border-gray-300 text-gray-700 rounded-lg font-semibold transition"
+                onClick={() => {}}
+              >
+                View Test Reports
+              </button>
+                {/* View Trade Terms Button */}
+              <button
+                className="w-full py-3 px-6 border border-gray-300 text-gray-700 rounded-lg font-semibold transition"
+                onClick={() => setShowTradeTerms(true)}
+              >
+                View Trade Terms
+              </button>
 
                 {/* Secondary Actions */}
                 <div className="flex gap-2">
@@ -461,6 +478,48 @@ const ProductPage: React.FC = () => {
         {addedToCart && !notification && (
           <div className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-bounce">
             Added to Cart Successfully!
+          </div>
+        )}
+
+        {/* Trade Terms Modal */}
+        {showTradeTerms && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative animate-fade-in">
+              <button
+                className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
+                onClick={() => setShowTradeTerms(false)}
+                aria-label="Close"
+              >
+                <X size={22} />
+              </button>
+              <h2 className="text-xl font-bold mb-4 text-center">Trade Terms</h2>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <span className="font-semibold">Preferred Buyer Revenue Range:</span><br />
+                  <span>{product.preferred_buyer_revenue_range || "-"}</span>
+                </div>
+                <div>
+                  <span className="font-semibold">Potential Years to Trade:</span><br />
+                  <span>{product.potential_years_to_trade || "-"}</span>
+                </div>
+                <div>
+                  <span className="font-semibold">Industry Using Product:</span><br />
+                  <span>{product.industry_using_product || "-"}</span>
+                </div>
+                <div>
+                  <span className="font-semibold">Years in Market:</span><br />
+                  <span>{product.years_in_market || "-"}</span>
+                </div>
+                <div>
+                  <span className="font-semibold">Buyer Market Duration:</span><br />
+                  <span>{product.buyer_market_duration || "-"}</span>
+                </div>
+                <div>
+                  <span className="font-semibold">Market Capture:</span><br />
+                  <span>{product.market_capture !== undefined && product.market_capture !== null ? product.market_capture + "%" : "-"}</span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
