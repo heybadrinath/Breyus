@@ -12,19 +12,25 @@ import {
   HttpStatus, 
   Logger,
   ParseUUIDPipe,
-  ValidationPipe
+  ValidationPipe,
+  Res
 } from '@nestjs/common';
+import { Response } from 'express';
 import { TradesService } from './trades.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateTradeRequestDto, UpdateTradeStatusDto, CounterOfferDto, TradeFilterDto, TradeResponseDto } from './dto/trade.dto';
 import { PurchaseRequestDto, ValidatePurchaseRequestStepDto } from './dto/purchase-request.dto';
 import { TradeStatus, TradeType } from './entities/trade.entity';
+import { PdfService } from '../pdf/pdf.service';
 
 @Controller('trades')
 export class TradesController {
   private readonly logger = new Logger(TradesController.name);
 
-  constructor(private readonly tradesService: TradesService) {}
+  constructor(
+    private readonly tradesService: TradesService,
+    private readonly pdfService: PdfService
+  ) {}
 
   // Debug endpoint - no auth required
   @Get('health')
@@ -434,6 +440,124 @@ export class TradesController {
       throw new HttpException(
         error.message || 'Failed to validate purchase request step',
         error.status || HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  // GET /trades/:id/pdf - Generate and serve purchase request PDF
+  @Get(':id/pdf')
+  @UseGuards(JwtAuthGuard)
+  async getPurchaseRequestPdf(
+    @Param('id', ParseUUIDPipe) tradeId: string,
+    @Request() req,
+    @Res() res: Response
+  ): Promise<void> {
+    try {
+      const userId = req.user.id;
+      this.logger.log(`GET /trades/${tradeId}/pdf - User: ${userId}`);
+      
+      // Get trade details with relations
+      const trade = await this.tradesService.getTradeDetails(tradeId, userId);
+      
+      // Generate PDF data from trade
+      const pdfData = await this.tradesService.generatePdfDataFromTrade(trade);
+      
+      // Generate PDF
+      const pdfBuffer = await this.pdfService.generatePurchaseRequestPdf(pdfData);
+      
+      // Set response headers
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="purchase-request-${tradeId.substring(0, 8)}.pdf"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      // Send PDF
+      res.send(pdfBuffer);
+    } catch (error) {
+      this.logger.error(`Error generating PDF for trade ${tradeId}: ${error.message}`, error.stack);
+      throw new HttpException(
+        error.message || 'Failed to generate PDF',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+  // GET /trades/pdf/:tradeId - Serve PDF files directly (public access for browser viewing)
+  @Get('pdf/:tradeId')
+  async servePdfFile(
+    @Param('tradeId', ParseUUIDPipe) tradeId: string,
+    @Res() res: Response
+  ): Promise<void> {
+    try {
+      this.logger.log(`GET /trades/pdf/${tradeId} - Serving PDF file`);
+        // Get trade details (without user authentication for PDF viewing)
+      const trade = await this.tradesService.getTradeForPdf(tradeId);
+      if (!trade) {
+        throw new HttpException('Trade not found', HttpStatus.NOT_FOUND);
+      }
+        // Convert Trade entity to TradeResponseDto format for PDF generation
+      const tradeDto: TradeResponseDto = {
+        id: trade.id,
+        buyer_id: trade.buyer_id,
+        seller_id: trade.seller_id,
+        product_id: trade.product_id,
+        status: trade.status,
+        trade_type: trade.trade_type,
+        offered_price: trade.offered_price,
+        counter_offer_price: trade.counter_offer_price || undefined,
+        quantity: trade.quantity,
+        buyer_message: trade.buyer_message || undefined,
+        seller_message: trade.seller_message || undefined,
+        rejection_reason: trade.rejection_reason || undefined,
+        trade_terms: trade.trade_terms || undefined,
+        shipping_details: trade.shipping_details || undefined,        expires_at: trade.expires_at || undefined,
+        accepted_at: trade.accepted_at || undefined,
+        completed_at: trade.completed_at || undefined,
+        final_price: trade.final_price || undefined,
+        is_urgent: trade.is_urgent,
+        counter_offer_count: trade.counter_offer_count,
+        created_at: trade.created_at,
+        updated_at: trade.updated_at,
+        buyer: trade.buyer ? {
+          id: trade.buyer.id,
+          email: trade.buyer.email,
+          firstName: trade.buyer.firstName,
+          lastName: trade.buyer.lastName
+        } : undefined,
+        seller: trade.seller ? {
+          id: trade.seller.id,
+          email: trade.seller.email,
+          firstName: trade.seller.firstName,
+          lastName: trade.seller.lastName
+        } : undefined,
+        product: trade.product ? {
+          id: trade.product.id,
+          name: trade.product.name,
+          price: trade.product.price,
+          quantity: trade.product.quantity,
+          productImage: trade.product.productImage
+        } : undefined,
+        purchase_request_data: trade.purchase_request_data || undefined
+      };
+      
+      // Generate PDF data from trade
+      const pdfData = await this.tradesService.generatePdfDataFromTrade(tradeDto);
+      
+      // Generate PDF
+      const pdfBuffer = await this.pdfService.generatePurchaseRequestPdf(pdfData);
+      
+      // Set response headers
+      const filename = `purchase-request-${tradeId.substring(0, 8)}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+      
+      // Send PDF
+      res.send(pdfBuffer);
+    } catch (error) {
+      this.logger.error(`Error serving PDF file for trade ${tradeId}: ${error.message}`, error.stack);
+      throw new HttpException(
+        error.message || 'Failed to serve PDF',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
   }

@@ -2,7 +2,7 @@ import axios, { AxiosResponse } from 'axios';
 import { io, Socket } from 'socket.io-client';
 import messageService from './message.service';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://breyus.com/backend';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/backend';
 
 export interface TradeRequest {
   id: string;

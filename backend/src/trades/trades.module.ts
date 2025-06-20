@@ -9,6 +9,7 @@ import { TradesGateway } from './trades.gateway';
 import { Trade } from './entities/trade.entity';
 import { Product } from '../products/entities/product.entity';
 import { User } from '../users/entities/user.entity';
+import { PdfModule } from '../pdf/pdf.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { User } from '../users/entities/user.entity';
       inject: [ConfigService],
     }),
     ScheduleModule.forRoot(), // Required for @Cron decorators
+    PdfModule
   ],
   controllers: [TradesController],
   providers: [

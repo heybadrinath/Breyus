@@ -3,7 +3,7 @@ import authService from './auth.service';
 import tradeService from './trade.service';
 import { Product } from '../types/product';
 
-const API_URL = `${process.env.REACT_APP_API_URL || 'https://breyus.com/backend'}/cart`;
+const API_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:5000/backend'}/cart`;
 
 export interface CartItem {
   id: string;
@@ -105,7 +105,11 @@ class CartService {
   }
 
   // Create trade request for a single item
-  async createTradeRequestForItem(cartItem: CartItem, message?: string): Promise<TradeRequestResult> {
+  async createTradeRequestForItem(
+    cartItem: CartItem, 
+    message?: string, 
+    purchaseRequestData?: any
+  ): Promise<TradeRequestResult> {
     try {
       const user = authService.getUser();
       if (!user) {
@@ -129,7 +133,8 @@ class CartService {
         quantity: cartItem.quantity,
         buyer_message: message || `Purchase request for ${cartItem.productName}`,
         trade_type: 'purchase_request',
-        is_urgent: false
+        is_urgent: false,
+        purchase_request_data: purchaseRequestData
       };
 
       console.log('Creating trade request:', tradeRequest);
@@ -152,7 +157,11 @@ class CartService {
   }
 
   // Convert cart items to trade requests (for checkout)
-  async convertCartToTradeRequests(selectedItemIds?: string[], message?: string): Promise<{
+  async convertCartToTradeRequests(
+    selectedItemIds?: string[], 
+    message?: string,
+    purchaseRequestData?: any
+  ): Promise<{
     successful: TradeRequestResult[];
     failed: TradeRequestResult[];
     summary: string;
@@ -168,7 +177,7 @@ class CartService {
     console.log(`Converting ${itemsToProcess.length} cart items to trade requests`);
 
     for (const item of itemsToProcess) {
-      const result = await this.createTradeRequestForItem(item, message);
+      const result = await this.createTradeRequestForItem(item, message, purchaseRequestData);
       
       if (result.success) {
         successful.push(result);

@@ -502,9 +502,18 @@ const Payment: React.FC<StepProps> = ({ className, onPrev, formData, setFormData
             const selectedItemIds = checkoutData.selectedItems.map((item: any) => item.id);
             const paymentTerms = getPaymentTermsMessage(step4Data.paymentMode);
             
+            // Include all form data in the purchase request
+            const purchaseRequestFormData = {
+                step1: formData.step1,
+                step2: formData.step2,
+                step3: formData.step3,
+                step4: formData.step4
+            };
+            
             const result = await cartService.convertCartToTradeRequests(
                 selectedItemIds,
-                `I would like to purchase these items. Please review and confirm availability and pricing.\n\nPayment Terms: ${paymentTerms}`
+                `I would like to purchase these items. Please review and confirm availability and pricing.\n\nPayment Terms: ${paymentTerms}`,
+                purchaseRequestFormData
             );
 
             // Show results to user

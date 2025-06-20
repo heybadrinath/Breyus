@@ -9,7 +9,7 @@ import { Product } from "../types/product";
 import ProgressBar from "../buyer/components/cart/PurchaseRequestProgress";
 
 // Get API URL from environment or use default
-const API_URL = process.env.REACT_APP_API_URL || 'https://breyus.com/backend';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/backend';
 
 // Helper function to get proper image URL from different sources
 const getImageUrl = (imagePath: string | undefined | null): string => {
@@ -1367,7 +1367,7 @@ const Tags: React.FC<TagsProps> = ({ setPageNo, updateProductData, productData =
 
     try {
       // Using the endpoint from your instructions
-      const response = await fetch("https://breyus.com/suggest-tags", {
+      const response = await fetch("http://localhost:5000/suggest-tags", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

@@ -78,6 +78,9 @@ export class Trade {
   @Column({ type: 'json', nullable: true })
   shipping_details: Record<string, any> | null;
 
+  @Column({ type: 'json', nullable: true })
+  purchase_request_data: Record<string, any> | null;
+
   @Column({ type: 'datetime', nullable: true })
   expires_at: Date | null;
 

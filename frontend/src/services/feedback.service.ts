@@ -3,7 +3,7 @@ import authService from './auth.service';
 
 const API_URL = process.env.REACT_APP_API_URL 
   ? `${process.env.REACT_APP_API_URL}/feedback` 
-  : 'https://breyus.com/backend/feedback';
+  : 'http://localhost:5000/backend/feedback';
 
 console.log('Feedback service using API URL:', API_URL);
 

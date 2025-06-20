@@ -426,7 +426,7 @@ const PurchaseRequestStatus: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedTrade, setSelectedTrade] = useState<TradeRequest | null>(null);
   const [filters, setFilters] = useState<TradeFilters>({ 
-    status: 'pending',
+    status: 'pending', // Only show pending requests in this tab
     page: 1, 
     limit: 10 
   });
@@ -592,11 +592,10 @@ const PurchaseRequestStatus: React.FC = () => {
   };
 
   return (
-    <div className='flex justify-between flex-col w-[98%] mx-auto my-16 shadow-lg border-[1px] border-gray-300 rounded-lg p-6 bg-white'>
-      <div className='flex w-full justify-between'>
+    <div className='flex justify-between flex-col w-[98%] mx-auto my-16 shadow-lg border-[1px] border-gray-300 rounded-lg p-6 bg-white'>      <div className='flex w-full justify-between'>
         <HeadingDescription 
           heading='Purchase Request Status' 
-          description='Manage incoming trade requests from buyers' 
+          description='Manage incoming pending trade requests from buyers' 
         />
         <div className='flex gap-2 mt-auto mr-2 my-auto'>
           {bulkSelected.size > 0 && (
@@ -608,6 +607,7 @@ const PurchaseRequestStatus: React.FC = () => {
         </div>
       </div>
 
+
       <EntriesPerPage
         options={[5, 10, 20, 50]}
         selected={filters.limit || 10}
@@ -615,7 +615,7 @@ const PurchaseRequestStatus: React.FC = () => {
       />
 
       <Table
-        headers={['Select', 'ID', 'Buyer', 'Product', 'Offered Price', 'Quantity', 'Status', 'Created', 'Actions']}
+        headers={['Select', 'ID', 'Buyer', 'Product', 'View Request', 'Quantity', 'Status', 'Created', 'Actions']}
         loading={loading}
         rows={trades.map((trade) => (
           <TableRow 
@@ -636,10 +636,20 @@ const PurchaseRequestStatus: React.FC = () => {
                 <div className="font-medium">{trade.product?.name}</div>
                 <div className="text-sm text-gray-500">Stock: {trade.product?.quantity}</div>
               </div>,
-              <div className="text-right">
-                <div className="font-bold">{tradeService.formatPrice(trade.offered_price)}</div>
+              <div className="text-center">
+                <a
+                  href={`${process.env.REACT_APP_API_URL || 'http://localhost:5000/backend'}/trades/pdf/${trade.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline text-sm font-medium"
+                >
+                  View PDF
+                </a>
+                <div className="text-xs text-gray-500 mt-1">
+                  ₹{tradeService.formatPrice(trade.offered_price)}
+                </div>
                 {trade.counter_offer_price && (
-                  <div className="text-sm text-blue-600">Counter: {tradeService.formatPrice(trade.counter_offer_price)}</div>
+                  <div className="text-xs text-blue-600">Counter: {tradeService.formatPrice(trade.counter_offer_price)}</div>
                 )}
               </div>,
               trade.quantity,
@@ -710,35 +720,317 @@ const PurchaseRequestStatus: React.FC = () => {
 }
 
 const PurchaseOrder: React.FC = () => {
-  return (
-    <div className='flex justify-between flex-col w-[98%] mx-auto my-16 shadow-lg border-[1px] border-gray-300 rounded-lg p-6 bg-white'>
+  const [orders, setOrders] = useState<TradeRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState<TradeRequest | null>(null);
+  const [filters, setFilters] = useState<TradeFilters>({ 
+    page: 1, 
+    limit: 10 
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [notification, setNotification] = useState<TradeNotification | null>(null);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
+  // Load processed orders (non-pending trades)
+  const loadOrders = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Get all trades and filter out pending ones on the frontend
+      const response = await tradeService.getIncomingTrades(filters);
+      console.log('🔍 All trades received:', response);
+      
+      // Filter out pending trades to show only processed orders
+      const processedOrders = response.trades.filter(trade => trade.status !== 'pending');
+      console.log('🔍 Processed orders:', processedOrders);
+      
+      setOrders(processedOrders);
+      setTotalPages(response.totalPages);
+    } catch (error) {
+      console.error('Failed to load purchase orders:', error);
+      setNotification({
+        type: 'error',
+        message: 'Failed to load purchase orders',
+        timestamp: new Date().toISOString()
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
+  const toggleOrderSelection = (orderId: string) => {
+    const newSelected = new Set(selectedOrderIds);
+    if (newSelected.has(orderId)) {
+      newSelected.delete(orderId);
+    } else {
+      newSelected.add(orderId);
+    }
+    setSelectedOrderIds(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedOrderIds.size === orders.length) {
+      // If all are selected, deselect all
+      setSelectedOrderIds(new Set());
+    } else {
+      // Select all visible orders
+      setSelectedOrderIds(new Set(orders.map(order => order.id)));
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedOrderIds.size === 0) return;
+    
+    if (!window.confirm(`Are you sure you want to delete ${selectedOrderIds.size} selected order(s)? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      // Here you would call a delete API endpoint
+      // await tradeService.deleteOrders(Array.from(selectedOrderIds));
+      
+      // For now, just remove from local state
+      setOrders(prev => prev.filter(order => !selectedOrderIds.has(order.id)));
+      setSelectedOrderIds(new Set());
+      
+      setNotification({
+        type: 'success',
+        message: `Successfully deleted ${selectedOrderIds.size} order(s)`,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Failed to delete orders:', error);
+      setNotification({
+        type: 'error',
+        message: 'Failed to delete selected orders',
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
+
+  return (    <div className='flex justify-between flex-col w-[98%] mx-auto my-16 shadow-lg border-[1px] border-gray-300 rounded-lg p-6 bg-white'>
       <div className='flex w-full justify-between'>
-        <HeadingDescription heading='Purchase Orders' description='Manage your confirmed purchase orders' />
-        <div className='flex gap-2 mt-auto mr-2 my-auto'>
-          <BlueButton text='Filter' />
+        <HeadingDescription heading='Purchase Orders' description='Manage your processed trade requests and confirmed orders' />        <div className='flex gap-2 mt-auto mr-2 my-auto'>
+          {selectedOrderIds.size > 0 && (
+            <button
+              onClick={handleDeleteSelected}
+              className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition-all duration-300"
+            >
+              Delete Selected ({selectedOrderIds.size})
+            </button>
+          )}
           <BlueButton text='Export CSV' />
+          <BlueButton text='Refresh' onClick={loadOrders} />        </div>
+      </div>
+
+      {/* Status Indicator */}
+      <div className='flex items-center gap-2 mb-4 p-3 bg-green-50 border border-green-200 rounded-lg'>
+        <div className="flex items-center">
+          <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+          <span className="text-sm font-medium text-green-700">
+            Showing processed orders (accepted, rejected, counter-offered) - Pending requests are in "Purchase Request Status" tab
+          </span>
         </div>
       </div>
 
       <EntriesPerPage
         options={[5, 10, 20, 50]}
-        selected={10}
-        onChange={(value) => console.log("Selected entries per page:", value)}
+        selected={filters.limit || 10}
+        onChange={(value) => setFilters(prev => ({ ...prev, limit: value, page: 1 }))}
       />
 
-      <div className="flex flex-col items-center justify-center py-16">
-        <Package className="h-16 w-16 text-gray-300 mb-4" />
-        <h3 className="text-xl font-semibold text-gray-500 mb-2">No Purchase Orders Yet</h3>
-        <p className="text-gray-400 text-center max-w-md">
-          Once buyers accept your trade offers and confirm their orders, they will appear here. 
-          You can track order status, shipping details, and manage fulfillment.
-        </p>
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-sm text-blue-700">
-            💡 <strong>Tip:</strong> To get your first orders, make sure your trade offers are competitive and respond quickly to buyer requests!
-          </p>
+      {/* Selection Summary */}
+      {selectedOrderIds.size > 0 && (
+        <div className='flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg mb-4'>
+          <div className="flex items-center gap-2">
+            <span className="text-blue-700 font-medium">
+              {selectedOrderIds.size} order(s) selected
+            </span>
+            <button
+              onClick={() => setSelectedOrderIds(new Set())}
+              className="text-blue-600 hover:text-blue-800 text-sm underline"
+            >
+              Clear selection
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleDeleteSelected}
+              className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition-all duration-300"
+            >
+              Delete Selected
+            </button>
+            <button
+              onClick={() => {
+                // You can add export functionality here
+                console.log('Export selected orders:', Array.from(selectedOrderIds));
+              }}
+              className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition-all duration-300"
+            >
+              Export Selected
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+
+      {orders.length === 0 && !loading ? (
+        <div className="flex flex-col items-center justify-center py-16">
+          <Package className="h-16 w-16 text-gray-300 mb-4" />
+          <h3 className="text-xl font-semibold text-gray-500 mb-2">No Purchase Orders Yet</h3>
+          <p className="text-gray-400 text-center max-w-md">
+            Once you accept, reject, or make counter offers on trade requests, they will appear here. 
+            You can track order status, shipping details, and manage fulfillment.
+          </p>
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm text-blue-700">
+              💡 <strong>Tip:</strong> Process pending requests in the "Purchase Request Status" tab to see them here!
+            </p>
+          </div>
+        </div>
+      ) : (        <>
+          <Table
+            headers={['Select All', 'ID', 'Buyer', 'Product', 'View Request', 'Quantity', 'Status', 'Final Price', 'Date', 'Actions']}
+            loading={loading}
+            rows={[
+              // Add a special row for the select all checkbox
+              <TableRow 
+                key="select-all-row"
+                cells={[
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={orders.length > 0 && selectedOrderIds.size === orders.length}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4"
+                    />
+                    <span className="ml-2 text-xs text-gray-600">
+                      {selectedOrderIds.size > 0 ? `${selectedOrderIds.size} selected` : 'Select all'}
+                    </span>
+                  </div>,
+                  <span className="text-xs text-gray-500">---</span>,
+                  <span className="text-xs text-gray-500">---</span>,
+                  <span className="text-xs text-gray-500">---</span>,
+                  <span className="text-xs text-gray-500">---</span>,
+                  <span className="text-xs text-gray-500">---</span>,
+                  <span className="text-xs text-gray-500">---</span>,
+                  <span className="text-xs text-gray-500">---</span>,
+                  <span className="text-xs text-gray-500">---</span>,
+                  <span className="text-xs text-gray-500">---</span>
+                ]}
+              />,              ...orders.map((order) => (
+                <TableRow 
+                  key={order.id}
+                  cells={[
+                    <input
+                      type="checkbox"
+                      checked={selectedOrderIds.has(order.id)}
+                      onChange={() => toggleOrderSelection(order.id)}
+                      className="w-4 h-4"
+                    />,
+                    <span className="font-mono text-xs">{order.id.substring(0, 8)}...</span>,
+                    <div className="text-left">
+                      <div className="font-medium">{order.buyer?.firstName} {order.buyer?.lastName}</div>
+                      <div className="text-sm text-gray-500">{order.buyer?.email}</div>
+                    </div>,
+                    <div className="text-left">
+                      <div className="font-medium">{order.product?.name}</div>
+                      <div className="text-sm text-gray-500">Stock: {order.product?.quantity}</div>
+                    </div>,
+                    <div className="text-center">
+                      <a
+                        href={`${process.env.REACT_APP_API_URL || 'http://localhost:5000/backend'}/trades/pdf/${order.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline text-sm font-medium"
+                      >
+                        View PDF
+                      </a>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Original: ₹{tradeService.formatPrice(order.offered_price)}
+                      </div>
+                    </div>,
+                    order.quantity,
+                    <TradeStatusBadge status={order.status} urgent={order.is_urgent} />,
+                    <div className="text-center">
+                      <div className="font-medium">
+                        ₹{tradeService.formatPrice(order.final_price || order.counter_offer_price || order.offered_price)}
+                      </div>
+                      {order.counter_offer_price && order.status === 'counter_offered' && (
+                        <div className="text-xs text-blue-600">Counter: ₹{tradeService.formatPrice(order.counter_offer_price)}</div>
+                      )}
+                    </div>,
+                    <div className="text-center text-sm">
+                      <div>{tradeService.formatDate(order.created_at)}</div>
+                      {order.accepted_at && (
+                        <div className="text-xs text-green-600">Accepted: {tradeService.formatDate(order.accepted_at)}</div>
+                      )}
+                      {order.completed_at && (
+                        <div className="text-xs text-purple-600">Completed: {tradeService.formatDate(order.completed_at)}</div>
+                      )}
+                    </div>,
+                    <div className='flex gap-1'>
+                      <button
+                        onClick={() => setSelectedOrder(order)}
+                        className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600"
+                      >
+                        View Details
+                      </button>
+                      {order.status === 'accepted' && (
+                        <button
+                          className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600"
+                          onClick={() => {
+                            // Handle mark as completed or shipping
+                            console.log('Mark as shipped/completed:', order.id);
+                          }}
+                        >
+                          Ship
+                        </button>
+                      )}
+                    </div>
+                  ]} 
+                />
+              ))
+            ]}
+          />
+
+          {/* Pagination */}
+          <div className="flex justify-center items-center gap-2 mt-4">
+            <button
+              onClick={() => setFilters(prev => ({ ...prev, page: Math.max(1, (prev.page || 1) - 1) }))}
+              disabled={currentPage <= 1}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="px-3 py-1">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setFilters(prev => ({ ...prev, page: Math.min(totalPages, (prev.page || 1) + 1) }))}
+              disabled={currentPage >= totalPages}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </>
+      )}      {/* Order Detail Modal */}
+      {selectedOrder && (
+        <TradeDetailModal
+          trade={selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+          onAccept={async () => {}} // Orders are already processed
+          onReject={async () => {}} // Orders are already processed
+          onCounterOffer={async () => {}} // Orders are already processed
+        />
+      )}
+
+      {/* Notification Toast */}
+      <NotificationToast
+        notification={notification}
+        onClose={() => setNotification(null)}
+      />
     </div>
   );
 }
@@ -1411,11 +1703,9 @@ const Trade: React.FC = () => {
       default:
         return null;
     }
-  };
-
-  const tabs = [
+  };  const tabs = [
     { label: 'Purchase Request Status', badge: tradeStats?.pending },
-    { label: 'Purchase Order', badge: tradeStats?.accepted },
+    { label: 'Purchase Order', badge: (tradeStats?.accepted || 0) + (tradeStats?.rejected || 0) },
     { label: 'Ongoing Trades' },
     { label: 'Track Trade' },
     { label: 'Trade History' }

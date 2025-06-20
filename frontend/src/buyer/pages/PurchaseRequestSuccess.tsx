@@ -25,7 +25,7 @@ const PurchaseRequestSuccess: React.FC = () => (
                                 </svg>
                             </span>
                             <span>
-                                An email has been sent to xxxxx234@gmail.com regarding your purchase request. Please check your inbox for further details.
+                                An email has been sent to your registered account regarding your purchase request. Please check your inbox for further details.
                             </span>
                         </div>
                     </div>
@@ -33,7 +33,7 @@ const PurchaseRequestSuccess: React.FC = () => (
                         <button className="border border-black px-6 py-2 rounded shadow" type="button">
                             Ask queries
                         </button>
-                        <button className="border border-black px-6 py-2 rounded shadow" type="button">
+                        <button className="border border-black px-6 py-2 rounded shadow" type="button" onClick={() => window.location.href = "/buyer/trade"}>
                             Check Status
                         </button>
                     </div>

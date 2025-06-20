@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = `${process.env.REACT_APP_API_URL || 'https://breyus.com/backend'}/auth`;
+const API_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:5000/backend'}/auth`;
 
 class AuthService {
   // Store the token in localStorage

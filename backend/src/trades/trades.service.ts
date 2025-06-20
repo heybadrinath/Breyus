@@ -8,6 +8,7 @@ import { PurchaseRequestDto, ValidatePurchaseRequestStepDto } from './dto/purcha
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { TradesGateway } from './trades.gateway';
 import { validate } from 'class-validator';
+import { PurchaseRequestData } from '../pdf/pdf.service';
 
 @Injectable()
 export class TradesService {
@@ -301,6 +302,22 @@ export class TradesService {
     }
 
     return this.mapToResponseDto(trade);
+  }
+
+  // Get trade for PDF generation (no user authentication required)
+  async getTradeForPdf(tradeId: string): Promise<Trade> {
+    this.logger.log(`Getting trade ${tradeId} for PDF generation`);
+    
+    const trade = await this.tradeRepository.findOne({
+      where: { id: tradeId },
+      relations: ['buyer', 'seller', 'product']
+    });
+    
+    if (!trade) {
+      throw new NotFoundException('Trade not found');
+    }
+    
+    return trade;
   }
 
   // Bulk accept trades
@@ -632,6 +649,217 @@ export class TradesService {
     };
     
     this.logger.log(`🔍 Mapping trade ${trade.id} to response: offered_price=${trade.offered_price}`);
+    return result;
+  }
+
+  // Generate PDF data from trade information
+  async generatePdfDataFromTrade(trade: TradeResponseDto): Promise<PurchaseRequestData> {
+    this.logger.log(`Generating PDF data for trade ${trade.id}`);
+
+    // Calculate tax amounts (assuming 9% SGST and 9% CGST = 18% total)
+    const baseAmount = trade.offered_price * trade.quantity;
+    const sgstRate = 0.09; // 9%
+    const cgstRate = 0.09; // 9%
+    const sgstAmount = baseAmount * sgstRate;
+    const cgstAmount = baseAmount * cgstRate;
+    const totalTax = sgstAmount + cgstAmount;
+    const totalAmount = baseAmount + totalTax;
+
+    // Convert amount to words (simplified)
+    const amountInWords = this.convertAmountToWords(totalAmount);
+
+    // Use stored purchase request data if available
+    const purchaseRequestData = trade.purchase_request_data || {};
+    const step1 = purchaseRequestData.step1 || {};
+    const step2 = purchaseRequestData.step2 || {};
+    const step3 = purchaseRequestData.step3 || {};
+    const step4 = purchaseRequestData.step4 || {};
+
+    // Build payment terms from form data
+    let paymentTerms = '100% ADVANCE';
+    if (step4.paymentMode) {
+      switch (step4.paymentMode) {
+        case 'advance':
+          paymentTerms = `${step4.advancePercentage || '100'}% ADVANCE via RTGS`;
+          break;
+        case 'credit':
+          paymentTerms = `Letter of Credit - ${step4.creditTimelineDays || '30'} days`;
+          break;
+        case 'open':
+          paymentTerms = `Open Account via RTGS - ${step4.paymentTimelineDays || '30'} days`;
+          break;
+      }
+    }
+
+    const pdfData: PurchaseRequestData = {
+      buyerCompany: {
+        name: trade.buyer?.firstName && trade.buyer?.lastName 
+          ? `${trade.buyer.firstName} ${trade.buyer.lastName}` 
+          : 'Buyer Company',
+        address1: 'Buyer Address Line 1',
+        address2: 'Buyer Address Line 2',
+        gstin: 'BUYER_GSTIN_NUMBER',
+        state: 'State',
+        stateCode: '32'
+      },
+      sellerCompany: {
+        name: trade.seller?.firstName && trade.seller?.lastName 
+          ? `${trade.seller.firstName} ${trade.seller.lastName}` 
+          : 'Seller Company',
+        address1: 'Seller Address Line 1',
+        address2: 'Seller Address Line 2',
+        gstin: 'SELLER_GSTIN_NUMBER',
+        state: 'State',
+        stateCode: '32'
+      },
+      purchaseRequest: {
+        poNumber: `PO-${trade.id.substring(0, 8).toUpperCase()}`,
+        poDate: new Date(trade.created_at).toLocaleDateString('en-GB'),
+        poDetails: trade.buyer_message || 'Purchase request for product',
+        sizeDays: step1.tradeDurationYears ? `${step1.tradeDurationYears} years` : '30 days'
+      },
+      deliveryAddress: {
+        name: trade.buyer?.firstName && trade.buyer?.lastName 
+          ? `${trade.buyer.firstName} ${trade.buyer.lastName}` 
+          : 'Delivery Contact',
+        address1: 'Delivery Address Line 1',
+        address2: 'Delivery Address Line 2',
+        gstin: 'DELIVERY_GSTIN_NUMBER',
+        state: 'State',
+        stateCode: '32'
+      },
+      product: {
+        name: trade.product?.name || 'Product Name',
+        description: this.buildProductDescription(trade, purchaseRequestData),
+        specification: 'Technical specifications as per buyer requirements',
+        quantity: trade.quantity,
+        price: trade.offered_price,
+        cost: baseAmount,
+        sgst: sgstAmount,
+        cgst: cgstAmount,
+        total: totalAmount
+      },
+      terms: {
+        paymentTerms,
+        deliverySchedule: `BEFORE ${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB')}`,
+        otherTerms: 'EX FACTORY RATE',
+        brokerage: 'EX FACTORY RATE',
+        totalAmountBeforeTax: baseAmount,
+        cost: baseAmount,
+        sgst: sgstAmount,
+        cgst: cgstAmount,
+        taxAmount: totalTax,
+        totalAmountAfterTax: totalAmount,
+        amountInWords: amountInWords
+      },
+      specialInstructions: this.buildSpecialInstructions(trade, purchaseRequestData)
+    };
+
+    return pdfData;
+  }
+
+  private buildProductDescription(trade: TradeResponseDto, purchaseRequestData: any): string {
+    const step2 = purchaseRequestData.step2 || {};
+    let description = `Product specification and details for ${trade.product?.name || 'product'}`;
+    
+    if (step2.industry) {
+      description += `\nIndustry Application: ${step2.industry}`;
+    }
+    if (step2.marketExperienceYears) {
+      description += `\nMarket Experience: ${step2.marketExperienceYears} years`;
+    }
+    
+    return description;
+  }
+
+  private buildSpecialInstructions(trade: TradeResponseDto, purchaseRequestData: any): string {
+    const step1 = purchaseRequestData.step1 || {};
+    let instructions = 'Physical Appearance: Slightly Coarse, brown colour without bone pieces. Free from feather meal adulteration and steroids.';
+    
+    if (step1.productUsage) {
+      instructions += `\n\nProduct Usage: ${step1.productUsage}`;
+    }
+    
+    if (step1.companyRevenueRange && step1.currency && step1.revenueUnit) {
+      instructions += `\n\nCompany Revenue Range: ${step1.companyRevenueRange} ${step1.currency} ${step1.revenueUnit}`;
+    }
+    
+    if (trade.buyer_message) {
+      instructions += `\n\nAdditional Instructions: ${trade.buyer_message}`;
+    }
+    
+    return instructions;
+  }
+
+  // Convert number to words (simplified implementation)
+  private convertAmountToWords(amount: number): string {
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const thousands = ['', 'Thousand', 'Lakh', 'Crore'];
+
+    if (amount === 0) return 'Zero Rupees Only';
+
+    const integerPart = Math.floor(amount);
+    const decimalPart = Math.round((amount - integerPart) * 100);
+
+    let result = this.convertNumberToWords(integerPart, ones, teens, tens, thousands);
+    result += ' Rupees';
+
+    if (decimalPart > 0) {
+      result += ' and ' + this.convertNumberToWords(decimalPart, ones, teens, tens, thousands) + ' Paise';
+    }
+
+    result += ' Only';
+    return result;
+  }
+
+  private convertNumberToWords(num: number, ones: string[], teens: string[], tens: string[], thousands: string[]): string {
+    if (num === 0) return '';
+
+    let result = '';
+    let thousandIndex = 0;
+
+    while (num > 0) {
+      const chunk = num % 1000;
+      if (chunk !== 0) {
+        const chunkWords = this.convertChunkToWords(chunk, ones, teens, tens);
+        result = chunkWords + (thousands[thousandIndex] ? ' ' + thousands[thousandIndex] : '') + (result ? ' ' + result : '');
+      }
+      num = Math.floor(num / 1000);
+      thousandIndex++;
+    }
+
+    return result.trim();
+  }
+
+  private convertChunkToWords(chunk: number, ones: string[], teens: string[], tens: string[]): string {
+    let result = '';
+
+    const hundreds = Math.floor(chunk / 100);
+    const remainder = chunk % 100;
+
+    if (hundreds > 0) {
+      result += ones[hundreds] + ' Hundred';
+    }
+
+    if (remainder > 0) {
+      if (result) result += ' ';
+      
+      if (remainder < 10) {
+        result += ones[remainder];
+      } else if (remainder < 20) {
+        result += teens[remainder - 10];
+      } else {
+        const tensDigit = Math.floor(remainder / 10);
+        const onesDigit = remainder % 10;
+        result += tens[tensDigit];
+        if (onesDigit > 0) {
+          result += ' ' + ones[onesDigit];
+        }
+      }
+    }
+
     return result;
   }
 }

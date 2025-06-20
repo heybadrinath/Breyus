@@ -40,6 +40,41 @@ export class CreateTradeRequestDto {
   @IsOptional()
   @IsBoolean()
   is_urgent?: boolean;
+
+  // Purchase request form data
+  @IsOptional()
+  @IsObject()
+  purchase_request_data?: {
+    step1?: {
+      companyRevenueRange?: string;
+      currency?: string;
+      revenueUnit?: string;
+      tradeDurationYears?: string;
+      productUsage?: string;
+    };
+    step2?: {
+      industry?: string;
+      marketExperienceYears?: string;
+      marketCapturePercentage?: string;
+    };
+    step3?: {
+      price?: string;
+      onSale?: boolean;
+      priceCurrency?: string;
+      sku?: string;
+      discount?: string;
+      salePrice?: string;
+      costOfGoods?: string;
+      profit?: string;
+      margin?: string;
+    };
+    step4?: {
+      paymentMode?: string;
+      advancePercentage?: string;
+      creditTimelineDays?: string;
+      paymentTimelineDays?: string;
+    };
+  };
 }
 
 export class UpdateTradeStatusDto {
@@ -86,6 +121,7 @@ export class TradeResponseDto {
   rejection_reason?: string;
   trade_terms?: Record<string, any>;
   shipping_details?: Record<string, any>;
+  purchase_request_data?: Record<string, any>;
   expires_at?: Date;
   accepted_at?: Date;
   completed_at?: Date;
