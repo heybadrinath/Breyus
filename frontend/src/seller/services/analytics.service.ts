@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios';
 
-const API_URL = 'http://localhost:5000/backend';
+const API_URL = 'https://breyus.com/backend';
 
 export interface BarGraphData {
   date: string;

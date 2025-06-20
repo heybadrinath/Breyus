@@ -40,7 +40,7 @@ const Signin: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post("http://localhost:5000/backend/auth/send-otp", {
+      const response = await axios.post("https://breyus.com/backend/auth/send-otp", {
         email: formData.email,
         password: formData.password,
         role: "seller",
@@ -66,7 +66,7 @@ const Signin: React.FC = () => {
 
     try {
       console.log("Verifying OTP for:", formData.email);
-      const response = await axios.post("http://localhost:5000/backend/auth/verify-otp", {
+      const response = await axios.post("https://breyus.com/backend/auth/verify-otp", {
         email: formData.email,
         otp,
       });

@@ -34,7 +34,7 @@ const SearchBar = ({ onSearchResults }: { onSearchResults: (results: SellerCardP
 
     const fetchResults = async (input: string) => {
         try {
-            const res = await fetch("http://localhost:5000/search/", {
+            const res = await fetch("https://breyus.com/search/", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ query: input }),

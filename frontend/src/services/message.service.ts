@@ -2,7 +2,7 @@ import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
 import authService from './auth.service';
 
-const API_URL = 'http://localhost:5000/backend/messages';
+const API_URL = 'https://breyus.com/backend/messages';
 
 export interface Message {
   id: string;
@@ -85,7 +85,7 @@ class MessageService {
         return;
       }
 
-      this.socket = io('http://localhost:5000/messages', {
+      this.socket = io('https://breyus.com/messages', {
         auth: { token },
         transports: ['websocket', 'polling']
       });

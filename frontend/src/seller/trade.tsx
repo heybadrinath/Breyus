@@ -638,7 +638,7 @@ const PurchaseRequestStatus: React.FC = () => {
               </div>,
               <div className="text-center">
                 <a
-                  href={`${process.env.REACT_APP_API_URL || 'http://localhost:5000/backend'}/trades/pdf/${trade.id}`}
+                  href={`${process.env.REACT_APP_API_URL || 'https://breyus.com/backend'}/trades/pdf/${trade.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:text-blue-800 underline text-sm font-medium"
@@ -939,7 +939,7 @@ const PurchaseOrder: React.FC = () => {
                     </div>,
                     <div className="text-center">
                       <a
-                        href={`${process.env.REACT_APP_API_URL || 'http://localhost:5000/backend'}/trades/pdf/${order.id}`}
+                        href={`${process.env.REACT_APP_API_URL || 'https://breyus.com/backend'}/trades/pdf/${order.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:text-blue-800 underline text-sm font-medium"

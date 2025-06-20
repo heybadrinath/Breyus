@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000/backend';
+const API_URL = process.env.REACT_APP_BACKEND_URL || 'https://breyus.com/backend';
 
 export interface DailyStoreVisitData {
   date: string; // "yyyy-MM-dd"
