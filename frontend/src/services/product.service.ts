@@ -5,7 +5,7 @@ import { Product } from '../types/product';
 // Get API URL from environment or use default
 const API_URL = process.env.REACT_APP_API_URL 
   ? `${process.env.REACT_APP_API_URL}/products`
-  : 'http://localhost:5000/backend/products';
+  : 'https://breyus.com/backend/products';
 
 console.log('Product service using API URL:', API_URL);
 
