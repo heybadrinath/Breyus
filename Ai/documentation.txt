@@ -1,0 +1,16 @@
+Dependencies:
+fastapi
+uvicorn
+spacy
+gensim
+nltk
+
+
+command to start the search engine:
+
+python -m uvicorn search:app --host 0.0.0.0 --host :: --port 7000 --reload  
+
+
+command to start tagger api:
+
+python -m uvicorn app.mainn:app --reload --host :: --host 0.0.0.0 --port 8000
