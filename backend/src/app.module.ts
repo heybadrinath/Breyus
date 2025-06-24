@@ -4,7 +4,9 @@ import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 
 import { UsersModule } from './users/users.module';
-import { TypegooseModule } from 'nestjs-typegoose';
+import { MongooseModule } from '@nestjs/mongoose';
+import { getModelForClass } from '@typegoose/typegoose';
+
 
 
 @Module({
@@ -13,7 +15,7 @@ import { TypegooseModule } from 'nestjs-typegoose';
       isGlobal: true,
       envFilePath: '.env',
     }),
-    TypegooseModule.forRoot((process.env.NODE_ENV === 'production' ? process.env.MONGODB_URI_PROD : process.env.MONGODB_URI_DEV) as string),
+    MongooseModule.forRoot((process.env.NODE_ENV === 'production' ? process.env.MONGODB_URI_PROD : process.env.MONGODB_URI_DEV) as string),
     UsersModule,
   ],
   controllers: [AppController],
