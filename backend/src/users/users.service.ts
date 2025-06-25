@@ -21,7 +21,7 @@ export class UsersService {
     async createUser(createUserdto: CreateUserDto): Promise<User> {
         const { email, password, role, company } = createUserdto;
 
-        if (![Role.user, Role.admin].includes(role)) {
+        if (![Role.Buyer, Role.Seller].includes(role)) {
       throw new HttpException(
         'Invalid role. Valid roles are: user, admin',
         HttpStatus.BAD_REQUEST,

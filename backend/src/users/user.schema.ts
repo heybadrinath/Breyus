@@ -3,8 +3,8 @@ import { Document, Types } from 'mongoose';
 import { Company } from 'src/company/company.schema';
 
 export enum Role {
-  admin = 'admin',
-  user = 'user',
+  Buyer = 'buyer',
+  Seller = 'seller',
 }
 
 @Schema({ timestamps: true })
