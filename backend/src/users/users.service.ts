@@ -5,11 +5,13 @@ import { User } from 'src/users/user.schema';
 import { CreateUserDto, UpdateUserDto } from 'src/users/dto/users.dto';
 import { Role } from 'src/users/user.schema';
 import { HttpException, HttpStatus } from '@nestjs/common';
+import { AuthService } from 'src/auth/auth.service';
 
 @Injectable()
 export class UsersService {
     constructor(
         @InjectModel(User.name) private userModel: Model<User>,
+        private readonly authService: AuthService,
     ) { }
 
     async HashPassword(password: string): Promise<string> {
@@ -18,7 +20,7 @@ export class UsersService {
         return await bcrypt.hash(password, saltRounds);
     }
 
-    async createUser(createUserdto: CreateUserDto): Promise<User> {
+    async createUser(createUserdto: CreateUserDto): Promise<{ message: string; token: string }> {
         const { email, password, role, company } = createUserdto;
 
         if (![Role.Buyer, Role.Seller].includes(role)) {
@@ -36,7 +38,13 @@ export class UsersService {
                 role,
                 company: company ? company : null,
             });
-            return await newUser.save();
+            const savedUser = await newUser.save();
+            const token: any = await this.authService.generateJwtToken(savedUser);
+            return {
+                message: 'User created successfully',
+                token,
+            }
+       
         } catch(error){
             if (error.code === 11000) {
                 const { ConflictException } = require('@nestjs/common');
