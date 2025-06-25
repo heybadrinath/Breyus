@@ -24,13 +24,19 @@ export class UsersService {
         const { email, password, role, company } = createUserdto;
 
         if (![Role.Buyer, Role.Seller].includes(role)) {
-      throw new HttpException(
-        'Invalid role. Valid roles are: user, admin',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+            throw new HttpException(
+                'Invalid role. Valid roles are: buyer, seller',
+                HttpStatus.BAD_REQUEST,
+            );
+        }
 
         try {
+            // Check if user already exists
+            const existingUser = await this.userModel.findOne({ email });
+            if (existingUser) {
+                throw new HttpException('User already exists with this email', HttpStatus.CONFLICT);
+            }
+
             const hashedPassword = await this.HashPassword(password);
             const newUser = new this.userModel({
                 email,
@@ -43,14 +49,13 @@ export class UsersService {
             return {
                 message: 'User created successfully',
                 token,
-            }
-       
-        } catch(error){
+            };
+
+        } catch (error) {
             if (error.code === 11000) {
-                const { ConflictException } = require('@nestjs/common');
-                throw new ConflictException('User already exists with this email');
+                throw new HttpException('User already exists with this email', HttpStatus.CONFLICT);
             } else {
-                throw new Error('Error creating user: ' + error.message);
+                throw new HttpException('Error creating user: ' + error.message, HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }
     }
