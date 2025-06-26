@@ -21,6 +21,12 @@ export class User extends Document {
 
   @Prop({ type: Types.ObjectId, ref: 'Company' })
   company: Company;
+
+   @Prop({ default: 0 })
+  failedLoginAttempts?: number;
+
+  @Prop({ type: Number, default: null })
+  lockUntil?: number | null;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

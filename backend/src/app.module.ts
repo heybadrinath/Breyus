@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UsersModule } from './users/users.module';
 import { CompanyModule } from './company/company.module';
+import { MailModule } from './mail/mail.module';
 
 
 
@@ -19,6 +20,7 @@ import { CompanyModule } from './company/company.module';
     AuthModule,
     UsersModule,
     CompanyModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

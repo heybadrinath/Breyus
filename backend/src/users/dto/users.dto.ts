@@ -1,4 +1,4 @@
-import { IsEmail, IsString, IsNotEmpty, IsEnum, IsOptional, IsMongoId, isNotEmpty } from 'class-validator';
+import { IsEmail, IsString, IsNotEmpty, IsEnum, IsOptional, IsMongoId, MinLength, isNotEmpty } from 'class-validator';
 import {Role} from 'src/users/user.schema'; // Import the Role enum from user.schema
 
 export class CreateUserDto {
@@ -9,6 +9,7 @@ export class CreateUserDto {
 
   @IsString()
   @IsNotEmpty()
+  @MinLength(8)
   password: string;
 
 
