@@ -25,7 +25,7 @@ export class MailService {
 
   
   generateOtp(): string {
-    return crypto.randomBytes(3).toString('hex');
+    return crypto.randomInt(100000, 1000000).toString();
   }
 
 

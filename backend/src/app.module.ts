@@ -7,6 +7,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { UsersModule } from './users/users.module';
 import { CompanyModule } from './company/company.module';
 import { MailModule } from './mail/mail.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
 
 
 
@@ -21,6 +22,7 @@ import { MailModule } from './mail/mail.module';
     UsersModule,
     CompanyModule,
     MailModule,
+    OnboardingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

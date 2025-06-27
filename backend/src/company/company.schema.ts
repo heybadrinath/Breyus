@@ -1,10 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { prop } from '@typegoose/typegoose';
 import { Document, Types } from 'mongoose';
-// import { UserSchema } from 'src/users/user.schema';
+import { MeanMonthlyRevenue } from 'src/onboarding/dto/onboarding.dto';
 
 export enum CompanyRole {
-    ADMIN = 'admin',
-    USER = 'user',
+    SELLER = 'seller',
+    BUYER = 'buyer'
 }
 
 export enum TradeType {
@@ -16,33 +17,43 @@ export enum TradeType {
 @Schema({ timestamps: true })
 export class Company extends Document {
 
-    @Prop({ required: true, unique: true })
+    @Prop({ unique: true })
     name: string;
 
-    @Prop({ required: true, unique: false })
+    @Prop({ unique: false })
     location: string;
 
-    @Prop({ required: true, unique: true })
+    @Prop({ unique: true })
     number: string;
 
-    @Prop({ required: true, unique: true })
+    @Prop({ unique: true })
     taxId: string;
 
-    @Prop({ required: true, unique: false })
+    @Prop({ unique: false })
     role: CompanyRole;
 
-    @Prop({ required: true, unique: false })
+    @Prop({ unique: false })
     isVerified: boolean;
 
-    @Prop({ required: true, unique: false })
+    @Prop({ unique: false })
     tradeType: TradeType;
 
-    @Prop({ required: true, unique: true })
+    @Prop({ unique: true })
     founderName: string;
 
-    @Prop({ required: true, unique: true })
+    @Prop({ unique: true })
     websiteUrl: string;
 
-    // @Prop({ type: Types.ObjectId, ref: 'UserSchema' })
-    // author: UserSchema;
+    @Prop()
+    mainLineBusiness: string[];
+
+    @Prop()
+    meanMonthlyRevenue: MeanMonthlyRevenue;
+
+    @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }] })
+    users: Types.ObjectId[]; // Or: User[]
+
+    @Prop({ default: 0 })
+    onboardingProgress: number;
 }
+export const CompanySchema = SchemaFactory.createForClass(Company)
