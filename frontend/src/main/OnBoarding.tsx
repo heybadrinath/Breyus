@@ -1,14 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, ChangeEvent, useRef } from "react";
 import OnboardingProgress from "../components/OnboardingProgress";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import BreyusLogo from "../seller/vectors/full-logo.svg";
 import PasswordAndOTPVerification from "../components/PasswordAndOTPVerification";
 import { submitStep1 } from "../services/onboarding";
 
 const OnBoarding: React.FC = () => {
-    const [currentStep, setCurrentStep] = React.useState(1);
-    const [isStep2Valid, setIsStep2Valid] = React.useState(false);
 
+    const [currentStep, setCurrentStep] = React.useState(1);
+
+    //animation variants
     const containerVariants = {
         hidden: { opacity: 0 },
         visible: {
@@ -31,132 +32,300 @@ const OnBoarding: React.FC = () => {
         }
     };
 
-    // handle form
-    const [formData, setFormData] = useState({
-        name: "",
-        location: "",
-        mail: "",
-        contactNumber: "",
-        taxId: "",
-    });
 
-    const [loading, setLoading] = useState(false); // To track the loading state
-    const [step1Submitted, setStep1Submitted] = useState(false); // Track if step 1 is already submitted
+    // step 1 
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setFormData((prevState) => ({
-            ...prevState,
-            [name]: value,
-        }));
+    // handle mail input
+    const [mail, setMail] = useState('');
+    const handleChangeMail = (e: ChangeEvent<HTMLInputElement>) => {
+        setMail(e.target.value);
     };
 
-    const handleSubmitStep1 = async () => {
-        if (currentStep === 1 && !step1Submitted) {
-            setLoading(true); // Set loading state
-            try {
-                // Always resubmit step 1, even if userId/companyId exist
-                const response = await submitStep1(formData); // Call the API to submit Step 1
-                console.log("Response from backend:", response); // Handle the response, e.g., save userId, companyId
-                localStorage.setItem("userId", response.userId);
-                localStorage.setItem("companyId", response.companyId);
-                setStep1Submitted(true); // Mark step 1 as submitted
-                setCurrentStep(2); // Proceed to the next step
-            } catch (error) {
-                console.error("Error in Step 1 submission:", error);
-                alert("Something went wrong. Please try again later.");
-            } finally {
-                setLoading(false); // Reset loading state
+
+    // handle otp 
+    const [emailOtp, setEmailOtp] = useState<string[]>(new Array(6).fill(''));
+    const [emailOtpStatus, setEmailOtpStatus] = useState<'idle' | 'success' | 'error'>('idle');
+    const [emailOtpMessage, setEmailOtpMessage] = useState('');
+    const emailOtpRefs = useRef<Array<HTMLInputElement | null>>([]);
+    const handleOtpChange = (
+        e: ChangeEvent<HTMLInputElement>,
+        index: number,
+        otpArray: string[],
+        setOtpArray: React.Dispatch<React.SetStateAction<string[]>>,
+        otpRefs: React.MutableRefObject<Array<HTMLInputElement | null>>
+    ) => {
+        const { value } = e.target;
+        if (/[^0-9]/.test(value)) return; // Only allow numbers
+
+        const newOtp = [...otpArray];
+        newOtp[index] = value;
+        setOtpArray(newOtp);
+
+        // Move to next input if current is filled
+        if (value && index < otpArray.length - 1) {
+            otpRefs.current[index + 1]?.focus();
+        }
+        // Move to previous input if backspace is pressed and current is empty
+        if (!value && index > 0 && (e.nativeEvent as InputEvent).inputType === 'deleteContentBackward') {
+            otpRefs.current[index - 1]?.focus();
+        }
+    };
+
+    const handlePaste = (
+        e: React.ClipboardEvent<HTMLInputElement>,
+        otpArray: string[],
+        setOtpArray: React.Dispatch<React.SetStateAction<string[]>>,
+        otpRefs: React.MutableRefObject<Array<HTMLInputElement | null>>
+    ) => {
+        const paste = e.clipboardData.getData('text');
+        if (!/^\d{6}$/.test(paste)) return;
+
+        const newOtp = paste.split('');
+        setOtpArray(newOtp);
+        newOtp.forEach((char, i) => {
+            if (otpRefs.current[i]) {
+                otpRefs.current[i]!.value = char; // Set value directly for pasted content
             }
-        } else if (currentStep === 1 && step1Submitted) {
-            setCurrentStep(2); // Just go to next step without resubmitting
+        });
+        otpRefs.current[5]?.focus(); // Focus on last input
+    };
+
+
+
+    const verifyOtp = (
+        otp: string[],
+        setOtpStatus: React.Dispatch<React.SetStateAction<'idle' | 'success' | 'error'>>,
+        setOtpMessage: React.Dispatch<React.SetStateAction<string>>,
+        type: 'mobile' | 'email'
+    ) => {
+        const otpCode = otp.join('');
+        if (otpCode.length !== 6 || !/^\d{6}$/.test(otpCode)) {
+            setOtpStatus('error');
+            setOtpMessage('Please enter a valid 6-digit OTP.');
+            return;
+        }
+
+        // Simulate API call
+        setTimeout(() => {
+            if (otpCode === '111111') { // Example success code
+                setOtpStatus('success');
+                setOtpMessage(`Your ${type} has been verified successfully.`);
+            } else {
+                setOtpStatus('error');
+                setOtpMessage('Incorrect Authorization Code. Please Try again.');
+            }
+        }, 1000);
+    };
+
+
+    const resendOtp = (setOtpMessage: React.Dispatch<React.SetStateAction<string>>) => {
+        setOtpMessage('Resending code...');
+        // Simulate API call
+        setTimeout(() => {
+            setOtpMessage('Code resent!');
+        }, 1000);
+    };
+
+
+
+    // handle password
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [passwordError, setPasswordError] = useState('');
+
+    const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
+        setPassword(e.target.value);
+        validatePasswords(e.target.value, confirmPassword);
+    };
+
+    const handleConfirmPasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
+        setConfirmPassword(e.target.value);
+        validatePasswords(password, e.target.value);
+    };
+
+    const validatePasswords = (pwd1: string, pwd2: string) => {
+        if (pwd1.length < 8) {
+            setPasswordError('Password must be at least 8 characters long.');
+        } else if (pwd1 !== pwd2) {
+            setPasswordError('Passwords do not match.');
         } else {
-            setCurrentStep(prev => prev + 1); // For other steps, just go to next
+            setPasswordError('');
         }
     };
 
 
 
 
+
+
+    // step 2 logic
+    const [step2Form, setStep2Form] = useState(
+        {
+            companyName: '',
+            companyLocation: '',
+            contactNumber: '',
+            taxId: '',
+        }
+    );
+    const handleStep2InputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setStep2Form((prevState) => ({
+            ...prevState,
+            [name]: value,
+        }));
+    };
+
+
+
+    // step 3 logic
+    const [mainlineOfBusiness, setmainLineOfBusiness] = useState<string[]>([]);
+    const handleMainLineOfBusinessChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        if (e.target.checked) {
+
+            setmainLineOfBusiness((prevState) => [...prevState, value]);
+        } else {
+
+            setmainLineOfBusiness((prevState) => prevState.filter((item) => item !== value));
+        }
+    };
+
+    const [financialRange, setFinancialRange] = useState<string>('');
+    const handleFinancialRangeChange = (e: ChangeEvent<HTMLInputElement>) => {
+        setFinancialRange(e.target.value);
+    };
+
+
+    // step 4 logic
+    const [step4Form, setStep4Form] = useState(
+        {
+            companyWebsiteUrl: '',
+            founderName: '',
+            exporedBefore: '',
+            referrel: ''
+        }
+    );
+    const handleStep4InputChange = (
+        e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLSelectElement>
+    ) => {
+        const { name, value } = e.target;
+        setStep4Form((prevState) => ({
+            ...prevState,
+            [name]: value,
+        }));
+    };
+
+    // step 5 logic
+    const [role, setRole] = useState('');
+    const handleRoleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setRole(e.target.value);
+    }
+
+
+
+
+    // render step ui content dynamically
     const renderStepContent = () => {
         switch (currentStep) {
             case 1:
                 return (
                     <motion.div
+                        key={currentStep}
                         variants={containerVariants}
                         initial="hidden"
                         animate="visible"
                         className="space-y-8"
                     >
 
-                        <motion.div variants={itemVariants}>
-                            <label htmlFor="companyName" className="block text-2xl font-bold text-black">Company Name <span className="text-red-500">*</span></label>
-                            <p className="mt-1 text-xs text-gray-500">Please put your full company name as it appears on official documents.</p>
-                            <input
-                                type="text"
-                                name="name"
-                                id="companyName"
-                                value={formData.name}
-                                onChange={handleInputChange}
-                                required
-                                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
-                                placeholder="Enter your company name"
-                            />
-                        </motion.div>
-                        <motion.div variants={itemVariants}>
-                            <label htmlFor="companyLocation" className="block text-2xl font-bold text-black">Company Location <span className="text-red-500">*</span></label>
-                            <input
-                                type="text"
-                                name="location"
-                                id="companyLocation"
-                                value={formData.location}
-                                required
-                                onChange={handleInputChange}
-                                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
-                                placeholder="Enter your company location"
-                            />
-                        </motion.div>
-                        <motion.div variants={itemVariants}>
+
+
+                        <motion.div>
                             <label htmlFor="companyEmail" className="block text-2xl font-bold text-black">Company Email Address<span className="text-red-500">*</span></label>
                             <input
                                 type="email"
                                 name="mail"
                                 id="companyEmail"
-                                value={formData.mail}
+                                value={mail}
                                 required
-                                onChange={handleInputChange}
+                                onChange={handleChangeMail}
                                 className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
                                 placeholder="Enter your company email address"
                             />
                         </motion.div>
-                        <motion.div variants={itemVariants}>
-                            <label htmlFor="whatsappNumber" className="block text-2xl font-bold text-black">What your Whatsapp Number ? <span className="text-red-500">*</span></label>
-                            <div className="mt-1 flex rounded-md shadow-sm">
-                                <input
-                                    type="text"
-                                    name="contactNumber"
-                                    id="whatsappNumber"
-                                    value={formData.contactNumber}
-                                    required
-                                    onChange={handleInputChange}
-                                    className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
-                                    placeholder="+91 8xxxxxxxxxx"
-                                />
+
+
+                        <motion.div>
+                            <label htmlFor="emailOtp" className="block text-2xl font-bold text-black">
+                                Verify Your Email Address
+                                {emailOtpStatus === 'success' ? (
+                                    <span className="text-green-500 ml-2">✔️</span>
+                                ) : (
+                                    <span className="text-red-500">*</span>
+                                )}
+                            </label>
+                            <p className="mt-1 text-xs text-gray-500">Check your inbox for a verification code to continue setting up your Breyus account. Didn't get it? <a href="#" onClick={() => resendOtp(setEmailOtpMessage)} className="text-blue-600 hover:underline">Resend Code</a></p>
+                            <div className="mt-2 flex space-x-2">
+                                {emailOtp.map((digit, index) => (
+                                    <input
+                                        key={index}
+                                        type="text"
+                                        maxLength={1}
+                                        value={digit}
+                                        onChange={(e) => handleOtpChange(e, index, emailOtp, setEmailOtp, emailOtpRefs)}
+                                        onFocus={(e) => e.target.select()}
+                                        onBlur={() => verifyOtp(emailOtp, setEmailOtpStatus, setEmailOtpMessage, 'email')}
+                                        onPaste={(e) => handlePaste(e, emailOtp, setEmailOtp, emailOtpRefs)}
+                                        ref={el => { emailOtpRefs.current[index] = el; }}
+                                        className={`w-12 h-12 text-center text-xl border rounded-md focus:outline-none focus:ring-2 ${emailOtpStatus === 'success' ? 'border-green-500 focus:ring-green-500' :
+                                            emailOtpStatus === 'error' ? 'border-red-500 focus:ring-red-500' :
+                                                'border-gray-300 focus:ring-black'
+                                            }`}
+                                    />
+                                ))}
                             </div>
+                            <AnimatePresence>
+                                {emailOtpMessage && (
+                                    <motion.p
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        className={`mt-2 text-sm ${emailOtpStatus === 'success' ? 'text-green-600' : 'text-red-600'
+                                            }`}
+                                    >
+                                        {emailOtpMessage}
+                                    </motion.p>
+                                )}
+                            </AnimatePresence>
                         </motion.div>
+
                         <motion.div variants={itemVariants}>
-                            <label htmlFor="taxId" className="block text-2xl font-bold text-black">Tax Id <span className="text-red-500">*</span></label>
+                            <label htmlFor="password" className="block text-2xl font-bold text-black">Set Your Password<span className="text-red-500">*</span></label>
                             <input
-                                type="text"
-                                name="taxId"
-                                id="taxId"
-                                value={formData.taxId}
-                                required
-                                onChange={handleInputChange}
-                                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
-                                placeholder="Enter your company GST number"
+                                type="password"
+                                name="password"
+                                id="password"
+                                className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? '!border-red-500' : ''}`}
+                                placeholder="Password"
+                                value={password}
+                                onChange={handlePasswordChange}
+                            />
+                            {passwordError && <p className="mt-1 text-xs text-red-500">{passwordError}</p>}
+                        </motion.div>
+
+                        <motion.div variants={itemVariants}>
+                            <label htmlFor="confirmPassword" className="block text-2xl font-bold text-black">Confirm Password<span className="text-red-500">*</span></label>
+                            <input
+                                type="password"
+                                name="confirmPassword"
+                                id="confirmPassword"
+                                className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? '!border-red-500' : ''}`}
+                                placeholder="Confirm Password"
+                                value={confirmPassword}
+                                onChange={handleConfirmPasswordChange}
                             />
                         </motion.div>
+
+
                     </motion.div>
                 );
             case 2:
@@ -167,7 +336,65 @@ const OnBoarding: React.FC = () => {
                         animate="visible"
                         className="space-y-8"
                     >
-                        <PasswordAndOTPVerification onValidationChange={setIsStep2Valid} />
+
+                        <motion.div variants={itemVariants}>
+                            <label htmlFor="companyName" className="block text-2xl font-bold text-black">Company Name <span className="text-red-500">*</span></label>
+                            <input
+                                type="text"
+                                name="companyName"
+                                id="companyName"
+                                value={step2Form.companyName}
+                                required
+                                onChange={handleStep2InputChange}
+                                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
+                                placeholder="Enter your company location"
+                            />
+                        </motion.div>
+
+                        <motion.div variants={itemVariants}>
+                            <label htmlFor="companyLocation" className="block text-2xl font-bold text-black">Company Location <span className="text-red-500">*</span></label>
+                            <input
+                                type="text"
+                                name="companyLocation"
+                                id="companyLocation"
+                                value={step2Form.companyLocation}
+                                required
+                                onChange={handleStep2InputChange}
+                                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
+                                placeholder="Enter your company location"
+                            />
+                        </motion.div>
+
+                        <motion.div variants={itemVariants}>
+                            <label htmlFor="whatsappNumber" className="block text-2xl font-bold text-black">What your Whatsapp Number ? <span className="text-red-500">*</span></label>
+                            <div className="mt-1 flex rounded-md shadow-sm">
+                                <input
+                                    type="text"
+                                    name="contactNumber"
+                                    id="whatsappNumber"
+                                    value={step2Form.contactNumber}
+                                    required
+                                    onChange={handleStep2InputChange}
+                                    className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
+                                    placeholder="+91 8xxxxxxxxxx"
+                                />
+                            </div>
+                        </motion.div>
+
+                        <motion.div variants={itemVariants}>
+                            <label htmlFor="taxId" className="block text-2xl font-bold text-black">Tax Id <span className="text-red-500">*</span></label>
+                            <input
+                                type="text"
+                                name="taxId"
+                                id="taxId"
+                                value={step2Form.taxId}
+                                required
+                                onChange={handleStep2InputChange}
+                                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
+                                placeholder="Enter your company GST number"
+                            />
+                        </motion.div>
+
                     </motion.div>
                 );
             case 3:
@@ -181,22 +408,30 @@ const OnBoarding: React.FC = () => {
                         <motion.div variants={itemVariants}>
                             <label className="block text-2xl font-bold text-black ">What best describes breyus's main line of business? <span className="text-red-500">*</span></label>
                             <div className="mt-2 space-y-2">
-                                {['Import/Export Company', 'Producer/Manufacturer', 'Commodity Trader', 'International Freight Forwarder', 'Domestic Trucking Company', 'I\'m none of the above', 'Broker/Intermediary/Agent', 'Other'].map((option) => (
-                                    <motion.div
-                                        key={option}
-                                        className="flex items-center"
-                                        variants={itemVariants}
-                                    >
+                                {[
+                                    'Import/Export Company',
+                                    'Producer/Manufacturer',
+                                    'Commodity Trader',
+                                    'International Freight Forwarder',
+                                    'Domestic Trucking Company',
+                                    "I'm none of the above",
+                                    'Broker/Intermediary/Agent',
+                                    'Other',
+                                ].map((option) => (
+                                    <div key={option} className="flex items-center">
                                         <input
                                             id={option.replace(/\s/g, '')}
-                                            name="lineOfBusiness"
+                                            name="mainlineOfBusiness"
                                             type="checkbox"
+                                            value={option}
+                                            checked={mainlineOfBusiness.includes(option)} // Check if this option is selected
+                                            onChange={handleMainLineOfBusinessChange} // Handle change
                                             className="focus:ring-black h-4 w-4 text-black border-gray-300 rounded"
                                         />
                                         <label htmlFor={option.replace(/\s/g, '')} className="ml-3 block text-sm font-medium text-gray-700">
                                             {option}
                                         </label>
-                                    </motion.div>
+                                    </div>
                                 ))}
                             </div>
                         </motion.div>
@@ -213,6 +448,9 @@ const OnBoarding: React.FC = () => {
                                             id={option.replace(/\s/g, '')}
                                             name="financialRange"
                                             type="radio"
+                                            value={option}
+                                            checked={financialRange === option}
+                                            onChange={handleFinancialRangeChange}
                                             className="focus:ring-black h-4 w-4 text-black border-gray-300"
                                         />
                                         <label htmlFor={option.replace(/\s/g, '')} className="ml-3 block text-sm font-medium text-gray-700">
@@ -237,38 +475,54 @@ const OnBoarding: React.FC = () => {
                             <p className="mt-1 text-xs text-gray-500">Remember to put https:// in front of it. Make sure the website is yours & valid, otherwise we won't be able to give you free trial access.</p>
                             <input
                                 type="text"
-                                name="companyWebsite"
+                                name="companyWebsiteUrl"
                                 id="companyWebsite"
+                                value={step4Form.companyWebsiteUrl}
+                                onChange={handleStep4InputChange}
                                 className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
                                 placeholder="Enter your company website"
                             />
                         </motion.div>
                         <motion.div variants={itemVariants}>
-                            <label htmlFor="name" className="block text-2xl font-bold text-black">Name <span className="text-red-500">*</span></label>
+                            <label htmlFor="name" className="block text-2xl font-bold text-black">Founder Name <span className="text-red-500">*</span></label>
                             <p className="mt-1 text-xs text-gray-500">Put your first and second name. Please make sure you put all correct information.</p>
                             <input
                                 type="text"
-                                name="name"
+                                name="founderName"
                                 id="name"
+                                value={step4Form.founderName}
+                                onChange={handleStep4InputChange}
                                 className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
-                                placeholder="Enter your Name"
+                                placeholder="Enter Founder Name"
                             />
                         </motion.div>
+
+
                         <motion.div variants={itemVariants}>
-                            <label htmlFor="exportedBefore" className="block text-2xl font-bold text-black">Has Your Company exported before? <span className="text-red-500">*</span></label>
-                            <input
-                                type="text"
-                                name="exportedBefore"
-                                id="exportedBefore"
-                                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
-                                placeholder="Yes/No"
-                            />
-                        </motion.div>
-                        <motion.div variants={itemVariants}>
-                            <label htmlFor="howYouKnowUs" className="block text-2xl font-bold text-black">How do you get to know about Breyus? <span className="text-red-500">*</span></label>
+                            <label htmlFor="exporedBefore" className="block text-2xl font-bold text-black">
+                                Has your company exported before?
+                            </label>
                             <select
-                                id="howYouKnowUs"
-                                name="howYouKnowUs"
+                                name="exporedBefore"
+                                id="exporedBefore"
+                                value={step4Form.exporedBefore}
+                                onChange={handleStep4InputChange}
+                                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
+                            >
+                                <option value="">Select</option>
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                            </select>
+                        </motion.div>
+
+
+                        <motion.div variants={itemVariants}>
+                            <label htmlFor="referrel" className="block text-2xl font-bold text-black">How do you get to know about Breyus? <span className="text-red-500">*</span></label>
+                            <select
+                                id="referrel"
+                                name="referrel"
+                                value={step4Form.referrel}
+                                onChange={handleStep4InputChange}
                                 className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
                             >
                                 <option>Select an option</option>
@@ -298,8 +552,11 @@ const OnBoarding: React.FC = () => {
                                     >
                                         <input
                                             id={option.replace(/\s/g, '')}
-                                            name="businessRole"
+                                            name="role"
                                             type="radio"
+                                            value={option}
+                                            checked={role === option}
+                                            onChange={handleRoleInputChange}
                                             className="focus:ring-black h-4 w-4 text-black border-gray-300"
                                         />
                                         <label htmlFor={option.replace(/\s/g, '')} className="ml-3 block text-sm text-black font-semibold">
@@ -343,7 +600,10 @@ const OnBoarding: React.FC = () => {
                         )}
                         {currentStep < 5 ? (
                             <button
-                                onClick={() => { handleSubmitStep1()}}
+                                onClick={() => {
+
+                                    setCurrentStep(prev => prev + 1);
+                                }}
                                 className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors ml-auto mt-12"
                             >
                                 Next

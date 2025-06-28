@@ -4,10 +4,10 @@ import { Injectable } from '@nestjs/common';
 export class AppService {
  
   getAppName(): string {
-    return process.env.APP_NAME || 'Breyus';
+    return process.env.APP_NAME || '';
   }
 
   getVersion(): string {
-    return process.env.VERSION || '1.0.0';
+    return process.env.VERSION || '';
   }
 }

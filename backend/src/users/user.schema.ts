@@ -1,10 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document, model, Types } from 'mongoose';
 
 
 export enum Role {
-  Buyer = 'buyer',
-  Seller = 'seller',
+  Buyer = 'admin',
+  Seller = 'user',
 }
 
 @Schema({ timestamps: true })
@@ -13,10 +13,10 @@ export class User extends Document {
   @Prop({ unique: true })
   mail: string;
 
-  @Prop({ unique: true })
+  @Prop()
   password: string;
 
-  @Prop({ unique: false })
+  @Prop()
   role: Role;
 
   @Prop({ type: Types.ObjectId, ref: 'Company', required: true })

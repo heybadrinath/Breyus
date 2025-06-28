@@ -14,11 +14,11 @@ export class OnboardingController {
         return await this.onboardingservice.step1(step1dto);
     }
 
-    @Post('step2')
-    @HttpCode(HttpStatus.ACCEPTED)
-    async step2(@Body() step2dto: Step2Dto){
-        //todo add user id created at step-1
-        return await this.onboardingservice.step2(step2dto, '_id');
-    }
+    // @Post('step2')
+    // @HttpCode(HttpStatus.ACCEPTED)
+    // async step2(@Body() step2dto: Step2Dto){
+    //     //todo add user id created at step-1
+    //     return await this.onboardingservice.step2(step2dto, '_id');
+    // }
 
 }

@@ -143,7 +143,7 @@ const PasswordAndOTPVerification: React.FC<PasswordAndOTPVerificationProps> = ({
             }}
             className="space-y-8"
         >
-            <motion.div variants={variants}>
+            {/* <motion.div variants={variants}>
                 <label htmlFor="password" className="block text-2xl font-bold text-black">Set Your Password<span className="text-red-500">*</span></label>
                 <input
                     type="password"
@@ -155,9 +155,9 @@ const PasswordAndOTPVerification: React.FC<PasswordAndOTPVerificationProps> = ({
                     onChange={handlePasswordChange}
                 />
                 {passwordError && <p className="mt-1 text-xs text-red-500">{passwordError}</p>}
-            </motion.div>
+            </motion.div> */}
 
-            <motion.div variants={variants}>
+            {/* <motion.div variants={variants}>
                 <label htmlFor="confirmPassword" className="block text-2xl font-bold text-black">Confirm Password<span className="text-red-500">*</span></label>
                 <input
                     type="password"
@@ -168,9 +168,9 @@ const PasswordAndOTPVerification: React.FC<PasswordAndOTPVerificationProps> = ({
                     value={confirmPassword}
                     onChange={handleConfirmPasswordChange}
                 />
-            </motion.div>
+            </motion.div> */}
 
-            <motion.div variants={variants}>
+            {/* <motion.div variants={variants}>
                 <label htmlFor="mobileOtp" className="block text-2xl font-bold text-black">
                     Verify Your Mobile Number
                     {mobileOtpStatus === 'success' ? (
@@ -214,7 +214,7 @@ const PasswordAndOTPVerification: React.FC<PasswordAndOTPVerificationProps> = ({
                         </motion.p>
                     )}
                 </AnimatePresence>
-            </motion.div>
+            </motion.div> */}
 
             <motion.div variants={variants}>
                 <label htmlFor="emailOtp" className="block text-2xl font-bold text-black">
