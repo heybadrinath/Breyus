@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import CheckoutStepper from "../components/cart/CheckoutStepper";
-import authService from "../../services/auth.service";
+import authService from "../../services_old/auth.service";
 
 
 interface Address {

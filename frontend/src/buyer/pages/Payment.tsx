@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import authService from '../../services/auth.service';
+import authService from '../../services_old/auth.service';
 
 interface PaymentData {
   tradeId: string;

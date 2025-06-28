@@ -23,7 +23,6 @@ import TraderTradeEfficiency from "../assets/section-4/Trader-Trade-Efficiency.s
 import TraderTradeGrowth from "../assets/section-4/Trader-Trade-Growth.svg";
 import worldmap from "../assets/worldmap.svg";
 
-
 const Navbar = () => {
     const navigate = useNavigate();
     return (

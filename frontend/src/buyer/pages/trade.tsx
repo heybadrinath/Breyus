@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Tabs, Table, TableRow } from '../../seller/trade';
 import TradeHistorySearch from '../components/TradeHistorySearch';
 import ProductCard from '../components/ProductCard';
-import tradeService from '../../services/trade.service';
-import productService from '../../services/product.service';
-import authService from '../../services/auth.service';
+import tradeService from '../../services_old/trade.service';
+import productService from '../../services_old/product.service';
+import authService from '../../services_old/auth.service';
 import { useNavigate } from 'react-router-dom';
 import Image from '../../components/Image';
 

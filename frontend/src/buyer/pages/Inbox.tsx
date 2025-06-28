@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Send, Search, Phone, Video, MoreVertical, ArrowLeft, Paperclip, Smile } from "lucide-react";
-import chatService, { ChatConversation, ChatMessage } from "../../services/chat.service";
-import authService from "../../services/auth.service";
+import chatService, { ChatConversation, ChatMessage } from "../../services_old/chat.service";
+import authService from "../../services_old/auth.service";
 
 const Inbox: React.FC = () => {
     const [conversations, setConversations] = useState<ChatConversation[]>([]);

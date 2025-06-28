@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Star, Heart, Share2, MessageCircle, ShoppingCart, Package, Shield, Truck, X } from "lucide-react";
-import productService from "../../services/product.service";
-import cartService from "../../services/cart.service";
-import wishlistService from "../../services/wishlist.service";
+import productService from "../../services_old/product.service";
+import cartService from "../../services_old/cart.service";
+import wishlistService from "../../services_old/wishlist.service";
 import { Product } from "../../types/product";
 
 const ProductPage: React.FC = () => {

@@ -3,8 +3,8 @@ import { motion } from "framer-motion";
 import { RefreshCw, Trash, Package, AlertTriangle, CheckCircle, Edit2 } from "lucide-react";
 import "../seller/css/product.css";
 import { Layout } from "./components";
-import productService from "../services/product.service";
-import authService from "../services/auth.service";
+import productService from "../services_old/product.service";
+import authService from "../services_old/auth.service";
 import { Product } from "../types/product";
 import ProgressBar from "../buyer/components/cart/PurchaseRequestProgress";
 

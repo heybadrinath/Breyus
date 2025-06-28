@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search as SearchIcon, Star, MessageCircle, ThumbsUp, ThumbsDown, RefreshCw, Bell, Clock, DollarSign, User, Package, AlertTriangle } from "lucide-react";
 import { tab } from '@testing-library/user-event/dist/tab';
-import feedbackService, { ProductFeedbackSummary, Review as FeedbackReview } from '../services/feedback.service';
-import authService from '../services/auth.service';
-import tradeService, { TradeRequest, TradeFilters, TradeNotification, TradeStats } from '../services/trade.service';
+import feedbackService, { ProductFeedbackSummary, Review as FeedbackReview } from '../services_old/feedback.service';
+import authService from '../services_old/auth.service';
+import tradeService, { TradeRequest, TradeFilters, TradeNotification, TradeStats } from '../services_old/trade.service';
 
 // Trade component for the seller module
 const Search: React.FC<{ onSearch: (term: string) => void }> = ({ onSearch }) => {

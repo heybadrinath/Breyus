@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import productService from '../services/product.service';
+import productService from '../services_old/product.service';
 
 export default function SellerTradeTerms() {
     const [form, setForm] = useState({

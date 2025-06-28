@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import CheckoutStepper from "../components/cart/CheckoutStepper";
-import cartService from "../../services/cart.service";
+import cartService from "../../services_old/cart.service";
 import PurchaseRequestProgress from "../components/cart/PurchaseRequestProgress";
-import purchaseRequestValidationService from "../../services/purchaseRequestValidation.service";
+import purchaseRequestValidationService from "../../services_old/purchaseRequestValidation.service";
 
 import Incoscreenshot from '../assets/incoterms-screenshot-temp.png';
 

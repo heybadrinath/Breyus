@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Image from "../../components/Image";
-import cartService from "../../services/cart.service";
-import authService from "../../services/auth.service";
+import cartService from "../../services_old/cart.service";
+import authService from "../../services_old/auth.service";
 import { Product } from "../../types/product";
 
 interface OrderRequestData {

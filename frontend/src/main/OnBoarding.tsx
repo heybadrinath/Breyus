@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import OnboardingProgress from "../components/OnboardingProgress";
 import { motion } from "framer-motion";
 import BreyusLogo from "../seller/vectors/full-logo.svg";
 import PasswordAndOTPVerification from "../components/PasswordAndOTPVerification";
+import { submitStep1 } from "../services/onboarding";
 
 const OnBoarding: React.FC = () => {
     const [currentStep, setCurrentStep] = React.useState(1);
@@ -30,6 +31,53 @@ const OnBoarding: React.FC = () => {
         }
     };
 
+    // handle form
+    const [formData, setFormData] = useState({
+        name: "",
+        location: "",
+        mail: "",
+        contactNumber: "",
+        taxId: "",
+    });
+
+    const [loading, setLoading] = useState(false); // To track the loading state
+    const [step1Submitted, setStep1Submitted] = useState(false); // Track if step 1 is already submitted
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setFormData((prevState) => ({
+            ...prevState,
+            [name]: value,
+        }));
+    };
+
+    const handleSubmitStep1 = async () => {
+        if (currentStep === 1 && !step1Submitted) {
+            setLoading(true); // Set loading state
+            try {
+                // Always resubmit step 1, even if userId/companyId exist
+                const response = await submitStep1(formData); // Call the API to submit Step 1
+                console.log("Response from backend:", response); // Handle the response, e.g., save userId, companyId
+                localStorage.setItem("userId", response.userId);
+                localStorage.setItem("companyId", response.companyId);
+                setStep1Submitted(true); // Mark step 1 as submitted
+                setCurrentStep(2); // Proceed to the next step
+            } catch (error) {
+                console.error("Error in Step 1 submission:", error);
+                alert("Something went wrong. Please try again later.");
+            } finally {
+                setLoading(false); // Reset loading state
+            }
+        } else if (currentStep === 1 && step1Submitted) {
+            setCurrentStep(2); // Just go to next step without resubmitting
+        } else {
+            setCurrentStep(prev => prev + 1); // For other steps, just go to next
+        }
+    };
+
+
+
+
     const renderStepContent = () => {
         switch (currentStep) {
             case 1:
@@ -40,13 +88,17 @@ const OnBoarding: React.FC = () => {
                         animate="visible"
                         className="space-y-8"
                     >
+
                         <motion.div variants={itemVariants}>
                             <label htmlFor="companyName" className="block text-2xl font-bold text-black">Company Name <span className="text-red-500">*</span></label>
                             <p className="mt-1 text-xs text-gray-500">Please put your full company name as it appears on official documents.</p>
                             <input
                                 type="text"
-                                name="companyName"
+                                name="name"
                                 id="companyName"
+                                value={formData.name}
+                                onChange={handleInputChange}
+                                required
                                 className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
                                 placeholder="Enter your company name"
                             />
@@ -55,8 +107,11 @@ const OnBoarding: React.FC = () => {
                             <label htmlFor="companyLocation" className="block text-2xl font-bold text-black">Company Location <span className="text-red-500">*</span></label>
                             <input
                                 type="text"
-                                name="companyLocation"
+                                name="location"
                                 id="companyLocation"
+                                value={formData.location}
+                                required
+                                onChange={handleInputChange}
                                 className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
                                 placeholder="Enter your company location"
                             />
@@ -65,8 +120,11 @@ const OnBoarding: React.FC = () => {
                             <label htmlFor="companyEmail" className="block text-2xl font-bold text-black">Company Email Address<span className="text-red-500">*</span></label>
                             <input
                                 type="email"
-                                name="companyEmail"
+                                name="mail"
                                 id="companyEmail"
+                                value={formData.mail}
+                                required
+                                onChange={handleInputChange}
                                 className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
                                 placeholder="Enter your company email address"
                             />
@@ -76,19 +134,25 @@ const OnBoarding: React.FC = () => {
                             <div className="mt-1 flex rounded-md shadow-sm">
                                 <input
                                     type="text"
-                                    name="whatsappNumber"
+                                    name="contactNumber"
                                     id="whatsappNumber"
+                                    value={formData.contactNumber}
+                                    required
+                                    onChange={handleInputChange}
                                     className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
                                     placeholder="+91 8xxxxxxxxxx"
                                 />
                             </div>
                         </motion.div>
                         <motion.div variants={itemVariants}>
-                            <label htmlFor="gstNumber" className="block text-2xl font-bold text-black">Company GST number <span className="text-red-500">*</span></label>
+                            <label htmlFor="taxId" className="block text-2xl font-bold text-black">Tax Id <span className="text-red-500">*</span></label>
                             <input
                                 type="text"
-                                name="gstNumber"
-                                id="gstNumber"
+                                name="taxId"
+                                id="taxId"
+                                value={formData.taxId}
+                                required
+                                onChange={handleInputChange}
                                 className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
                                 placeholder="Enter your company GST number"
                             />
@@ -215,38 +279,38 @@ const OnBoarding: React.FC = () => {
                         </motion.div>
                     </motion.div>
                 );
-                case 5:
-                    return (
-                        <motion.div
-                            variants={containerVariants}
-                            initial="hidden"
-                            animate="visible"
-                            className="space-y-8"
-                        >
-                            <motion.div variants={itemVariants}>
-                                <label className="block text-2xl font-bold text-black">What's your business roll in the market?<span className="text-red-500">*</span></label>
-                                <div className="mt-4 space-y-4">
-                                    {['Seller', 'Buyer', 'Seller and Buyer'].map((option, index) => (
-                                        <motion.div
-                                            key={option}
-                                            className="flex items-center"
-                                            variants={itemVariants}
-                                        >
-                                            <input
-                                                id={option.replace(/\s/g, '')}
-                                                name="businessRole"
-                                                type="radio"
-                                                className="focus:ring-black h-4 w-4 text-black border-gray-300"
-                                            />
-                                            <label htmlFor={option.replace(/\s/g, '')} className="ml-3 block text-sm text-black font-semibold">
-                                                {option}
-                                            </label>
-                                        </motion.div>
-                                    ))}
-                                </div>
-                            </motion.div>
+            case 5:
+                return (
+                    <motion.div
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="visible"
+                        className="space-y-8"
+                    >
+                        <motion.div variants={itemVariants}>
+                            <label className="block text-2xl font-bold text-black">What's your business roll in the market?<span className="text-red-500">*</span></label>
+                            <div className="mt-4 space-y-4">
+                                {['Seller', 'Buyer', 'Seller and Buyer'].map((option, index) => (
+                                    <motion.div
+                                        key={option}
+                                        className="flex items-center"
+                                        variants={itemVariants}
+                                    >
+                                        <input
+                                            id={option.replace(/\s/g, '')}
+                                            name="businessRole"
+                                            type="radio"
+                                            className="focus:ring-black h-4 w-4 text-black border-gray-300"
+                                        />
+                                        <label htmlFor={option.replace(/\s/g, '')} className="ml-3 block text-sm text-black font-semibold">
+                                            {option}
+                                        </label>
+                                    </motion.div>
+                                ))}
+                            </div>
                         </motion.div>
-                    );
+                    </motion.div>
+                );
             default:
                 return null;
         }
@@ -279,7 +343,7 @@ const OnBoarding: React.FC = () => {
                         )}
                         {currentStep < 5 ? (
                             <button
-                                onClick={() => setCurrentStep(prev => prev + 1)}
+                                onClick={() => { handleSubmitStep1()}}
                                 className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors ml-auto mt-12"
                             >
                                 Next

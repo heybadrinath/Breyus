@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import authService from '../services/auth.service';
+import authService from '../services_old/auth.service';
 
 // Define interfaces for our messaging data
 interface Message {
