@@ -2,8 +2,7 @@ import React, { useState, ChangeEvent, useRef } from "react";
 import OnboardingProgress from "../components/OnboardingProgress";
 import { motion, AnimatePresence } from "framer-motion";
 import BreyusLogo from "../seller/vectors/full-logo.svg";
-import PasswordAndOTPVerification from "../components/PasswordAndOTPVerification";
-import { submitStep1 } from "../services/onboarding";
+
 
 const OnBoarding: React.FC = () => {
 
@@ -40,6 +39,12 @@ const OnBoarding: React.FC = () => {
     const handleChangeMail = (e: ChangeEvent<HTMLInputElement>) => {
         setMail(e.target.value);
     };
+
+    // mail onblur to make otp visible 
+    const [ismailentered, setIsMailEntered] = useState(false);
+    const handleMailBlur = () => {
+        setIsMailEntered(true);
+    }
 
 
     // handle otp 
@@ -153,6 +158,13 @@ const OnBoarding: React.FC = () => {
         }
     };
 
+    // handle current password if user exists with partial onboarding
+    const [currentPassword, setCurrentPassword] = useState('');
+
+    const handleCurrentPasswordChange = () =>{
+
+    }
+
 
 
 
@@ -240,7 +252,9 @@ const OnBoarding: React.FC = () => {
 
 
                         <motion.div>
-                            <label htmlFor="companyEmail" className="block text-2xl font-bold text-black">Company Email Address<span className="text-red-500">*</span></label>
+                            <label htmlFor="companyEmail" className="block text-2xl font-bold text-black">
+                                Company Email Address<span className="text-red-500">*</span>
+                            </label>
                             <input
                                 type="email"
                                 name="mail"
@@ -248,56 +262,99 @@ const OnBoarding: React.FC = () => {
                                 value={mail}
                                 required
                                 onChange={handleChangeMail}
+                                onBlur={(e) => {
+                                    const value = e.target.value.trim();
+                                    // Simple email validation regex
+                                    const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+                                    if (value !== '' && isValidEmail) {
+                                        handleMailBlur();
+                                    }
+                                }}
                                 className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
                                 placeholder="Enter your company email address"
                             />
                         </motion.div>
 
 
-                        <motion.div>
-                            <label htmlFor="emailOtp" className="block text-2xl font-bold text-black">
-                                Verify Your Email Address
-                                {emailOtpStatus === 'success' ? (
-                                    <span className="text-green-500 ml-2">✔️</span>
-                                ) : (
-                                    <span className="text-red-500">*</span>
-                                )}
-                            </label>
-                            <p className="mt-1 text-xs text-gray-500">Check your inbox for a verification code to continue setting up your Breyus account. Didn't get it? <a href="#" onClick={() => resendOtp(setEmailOtpMessage)} className="text-blue-600 hover:underline">Resend Code</a></p>
-                            <div className="mt-2 flex space-x-2">
-                                {emailOtp.map((digit, index) => (
-                                    <input
-                                        key={index}
-                                        type="text"
-                                        maxLength={1}
-                                        value={digit}
-                                        onChange={(e) => handleOtpChange(e, index, emailOtp, setEmailOtp, emailOtpRefs)}
-                                        onFocus={(e) => e.target.select()}
-                                        onBlur={() => verifyOtp(emailOtp, setEmailOtpStatus, setEmailOtpMessage, 'email')}
-                                        onPaste={(e) => handlePaste(e, emailOtp, setEmailOtp, emailOtpRefs)}
-                                        ref={el => { emailOtpRefs.current[index] = el; }}
-                                        className={`w-12 h-12 text-center text-xl border rounded-md focus:outline-none focus:ring-2 ${emailOtpStatus === 'success' ? 'border-green-500 focus:ring-green-500' :
-                                            emailOtpStatus === 'error' ? 'border-red-500 focus:ring-red-500' :
-                                                'border-gray-300 focus:ring-black'
-                                            }`}
-                                    />
-                                ))}
-                            </div>
-                            <AnimatePresence>
-                                {emailOtpMessage && (
-                                    <motion.p
-                                        initial={{ opacity: 0, y: -10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        className={`mt-2 text-sm ${emailOtpStatus === 'success' ? 'text-green-600' : 'text-red-600'
-                                            }`}
-                                    >
-                                        {emailOtpMessage}
-                                    </motion.p>
-                                )}
-                            </AnimatePresence>
-                        </motion.div>
+                        <AnimatePresence>
+                            {ismailentered && (
+                                <motion.div
+                                    variants={itemVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="hidden"
+                                    className=""
+                                >
+                                    <label htmlFor="emailOtp" className="block text-2xl font-bold text-black">
+                                        Verify Your Email Address
+                                        {emailOtpStatus === 'success' ? (
+                                            <span className="text-green-500 ml-2">✔️</span>
+                                        ) : (
+                                            <span className="text-red-500">*</span>
+                                        )}
+                                    </label>
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        Check your inbox for a verification code to continue setting up your Breyus account. Didn't get it?{" "}
+                                        <a href="#" onClick={() => resendOtp(setEmailOtpMessage)} className="text-blue-600 hover:underline">
+                                            Resend Code
+                                        </a>
+                                    </p>
+                                    <div className="mt-2 flex space-x-2">
+                                        {emailOtp.map((digit, index) => (
+                                            <input
+                                                key={index}
+                                                type="text"
+                                                maxLength={1}
+                                                value={digit}
+                                                onChange={(e) => handleOtpChange(e, index, emailOtp, setEmailOtp, emailOtpRefs)}
+                                                onFocus={(e) => e.target.select()}
+                                                onBlur={() => verifyOtp(emailOtp, setEmailOtpStatus, setEmailOtpMessage, 'email')}
+                                                onPaste={(e) => handlePaste(e, emailOtp, setEmailOtp, emailOtpRefs)}
+                                                ref={el => { emailOtpRefs.current[index] = el; }}
+                                                className={`w-12 h-12 text-center text-xl border rounded-md focus:outline-none focus:ring-2 ${emailOtpStatus === 'success'
+                                                        ? 'border-green-500 focus:ring-green-500'
+                                                        : emailOtpStatus === 'error'
+                                                            ? 'border-red-500 focus:ring-red-500'
+                                                            : 'border-gray-300 focus:ring-black'
+                                                    }`}
+                                            />
+                                        ))}
+                                    </div>
+                                    <AnimatePresence>
+                                        {emailOtpMessage && (
+                                            <motion.p
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -10 }}
+                                                className={`mt-2 text-sm ${emailOtpStatus === 'success' ? 'text-green-600' : 'text-red-600'
+                                                    }`}
+                                            >
+                                                {emailOtpMessage}
+                                            </motion.p>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
+                        { false && (
+                            <motion.div variants={itemVariants}>
+                            <label htmlFor="currentPassword" className="block text-2xl font-bold text-black">Enter Your password<span className="text-red-500">*</span></label>
+                            <input
+                                type="password"
+                                name="currentPassword"
+                                id="currentPassword"
+                                className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? '!border-red-500' : ''}`}
+                                placeholder="Enter Your Password"
+                                value={currentPassword}
+                                onChange={handleCurrentPasswordChange}
+                            />
+                            {passwordError && <p className="mt-1 text-xs text-red-500">{passwordError}</p>}
+                        </motion.div>
+                        )}
+
+                        { false && (
+                            <>
                         <motion.div variants={itemVariants}>
                             <label htmlFor="password" className="block text-2xl font-bold text-black">Set Your Password<span className="text-red-500">*</span></label>
                             <input
@@ -324,6 +381,8 @@ const OnBoarding: React.FC = () => {
                                 onChange={handleConfirmPasswordChange}
                             />
                         </motion.div>
+                        </>
+                        )}
 
 
                     </motion.div>
