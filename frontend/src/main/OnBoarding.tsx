@@ -4,9 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import BreyusLogo from "../seller/vectors/full-logo.svg";
 
 // import service (backend integration)
-import { sendOtpService, verifyOtpService, validateTokenService } from '../services/onboarding';
-import { json } from "stream/consumers";
-import { BooleanLiteral } from "typescript";
+import { sendOtpService, verifyOtpService, validateTokenService, setPasswordService } from '../services/onboarding';
+
 
 
 const OnBoarding: React.FC = () => {
@@ -17,6 +16,7 @@ const OnBoarding: React.FC = () => {
     const [successMessage, setSuccessMessage] = React.useState('');
     const [emailOtpStatus, setEmailOtpStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [accountExists, setAccountExists] = React.useState(false);
+    const [createAccount, setCreateAccount] = React.useState(false)
 
     //animation variants
     const containerVariants = {
@@ -179,9 +179,12 @@ const OnBoarding: React.FC = () => {
                 const response = await validateTokenService(onboarding.token as string);
                 const responseObject = await response.json();
                 const UserExists = responseObject.status;
+                setSuccessMessage('');
                 if (UserExists === 'accountExists') {
                     setAccountExists(true);
-                } 
+                } else{
+                    setCreateAccount(true);
+                }
                 
 
             } catch (e) {
@@ -382,7 +385,7 @@ const OnBoarding: React.FC = () => {
                             )}
                         </AnimatePresence>
 
-                        {!accountExists && (
+                        {accountExists && (
                             <motion.div variants={itemVariants}>
                                 <label htmlFor="currentPassword" className="block text-2xl font-bold text-black">Enter Your password<span className="text-red-500">*</span></label>
                                 <input
@@ -398,7 +401,7 @@ const OnBoarding: React.FC = () => {
                             </motion.div>
                         )}
 
-                        {accountExists && (
+                        {createAccount && (
                             <>
                                 <motion.div variants={itemVariants}>
                                     <label htmlFor="password" className="block text-2xl font-bold text-black">Set Your Password<span className="text-red-500">*</span></label>

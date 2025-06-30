@@ -58,5 +58,27 @@ export const validateTokenService = async (token: string) => {
 }
 
 
+export const setPasswordService = async (token: string, setPassword: string, confirmPassword: string) => {
+    const endpoint = "/set-password"
+    const headers = {
+        'Authorization': token,
+        'Content': 'application/json'
+    }
+
+    const response = await fetch(`${BACKEND_END_POINT}${endpoint}`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+            setPassword,
+            confirmPassword
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error("Unauthorised access!")
+    }
+    return response;
+}
+
 
 
