@@ -80,7 +80,6 @@ export class OnboardingService {
             );
         }
 
-
         // decode the jwt token
         let decodeToken;
         const jwtSecret = process.env.JWT_SECRET_KEY;
@@ -99,10 +98,14 @@ export class OnboardingService {
             throw new HttpException('Please Verify your email through otp first!', HttpStatus.NOT_FOUND);
         }
 
+        // Check if user already exists
+        const existingUser = await this.userSchema.findOne({ mail: mail });
+        if (existingUser) {
+            throw new HttpException("Account already exists!", HttpStatus.BAD_REQUEST);
+        }
 
         // Hash the password
         const hashedPassword = await bcrypt.hash(setPassword, 10);
-
 
         // create company empty database
         let savedCompany;
@@ -116,7 +119,6 @@ export class OnboardingService {
             );
         }
 
-
         // create an user database
         let savedUser;
         try {
@@ -128,15 +130,12 @@ export class OnboardingService {
             savedUser = await User.save();
         } catch (e) {
             throw new HttpException(
-                'Unable to create User Database pleae try again later',
+                'Unable to create User Database please try again later',
                 HttpStatus.INTERNAL_SERVER_ERROR
             );
         }
 
         return savedUser._id;
-
-
-
     }
 
     async continueOnboarding(PasswordDto) {

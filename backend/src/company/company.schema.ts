@@ -17,37 +17,37 @@ export enum TradeType {
 @Schema({ timestamps: true })
 export class Company extends Document {
 
-    @Prop({ unique: true, required: false, default: '__UNIQUE__PLACEHOLDER__' })
+    @Prop()
     name: string;
 
-    @Prop({ unique: false, required: false })
+    @Prop()
     location: string;
 
-    @Prop({ unique: true, required: false, default: '__UNIQUE__PLACEHOLDER__' })
+    @Prop()
     number: string;
 
-    @Prop({ unique: true, required: false, default: '__UNIQUE__PLACEHOLDER__' })
+    @Prop()
     taxId: string;
 
-    @Prop({ unique: false, required: false })
+    @Prop()
     role: CompanyRole;
 
-    @Prop({ unique: false, default: false })
+    @Prop()
     isVerified: boolean;
 
-    @Prop({ unique: false, required: false })
+    @Prop()
     tradeType: TradeType;
 
-    @Prop({ unique: false, required: false })
+    @Prop()
     founderName: string;
 
-    @Prop({ unique: true, required: false, default: '__UNIQUE__PLACEHOLDER__' })
+    @Prop()
     websiteUrl: string;
 
-    @Prop({required: false})
+    @Prop()
     mainLineBusiness: string[];
 
-    @Prop({required: false})
+    @Prop()
     meanMonthlyRevenue: MeanMonthlyRevenue;
 
     @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], required: false })

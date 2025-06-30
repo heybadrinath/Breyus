@@ -229,7 +229,6 @@ const OnBoarding: React.FC = () => {
         try{
            const response = await setPasswordService(onboarding.token as string,password,confirmPassword);
            setSuccessMessage("Welcome to breyus!")
-            console.log(response);
         } catch (e){
         setErrorMessage("Error, failed onboarding please try again")
         }
