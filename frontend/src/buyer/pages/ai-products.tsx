@@ -33,30 +33,34 @@ const SearchBar = ({ onSearchResults }: { onSearchResults: (results: SellerCardP
     const location = useLocation();
 
     const fetchResults = async (input: string) => {
-        try {
-            const res = await fetch("https://breyus.com/search/", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ query: input }),
-            });
-	    console.log(res);
-            const data = await res.json();
-            const formattedResults = data.matches?.map((item: any) => ({
-                company: item.Company,
-                country: item.Country,
-                contactNumber: item["Contact number"],
-                productDescription: item["Product description"],
-                product: item.Product,
-                companyAddress: item["Company address"],
-                price: item.Price,
-                hsnCode: item["HS Code"]
-            }));
-            onSearchResults(formattedResults || []);
-        } catch (error) {
-            console.error("Search failed", error);
-            onSearchResults([]);
-        }
-    };
+    try {
+        const endpoint = "/buyer/ai";
+        const res = await fetch(`${process.env.REACT_APP_BACKEND_AI_URL}${endpoint}`,}
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: input }),
+        });
+        console.log("Raw Response:", res);
+        const data = await res.json();
+        console.log("Parsed Data:", data);
+
+        const formattedResults = data.results?.map((item: any) => ({
+            company: item.importer_name,
+            country: item.country,
+            contactNumber: "N/A", 
+            productDescription: item.product_description,
+            product: item.product,
+            companyAddress: item.importer_address,
+            price: item.price,
+            hsnCode: item.hs_code
+        }));
+
+        onSearchResults(formattedResults || []);
+    } catch (error) {
+        console.error("Search failed", error);
+        onSearchResults([]);
+    }
+};
 
     useEffect(() => {
         const state = location.state as { query?: string };
