@@ -46,9 +46,9 @@ export class OnboardingController {
 
     // Endpoint to set a password after OTP verification
     @Post('set-password')
-    async setPassword(@Body() setPasswordDto: SetPasswordDto): Promise<string> {
+    async setPassword(@Headers('authorization') token: string, @Body() setPasswordDto: SetPasswordDto): Promise<string> {
         try {
-            const savedUserId = await this.onboardingService.SetPassword(setPasswordDto);
+            const savedUserId = await this.onboardingService.SetPassword(setPasswordDto,token);
             return savedUserId;  // Return the created user's ID
         } catch (error) {
             throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);

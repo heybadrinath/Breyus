@@ -16,28 +16,28 @@ export const sendOtpService = async (mail: string) => {
     if (!response.ok) {
         throw Error("Network error")
     }
- 
+
 }
 
 export const verifyOtpService = async (email: string, otp: string) => {
-  const endpoint = "/verify-otp";
-  const body = { email, otp };
-  const headers = { 'Content-type': 'application/json' };
+    const endpoint = "/verify-otp";
+    const body = { email, otp };
+    const headers = { 'Content-type': 'application/json' };
 
-  const response = await fetch(`${BACKEND_END_POINT}${endpoint}`, {
-    method: 'POST',
-    headers: headers,
-    body: JSON.stringify(body),
-  });
+    const response = await fetch(`${BACKEND_END_POINT}${endpoint}`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(body),
+    });
 
-  // Check if the response was successful (status code 2xx)
-  if (!response.ok) {
-    throw new Error(`Failed to verify OTP: ${response.statusText}`);
-  }
+    // Check if the response was successful (status code 2xx)
+    if (!response.ok) {
+        throw new Error(`Failed to verify OTP: ${response.statusText}`);
+    }
 
 
-  const token = await response.json();
-  return token;  
+    const token = await response.json();
+    return token;
 }
 
 export const validateTokenService = async (token: string) => {
@@ -62,16 +62,19 @@ export const setPasswordService = async (token: string, setPassword: string, con
     const endpoint = "/set-password"
     const headers = {
         'Authorization': token,
-        'Content': 'application/json'
+        'Content-Type': 'application/json'
     }
+
+    const payload = {
+        setPassword: String(setPassword),
+        confirmPassword: String(confirmPassword)
+    }
+
 
     const response = await fetch(`${BACKEND_END_POINT}${endpoint}`, {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify({
-            setPassword,
-            confirmPassword
-        })
+        body: JSON.stringify(payload)
     });
 
     if (!response.ok) {

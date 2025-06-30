@@ -24,10 +24,6 @@ export class VerifyEmailOtpDto {
 
 export class SetPasswordDto {
 
-     @IsString({ message: 'Onboarding token must be a string.' })
-    @IsNotEmpty({ message: 'Onboarding token is required.' })
-    onboardingToken: string;
-
     @IsString({ message: "Password must be a String!" })
     @MinLength(8, { message: "Password must be atleast 8 characters long!" })
     @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).+$/, {

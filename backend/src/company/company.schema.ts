@@ -56,7 +56,7 @@ export class Company extends Document {
     @Prop({ default: 0, required: false })
     onboardingProgress: number;
 
-    @Prop({default: false})
+    @Prop({default: false, unique: false})
     isOnboardingCompleted: boolean;
 }
 export const CompanySchema = SchemaFactory.createForClass(Company)

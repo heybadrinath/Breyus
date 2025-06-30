@@ -69,8 +69,8 @@ export class OnboardingService {
 
     }
 
-    async SetPassword(setPasswordDto: SetPasswordDto): Promise<string> {
-        const { setPassword, confirmPassword, onboardingToken } = setPasswordDto;
+    async SetPassword(setPasswordDto: SetPasswordDto, onboardingToken): Promise<string> {
+        const { setPassword, confirmPassword } = setPasswordDto;
 
         // verify if password match 
         if (setPassword !== confirmPassword) {
