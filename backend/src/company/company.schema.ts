@@ -17,43 +17,43 @@ export enum TradeType {
 @Schema({ timestamps: true })
 export class Company extends Document {
 
-    @Prop({ unique: true })
+    @Prop({ unique: true, required: false, default: '__UNIQUE__PLACEHOLDER__' })
     name: string;
 
-    @Prop({ unique: false })
+    @Prop({ unique: false, required: false })
     location: string;
 
-    @Prop({ unique: true })
+    @Prop({ unique: true, required: false, default: '__UNIQUE__PLACEHOLDER__' })
     number: string;
 
-    @Prop({ unique: true })
+    @Prop({ unique: true, required: false, default: '__UNIQUE__PLACEHOLDER__' })
     taxId: string;
 
-    @Prop({ unique: false })
+    @Prop({ unique: false, required: false })
     role: CompanyRole;
 
-    @Prop({ unique: false })
+    @Prop({ unique: false, default: false })
     isVerified: boolean;
 
-    @Prop({ unique: false })
+    @Prop({ unique: false, required: false })
     tradeType: TradeType;
 
-    @Prop({ unique: true })
+    @Prop({ unique: false, required: false })
     founderName: string;
 
-    @Prop({ unique: true })
+    @Prop({ unique: true, required: false, default: '__UNIQUE__PLACEHOLDER__' })
     websiteUrl: string;
 
-    @Prop()
+    @Prop({required: false})
     mainLineBusiness: string[];
 
-    @Prop()
+    @Prop({required: false})
     meanMonthlyRevenue: MeanMonthlyRevenue;
 
-    @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }] })
+    @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], required: false })
     users: Types.ObjectId[]; // Or: User[]
 
-    @Prop({ default: 0 })
+    @Prop({ default: 0, required: false })
     onboardingProgress: number;
 
     @Prop({default: false})

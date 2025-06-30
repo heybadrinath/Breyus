@@ -3,10 +3,20 @@ import OnboardingProgress from "../components/OnboardingProgress";
 import { motion, AnimatePresence } from "framer-motion";
 import BreyusLogo from "../seller/vectors/full-logo.svg";
 
+// import service (backend integration)
+import { sendOtpService, verifyOtpService, validateTokenService } from '../services/onboarding';
+import { json } from "stream/consumers";
+import { BooleanLiteral } from "typescript";
+
 
 const OnBoarding: React.FC = () => {
-
+    const [onboarding, setonboarding] = React.useState<{ token?: string, onboardingStatus?: boolean }>({});
+    const [ismailverified, setIsMailverified] = React.useState(false);
     const [currentStep, setCurrentStep] = React.useState(1);
+    const [errorMessage, setErrorMessage] = React.useState('');
+    const [successMessage, setSuccessMessage] = React.useState('');
+    const [emailOtpStatus, setEmailOtpStatus] = useState<'idle' | 'success' | 'error'>('idle');
+    const [accountExists, setAccountExists] = React.useState(false);
 
     //animation variants
     const containerVariants = {
@@ -42,15 +52,25 @@ const OnBoarding: React.FC = () => {
 
     // mail onblur to make otp visible 
     const [ismailentered, setIsMailEntered] = useState(false);
-    const handleMailBlur = () => {
+    const handleMailBlur = async () => {
+        if (!ismailentered) {
+            try {
+                await sendOtpService(mail);
+                setSuccessMessage("Email successfully sent to your mail");
+                setErrorMessage('');
+            } catch (error: any) {
+                setErrorMessage(error?.message || "Failed to send OTP. Please try again.");
+                setSuccessMessage('');
+            }
+        }
         setIsMailEntered(true);
     }
 
 
     // handle otp 
     const [emailOtp, setEmailOtp] = useState<string[]>(new Array(6).fill(''));
-    const [emailOtpStatus, setEmailOtpStatus] = useState<'idle' | 'success' | 'error'>('idle');
-    const [emailOtpMessage, setEmailOtpMessage] = useState('');
+
+
     const emailOtpRefs = useRef<Array<HTMLInputElement | null>>([]);
     const handleOtpChange = (
         e: ChangeEvent<HTMLInputElement>,
@@ -82,17 +102,17 @@ const OnBoarding: React.FC = () => {
         setOtpArray: React.Dispatch<React.SetStateAction<string[]>>,
         otpRefs: React.MutableRefObject<Array<HTMLInputElement | null>>
     ) => {
+        e.preventDefault(); // Prevent default paste behavior
         const paste = e.clipboardData.getData('text');
         if (!/^\d{6}$/.test(paste)) return;
 
         const newOtp = paste.split('');
         setOtpArray(newOtp);
-        newOtp.forEach((char, i) => {
-            if (otpRefs.current[i]) {
-                otpRefs.current[i]!.value = char; // Set value directly for pasted content
-            }
-        });
-        otpRefs.current[5]?.focus(); // Focus on last input
+
+        // Focus on the last input after state update
+        setTimeout(() => {
+            otpRefs.current[5]?.focus();
+        }, 0);
     };
 
 
@@ -100,36 +120,79 @@ const OnBoarding: React.FC = () => {
     const verifyOtp = (
         otp: string[],
         setOtpStatus: React.Dispatch<React.SetStateAction<'idle' | 'success' | 'error'>>,
-        setOtpMessage: React.Dispatch<React.SetStateAction<string>>,
-        type: 'mobile' | 'email'
+        type: 'email'
     ) => {
         const otpCode = otp.join('');
         if (otpCode.length !== 6 || !/^\d{6}$/.test(otpCode)) {
             setOtpStatus('error');
-            setOtpMessage('Please enter a valid 6-digit OTP.');
+            setErrorMessage('Please enter a valid 6-digit OTP.');
             return;
         }
 
-        // Simulate API call
-        setTimeout(() => {
-            if (otpCode === '111111') { // Example success code
-                setOtpStatus('success');
-                setOtpMessage(`Your ${type} has been verified successfully.`);
-            } else {
-                setOtpStatus('error');
-                setOtpMessage('Incorrect Authorization Code. Please Try again.');
+        // verify otp function call service
+        (async () => {
+            if (!ismailverified) {
+                try {
+
+                    setonboarding(await verifyOtpService(mail, otpCode));
+                    setOtpStatus('success');
+                    setSuccessMessage('OTP verified successfully!');
+                    setErrorMessage('');
+                    // todo disable duplicate submissions and disable email and otp input
+                    setIsMailverified(true);
+                } catch (error: any) {
+                    setOtpStatus('error');
+                    setErrorMessage(error?.message || 'Failed to verify OTP. Please try again.');
+                    setSuccessMessage('');
+                }
+
             }
-        }, 1000);
+
+        })();
     };
 
 
-    const resendOtp = (setOtpMessage: React.Dispatch<React.SetStateAction<string>>) => {
-        setOtpMessage('Resending code...');
-        // Simulate API call
-        setTimeout(() => {
-            setOtpMessage('Code resent!');
-        }, 1000);
+
+
+    // Resend OTP handler for email
+    const handleResendEmailOtp = async () => {
+        if (!mail || ismailverified) return;
+        try {
+            setSuccessMessage('');
+            setErrorMessage('');
+            await sendOtpService(mail);
+            setSuccessMessage('Verification code resent to your email.');
+            setEmailOtpStatus('idle');
+            setEmailOtp(new Array(6).fill(''));
+            emailOtpRefs.current[0]?.focus();
+        } catch (error: any) {
+            setErrorMessage(error?.message || 'Failed to resend OTP. Please try again.');
+        }
     };
+
+
+    //validate token sent during otp validation and check if user already onboarded
+    if (ismailverified) {
+
+        (async () => {
+            try {
+                const response = await validateTokenService(onboarding.token as string);
+                const responseObject = await response.json();
+                const UserExists = responseObject.status;
+                if (UserExists === 'accountExists') {
+                    setAccountExists(true);
+                } 
+                
+
+            } catch (e) {
+                setErrorMessage("Unauthorised Access");
+                setSuccessMessage('');
+                console.log(onboarding.token);
+            }
+        })();
+    }
+
+    
 
 
 
@@ -161,7 +224,7 @@ const OnBoarding: React.FC = () => {
     // handle current password if user exists with partial onboarding
     const [currentPassword, setCurrentPassword] = useState('');
 
-    const handleCurrentPasswordChange = () =>{
+    const handleCurrentPasswordChange = () => {
 
     }
 
@@ -235,7 +298,6 @@ const OnBoarding: React.FC = () => {
 
 
 
-
     // render step ui content dynamically
     const renderStepContent = () => {
         switch (currentStep) {
@@ -262,6 +324,7 @@ const OnBoarding: React.FC = () => {
                                 value={mail}
                                 required
                                 onChange={handleChangeMail}
+                                disabled={ismailverified}
                                 onBlur={(e) => {
                                     const value = e.target.value.trim();
                                     // Simple email validation regex
@@ -270,7 +333,7 @@ const OnBoarding: React.FC = () => {
                                         handleMailBlur();
                                     }
                                 }}
-                                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
+                                className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${(ismailverified) ? 'cursor-not-allowed' : 'cursor-auto'}`}
                                 placeholder="Enter your company email address"
                             />
                         </motion.div>
@@ -285,17 +348,10 @@ const OnBoarding: React.FC = () => {
                                     exit="hidden"
                                     className=""
                                 >
-                                    <label htmlFor="emailOtp" className="block text-2xl font-bold text-black">
-                                        Verify Your Email Address
-                                        {emailOtpStatus === 'success' ? (
-                                            <span className="text-green-500 ml-2">✔️</span>
-                                        ) : (
-                                            <span className="text-red-500">*</span>
-                                        )}
-                                    </label>
+
                                     <p className="mt-1 text-xs text-gray-500">
                                         Check your inbox for a verification code to continue setting up your Breyus account. Didn't get it?{" "}
-                                        <a href="#" onClick={() => resendOtp(setEmailOtpMessage)} className="text-blue-600 hover:underline">
+                                        <a href="#" onClick={() => handleResendEmailOtp} className={`text-blue-600 hover:underline ${(ismailverified) ? 'cursor-not-allowed' : 'cursor-auto'}`}>
                                             Resend Code
                                         </a>
                                     </p>
@@ -306,82 +362,71 @@ const OnBoarding: React.FC = () => {
                                                 type="text"
                                                 maxLength={1}
                                                 value={digit}
+                                                disabled={ismailverified}
                                                 onChange={(e) => handleOtpChange(e, index, emailOtp, setEmailOtp, emailOtpRefs)}
                                                 onFocus={(e) => e.target.select()}
-                                                onBlur={() => verifyOtp(emailOtp, setEmailOtpStatus, setEmailOtpMessage, 'email')}
+                                                onBlur={() => verifyOtp(emailOtp, setEmailOtpStatus, 'email')}
                                                 onPaste={(e) => handlePaste(e, emailOtp, setEmailOtp, emailOtpRefs)}
                                                 ref={el => { emailOtpRefs.current[index] = el; }}
-                                                className={`w-12 h-12 text-center text-xl border rounded-md focus:outline-none focus:ring-2 ${emailOtpStatus === 'success'
-                                                        ? 'border-green-500 focus:ring-green-500'
-                                                        : emailOtpStatus === 'error'
-                                                            ? 'border-red-500 focus:ring-red-500'
-                                                            : 'border-gray-300 focus:ring-black'
-                                                    }`}
+                                                className={`w-12 h-12 text-center text-xl border rounded-md focus:outline-none focus:ring-1 ${emailOtpStatus === 'success'
+                                                    ? 'border-green-500 focus:ring-green-500'
+                                                    : emailOtpStatus === 'error'
+                                                        ? 'border-red-500 focus:ring-red-500'
+                                                        : 'border-gray-300 focus:ring-black'
+                                                    }  ${(ismailverified) ? 'cursor-not-allowed' : 'cursor-auto'}`}
                                             />
                                         ))}
                                     </div>
-                                    <AnimatePresence>
-                                        {emailOtpMessage && (
-                                            <motion.p
-                                                initial={{ opacity: 0, y: -10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: -10 }}
-                                                className={`mt-2 text-sm ${emailOtpStatus === 'success' ? 'text-green-600' : 'text-red-600'
-                                                    }`}
-                                            >
-                                                {emailOtpMessage}
-                                            </motion.p>
-                                        )}
-                                    </AnimatePresence>
+                                    <div></div>
                                 </motion.div>
                             )}
                         </AnimatePresence>
 
-                        { false && (
+                        {!accountExists && (
                             <motion.div variants={itemVariants}>
-                            <label htmlFor="currentPassword" className="block text-2xl font-bold text-black">Enter Your password<span className="text-red-500">*</span></label>
-                            <input
-                                type="password"
-                                name="currentPassword"
-                                id="currentPassword"
-                                className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? '!border-red-500' : ''}`}
-                                placeholder="Enter Your Password"
-                                value={currentPassword}
-                                onChange={handleCurrentPasswordChange}
-                            />
-                            {passwordError && <p className="mt-1 text-xs text-red-500">{passwordError}</p>}
-                        </motion.div>
+                                <label htmlFor="currentPassword" className="block text-2xl font-bold text-black">Enter Your password<span className="text-red-500">*</span></label>
+                                <input
+                                    type="password"
+                                    name="currentPassword"
+                                    id="currentPassword"
+                                    className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? '!border-red-500' : ''}`}
+                                    placeholder="Enter Your Password"
+                                    value={currentPassword}
+                                    onChange={handleCurrentPasswordChange}
+                                />
+                                {passwordError && <p className="mt-1 text-xs text-red-500">{passwordError}</p>}
+                            </motion.div>
                         )}
 
-                        { false && (
+                        {accountExists && (
                             <>
-                        <motion.div variants={itemVariants}>
-                            <label htmlFor="password" className="block text-2xl font-bold text-black">Set Your Password<span className="text-red-500">*</span></label>
-                            <input
-                                type="password"
-                                name="password"
-                                id="password"
-                                className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? '!border-red-500' : ''}`}
-                                placeholder="Password"
-                                value={password}
-                                onChange={handlePasswordChange}
-                            />
-                            {passwordError && <p className="mt-1 text-xs text-red-500">{passwordError}</p>}
-                        </motion.div>
+                                <motion.div variants={itemVariants}>
+                                    <label htmlFor="password" className="block text-2xl font-bold text-black">Set Your Password<span className="text-red-500">*</span></label>
+                                    <input
+                                        type="password"
+                                        name="password"
+                                        id="password"
+                                        className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? '!border-red-500' : ''}`}
+                                        placeholder="Password"
+                                        value={password}
+                                        onChange={handlePasswordChange}
+                                    />
+                                    {passwordError && <p className="mt-1 text-xs text-red-500">{passwordError}</p>}
+                                </motion.div>
 
-                        <motion.div variants={itemVariants}>
-                            <label htmlFor="confirmPassword" className="block text-2xl font-bold text-black">Confirm Password<span className="text-red-500">*</span></label>
-                            <input
-                                type="password"
-                                name="confirmPassword"
-                                id="confirmPassword"
-                                className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? '!border-red-500' : ''}`}
-                                placeholder="Confirm Password"
-                                value={confirmPassword}
-                                onChange={handleConfirmPasswordChange}
-                            />
-                        </motion.div>
-                        </>
+                                <motion.div variants={itemVariants}>
+                                    <label htmlFor="confirmPassword" className="block text-2xl font-bold text-black">Confirm Password<span className="text-red-500">*</span></label>
+                                    <input
+                                        type="password"
+                                        name="confirmPassword"
+                                        id="confirmPassword"
+                                        className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? '!border-red-500' : ''}`}
+                                        placeholder="Confirm Password"
+                                        value={confirmPassword}
+                                        onChange={handleConfirmPasswordChange}
+                                    />
+                                </motion.div>
+                            </>
                         )}
 
 
@@ -648,34 +693,42 @@ const OnBoarding: React.FC = () => {
                     <div className="w-full max-w-[800px] mx-auto">
                         {renderStepContent()}
                     </div>
-                    <div className="flex justify-between mt-8 max-w-[800px] mx-auto">
-                        {currentStep > 1 && (
-                            <button
-                                onClick={() => setCurrentStep(prev => prev - 1)}
-                                className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors h-fit mt-12"
-                            >
-                                Previous
-                            </button>
-                        )}
-                        {currentStep < 5 ? (
-                            <button
-                                onClick={() => {
 
-                                    setCurrentStep(prev => prev + 1);
-                                }}
-                                className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors ml-auto mt-12"
-                            >
-                                Next
-                            </button>
-                        ) : (
-                            <button
-                                onClick={() => { }}
-                                className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors mt-12"
-                            >
-                                Next
-                            </button>
-                        )}
-                    </div>
+                    <>
+
+                        <div className="mt-3 mx-6 text-red-600 text-sm"> {errorMessage}</div>
+                        <div className="mt-3 mx-6 text-green-600 text-sm"> {successMessage}</div>
+
+                        <div className="flex justify-between max-w-[800px] mx-auto">
+
+                            {currentStep > 1 && (
+                                <button
+                                    onClick={() => setCurrentStep(prev => prev - 1)}
+                                    className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors h-fit mt-12"
+                                >
+                                    Previous
+                                </button>
+                            )}
+                            {currentStep < 5 ? (
+                                <button
+                                    onClick={() => {
+
+                                        setCurrentStep(prev => prev + 1);
+                                    }}
+                                    className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors ml-auto mt-12"
+                                >
+                                    Next
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => { }}
+                                    className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors mt-12"
+                                >
+                                    Next
+                                </button>
+                            )}
+                        </div>
+                    </>
                 </div>
             </div>
         </div>

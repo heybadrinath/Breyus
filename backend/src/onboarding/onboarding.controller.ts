@@ -1,24 +1,68 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Session } from '@nestjs/common';
-import { Step1Dto, Step2Dto } from './dto/onboarding.dto';
+import { Body, Controller, HttpCode, HttpException, HttpStatus, Post, Session, Headers } from '@nestjs/common';
+import {SendEmailOtpDto, VerifyEmailOtpDto, PasswordDto, SetPasswordDto } from './dto/onboarding.dto';
 import { OnboardingService } from './onboarding.service';
+import { AuthService } from 'src/auth/auth.service';
 
 @Controller('onboarding')
 export class OnboardingController {
-     constructor(
-            private readonly onboardingservice: OnboardingService
-        ) { };
-    
-    @Post('step1')
-    @HttpCode(HttpStatus.ACCEPTED)
-    async step1(@Body() step1dto: Step1Dto){
-        return await this.onboardingservice.step1(step1dto);
+    constructor(
+        private readonly onboardingService: OnboardingService,
+        private readonly authService: AuthService
+    ) { };
+
+
+
+    // Endpoint to send OTP email
+    @Post('send-otp')
+    async sendOtp(@Body() sendEmailOtpDto: SendEmailOtpDto): Promise<string> {
+        try {
+            const response = await this.onboardingService.sendMailOtp(sendEmailOtpDto);
+            return response as string;
+        } catch (error) {
+            throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
-    // @Post('step2')
-    // @HttpCode(HttpStatus.ACCEPTED)
-    // async step2(@Body() step2dto: Step2Dto){
-    //     //todo add user id created at step-1
-    //     return await this.onboardingservice.step2(step2dto, '_id');
-    // }
+    // Endpoint to verify OTP and generate onboarding token
+    @Post('verify-otp')
+    async verifyOtp(@Body() verifyEmailOtpDto: VerifyEmailOtpDto): Promise<string> {
+        try {
+            const token = await this.onboardingService.ValidateMailOtp(verifyEmailOtpDto);
+            return token;  // return the onboarding token
+        } catch (error) {
+            throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+        }
+    }
 
+    @Post('validate-token')
+    async verifyOnboardingToken(@Headers('authorization') token: string){
+        try{
+            return await this.authService.verifyOnboardingToken(token);
+            
+        } catch (error) {
+            throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    // Endpoint to set a password after OTP verification
+    @Post('set-password')
+    async setPassword(@Body() setPasswordDto: SetPasswordDto): Promise<string> {
+        try {
+            const savedUserId = await this.onboardingService.SetPassword(setPasswordDto);
+            return savedUserId;  // Return the created user's ID
+        } catch (error) {
+            throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // Endpoint to continue onboarding (after setting the password)
+    @Post('continue-onboarding')
+    async continueOnboarding(@Body() passwordDto: PasswordDto): Promise<boolean> {
+        try {
+            const result = await this.onboardingService.continueOnboarding(passwordDto);
+            return result;
+        } catch (error) {
+            throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }
