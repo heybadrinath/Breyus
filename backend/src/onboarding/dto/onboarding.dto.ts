@@ -42,11 +42,7 @@ export class SetPasswordDto {
 
 }
 
-export class PasswordDto {
-
-    @IsString({message: "_id must be a string"})
-    @IsNotEmpty({message: "_id cannot be empty"})
-    _id: string
+export class continueOnboardingDto {
 
     @IsString({message: "Password must be a String"})
     @IsNotEmpty({message: "Password is required!"})
@@ -54,37 +50,7 @@ export class PasswordDto {
 }
 
 
-// export class Step1Dto {
-
-//     @IsString()
-//     @IsNotEmpty()
-//     @Transform(({ value }) => typeof value === 'string' ? value.toLowerCase() : value)
-//     name: string;
-
-//     @IsString()
-//     @IsNotEmpty()
-//     location: string;
-
-//     @IsEmail()
-//     @IsNotEmpty()
-//     @Transform(({ value }) => typeof value === 'string' ? value.toLowerCase() : value)
-//     mail: string;
-
-//     @IsString()
-//     @IsNotEmpty()
-//     @Transform(({ value }) => value.replace(/\s+/g, ''))
-//     @Matches(/^\+(\d{1,4})[\s\-]?(\d{7,15})([\s\-]?\d+)*$/, { message: 'Invalid phone number format. Please provide a valid international number, e.g., +91 123 456 7890.' })
-//     contactNumber: string;
-
-//     @IsString()
-//     @IsNotEmpty()
-//     @Transform(({ value }) => value.replace(/\s+/g, ''))
-//     @Matches(/^(?:[A-Z]{2}[A-Z0-9]{10}[A-Z0-9]{1}|[0-9]{2}-[0-9]{7}|[A-Z0-9]{9,15})$/, {
-//         message: 'Invalid Tax ID. Must match GSTIN, EIN, or other valid formats.',
-//     })
-//     taxId: string;
-
-// }
+// step 2 dto
 
 export class Step2Dto {
 

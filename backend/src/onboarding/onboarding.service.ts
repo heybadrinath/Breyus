@@ -1,5 +1,5 @@
 import { BadRequestException, HttpException, HttpStatus, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
-import { SendEmailOtpDto, VerifyEmailOtpDto, SetPasswordDto, PasswordDto } from 'src/onboarding/dto/onboarding.dto';
+import { SendEmailOtpDto, VerifyEmailOtpDto, SetPasswordDto, continueOnboardingDto } from 'src/onboarding/dto/onboarding.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Company } from 'src/company/company.schema';
 import { User, UserSchema } from 'src/users/user.schema';
@@ -9,7 +9,8 @@ import { MailService } from 'src/mail/mail.service';
 import { NotFoundError } from 'rxjs';
 import { AuthService } from 'src/auth/auth.service';
 import * as jwt from 'jsonwebtoken';
-import { Response } from 'express';
+import { response, Response } from 'express';
+import { decode } from 'punycode';
 
 
 
@@ -135,15 +136,35 @@ export class OnboardingService {
             );
         }
 
-        return savedUser._id;
+
+        const JwtToken = this.authService.generateAccountToken(savedUser._id);
+        response.cookie('access_token', JwtToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 86400000,
+            signed: true,
+        });
+        return JwtToken;
     }
 
-    async continueOnboarding(PasswordDto) {
-        const { _id, password } = PasswordDto;
 
+
+
+    async continueOnboarding(continueOnboardingDto, onboardingToken: string) {
+        const { password } = continueOnboardingDto;
 
         try {
-            const user = await this.userSchema.findById(_id);
+            const jwtSecret = process.env.JWT_SECRET_KEY;
+            if (!jwtSecret) {
+                throw new InternalServerErrorException('JWT secret key is not defined in environment variables');
+            }
+            const decodeToken = jwt.verify(onboardingToken, jwtSecret);
+            if (typeof decodeToken !== 'object' || decodeToken === null || !('userId' in decodeToken)) {
+                throw new HttpException('Invalid token payload', HttpStatus.BAD_REQUEST);
+            }
+            const userId = (decodeToken as jwt.JwtPayload).userId;
+
+            const user = await this.userSchema.findById(userId);
 
             if (!user) {
                 throw new HttpException("User not found", HttpStatus.NOT_FOUND);
@@ -154,8 +175,15 @@ export class OnboardingService {
             if (!isPasswordValid) {
                 throw new HttpException("Invalid Password", HttpStatus.BAD_REQUEST);
             }
-
-            return true;
+            
+            const JwtToken = this.authService.generateAccountToken(userId as string);
+            response.cookie('access_token', JwtToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                maxAge: 86400000,
+                signed: true,
+            });
+            return JwtToken;
 
         } catch (e) {
             throw new HttpException(e, HttpStatus.BAD_REQUEST);

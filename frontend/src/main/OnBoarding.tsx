@@ -225,18 +225,22 @@ const OnBoarding: React.FC = () => {
     };
 
     //handle password to create account
+    const [isPasswordSubmitted, setIsPasswordSubmitted] = useState(false);
+
     const handlecreateAccount = async () => {
-        try{
-           const response = await setPasswordService(onboarding.token as string,password,confirmPassword);
-           setSuccessMessage("Welcome to breyus!")
-        } catch (e){
-        setErrorMessage("Error, failed onboarding please try again")
+        if (isPasswordSubmitted) return;
+        setIsPasswordSubmitted(true);
+        try {
+            await setPasswordService(onboarding.token as string, password, confirmPassword);
+            setSuccessMessage("Account created successfully!");
+            setErrorMessage('');
+        } catch (e) {
+            setErrorMessage("Error, failed onboarding please try again");
+            setSuccessMessage('');
+        } finally {
+            setIsPasswordSubmitted(false);
         }
-
-       
     }
-
-    
 
     // handle current password if user exists with partial onboarding
     const [currentPassword, setCurrentPassword] = useState('');

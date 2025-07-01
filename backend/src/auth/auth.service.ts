@@ -53,4 +53,31 @@ export class AuthService {
         throw new HttpException('Error verifying token: ' + e,HttpStatus.BAD_REQUEST);
     }
   }
+
+  generateAccountToken( userId: string){
+    const secretKey = process.env.JWT_SECRET_KEY;
+    if(!secretKey){
+      throw new Error("JWT_SECRET_KEY is not defined in the environment variables");
+    }
+    const token = jwt.sign({ userId }, secretKey, { expiresIn: '1d' });
+    return token;
+  }
+
+  verifyAccountToken(token: string){
+    const secretKey = process.env.JWT_SECRET_KEY;
+    if(!secretKey){
+      throw new Error("JWT_SECRET_KEY is not defined in the environment variables");
+    }
+
+    try{
+      const decode: any = jwt.verify(token, secretKey);
+      if(decode && decode.userId){
+        return decode.userId;
+      } else {
+        throw new HttpException('userId not found in token payload', HttpStatus.BAD_REQUEST);
+      }
+    }catch(e){
+      throw new HttpException('Error Verifying token: ' + e, HttpStatus.BAD_REQUEST);
+    }
+  }
 }

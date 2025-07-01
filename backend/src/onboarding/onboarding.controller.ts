@@ -1,5 +1,5 @@
 import { Body, Controller, HttpCode, HttpException, HttpStatus, Post, Session, Headers } from '@nestjs/common';
-import {SendEmailOtpDto, VerifyEmailOtpDto, PasswordDto, SetPasswordDto } from './dto/onboarding.dto';
+import { SendEmailOtpDto, VerifyEmailOtpDto, continueOnboardingDto, SetPasswordDto } from './dto/onboarding.dto';
 import { OnboardingService } from './onboarding.service';
 import { AuthService } from 'src/auth/auth.service';
 
@@ -35,10 +35,10 @@ export class OnboardingController {
     }
 
     @Post('validate-token')
-    async verifyOnboardingToken(@Headers('authorization') token: string){
-        try{
+    async verifyOnboardingToken(@Headers('authorization') token: string) {
+        try {
             return await this.authService.verifyOnboardingToken(token);
-            
+
         } catch (error) {
             throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
         }
@@ -48,18 +48,30 @@ export class OnboardingController {
     @Post('set-password')
     async setPassword(@Headers('authorization') token: string, @Body() setPasswordDto: SetPasswordDto): Promise<string> {
         try {
-            const savedUserId = await this.onboardingService.SetPassword(setPasswordDto,token);
+            const savedUserId = await this.onboardingService.SetPassword(setPasswordDto, token);
             return savedUserId;  // Return the created user's ID
         } catch (error) {
             throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
+
+    // Endpoint that validate the jwt token and return the payload if.e userId
+    @Post('validate-account-token')
+    async validateAccountToken(@Headers('authorization') token: string): Promise<string> {
+        try {
+            return await this.authService.verifyAccountToken(token);
+        } catch (e) {
+            throw new HttpException(e.message,HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    
     // Endpoint to continue onboarding (after setting the password)
     @Post('continue-onboarding')
-    async continueOnboarding(@Body() passwordDto: PasswordDto): Promise<boolean> {
+    async continueOnboarding(@Body() continueOnboardingDto, @Headers('authorization') onBoardingToken: string): Promise<string>{
         try {
-            const result = await this.onboardingService.continueOnboarding(passwordDto);
+            const result = await this.onboardingService.continueOnboarding(continueOnboardingDto,onBoardingToken);
             return result;
         } catch (error) {
             throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
