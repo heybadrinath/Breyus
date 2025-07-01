@@ -136,14 +136,7 @@ export class OnboardingService {
             );
         }
 
-
         const JwtToken = this.authService.generateAccountToken(savedUser._id);
-        response.cookie('access_token', JwtToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            maxAge: 86400000,
-            signed: true,
-        });
         return JwtToken;
     }
 

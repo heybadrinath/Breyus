@@ -227,19 +227,17 @@ const OnBoarding: React.FC = () => {
     //handle password to create account
     const [isPasswordSubmitted, setIsPasswordSubmitted] = useState(false);
 
-    const handlecreateAccount = async () => {
+    const handleCreateAccount = async () => {
         if (isPasswordSubmitted) return;
-        setIsPasswordSubmitted(true);
         try {
             await setPasswordService(onboarding.token as string, password, confirmPassword);
             setSuccessMessage("Account created successfully!");
             setErrorMessage('');
+            setIsPasswordSubmitted(true);
         } catch (e) {
             setErrorMessage("Error, failed onboarding please try again");
             setSuccessMessage('');
-        } finally {
-            setIsPasswordSubmitted(false);
-        }
+        } 
     }
 
     // handle current password if user exists with partial onboarding
@@ -734,8 +732,8 @@ const OnBoarding: React.FC = () => {
                                 <button
                                     onClick={() => {
 
-                                        // setCurrentStep(prev => prev + 1);
-                                        handlecreateAccount();
+                                        setCurrentStep(prev => prev + 1);
+                                        handleCreateAccount();
                                     }}
                                     className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors ml-auto mt-12"
                                 >

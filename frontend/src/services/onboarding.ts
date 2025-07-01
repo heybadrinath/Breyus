@@ -59,17 +59,16 @@ export const validateTokenService = async (token: string) => {
 
 
 export const setPasswordService = async (token: string, setPassword: string, confirmPassword: string) => {
-    const endpoint = "/set-password"
+    const endpoint = "/set-password";
     const headers = {
         'Authorization': token,
         'Content-Type': 'application/json'
-    }
+    };
 
     const payload = {
         setPassword: String(setPassword),
         confirmPassword: String(confirmPassword)
-    }
-
+    };
 
     const response = await fetch(`${BACKEND_END_POINT}${endpoint}`, {
         method: 'POST',
@@ -78,10 +77,14 @@ export const setPasswordService = async (token: string, setPassword: string, con
     });
 
     if (!response.ok) {
-        throw new Error("Unauthorised access!")
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Unauthorised access!");
     }
-    return response;
-}
+
+    // Parse and return the response data (message and AccountToken)
+    const data = await response.json();
+    return data;
+};
 
 
 
