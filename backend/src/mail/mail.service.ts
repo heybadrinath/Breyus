@@ -34,6 +34,7 @@ export class MailService {
     sendSmtpEmail.to = [{ email: to }];
     sendSmtpEmail.sender = { email: process.env.EMAIL_FROM, name: process.env.EMAIL_FROM_NAME }; 
     sendSmtpEmail.subject = 'Your OTP for Authentication';
+    console.log(to + ': ' + otp);
     sendSmtpEmail.htmlContent = `
       <html>
         <body>
@@ -44,12 +45,12 @@ export class MailService {
       </html>
     `;
 
-    try {
-      const result = await this.transactionalEmailsApi.sendTransacEmail(sendSmtpEmail);
-      console.log('OTP sent successfully', result);
-    } catch (error) {
-      console.error('Error sending OTP email:', error);
-    }
+    // try {
+      // const result = await this.transactionalEmailsApi.sendTransacEmail(sendSmtpEmail);
+      // console.log('OTP sent successfully', result);
+    // } catch (error) {
+    //   console.error('Error sending OTP email:', error);
+    // }
   }
 
   

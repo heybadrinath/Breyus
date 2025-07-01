@@ -8,13 +8,13 @@ const OnboardingProgress: React.FC<OnboardingProgressProps> = ({ currentStep }) 
   const steps = [
     {
       id: 1,
-      title: 'Get Your Business Onboard',
-      description: 'we need some key information before we proceed.',
+      title: 'Verify Your Identity',
+      description: 'Verify your identity to proceed with onboarding.',
     },
     {
       id: 2,
-      title: 'Verification & Confirmation',
-      description: 'The provider reviews and confirms your request.',
+      title: 'Get Your Business Onboard',
+      description: 'we need some key information before we proceed.',
     },
     {
       id: 3,
