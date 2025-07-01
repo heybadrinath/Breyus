@@ -86,5 +86,30 @@ export const setPasswordService = async (token: string, setPassword: string, con
     return data;
 };
 
+export const continueOnboardingService = async (token: string, password: string) => {
+    const endpoint = "/continue-onboarding";
+    const headers = {
+        'Authorization': token,
+        'Content-Type': 'application/json'
+    }
+    const body = {
+        password: String(password),
+    }
+
+    const response = await fetch(`${BACKEND_END_POINT}${endpoint}`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+        throw new Error("Unauthorised access!");
+    }
+
+    return response;
+    
+    
+}
+
 
 

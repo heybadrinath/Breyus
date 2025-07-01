@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import BreyusLogo from "../seller/vectors/full-logo.svg";
 
 // import service (backend integration)
-import { sendOtpService, verifyOtpService, validateTokenService, setPasswordService } from '../services/onboarding';
+import { sendOtpService, verifyOtpService, validateTokenService, setPasswordService, continueOnboardingService } from '../services/onboarding';
 
 
 
@@ -17,6 +17,7 @@ const OnBoarding: React.FC = () => {
     const [emailOtpStatus, setEmailOtpStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [accountExists, setAccountExists] = React.useState(false);
     const [createAccount, setCreateAccount] = React.useState(false)
+    const [isPasswordVerified, setIsPasswordVerified] = useState(false);
 
     //animation variants
     const containerVariants = {
@@ -217,6 +218,8 @@ const OnBoarding: React.FC = () => {
     const validatePasswords = (pwd1: string, pwd2: string) => {
         if (pwd1.length < 8) {
             setPasswordError('Password must be at least 8 characters long.');
+        } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).+$/.test(pwd1)) {
+            setPasswordError('Password must contain uppercase, lowercase, number, and special character.');
         } else if (pwd1 !== pwd2) {
             setPasswordError('Passwords do not match.');
         } else {
@@ -227,7 +230,7 @@ const OnBoarding: React.FC = () => {
     //handle password to create account
     const [isPasswordSubmitted, setIsPasswordSubmitted] = useState(false);
 
-    const handleCreateAccount = async () => {
+    const ServiceCreateAccount = async () => {
         if (isPasswordSubmitted) return;
         try {
             await setPasswordService(onboarding.token as string, password, confirmPassword);
@@ -243,9 +246,25 @@ const OnBoarding: React.FC = () => {
     // handle current password if user exists with partial onboarding
     const [currentPassword, setCurrentPassword] = useState('');
 
-    const handleCurrentPasswordChange = () => {
-        // todo
+    const handleCurrentPasswordChange = async (e: ChangeEvent<HTMLInputElement>) => {
+        setCurrentPassword(e.target.value);
     }
+
+    const ServiceCurrentPasswordChange = async () => {
+        if (isPasswordVerified) return true;
+        try {
+            await continueOnboardingService(onboarding.token as string, currentPassword);
+            setSuccessMessage("Verified successfully!");
+            setErrorMessage('');
+            setIsPasswordVerified(true);
+            return true;
+        } catch (e) {
+            setErrorMessage("Error, failed to verify password please try again");
+            return false;
+        }
+    }
+
+   
 
 
 
@@ -408,10 +427,11 @@ const OnBoarding: React.FC = () => {
                                     type="password"
                                     name="currentPassword"
                                     id="currentPassword"
-                                    className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? '!border-red-500' : ''}`}
+                                    className={`mt-3 block w-full p-2 sm:text-sm  !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? '!border-red-500' : ''} ${isPasswordVerified ? 'cursor-not-allowed' : 'cursor-auto'}`}
                                     placeholder="Enter Your Password"
                                     value={currentPassword}
                                     onChange={handleCurrentPasswordChange}
+                                    disabled={isPasswordVerified}
                                 />
                                 {passwordError && <p className="mt-1 text-xs text-red-500">{passwordError}</p>}
                             </motion.div>
@@ -425,12 +445,13 @@ const OnBoarding: React.FC = () => {
                                         type="password"
                                         name="password"
                                         id="password"
-                                        className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? '!border-red-500' : ''}`}
+                                        className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? '!border-red-500' : ''} ${isPasswordSubmitted ? 'cursor-not-allowed' : 'cursor-auto'}`}
                                         placeholder="Password"
                                         value={password}
+                                        disabled={isPasswordSubmitted}
                                         onChange={handlePasswordChange}
                                     />
-                                    {passwordError && <p className="mt-1 text-xs text-red-500">{passwordError}</p>}
+                                    {/* {passwordError && <p className="mt-1 text-xs text-red-500">{passwordError}</p>} */}
                                 </motion.div>
 
                                 <motion.div variants={itemVariants}>
@@ -439,8 +460,9 @@ const OnBoarding: React.FC = () => {
                                         type="password"
                                         name="confirmPassword"
                                         id="confirmPassword"
-                                        className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? '!border-red-500' : ''}`}
+                                        className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? '!border-red-500' : ''} ${isPasswordSubmitted ? 'cursor-not-allowed' : 'cursor-auto'}`}
                                         placeholder="Confirm Password"
+                                        disabled={isPasswordSubmitted}
                                         value={confirmPassword}
                                         onChange={handleConfirmPasswordChange}
                                     />
@@ -696,6 +718,113 @@ const OnBoarding: React.FC = () => {
         }
     };
 
+    // Validation for each step
+    const validateStep = (step: number): boolean => {
+        setErrorMessage("");
+        if (step === 1) {
+            if (!mail) {
+                setErrorMessage("Email is required.");
+                return false;
+            }
+            const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail);
+            if (!isValidEmail) {
+                setErrorMessage("Please enter a valid email address.");
+                return false;
+            }
+            if (!ismailentered) {
+                setErrorMessage("Please enter your email and request OTP.");
+                return false;
+            }
+            if (!ismailverified) {
+                if (emailOtp.join("").length !== 6 || !/^\d{6}$/.test(emailOtp.join(""))) {
+                    setErrorMessage("Please enter a valid 6-digit OTP.");
+                    return false;
+                }
+            }
+            if (accountExists && !currentPassword) {
+                setErrorMessage("Password is required.");
+                return false;
+            }
+            if (createAccount) {
+                if (!password || !confirmPassword) {
+                    setErrorMessage("Password and confirm password are required.");
+                    return false;
+                }
+                if (password.length < 8) {
+                    setErrorMessage("Password must be at least 8 characters long.");
+                    return false;
+                }
+                // Password must have uppercase, lowercase, number, special char
+                const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).+$/;
+                if (!strongPassword.test(password)) {
+                    setErrorMessage("Password must contain uppercase, lowercase, number, and special character.");
+                    return false;
+                }
+                if (password !== confirmPassword) {
+                    setErrorMessage("Passwords do not match.");
+                    return false;
+                }
+            }
+        }
+        // Step 2: Company Info
+        if (step === 2) {
+            if (!step2Form.companyName || step2Form.companyName.length < 2) {
+                setErrorMessage("Company name is required (min 2 characters).");
+                return false;
+            }
+            if (!step2Form.companyLocation || step2Form.companyLocation.length < 2) {
+                setErrorMessage("Company location is required (min 2 characters).");
+                return false;
+            }
+            if (!step2Form.contactNumber || !/^\+?\d{10,15}$/.test(step2Form.contactNumber)) {
+                setErrorMessage("Please enter a valid Whatsapp number (10-15 digits, with or without country code).");
+                return false;
+            }
+            if (!step2Form.taxId || step2Form.taxId.length < 8) {
+                setErrorMessage("Tax ID is required (min 8 characters).");
+                return false;
+            }
+        }
+        // Step 3: Business Info
+        if (step === 3) {
+            if (mainlineOfBusiness.length === 0) {
+                setErrorMessage("Please select at least one business type.");
+                return false;
+            }
+            if (!financialRange) {
+                setErrorMessage("Please select your monthly revenue range.");
+                return false;
+            }
+        }
+        // Step 4: More Info
+        if (step === 4) {
+            if (!step4Form.companyWebsiteUrl || !/^https?:\/\/.+\..+/.test(step4Form.companyWebsiteUrl)) {
+                setErrorMessage("Please enter a valid company website URL (must start with http/https).");
+                return false;
+            }
+            if (!step4Form.founderName || step4Form.founderName.length < 2) {
+                setErrorMessage("Founder name is required (min 2 characters).");
+                return false;
+            }
+            if (!step4Form.exporedBefore) {
+                setErrorMessage("Please select if your company has exported before.");
+                return false;
+            }
+            if (!step4Form.referrel || step4Form.referrel === "Select an option" || step4Form.referrel === "") {
+                setErrorMessage("Please select how you got to know about Breyus.");
+                return false;
+            }
+        }
+        // Step 5: Role
+        if (step === 5) {
+            if (!role) {
+                setErrorMessage("Please select your business role in the market.");
+                return false;
+            }
+        }
+        return true;
+    };
+
     return (
         <div className="flex min-h-screen">
             {/* Left side - Progress Bar */}
@@ -730,10 +859,18 @@ const OnBoarding: React.FC = () => {
                             )}
                             {currentStep < 5 ? (
                                 <button
-                                    onClick={() => {
-
+                                    onClick={async () => {
+                                        // If password is required and not verified, try to verify first
+                                        if (currentStep === 1 && accountExists && !isPasswordVerified) {
+                                            const verified = await ServiceCurrentPasswordChange();
+                                            if (verified) {
+                                                setCurrentStep(prev => prev + 1);
+                                            }
+                                            return;
+                                        }
+                                        if (!validateStep(currentStep)) return;
                                         setCurrentStep(prev => prev + 1);
-                                        handleCreateAccount();
+                                        if (currentStep === 1 && createAccount && !isPasswordSubmitted) ServiceCreateAccount();
                                     }}
                                     className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors ml-auto mt-12"
                                 >
