@@ -22,13 +22,10 @@ async function bootstrap() {
       whitelist: true,
     }),
   );
-
   app.use(cookieParser(cookieSecret)); 
   await app.listen(process.env.PORT || 5000);
   const appName = process.env.APP_NAME;
   console.log(`${appName} is running on port ${process.env.PORT || 5000}`);
 }
 bootstrap();
-
-
 
