@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import BreyusLogo from "../seller/vectors/full-logo.svg";
 
 // import service (backend integration)
-import { sendOtpService, verifyOtpService, validateTokenService, setPasswordService, continueOnboardingService } from '../services/onboarding';
+import { sendOtpService, verifyOtpService, validateTokenService, setPasswordService, continueOnboardingService, step2Service, step3Service, MeanMonthlyRevenueEnum, step4Service, step5Service } from '../services/onboarding.service';
 
 
 
@@ -18,6 +18,7 @@ const OnBoarding: React.FC = () => {
     const [accountExists, setAccountExists] = React.useState(false);
     const [createAccount, setCreateAccount] = React.useState(false)
     const [isPasswordVerified, setIsPasswordVerified] = useState(false);
+    const [AccountToken, setAccountToken] = useState('');
 
     //animation variants
     const containerVariants = {
@@ -183,20 +184,20 @@ const OnBoarding: React.FC = () => {
                 setSuccessMessage('');
                 if (UserExists === 'accountExists') {
                     setAccountExists(true);
-                } else{
+                } else {
                     setCreateAccount(true);
                 }
-                
+
 
             } catch (e) {
                 setErrorMessage("Unauthorised Access");
                 setSuccessMessage('');
-                console.log(onboarding.token);
+
             }
         })();
     }
 
-    
+
 
 
 
@@ -233,14 +234,15 @@ const OnBoarding: React.FC = () => {
     const ServiceCreateAccount = async () => {
         if (isPasswordSubmitted) return;
         try {
-            await setPasswordService(onboarding.token as string, password, confirmPassword);
+            const response = await setPasswordService(onboarding.token as string, password, confirmPassword);
             setSuccessMessage("Account created successfully!");
             setErrorMessage('');
             setIsPasswordSubmitted(true);
+            setAccountToken(response.data)
         } catch (e) {
             setErrorMessage("Error, failed onboarding please try again");
             setSuccessMessage('');
-        } 
+        }
     }
 
     // handle current password if user exists with partial onboarding
@@ -253,10 +255,12 @@ const OnBoarding: React.FC = () => {
     const ServiceCurrentPasswordChange = async () => {
         if (isPasswordVerified) return true;
         try {
-            await continueOnboardingService(onboarding.token as string, currentPassword);
+            const data = await continueOnboardingService(onboarding.token as string, currentPassword);
             setSuccessMessage("Verified successfully!");
             setErrorMessage('');
             setIsPasswordVerified(true);
+            const json = await data.json();
+            setAccountToken(json.data)
             return true;
         } catch (e) {
             setErrorMessage("Error, failed to verify password please try again");
@@ -264,7 +268,7 @@ const OnBoarding: React.FC = () => {
         }
     }
 
-   
+
 
 
 
@@ -288,6 +292,21 @@ const OnBoarding: React.FC = () => {
         }));
     };
 
+    const handleStep2Service = async () => {
+        setErrorMessage('');
+        setSuccessMessage('');
+        try {
+
+            await step2Service(AccountToken as string, step2Form.companyName, step2Form.companyLocation, step2Form.contactNumber, step2Form.taxId);
+
+            setSuccessMessage('Company details updated successfully!');
+            setCurrentStep(prev => prev + 1);
+        } catch (error) {
+            setErrorMessage("Error");
+
+        }
+    };
+
 
 
     // step 3 logic
@@ -303,10 +322,31 @@ const OnBoarding: React.FC = () => {
         }
     };
 
-    const [financialRange, setFinancialRange] = useState<string>('');
+    const [meanMonthlyRevenue, setmeanMonthlyRevenue] = useState<MeanMonthlyRevenueEnum | ''>('');
     const handleFinancialRangeChange = (e: ChangeEvent<HTMLInputElement>) => {
-        setFinancialRange(e.target.value);
+        setmeanMonthlyRevenue(e.target.value as MeanMonthlyRevenueEnum);
     };
+
+    const handleStep3Service = async () => {
+        setErrorMessage('');
+        setSuccessMessage('');
+        try {
+            // Ensure meanMonthlyRevenue is a valid enum value
+            if (meanMonthlyRevenue && Object.values(MeanMonthlyRevenueEnum).includes(meanMonthlyRevenue)) {
+                await step3Service(AccountToken, {
+                    mainLineBusiness: mainlineOfBusiness,
+                    meanMonthlyRevenue: meanMonthlyRevenue as MeanMonthlyRevenueEnum
+                });
+                setSuccessMessage('Company details updated successfully!');
+                setCurrentStep(prev => prev + 1);
+            } else {
+                setErrorMessage("Please select your monthly revenue range.");
+            }
+        } catch (e: any) {
+            // Show backend error if available
+            setErrorMessage(e?.message || "Error updating company details. Please try again.");
+        }
+    }
 
 
     // step 4 logic
@@ -328,11 +368,55 @@ const OnBoarding: React.FC = () => {
         }));
     };
 
+    const handleStep4Service = async () => {
+        setErrorMessage('');
+        setSuccessMessage('');
+        try {
+
+            await step4Service(AccountToken, {
+                websiteUrl: step4Form.companyWebsiteUrl,
+                founderName: step4Form.founderName,
+                exportedBefore: step4Form.exporedBefore === 'Yes',
+                referrel: step4Form.referrel
+            });
+            setCurrentStep(prev => prev + 1);
+
+        } catch (e: any) {
+            // Show backend error if available
+            setErrorMessage(e?.message || "Error updating company details. Please try again.");
+        }
+    }
+
     // step 5 logic
     const [role, setRole] = useState('');
     const handleRoleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setRole(e.target.value);
     }
+
+    const handleStep5Service = async () => {
+        setErrorMessage('');
+        setSuccessMessage('');
+        try {
+
+            await step5Service(AccountToken, {
+                role
+            });
+        //    setSuccessMessage("Onboarding Successful")
+        if(role === "Buyer"){
+            window.location.href="login"
+            // alert("redirect to login")
+        }else{
+            window.location.href="schedule-meeting"
+            // alert("redirect to schedule meeting")
+        }
+
+        } catch (e: any) {
+            // Show backend error if available
+            setErrorMessage(e?.message || "Error updating company details. Please try again.");
+        }
+    }
+
+
 
 
 
@@ -551,7 +635,7 @@ const OnBoarding: React.FC = () => {
                         className="space-y-8"
                     >
                         <motion.div variants={itemVariants}>
-                            <label className="block text-2xl font-bold text-black ">What best describes breyus's main line of business? <span className="text-red-500">*</span></label>
+                            <label className="block text-2xl font-bold text-black ">What best describes {step2Form.companyName}'s main line of business? <span className="text-red-500">*</span></label>
                             <div className="mt-2 space-y-2">
                                 {[
                                     'Import/Export Company',
@@ -581,9 +665,11 @@ const OnBoarding: React.FC = () => {
                             </div>
                         </motion.div>
                         <motion.div variants={itemVariants}>
-                            <label className="block text-2xl font-bold text-black">What's breyus average monthly revenue? <span className="text-red-500">*</span></label>
+                            <label className="block text-2xl font-bold text-black">
+                                What's {step2Form.companyName}'s average monthly revenue? <span className="text-red-500">*</span>
+                            </label>
                             <div className="mt-2 space-y-2">
-                                {['Less than 1K Dollars', '1K Dollars - 10K Dollars', '10K Dollars - 100K Dollars', '100K Dollars - 1000K dollars'].map((option) => (
+                                {Object.values(MeanMonthlyRevenueEnum).map((option) => (
                                     <motion.div
                                         key={option}
                                         className="flex items-center"
@@ -591,14 +677,17 @@ const OnBoarding: React.FC = () => {
                                     >
                                         <input
                                             id={option.replace(/\s/g, '')}
-                                            name="financialRange"
+                                            name="meanMonthlyRevenue"
                                             type="radio"
                                             value={option}
-                                            checked={financialRange === option}
+                                            checked={meanMonthlyRevenue === option}
                                             onChange={handleFinancialRangeChange}
                                             className="focus:ring-black h-4 w-4 text-black border-gray-300"
                                         />
-                                        <label htmlFor={option.replace(/\s/g, '')} className="ml-3 block text-sm font-medium text-gray-700">
+                                        <label
+                                            htmlFor={option.replace(/\s/g, '')}
+                                            className="ml-3 block text-sm font-medium text-gray-700"
+                                        >
                                             {option}
                                         </label>
                                     </motion.div>
@@ -776,8 +865,11 @@ const OnBoarding: React.FC = () => {
                 setErrorMessage("Company location is required (min 2 characters).");
                 return false;
             }
-            if (!step2Form.contactNumber || !/^\+?\d{10,15}$/.test(step2Form.contactNumber)) {
-                setErrorMessage("Please enter a valid Whatsapp number (10-15 digits, with or without country code).");
+            if (
+                !step2Form.contactNumber ||
+                !/^\+?\d[\d\s]{9,19}$/.test(step2Form.contactNumber.replace(/ {2,}/g, ' '))
+            ) {
+                setErrorMessage("Please enter a valid Whatsapp number (10-15 digits, with or without country code, spaces allowed).");
                 return false;
             }
             if (!step2Form.taxId || step2Form.taxId.length < 8) {
@@ -791,7 +883,7 @@ const OnBoarding: React.FC = () => {
                 setErrorMessage("Please select at least one business type.");
                 return false;
             }
-            if (!financialRange) {
+            if (!meanMonthlyRevenue) {
                 setErrorMessage("Please select your monthly revenue range.");
                 return false;
             }
@@ -869,7 +961,24 @@ const OnBoarding: React.FC = () => {
                                             return;
                                         }
                                         if (!validateStep(currentStep)) return;
-                                        setCurrentStep(prev => prev + 1);
+                                        if (currentStep === 2) {
+                                            await handleStep2Service();
+                                            return;
+                                        }
+                                        if (currentStep === 3) {
+                                            await handleStep3Service();
+                                            return;
+                                        }
+                                        if (currentStep === 4) {
+                                            await handleStep4Service();
+                                            return;
+                                        }
+                                       
+                                        if (currentStep === 1) {
+                                            setCurrentStep(prev => prev + 1);
+                                        }
+                                        
+
                                         if (currentStep === 1 && createAccount && !isPasswordSubmitted) ServiceCreateAccount();
                                     }}
                                     className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors ml-auto mt-12"
@@ -878,7 +987,12 @@ const OnBoarding: React.FC = () => {
                                 </button>
                             ) : (
                                 <button
-                                    onClick={() => { }}
+                                    onClick={ async () => {
+                                         if(currentStep === 5){
+                                            await handleStep5Service();
+                                            return;
+                                        }
+                                     }}
                                     className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors mt-12"
                                 >
                                     Next

@@ -1,8 +1,9 @@
 import { Body, Controller, HttpCode, HttpException, HttpStatus, Post, Session, Headers, Res } from '@nestjs/common';
-import { SendEmailOtpDto, VerifyEmailOtpDto, continueOnboardingDto, SetPasswordDto } from './dto/onboarding.dto';
+import { SendEmailOtpDto, VerifyEmailOtpDto, continueOnboardingDto, SetPasswordDto, Step2Dto, Step3Dto, Step4Dto, Step5Dto } from './dto/onboarding.dto';
 import { OnboardingService } from './onboarding.service';
 import { AuthService } from 'src/auth/auth.service';
 import { Response } from 'express';
+import { CompanySchema } from 'src/company/company.schema';
 
 @Controller('onboarding')
 export class OnboardingController {
@@ -54,13 +55,13 @@ export class OnboardingController {
     ): Promise<void> {
         try {
             const result = await this.onboardingService.SetPassword(setPasswordDto, token);
-            response.cookie('access_token', result, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                maxAge: 86400000,
-                signed: true,
-                sameSite: 'none'
-            });
+            // response.cookie('access_token', result, {
+            //     httpOnly: true,
+            //     secure: process.env.NODE_ENV === 'production',
+            //     maxAge: 86400000,
+            //     signed: true,
+            //     sameSite: 'none'
+            // });
             await response.status(HttpStatus.OK).json({ message: 'Onboarding continued successfully', data: result });
 
         } catch (error) {
@@ -89,16 +90,79 @@ export class OnboardingController {
     ): Promise<void> {
         try {
             const result = await this.onboardingService.continueOnboarding(continueOnboardingDto, onBoardingToken);
-            response.cookie('access_token', result, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                maxAge: 86400000,
-                signed: true,
-                sameSite: 'none'
-            });
+            
             await response.status(HttpStatus.OK).json({ message: 'Onboarding continued successfully', data: result });
         } catch (error) {
             throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // step 2 endpoint
+    @Post('step-2')
+    async step2(
+        @Body() step2dto: Step2Dto,
+        @Res() response: Response,
+        @Headers('Authorization') AccountToken: string
+    ): Promise<void> {
+        try {
+            
+            const result = await this.onboardingService.step2(step2dto, AccountToken);
+            await response.status(HttpStatus.OK).json({ message: 'Step 2 completed successfully', data: result });
+           // todo update the progress to 2 in database
+        } catch (e) {
+            throw new HttpException(e.message, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    // step 3 endpoint
+    @Post('step-3')
+    async step3(
+        @Body() step3dto: Step3Dto,
+        @Res() response: Response,
+        @Headers('Authorization') AccountToken: string
+    ): Promise<void> {
+        try {
+            
+            const result = await this.onboardingService.step3(step3dto, AccountToken);
+            await response.status(HttpStatus.OK).json({ message: 'Step 3 completed successfully', data: result });
+           // todo update the progress to 3 in database
+        } catch (e) {
+            throw new HttpException(e.message, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // step 4 endpoint
+    @Post('step-4')
+    async step4(
+        @Body() step4dto: Step4Dto,
+        @Res() response: Response,
+        @Headers('Authorization') AccountToken: string
+    ): Promise<void> {
+        try {
+            
+            const result = await this.onboardingService.step4( step4dto, AccountToken);
+            await response.status(HttpStatus.OK).json({ message: 'Step 4 completed successfully', data: result });
+           // todo update the progress to 4 in database
+        } catch (e) {
+            throw new HttpException(e.message, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // step 5 endpoint
+    @Post('step-5')
+    async step5(
+        @Body() step5dto: Step5Dto,
+        @Res() response: Response,
+        @Headers('Authorization') AccountToken: string
+    ): Promise<void> {
+        try {
+            
+            const result = await this.onboardingService.step5( step5dto, AccountToken);
+            await response.status(HttpStatus.OK).json({ message: 'Step 5 completed successfully', data: result });
+           // todo update the progress to 4 in database
+        } catch (e) {
+            throw new HttpException(e.message, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

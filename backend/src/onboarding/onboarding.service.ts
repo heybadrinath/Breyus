@@ -1,5 +1,5 @@
 import { BadRequestException, HttpException, HttpStatus, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
-import { SendEmailOtpDto, VerifyEmailOtpDto, SetPasswordDto, continueOnboardingDto } from 'src/onboarding/dto/onboarding.dto';
+import { SendEmailOtpDto, VerifyEmailOtpDto, SetPasswordDto, continueOnboardingDto, Step2Dto, Step3Dto, Step4Dto, Step5Dto } from 'src/onboarding/dto/onboarding.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Company } from 'src/company/company.schema';
 import { User, UserSchema } from 'src/users/user.schema';
@@ -177,8 +177,220 @@ export class OnboardingService {
         }
     }
 
+    // step 2 logic
+    async step2(step2Dto: Step2Dto, AccountToken: string) {
+        const { companyName, companyAddress, companyMobile, taxId } = step2Dto;
+
+        const jwtSecret = process.env.JWT_SECRET_KEY;
+        let payload;
+        if (!jwtSecret) {
+            throw new InternalServerErrorException('JWT secret key is not defined in environment variables');
+        }
+        try {
+            payload = jwt.verify(AccountToken, jwtSecret);
+        } catch (e) {
+            throw new HttpException('Unauthorised, please verify again!', HttpStatus.BAD_REQUEST);
+        }
+        const userId = payload.userId;
+
+        const user = await this.userSchema.findById(userId).populate('company', '_id');
+
+        if (!user) {
+            throw new HttpException("User not found", HttpStatus.NOT_FOUND);
+        }
+
+        if (!user.company || !user.company._id) {
+            throw new HttpException("Company not found for user", HttpStatus.NOT_FOUND);
+        }
+
+        try {
+            const companyId = user.company._id;
+            const updateCompany = await this.companySchema.findByIdAndUpdate(
+                companyId,
+                {
+                    companyName,
+                    companyAddress,
+                    companyMobile,
+                    taxId
+                },
+                { new: true }
+            );
+
+            if (!updateCompany) {
+                throw new HttpException('Company not found or update failed', HttpStatus.NOT_FOUND);
+            }
+
+            return updateCompany;
+        } catch (error) {
+
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException('Internal server error while updating company', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+
+    // step3 logic
+    async step3(step3Dto: Step3Dto, AccountToken: string) {
+        const { mainLineBusiness, meanMonthlyRevenue } = step3Dto;
+
+        const jwtSecret = process.env.JWT_SECRET_KEY;
+        let payload;
+        if (!jwtSecret) {
+            throw new InternalServerErrorException('JWT secret key is not defined in environment variables');
+        }
+        try {
+            payload = jwt.verify(AccountToken, jwtSecret);
+        } catch (e) {
+            throw new HttpException('Unauthorised, please verify again!', HttpStatus.BAD_REQUEST);
+        }
+        const userId = payload.userId;
+
+        const user = await this.userSchema.findById(userId).populate('company', '_id');
+
+        if (!user) {
+            throw new HttpException("User not found", HttpStatus.NOT_FOUND);
+        }
+
+        if (!user.company || !user.company._id) {
+            throw new HttpException("Company not found for user", HttpStatus.NOT_FOUND);
+        }
+
+        try {
+            const companyId = user.company._id;
+            const updateCompany = await this.companySchema.findByIdAndUpdate(
+                companyId,
+                {
+                    mainLineBusiness,
+                    meanMonthlyRevenue
+                },
+                { new: true }
+            );
+
+            if (!updateCompany) {
+                throw new HttpException('Company not found or update failed', HttpStatus.NOT_FOUND);
+            }
+
+            return updateCompany;
+        } catch (error) {
+
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException('Internal server error while updating company', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    // step 4
+    async step4(step4Dto: Step4Dto, AccountToken: string) {
+        const { websiteUrl, founderName, exportedBefore, referrel } = step4Dto;
+
+        const jwtSecret = process.env.JWT_SECRET_KEY;
+        let payload;
+        if (!jwtSecret) {
+            throw new InternalServerErrorException('JWT secret key is not defined in environment variables');
+        }
+        try {
+            payload = jwt.verify(AccountToken, jwtSecret);
+        } catch (e) {
+            throw new HttpException('Unauthorised, please verify again!', HttpStatus.BAD_REQUEST);
+        }
+        const userId = payload.userId;
+
+        const user = await this.userSchema.findById(userId).populate('company', '_id');
+
+        if (!user) {
+            throw new HttpException("User not found", HttpStatus.NOT_FOUND);
+        }
+
+        if (!user.company || !user.company._id) {
+            throw new HttpException("Company not found for user", HttpStatus.NOT_FOUND);
+        }
+
+        try {
+            const companyId = user.company._id;
+            const updateCompany = await this.companySchema.findByIdAndUpdate(
+                companyId,
+                {
+                    websiteUrl,
+                    founderName,
+                    exportedBefore,
+                    referrel
+                },
+                { new: true }
+            );
+
+            if (!updateCompany) {
+                throw new HttpException('Company not found or update failed', HttpStatus.NOT_FOUND);
+            }
+
+            return updateCompany;
+        } catch (error) {
+
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException('Internal server error while updating company', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    // step 5
+    async step5(step5Dto: Step5Dto, AccountToken: string) {
+        const { role } = step5Dto;
+
+        const jwtSecret = process.env.JWT_SECRET_KEY;
+        let payload;
+        if (!jwtSecret) {
+            throw new InternalServerErrorException('JWT secret key is not defined in environment variables');
+        }
+        try {
+            payload = jwt.verify(AccountToken, jwtSecret);
+        } catch (e) {
+            throw new HttpException('Unauthorised, please verify again!', HttpStatus.BAD_REQUEST);
+        }
+        const userId = payload.userId;
+
+        const user = await this.userSchema.findById(userId).populate('company', '_id');
+
+        if (!user) {
+            throw new HttpException("User not found", HttpStatus.NOT_FOUND);
+        }
+
+        if (!user.company || !user.company._id) {
+            throw new HttpException("Company not found for user", HttpStatus.NOT_FOUND);
+        }
+
+        try {
+            const companyId = user.company._id;
+            const updateCompany = await this.companySchema.findByIdAndUpdate(
+                companyId,
+                {
+                    role,
+                    isOnboardingCompleted: true
+                },
+                { new: true }
+            );
+
+            if (!updateCompany) {
+                throw new HttpException('Company not found or update failed', HttpStatus.NOT_FOUND);
+            }
+
+            return updateCompany;
+        } catch (error) {
+
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException('Internal server error while updating company', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 
 }
 
 
-// step 2 logic
+

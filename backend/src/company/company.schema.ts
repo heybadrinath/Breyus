@@ -3,9 +3,10 @@ import { prop } from '@typegoose/typegoose';
 import { Document, Types } from 'mongoose';
 import { MeanMonthlyRevenue } from 'src/onboarding/dto/onboarding.dto';
 
-export enum CompanyRole {
-    SELLER = 'seller',
-    BUYER = 'buyer'
+export enum Role {
+    BUYER = 'Buyer',
+    SELLER = 'Seller',
+    BOTH = 'Seller and Buyer'
 }
 
 export enum TradeType {
@@ -18,19 +19,19 @@ export enum TradeType {
 export class Company extends Document {
 
     @Prop()
-    name: string;
+    companyName: string;
 
     @Prop()
-    location: string;
+    companyAddress: string;
 
     @Prop()
-    number: string;
+    companyMobile: string;
 
     @Prop()
     taxId: string;
 
     @Prop()
-    role: CompanyRole;
+    role: Role;
 
     @Prop()
     isVerified: boolean;
@@ -43,6 +44,12 @@ export class Company extends Document {
 
     @Prop()
     websiteUrl: string;
+
+    @Prop()
+    exportedBefore: boolean;
+
+    @Prop()
+    referrel: string;
 
     @Prop()
     mainLineBusiness: string[];

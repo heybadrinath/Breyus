@@ -50,25 +50,25 @@ export class continueOnboardingDto {
 }
 
 
-// step 2 dto
+// step 2 dto' s
 
 export class Step2Dto {
 
     @IsString()
     @IsNotEmpty()
-    password: string;
+    companyName: string;
 
     @IsString()
     @IsNotEmpty()
-    confirmPassword: string;
-
-    @IsEmail()
-    @IsNotEmpty()
-    mobileOtp: string;
+    companyAddress: string;
 
     @IsString()
     @IsNotEmpty()
-    mailOtp: string;
+    companyMobile: string;
+
+    @IsString()
+    @IsNotEmpty()
+    taxId: string;
 
 }
 
@@ -80,6 +80,8 @@ export enum MeanMonthlyRevenue {
     MoreThan1000k = "More than 1000k Dollars"
 }
 
+// step 3 dto's
+
 export class Step3Dto {
     @IsArray()
     @ArrayNotEmpty({ message: 'At least one option must be selected' })
@@ -90,6 +92,8 @@ export class Step3Dto {
     meanMonthlyRevenue: MeanMonthlyRevenue;
 
 }
+
+// step 4 dto's 
 
 export class Step4Dto {
 
@@ -113,16 +117,18 @@ export class Step4Dto {
 }
 
 export enum Role {
-    BUYER = 'buyer',
-    SELLER = 'seller',
-    BOTH = 'both'
+    BUYER = 'Buyer',
+    SELLER = 'Seller',
+    BOTH = 'Seller and Buyer'
 
 }
+
+ // step 5 dto's
 
 export class Step5Dto {
     @IsEnum(Role)
     @IsNotEmpty()
-    name: Role;
+    role: Role;
 
 }
 
