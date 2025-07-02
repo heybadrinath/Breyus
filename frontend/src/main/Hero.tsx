@@ -37,15 +37,13 @@ const Navbar = () => {
                 <a className="mx-4 text-black my-auto" href="#contact-us">Contact Us</a>
             </div>
             <div id="login-signup-btn" className="flex">
-                {/* <Button onClick={() => navigate("/onboarding")} className=" md:text-sm md:px-6">Sign Up</Button> */}
-                {/* <Button onClick={() => navigate("/buyer/signin")} className='bg-black text-white lg:text-sm md:px-6'>Login In</Button> */}
+                <Button onClick={() => navigate("/onboarding")} className=" md:text-sm md:px-6">Sign Up</Button>
+                <Button onClick={() => navigate("/login")} className='bg-black text-white lg:text-sm md:px-6'>Login In</Button>
 
-                {/* Temp buttons for signin and signup */}
+                {/* Temp buttons for signin and signup
                  <Button onClick={() => navigate("/seller/signup")} className=" md:text-sm md:px-6">Sign Up</Button>
-                 <Button onClick={() => navigate("/buyer/signin")} className='bg-black text-white lg:text-sm md:px-2'>Buyer Login In</Button>
-                 <Button onClick={() => navigate("/seller/signin")} className='bg-black text-white lg:text-sm md:px-6'>Seller Login In</Button>
-
-
+                 <Button onClick={() => navigate("/buyer/signin")} className='bg-black text-white lg:text-sm md:px-6'>Buyer Login In</Button>
+                 <Button onClick={() => navigate("/seller/signin")} className='bg-black text-white lg:text-sm md:px-6'>Seller Login In</Button> */}
             </div>
 
         </div>
@@ -54,7 +52,9 @@ const Navbar = () => {
 
 
 const Section1 = () => {
+    const navigate = useNavigate();
     return (
+        
         <BorderBox className="border-t-0">
             <div className="w-full flex flex-col">
                 <div id="top" className="my-18">
@@ -64,7 +64,7 @@ const Section1 = () => {
                 </div>
 
                 <div id="bottom-btns" className="flex mx-auto">
-                    <Button onClick={() => window.location.href='/onboarding'} className="!border-black border-2">Get Started</Button>
+                    <Button onClick={() => navigate("/onboarding")} className="!border-black border-2">Get Started</Button>
                     <Button onClick={() => window.location.href='https://calendly.com/breyuscrew/30min'} className="bg-black text-white">Schedule Now</Button>
                 </div>
                 <div className="flex mx-auto mt-24 mb-16 flex-col">
