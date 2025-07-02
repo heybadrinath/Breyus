@@ -1,7 +1,7 @@
 import React, { ReactNode, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../seller/css/components.css";
-import authService from "../services/auth.service";
+import authService from "../services_old/auth.service";
 
 // assets import 
 import downArrow from "../seller/vectors/down-arrow.svg";

@@ -3,7 +3,7 @@ import Sidebar from '../components/Sidebar';
 import ProductCard from '../components/ProductCard';
 import Banner from '../components/Banner';
 import Navbar from '../components/navbar';
-import productService from '../../services/product.service';
+import productService from '../../services_old/product.service';
 import { Product } from '../../types/product';
 
 const Homepage: React.FC = () => {

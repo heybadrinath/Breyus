@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import ProductCard from '../components/ProductCard';
 import Navbar from '../components/navbar';
-import wishlistService, { WishlistItem } from '../../services/wishlist.service';
+import wishlistService, { WishlistItem } from '../../services_old/wishlist.service';
 
 const Wishlist = () => {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);

@@ -5,8 +5,8 @@ import userProfile from "../seller/vectors/profile.svg";
 import locationIcon from "../seller/vectors/location-icon.svg"
 import editIcon from "../seller/vectors/edit.svg";
 import verifiedIcon from "../seller/vectors/verified.svg";
-import authService from "../services/auth.service";
-import userDetailsService from "../services/user-details.service";
+import authService from "../services_old/auth.service";
+import userDetailsService from "../services_old/user-details.service";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 

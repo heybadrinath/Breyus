@@ -16,6 +16,23 @@ img {
   height: 100%;
 }
 
+
+@layer base {
+  input[type="checkbox"],
+  input[type="radio"],
+  select {
+    accent-color: #000000e8;
+  }
+  option:checked,
+  option:focus,
+  option:hover {
+     appearance: none;
+    background-color: #000000e8;
+   
+  }
+  
+}
+
 /* Loading animation for images */
 .image-loading {
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);

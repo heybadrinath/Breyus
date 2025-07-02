@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Bell, ShoppingCart } from "lucide-react";
-import cartService from '../../services/cart.service';
+import cartService from '../../services_old/cart.service';
 
 interface NavbarProps {
   onSearch?: (searchTerm: string) => void;

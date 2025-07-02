@@ -5,8 +5,8 @@ import CheckoutStepper from "../components/cart/CheckoutStepper";
 import BillForCart from "../components/cart/BillForCart";
 import CardCount from "../components/cart/CardCount";
 import ProductCard from "../components/ProductCard";
-import cartService, { CartItem as CartItemType, CartSummary } from "../../services/cart.service";
-import productService from "../../services/product.service";
+import cartService, { CartItem as CartItemType, CartSummary } from "../../services_old/cart.service";
+import productService from "../../services_old/product.service";
 
 export default function CartPage() {
   const [cartSummary, setCartSummary] = useState<CartSummary>({

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, Star } from "lucide-react";
-import cartService from "../../services/cart.service";
-import wishlistService from "../../services/wishlist.service";
+import cartService from "../../services_old/cart.service";
+import wishlistService from "../../services_old/wishlist.service";
 import { Product } from "../../types/product";
 
 interface ProductCardProps {

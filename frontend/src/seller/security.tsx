@@ -2,9 +2,9 @@ import React from "react";
 import "../seller/css/components.css";
 import "../seller/css/security.css";
 import { Link } from "react-router-dom";
-import authService from "../services/auth.service";
+import authService from "../services_old/auth.service";
 import axios from "axios";
-import userDetailsService from "../services/user-details.service";
+import userDetailsService from "../services_old/user-details.service";
 
 interface SecuritySectionProps {
     email?: string;
