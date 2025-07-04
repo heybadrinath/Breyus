@@ -26,7 +26,7 @@ const BuyerProtectedRoute = ({ children }: { children: JSX.Element }) => {
         setIsAuthed(false);
       }
 
-      if(data.role !== 'Buyer') {
+      if(data.role === 'Seller') {
         alert('You are not authorized to access this page');
         setIsAuthed(false);
       }
@@ -68,7 +68,7 @@ const SellerProtectedRoute = ({ children }: { children: JSX.Element }) => {
       } else {
         setIsAuthed(false);
       }
-      if(data.role !== 'Seller') {
+      if(data.role === 'Buyer') {
         alert('You are not authorized to access this page');
         setIsAuthed(false);
       }
