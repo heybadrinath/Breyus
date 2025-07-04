@@ -2,46 +2,46 @@ import React, { JSX, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import axios from 'axios';
 
+const Backend_URL = process.env.REACT_APP_BACKEND_URL;
+
+
 const BuyerProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthed, setIsAuthed] = useState(false);
 
-
-  useEffect(() => {
+ useEffect(() => {
     const checkAuthAndBackend = async () => {
       try {
-        await axios.get('https://breyus.com/backend/health');
+      await fetch(`${Backend_URL}/health`, { credentials: 'include' });
 
-        const token = localStorage.getItem('token');
-        if (!token) {
-          setIsAuthed(false);
-          setLoading(false);
-          return;
-        }
+      const res = await fetch(`${Backend_URL}/auth/validate-cookie`, {
+        credentials: 'include',
+      });
 
-        const res = await axios.get('https://breyus.com/backend/auth/validate-token', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+      const data = await res.json();
 
-        if (res.data.valid) {
-          setIsAuthed(true);
-        } else {
-          setIsAuthed(false);
-        }
-      } catch (err) {
+      if (data.valid) {
+        setIsAuthed(true);
+      } else {
         setIsAuthed(false);
+      }
+
+      if(data.role !== 'Buyer') {
+        alert('You are not authorized to access this page');
+        setIsAuthed(false);
+      }
+      } catch (err) {
+      setIsAuthed(false);
       } finally {
-        setLoading(false);
+      setLoading(false);
       }
     };
 
     checkAuthAndBackend();
-  }, []);
+  })
 
   if (loading) return <div className='w-fit m-auto h-fit mt-[40vh]'>Loading.....</div>;
-  if (!isAuthed) return <Navigate to="/buyer/signin" />;
+  if (!isAuthed) return <Navigate to="/login" />;
   return children;
 };
 
@@ -55,38 +55,35 @@ const SellerProtectedRoute = ({ children }: { children: JSX.Element }) => {
   useEffect(() => {
     const checkAuthAndBackend = async () => {
       try {
-        await axios.get('https://breyus.com/backend/health');
+      await fetch(`${Backend_URL}/health`, { credentials: 'include' });
 
-        const token = localStorage.getItem('token');
-        if (!token) {
-          setIsAuthed(false);
-          setLoading(false);
-          return;
-        }
+      const res = await fetch(`${Backend_URL}/auth/validate-cookie`, {
+        credentials: 'include',
+      });
 
-        const res = await axios.get('https://breyus.com/backend/auth/validate-token', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+      const data = await res.json();
 
-        if (res.data.valid) {
-          setIsAuthed(true);
-        } else {
-          setIsAuthed(false);
-        }
-      } catch (err) {
+      if (data.valid) {
+        setIsAuthed(true);
+      } else {
         setIsAuthed(false);
+      }
+      if(data.role !== 'Seller') {
+        alert('You are not authorized to access this page');
+        setIsAuthed(false);
+      }
+    } catch (err) {
+      setIsAuthed(false);
       } finally {
-        setLoading(false);
+      setLoading(false);
       }
     };
 
     checkAuthAndBackend();
-  }, []);
+  })
 
   if (loading) return <div className='w-fit m-auto h-fit mt-[40vh]'>Loading.....</div>;
-  if (!isAuthed) return <Navigate to="/seller/signin" />;
+  if (!isAuthed) return <Navigate to="/login" />;
   return children;
 };
 

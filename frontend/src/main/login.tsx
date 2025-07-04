@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
-import axios from "axios";
-import authService from "../services_old/auth.service";
+import { login, validateOtp } from '../services/login.service';
+
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -24,6 +24,7 @@ const Login: React.FC = () => {
     return () => clearInterval(timer);
   }, [isOtpSent, resendTimer]);
 
+  //logic to handle form data
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -33,99 +34,43 @@ const Login: React.FC = () => {
     if (error) setError("");
   };
 
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
+  //logic to handle login services
+
+  const handlelogin = async () => {
     setIsLoading(true);
-
+    setError("");
     try {
-      const response = await axios.post("https://breyus.com/backend/auth/send-otp", {
-        email: formData.email,
-        password: formData.password,
-        role: "buyer",
-      });
-
-      if (response.data.message === "OTP sent successfully") {
-        setIsOtpSent(true);
-        setResendTimer(300);
-      } else {
-        setError(response.data.message || "Failed to send OTP.");
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Error sending OTP.");
+      await login(formData.email, formData.password);
+      setIsOtpSent(true);
+      setResendTimer(300);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || "Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
+  const handleverifyOtp = async () => {
     setIsLoading(true);
-
+    setError("");
     try {
-      console.log("Verifying OTP for:", formData.email);
-      const response = await axios.post("https://breyus.com/backend/auth/verify-otp", {
-        email: formData.email,
-        otp,
-      });
-
-      console.log("OTP verification response:", response.data);
-      
-      if (response.data.success) {
-        // Store user information and token
-        if (response.data.token) {
-          authService.setToken(response.data.token);
-          console.log("Token stored in localStorage");
-        } else {
-          console.error("No token received from server");
-          setError("Authentication failed: No token received");
-          setIsLoading(false);
-          return;
-        }
-        
-        // Get user data from response, ensure it has a role
-        const userData = response.data.user || {};
-        
-        if (!userData.role) {
-          console.warn("No role in user data, defaulting to buyer role");
-          userData.role = "buyer";
-        }
-        
-        console.log("Setting user data:", userData);
-        authService.setUser(userData);
-        
-        // Check localStorage after setting values
-        console.log("After storing - localStorage check:", {
-          token: localStorage.getItem('token') ? 'exists' : 'missing',
-          user: localStorage.getItem('user')
-        });
-        
-        // Check authentication status before redirect
-        const isAuth = authService.isAuthenticated();
-        const hasRole = authService.hasRole("buyer");
-        console.log("Authentication check before redirect:", { isAuth, hasRole });
-        
-        if (!isAuth || !hasRole) {
-          console.error("Authentication validation failed after login");
-          setError("Authentication failed after login. Please try again.");
-          setIsLoading(false);
-          return;
-        }
-        
-        console.log("Authentication successful, redirecting to dashboard");
-        navigate("/buyer/homepage");
-       
+      const response = await validateOtp(formData.email, otp);
+      setIsOtpSent(true);
+      if (response.role === "Buyer") {
+        navigate('/buyer/homepage');
+      } else if (response.role === "Seller") {
+        navigate('/seller/dashboard');
       } else {
-        setError("Invalid OTP. Please try again.");
+        navigate('/select-role');
       }
-    } catch (err: any) {
-      console.error("OTP verification error:", err.response?.data || err.message);
-      setError(err.response?.data?.message || "Error verifying OTP.");
+      // navigate('/');
+      // console.log("OTP Validation Response: ", response.role);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || "Login failed. Please try again. ");
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   return (
     <div className="flex h-screen w-screen bg-white text-black">
@@ -143,7 +88,8 @@ const Login: React.FC = () => {
           </p>
 
           {!isOtpSent ? (
-            <form onSubmit={handleSendOtp} className="w-full">
+            // login form
+            <form onSubmit={(e) => e.preventDefault()} className="w-full">
               <label className="block text-gray-700">E-mail</label>
               <input
                 type="email"
@@ -186,6 +132,7 @@ const Login: React.FC = () => {
               <button
                 type="submit"
                 className={`mt-6 w-full bg-black text-white py-3 rounded-full text-lg font-semibold transition-all duration-300 hover:bg-gray-800 shadow-md ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+                onClick={handlelogin}
                 disabled={isLoading}
               >
                 {isLoading ? "Sending..." : "Send OTP"}
@@ -200,7 +147,8 @@ const Login: React.FC = () => {
               </div>
             </form>
           ) : (
-            <form onSubmit={handleVerifyOtp} className="w-full">
+            // otp form
+            <form onSubmit={(e) => { e.preventDefault() }} className="w-full">
               <label className="block text-gray-700">OTP</label>
               <input
                 type="text"
@@ -217,17 +165,17 @@ const Login: React.FC = () => {
               <button
                 type="submit"
                 className="mt-4 w-full bg-green-600 text-white py-3 rounded-full text-lg font-semibold transition-all duration-300 hover:bg-green-700 shadow-md"
+                onClick={handleverifyOtp}
               >
                 Verify OTP
               </button>
 
               <button
                 type="button"
-                className={`mt-4 w-full bg-gray-600 text-white py-3 rounded-full text-lg font-semibold transition-all duration-300 hover:bg-gray-700 shadow-md ${
-                  resendTimer > 0 ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+                className={`mt-4 w-full bg-gray-600 text-white py-3 rounded-full text-lg font-semibold transition-all duration-300 hover:bg-gray-700 shadow-md ${resendTimer > 0 ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
                 disabled={resendTimer > 0}
-                onClick={handleSendOtp}
+              // onClick={handleSendOtp}
               >
                 {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : "Resend OTP"}
               </button>
@@ -244,4 +192,4 @@ const Login: React.FC = () => {
   );
 };
 
-export {Login};
+export { Login };
