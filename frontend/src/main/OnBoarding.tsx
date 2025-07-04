@@ -407,10 +407,8 @@ const OnBoarding: React.FC = () => {
             });
         if(role === "Buyer"){
             navigate("/login");
-            // alert("redirect to login")
         }else{
            navigate("/schedule-meeting");
-            // alert("redirect to schedule meeting")
         }
 
         } catch (e: any) {

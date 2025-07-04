@@ -15,6 +15,7 @@ import SellerSignup from "../seller/signup";  // Seller Signup
 import { OnBoarding } from "../main/OnBoarding";
 import {Login} from "../main/login";
 import SelectRole from "../main/selectRole";
+import ScheduleMeeting from "../main/scheduleMeeting"; 
 
 import Hero from "../main/Hero";
 import SellerSettings from "../seller/settings";
@@ -112,6 +113,7 @@ const AppRoutes = () => {
           <Route path="/onboarding" element={<Animate page={<OnBoarding />} />} />
           <Route path="/login" element={<Animate page={<Login />} />} />
           <Route path="/select-role" element={<Animate page={<SelectRole />} />} />
+          <Route path="/schedule-meeting" element={<Animate page={<ScheduleMeeting />} />} />
 
          
   
