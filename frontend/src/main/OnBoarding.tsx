@@ -5,6 +5,7 @@ import BreyusLogo from "../seller/vectors/full-logo.svg";
 
 // import service (backend integration)
 import { sendOtpService, verifyOtpService, validateTokenService, setPasswordService, continueOnboardingService, step2Service, step3Service, MeanMonthlyRevenueEnum, step4Service, step5Service } from '../services/onboarding.service';
+import { useNavigate } from "react-router-dom";
 
 
 
@@ -19,6 +20,8 @@ const OnBoarding: React.FC = () => {
     const [createAccount, setCreateAccount] = React.useState(false)
     const [isPasswordVerified, setIsPasswordVerified] = useState(false);
     const [AccountToken, setAccountToken] = useState('');
+
+    const navigate = useNavigate();
 
     //animation variants
     const containerVariants = {
@@ -396,22 +399,19 @@ const OnBoarding: React.FC = () => {
     const handleStep5Service = async () => {
         setErrorMessage('');
         setSuccessMessage('');
+        
         try {
 
             await step5Service(AccountToken, {
                 role
             });
-        //    setSuccessMessage("Onboarding Successful")
         if(role === "Buyer"){
-            window.location.href="login"
-            // alert("redirect to login")
+            navigate("/login");
         }else{
-            window.location.href="schedule-meeting"
-            // alert("redirect to schedule meeting")
+           navigate("/schedule-meeting");
         }
 
         } catch (e: any) {
-            // Show backend error if available
             setErrorMessage(e?.message || "Error updating company details. Please try again.");
         }
     }

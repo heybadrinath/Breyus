@@ -3,7 +3,7 @@ import { SendEmailOtpDto, VerifyEmailOtpDto, continueOnboardingDto, SetPasswordD
 import { OnboardingService } from './onboarding.service';
 import { AuthService } from 'src/auth/auth.service';
 import { Response } from 'express';
-import { CompanySchema } from 'src/company/company.schema';
+
 
 @Controller('onboarding')
 export class OnboardingController {
@@ -55,13 +55,6 @@ export class OnboardingController {
     ): Promise<void> {
         try {
             const result = await this.onboardingService.SetPassword(setPasswordDto, token);
-            // response.cookie('access_token', result, {
-            //     httpOnly: true,
-            //     secure: process.env.NODE_ENV === 'production',
-            //     maxAge: 86400000,
-            //     signed: true,
-            //     sameSite: 'none'
-            // });
             await response.status(HttpStatus.OK).json({ message: 'Onboarding continued successfully', data: result });
 
         } catch (error) {

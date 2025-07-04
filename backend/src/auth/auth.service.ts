@@ -80,4 +80,17 @@ export class AuthService {
       throw new HttpException('Error Verifying token: ' + e, HttpStatus.BAD_REQUEST);
     }
   }
+
+  validateAccountToken(token: string){
+    const secretKey = process.env.JWT_SECRET_KEY;
+    if (!secretKey) {
+      throw new Error("JWT_SECRET_KEY is not defined in the environment variables");
+    }
+    try {
+      const decode = jwt.verify(token, secretKey);
+      return decode;
+    } catch (e) {
+      throw new HttpException('Invalid or Expired cookie: ' + e, HttpStatus.BAD_REQUEST);
+    }
+  }
 }

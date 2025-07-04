@@ -11,8 +11,11 @@ import SellerSignin from "../seller/signin";  // Seller Signin
 import Signup from "../buyer/signup";  // Buyer Signup
 import SellerSignup from "../seller/signup";  // Seller Signup
 
-// Onboarding
+// Main links
 import { OnBoarding } from "../main/OnBoarding";
+import {Login} from "../main/login";
+import SelectRole from "../main/selectRole";
+import ScheduleMeeting from "../main/scheduleMeeting"; 
 
 import Hero from "../main/Hero";
 import SellerSettings from "../seller/settings";
@@ -48,10 +51,24 @@ import PurchaseRequestSuccess from "../buyer/pages/PurchaseRequestSuccess";
 import BuyerAi from "../buyer/pages/ai";
 import BuyerAiproduct from "../buyer/pages/ai-products";
 
-const pageVariants = { 
-  initial: { opacity: 0, x: -80 },
-  animate: { opacity: 1, x: 0, transition: { duration: 0.4 } },
-  exit: { opacity: 0, x: 80, transition: { duration: 0.4 } }
+// const pageVariants = { 
+//   initial: { opacity: 0 },
+//   animate: { opacity: 1, transition: { duration: 0.4 } },
+//   exit: { opacity: 0, transition: { duration: 0.4 } }
+// };
+
+const pageVariants = {
+  initial: { opacity: 0, y: 20 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.3, ease: "easeOut" },
+  },
+  exit: {
+    opacity: 0,
+    y: -10,
+    transition: { duration: 0.2, ease: "easeIn" },
+  },
 };
 
 // wrapper for seller div is already available 
@@ -92,8 +109,11 @@ const AppRoutes = () => {
 
 
 
-          {/* OnBoarding */}
+          {/* Main routes */}
           <Route path="/onboarding" element={<Animate page={<OnBoarding />} />} />
+          <Route path="/login" element={<Animate page={<Login />} />} />
+          <Route path="/select-role" element={<Animate page={<SelectRole />} />} />
+          <Route path="/schedule-meeting" element={<Animate page={<ScheduleMeeting />} />} />
 
          
   

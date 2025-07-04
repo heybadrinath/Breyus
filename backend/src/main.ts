@@ -14,7 +14,7 @@ async function bootstrap() {
     origin: corsOrigin,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     Headers: 'Content-Type',
-    credentials: corsCredentials,
+    credentials: true,
   });
    app.useGlobalPipes(
     new ValidationPipe({
