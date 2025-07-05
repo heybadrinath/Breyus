@@ -2,12 +2,50 @@ import React from "react";
 
 // Product Information Component
  const ProductInformation = () => {
+  const [productInformation, setProductInformation] = React.useState({
+    name: '',
+    moq: '',
+    description: '',
+    detailedDescription: '',
+    category: '',
+    hsnCode: ''
+  });
 
+  const [hsnDetails, setHsnDetails] = React.useState<null | {
+    hsn_code: string;
+    description: string;
+    gst_rate: string;
+    category: string;
+    remarks: string;
+  }>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setProductInformation(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    if (name === "hsnCode" && value.length >= 4) {
+      fetchHSNDetails(value)
+        .then(data => setHsnDetails(data))
+        .catch(() => setHsnDetails(null));
+    }
+  };
+
+
+  const fetchHSNDetails = async (hsn_code: string) => {
+    const response = await fetch(`https://hsnapi.com/hsn/${encodeURIComponent(hsn_code)}`);
+    if (!response.ok) {
+    throw new Error('Failed to fetch HSN details');
+    }
+    return response.json();
+  }
 
   return (
     <div>
       <div className="flex flex-col h-full">
-        {/* <h1 className="section-title font-bold mb-6 text-2xl">{isEditMode ? 'Edit Product' : 'Product Information'}</h1> */}
+        <h1 className="section-title font-bold mb-6 text-2xl"> Product Information</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div className="form-field">
@@ -44,8 +82,8 @@ import React from "react";
                 className="w-full border border-gray-200 rounded-t-lg px-3 py-2"
                 type="text"
                 name="description"
-                // value={formData.description}
-                // onChange={handleChange}
+                value={productInformation.description}
+                onChange={handleChange}
               />
             </div>
             <textarea
@@ -79,8 +117,15 @@ import React from "react";
                 placeholder="HSN Code"
                 type="text"
                 name="hsnCode"
-                // value={formData.hsnCode}
-                // onChange={handleChange}
+                value={productInformation.hsnCode}
+                onChange={handleChange}
+                onBlur={() => {
+                  if (productInformation.hsnCode.length >= 4) {
+                    fetchHSNDetails(productInformation.hsnCode)
+                      .then(data => setHsnDetails(data))
+                      .catch(() => setHsnDetails(null));
+                  }
+                }}
               />
               <p className="text-xs text-gray-500 mt-1">Harmonized System Nomenclature code for product classification</p>
             </div>
