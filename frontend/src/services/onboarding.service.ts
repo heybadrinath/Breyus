@@ -242,5 +242,24 @@ export const step5Service = async (token: string, step5Dto: Step5Dto) => {
     return response;
 };
 
+export const getOnboardingProgressService = async (token: string) => {
+    const endpoint = "/get-onboarding-progress-details";
+    const headers = {
+        'Authorization': token,
+        'Content-Type': 'application/json'
+    };
+
+    const response = await fetch(`${BACKEND_END_POINT}${endpoint}`, {
+        method: 'POST',
+        headers: headers
+    });
+
+    if (!response.ok) {
+        throw new Error("Your Session Expired please Refresh this page and try again!");
+    }
+
+    return response.json();
+}
+
 
 

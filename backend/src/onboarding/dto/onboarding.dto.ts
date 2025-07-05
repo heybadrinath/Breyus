@@ -98,7 +98,6 @@ export class Step3Dto {
 export class Step4Dto {
 
     @IsString()
-    @IsNotEmpty()
     websiteUrl: string;
 
     @IsString()

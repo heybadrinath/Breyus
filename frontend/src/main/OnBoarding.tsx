@@ -4,8 +4,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import BreyusLogo from "../seller/vectors/full-logo.svg";
 
 // import service (backend integration)
-import { sendOtpService, verifyOtpService, validateTokenService, setPasswordService, continueOnboardingService, step2Service, step3Service, MeanMonthlyRevenueEnum, step4Service, step5Service } from '../services/onboarding.service';
+import { sendOtpService, verifyOtpService, validateTokenService, setPasswordService, continueOnboardingService, step2Service, step3Service, MeanMonthlyRevenueEnum, step4Service, step5Service, getOnboardingProgressService } from '../services/onboarding.service';
 import { useNavigate } from "react-router-dom";
+
+
+
 
 
 
@@ -22,6 +25,11 @@ const OnBoarding: React.FC = () => {
     const [AccountToken, setAccountToken] = useState('');
 
     const navigate = useNavigate();
+
+   
+    const [companyDetails, setCompanyDetails] = useState<{ [key: string]: any }>({});
+
+
 
     //animation variants
     const containerVariants = {
@@ -231,6 +239,23 @@ const OnBoarding: React.FC = () => {
         }
     };
 
+
+    // fetch details of the onboarding progress if not already fetched
+    const fetchOnboardingDetails = async (token?: string) => {
+        try {
+            const usedToken = token || AccountToken;
+            if (usedToken) {
+                const details = await getOnboardingProgressService(usedToken);
+                setCompanyDetails(details.company || {});
+            }
+        } catch (error) {
+            console.error("Failed to fetch onboarding progress:", error);
+        }
+    };
+
+  
+
+
     //handle password to create account
     const [isPasswordSubmitted, setIsPasswordSubmitted] = useState(false);
 
@@ -264,6 +289,7 @@ const OnBoarding: React.FC = () => {
             setIsPasswordVerified(true);
             const json = await data.json();
             setAccountToken(json.data)
+            await fetchOnboardingDetails(json.data);
             return true;
         } catch (e) {
             setErrorMessage("Error, failed to verify password please try again");
@@ -279,14 +305,22 @@ const OnBoarding: React.FC = () => {
 
 
     // step 2 logic
-    const [step2Form, setStep2Form] = useState(
-        {
-            companyName: '',
-            companyLocation: '',
-            contactNumber: '',
-            taxId: '',
-        }
-    );
+    const [step2Form, setStep2Form] = useState({
+        companyName: companyDetails.companyName ?? '',
+        companyLocation: companyDetails.companyAddress ?? '',
+        contactNumber: companyDetails.companyMobile ?? '',
+        taxId: companyDetails.taxId ?? '',
+    });
+
+    // Update step2Form when companyDetails changes and fields are empty
+    React.useEffect(() => {
+        setStep2Form(prev => ({
+            companyName: prev.companyName || companyDetails.companyName || '',
+            companyLocation: prev.companyLocation || companyDetails.companyAddress || '',
+            contactNumber: prev.contactNumber || companyDetails.companyMobile || '',
+            taxId: prev.taxId || companyDetails.taxId || '',
+        }));
+    }, [companyDetails]);
     const handleStep2InputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setStep2Form((prevState) => ({
@@ -325,10 +359,25 @@ const OnBoarding: React.FC = () => {
         }
     };
 
+    // Step 3: Main Line of Business & Revenue
+    // Sync mainlineOfBusiness and meanMonthlyRevenue with companyDetails if available
     const [meanMonthlyRevenue, setmeanMonthlyRevenue] = useState<MeanMonthlyRevenueEnum | ''>('');
+    React.useEffect(() => {
+        // Only update if companyDetails has values and local state is empty
+        if (companyDetails.mainLineBusiness && Array.isArray(companyDetails.mainLineBusiness) && mainlineOfBusiness.length === 0) {
+            setmainLineOfBusiness(companyDetails.mainLineBusiness);
+        }
+        if (companyDetails.meanMonthlyRevenue && !meanMonthlyRevenue) {
+            setmeanMonthlyRevenue(companyDetails.meanMonthlyRevenue as MeanMonthlyRevenueEnum);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [companyDetails]);
+
     const handleFinancialRangeChange = (e: ChangeEvent<HTMLInputElement>) => {
         setmeanMonthlyRevenue(e.target.value as MeanMonthlyRevenueEnum);
     };
+
+   
 
     const handleStep3Service = async () => {
         setErrorMessage('');
@@ -353,14 +402,28 @@ const OnBoarding: React.FC = () => {
 
 
     // step 4 logic
-    const [step4Form, setStep4Form] = useState(
-        {
-            companyWebsiteUrl: '',
-            founderName: '',
-            exporedBefore: '',
-            referrel: ''
-        }
-    );
+    const [step4Form, setStep4Form] = useState({
+        companyWebsiteUrl: companyDetails.websiteUrl ?? '',
+        founderName: companyDetails.founderName ?? '',
+        exporedBefore: typeof companyDetails.exportedBefore === 'boolean'
+            ? (companyDetails.exportedBefore ? 'Yes' : 'No')
+            : '',
+        referrel: companyDetails.referrel ?? '',
+    });
+
+    // Sync step4Form with companyDetails when companyDetails changes
+    React.useEffect(() => {
+        setStep4Form(prev => ({
+            companyWebsiteUrl: prev.companyWebsiteUrl || companyDetails.websiteUrl || '',
+            founderName: prev.founderName || companyDetails.founderName || '',
+            exporedBefore:
+                prev.exporedBefore ||
+                (typeof companyDetails.exportedBefore === 'boolean'
+                    ? (companyDetails.exportedBefore ? 'Yes' : 'No')
+                    : ''),
+            referrel: prev.referrel || companyDetails.referrel || '',
+        }));
+    }, [companyDetails]);
     const handleStep4InputChange = (
         e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLSelectElement>
     ) => {
@@ -391,7 +454,14 @@ const OnBoarding: React.FC = () => {
     }
 
     // step 5 logic
-    const [role, setRole] = useState('');
+    const [role, setRole] = useState(companyDetails.role ?? '');
+
+    // Sync role with companyDetails when companyDetails changes and local role is empty
+    React.useEffect(() => {
+        if (companyDetails.role && !role) {
+            setRole(companyDetails.role);
+        }
+    }, [companyDetails, role]);
     const handleRoleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setRole(e.target.value);
     }
@@ -399,17 +469,17 @@ const OnBoarding: React.FC = () => {
     const handleStep5Service = async () => {
         setErrorMessage('');
         setSuccessMessage('');
-        
+
         try {
 
             await step5Service(AccountToken, {
                 role
             });
-        if(role === "Buyer"){
-            navigate("/login");
-        }else{
-           navigate("/schedule-meeting");
-        }
+            if (role === "Buyer") {
+                navigate("/login");
+            } else {
+                navigate("/schedule-meeting");
+            }
 
         } catch (e: any) {
             setErrorMessage(e?.message || "Error updating company details. Please try again.");
@@ -890,10 +960,10 @@ const OnBoarding: React.FC = () => {
         }
         // Step 4: More Info
         if (step === 4) {
-            if (!step4Form.companyWebsiteUrl || !/^https?:\/\/.+\..+/.test(step4Form.companyWebsiteUrl)) {
-                setErrorMessage("Please enter a valid company website URL (must start with http/https).");
-                return false;
-            }
+            // if (!step4Form.companyWebsiteUrl || !/^https?:\/\/.+\..+/.test(step4Form.companyWebsiteUrl)) {
+            //     setErrorMessage("Please enter a valid company website URL (must start with http/https).");
+            //     return false;
+            // }
             if (!step4Form.founderName || step4Form.founderName.length < 2) {
                 setErrorMessage("Founder name is required (min 2 characters).");
                 return false;
@@ -973,11 +1043,11 @@ const OnBoarding: React.FC = () => {
                                             await handleStep4Service();
                                             return;
                                         }
-                                       
+
                                         if (currentStep === 1) {
                                             setCurrentStep(prev => prev + 1);
                                         }
-                                        
+
 
                                         if (currentStep === 1 && createAccount && !isPasswordSubmitted) ServiceCreateAccount();
                                     }}
@@ -987,12 +1057,12 @@ const OnBoarding: React.FC = () => {
                                 </button>
                             ) : (
                                 <button
-                                    onClick={ async () => {
-                                         if(currentStep === 5){
+                                    onClick={async () => {
+                                        if (currentStep === 5) {
                                             await handleStep5Service();
                                             return;
                                         }
-                                     }}
+                                    }}
                                     className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors mt-12"
                                 >
                                     Next

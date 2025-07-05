@@ -33,7 +33,7 @@ import SellerForgotPassword from "../seller/forgot-password";
 import { Layout } from "../seller/components";
 import Inbox from "../seller/inbox"; 
 import {Trade,Feedback} from "../seller/trade";
-import SellerAddProductTerms from "../seller/Products/add-products-trade-terms";
+import SellerAddProductTerms from "../seller/Products/product-terms";
 
 import BuyerInbox from "../buyer/pages/Inbox";
 import Homepage from "../buyer/pages/Homepage";

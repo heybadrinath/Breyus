@@ -2,7 +2,7 @@ import React, { ReactNode, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../seller/css/components.css";
 import authService from "../services_old/auth.service";
-
+import { usernameService } from "../services/users.service";
 // assets import 
 import downArrow from "../seller/vectors/down-arrow.svg";
 import notifications from "../seller/vectors/notifications.svg";
@@ -165,14 +165,26 @@ const Leftnavdash = ({ username }: { username: String }) => {
 };
 
 const Layout = ({ Body }: { Body: ReactNode }) => {
-    // Get user data from localStorage
-    const userStr = localStorage.getItem('user');
-    const user = userStr ? JSON.parse(userStr) : null;
-    const firstName = user?.firstName || 'User';
+    const [username, setUsername] = useState<string>("");
+
+    React.useEffect(() => {
+        const fetchUsername = async () => {
+            try {
+                const user = await usernameService();
+                if (user && typeof user.name === "string") {
+                    user.name = user.name.split("@")[0];
+                }
+                setUsername(user?.name || "User");
+            } catch (error) {
+                setUsername("User");
+            }
+        };
+        fetchUsername();
+    }, []);
 
     return (
         <div className="layout">
-            <Leftnavdash username={firstName} />
+            <Leftnavdash username={username} />
             <div id="right-section">
                 <Header />
                 {Body}

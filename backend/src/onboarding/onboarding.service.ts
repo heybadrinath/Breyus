@@ -389,7 +389,32 @@ export class OnboardingService {
         }
     }
 
+    
 
+    async fetchOnboardingDetails(token: string): Promise<any>
+
+    {
+        const jwtSecret = process.env.JWT_SECRET_KEY;
+        if (!jwtSecret) {
+            throw new InternalServerErrorException('JWT secret key is not defined in environment variables');
+        }
+        let payload;
+        try {
+            payload = jwt.verify(token, jwtSecret);
+        } catch (e) {
+            throw new UnauthorizedException('Invalid or expired token');
+        }
+
+        const userId = payload.userId;
+
+        const user = await this.userSchema.findById(userId).populate('company').exec();
+
+        if (!user || !user.company) {
+            throw new NotFoundError('User or company not found');
+        }
+
+        return user.company;
+    }
 }
 
 
