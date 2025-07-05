@@ -20,22 +20,7 @@ const Media= () => {
             {/* <ImageUpload onChange={handleTestReportsChange} value={testReports} /> */}
           </div>
         </div>
-        <div className="mt-8 flex justify-between">
-          <button
-            // onClick={handlePrev}
-            type="button"
-            className="product-btn-prev"
-          >
-            Previous
-          </button>
-          <button
-            // onClick={handleNext}
-            type="button"
-            className="product-btn"
-          >
-            Next
-          </button>
-        </div>
+        
       </div>
     </div>
   );

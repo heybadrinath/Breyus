@@ -1,7 +1,7 @@
 import React from "react";
 
 // Product Information Component
-export const ProductInformation = () => {
+ const ProductInformation = () => {
 
 
   return (
@@ -87,16 +87,10 @@ export const ProductInformation = () => {
           </div>
         </div>
 
-        <div className="mt-8 flex justify-end">
-          <button
-            // onClick={handleNext}
-            type="button"
-            className="product-btn"
-          >
-            Next
-          </button>
-        </div>
+        
       </div>
     </div>
   );
 };
+
+export default ProductInformation;

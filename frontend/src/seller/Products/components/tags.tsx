@@ -85,21 +85,6 @@ const Tags = () => {
           </div>
         </div>
 
-        <div className="mt-8 flex justify-between">
-          <button
-            // onClick={handlePrev}
-            className="product-btn-prev"
-          >
-            Previous
-          </button>
-          <button
-            // onClick={handleSubmit}
-            // disabled={isSubmitting}
-            // className={`product-btn ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
-          >
-            {/* {isSubmitting ? 'Processing...' : isEditMode ? 'Update Product' : 'Add Product'} */}
-          </button>
-        </div>
       </div>
    </div>
   );

@@ -132,22 +132,6 @@ const Price = () => {
 
         </div>
 
-        <div className="mt-2 flex justify-between">
-          <button
-            // onClick={handlePrev}
-            type="button"
-            className="product-btn-prev"
-          >
-            Previous
-          </button>
-          <button
-            // onClick={handleNext}
-            type="button"
-            className="product-btn"
-          >
-            Next
-          </button>
-        </div>
       </div>
     </div>
   );
