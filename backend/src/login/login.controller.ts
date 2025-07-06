@@ -28,7 +28,7 @@ export class LoginController {
             const result = await this.loginService.ValidateOtp(otpDto);
             response.cookie('account', result.AccountToken, {
                 httpOnly: true,
-                maxAge: 1000 * 60 * 60 * 2,
+                maxAge:  Number(process.env.COOKIE_EXPIRY_LOGIN) || 1000 * 60 * 60 * 1, // 1 hour in ms
                 signed: true,
                 secure: process.env.NODE_ENV === 'production' || true,
                 sameSite: (process.env.NODE_ENV === 'production')? 'strict': 'none'
