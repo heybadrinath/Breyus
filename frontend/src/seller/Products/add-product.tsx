@@ -41,7 +41,7 @@ const [productImages, setProductImages] = useState<File[]>([]);
     salePrice: '',
     costOfGoods: '',
     profit: '',
-    margin: '',
+    pricing: '',
     quantity: ''
   });
 
@@ -86,9 +86,9 @@ const [productImages, setProductImages] = useState<File[]>([]);
             {!(step === 0) && <button
               onClick={() => setStep((prev) => Math.max(prev - 1, 0))}
               type="button"
-              className="product-btn-prev !bg-[black]"
+              className="product-btn !bg-[black]"
             >
-              Previous
+              Prev
             </button>}
             <button
               onClick={() => setStep((prev) => Math.min(prev + 1, 3))}

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Switch from 'react-switch';
 
 interface PriceProps {
@@ -11,7 +11,7 @@ interface PriceProps {
     salePrice: string;
     costOfGoods: string;
     profit: string;
-    margin: string;
+    pricing: string;
     quantity: string;
   };
   setPriceData: React.Dispatch<React.SetStateAction<{
@@ -23,23 +23,13 @@ interface PriceProps {
     salePrice: string;
     costOfGoods: string;
     profit: string;
-    margin: string;
+    pricing: string;
     quantity: string;
   }>>;
 }
 
 // Price Component
 const Price: React.FC<PriceProps> = ({ priceData, setPriceData }) => {
-  
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
-    
-    setPriceData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
 
   const toggleSale = () => {
     setPriceData(prev => ({
@@ -48,14 +38,49 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData }) => {
     }));
   };
 
+
+  const handleChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
+
+    setPriceData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  useEffect(() => {
+    const newPricing = priceData.onSale ? priceData.salePrice : priceData.price;
+    setPriceData(prev => ({
+      ...prev,
+      pricing: newPricing
+    }));
+  }, [priceData.onSale, priceData.price, priceData.salePrice]);
+
+  useEffect(() => {
+    const salePrice = Number(priceData.price) - (Number(priceData.discount) / 100) * Number(priceData.price);
+    setPriceData(prev => ({
+      ...prev,
+      salePrice: (priceData.onSale) ? String(salePrice) : ''
+    }))
+  }, [priceData.price, priceData.salePrice, priceData.discount]);
+
+  useEffect(() =>{
+    const profit = Number(priceData.pricing) - Number(priceData.costOfGoods);
+    setPriceData(prev => ({
+      ...prev,
+      profit: String(profit)
+    }))
+  }, [priceData.pricing, priceData.costOfGoods, priceData.profit]);
+
+
   return (
     <div>
       <div className="flex flex-col h-full">
-        <h1 className="section-title font-bold mb-6 text-2xl">Price</h1>
+        <h1 className="section-title font-bold mb-6 text-2xl">Pricing</h1>
 
         <div className="product-card animate-slide-in shadow-none">
           {/* Section-1 */}
-          <h2 className="text-lg font-semibold mb-2">Basic Pricing</h2>
           <div className="price-container grid-cols-3">
             <div className="form-field">
               <input
@@ -94,15 +119,8 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData }) => {
           {/* Section -2  */}
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-lg font-semibold">Discounts</h2>
-            <div className="flex items-center">
-              <span className="mr-2 text-sm text-gray-700">On Sale</span>
-              {/* <input
-                type="checkbox"
-                name="onSale"
-                checked={priceData.onSale}
-                onChange={handleChange}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-              /> */}
+            <div className="flex items-center my-2">
+              <span className="mr-2 text-sm text-gray-700 ml-2 my-auto">On Sale</span>
               <Switch
                 onChange={toggleSale}
                 checked={priceData.onSale}
@@ -114,6 +132,7 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData }) => {
                 checkedIcon={false}
                 className="focus:!outline-none"
               />
+
             </div>
           </div>
 
@@ -137,6 +156,7 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData }) => {
                 value={priceData.salePrice}
                 onChange={handleChange}
                 disabled={!priceData.onSale}
+                readOnly
                 className={`w-full ${!priceData.onSale ? 'opacity-50' : ''}`}
               />
             </div>
@@ -144,8 +164,21 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData }) => {
 
           {/* Section -3 */}
           <h2 className="text-lg font-semibold mb-2">Inventory & Profit</h2>
-          <div className="price-container grid-cols-3">
-            <div className="form-field">
+          <div className="flex flex-row w-full">
+            <div className="form-field w-full mx-3">
+              <input
+                placeholder="pricing"
+                type="text"
+                name="pricing"
+                value={priceData.pricing}
+                readOnly
+                className="w-full mx-auto bg-gray-50"
+              />
+            </div>
+
+            <div className="flex w-16 bg-gray-500 h-1 my-auto rounded-full"></div>
+
+            <div className="form-field w-full mx-3">
               <input
                 placeholder="Cost of Goods"
                 type="text"
@@ -155,7 +188,10 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData }) => {
                 className="w-full"
               />
             </div>
-            <div className="form-field">
+
+            <div className="flex w-16  h-3 border-b-[3px] border-t-[3px] border-gray-500 my-auto rounded-sm "></div>
+
+            <div className="form-field w-full mx-3">
               <input
                 placeholder="Profit"
                 type="text"
@@ -165,30 +201,10 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData }) => {
                 className="w-full bg-gray-50"
               />
             </div>
-            <div className="form-field">
-              <input
-                placeholder="Margin %"
-                type="text"
-                name="margin"
-                value={priceData.margin}
-                readOnly
-                className="w-full bg-gray-50"
-              />
-            </div>
+
           </div>
 
-          <div className="form-field">
-            <label className="block text-gray-700 font-medium mb-2">Product Quantity</label>
-            <input
-              placeholder="Enter available product quantity"
-              type="number"
-              name="quantity"
-              value={priceData.quantity}
-              onChange={handleChange}
-              className="w-full border p-2 rounded"
-            />
-            <p className="text-sm text-gray-500 mt-1">Number of units currently in stock</p>
-          </div>
+
         </div>
       </div>
     </div>

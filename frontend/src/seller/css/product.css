@@ -44,10 +44,10 @@ input[type="text"], input[type="number"], select, textarea {
     background-color: #fafafa;
 }
 
-.form-field input:focus, .form-field select:focus, .form-field textarea:focus {
+/* .form-field input:focus, .form-field select:focus, .form-field textarea:focus {
     background-color: white;
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-}
+} */
 
 .form-field label {
     @apply block text-sm font-semibold text-gray-700 mb-2;
@@ -88,24 +88,19 @@ input[type="text"], input[type="number"], select, textarea {
     border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.product-card:hover {
+/* .product-card:hover {
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
     transform: translateY(-2px);
-}
+} */
 
 
 
 /* Button styling */
+
+
+
 .product-btn {
-    @apply bg-black text-white px-8 py-3 rounded-xl font-semibold;
-    @apply transition-all duration-300 ease-in-out;
-    /* @apply hover:from-blue-700 hover:to-blue-800 hover:shadow-lg hover:scale-105 active:scale-100; */
-    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
-}
-
-
-.product-btn-prev {
-    @apply bg-gradient-to-r from-[#5e5959] to-[black] text-white px-8 py-3 rounded-xl font-semibold;
+    @apply bg-gradient-to-r from-[#5e5959] to-[black] text-white px-12 py-3 rounded-xl font-semibold;
     @apply transition-all duration-300 ease-in-out;
     @apply hover:from-gray-600 hover:to-gray-700 hover:shadow-lg hover:scale-105 active:scale-100;
     box-shadow: 0 4px 15px rgba(107, 114, 128, 0.3);
