@@ -13,6 +13,7 @@ interface PriceProps {
     profit: string;
     pricing: string;
     quantity: string;
+    margin: string;
   };
   setPriceData: React.Dispatch<React.SetStateAction<{
     price: string;
@@ -25,6 +26,7 @@ interface PriceProps {
     profit: string;
     pricing: string;
     quantity: string;
+    margin: string;
   }>>;
 }
 
@@ -66,12 +68,26 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData }) => {
   }, [priceData.price, priceData.salePrice, priceData.discount]);
 
   useEffect(() =>{
-    const profit = Number(priceData.pricing) - Number(priceData.costOfGoods);
+    if(priceData.pricing && priceData.costOfGoods){
+      const profit = Number(priceData.pricing) - Number(priceData.costOfGoods);
     setPriceData(prev => ({
       ...prev,
       profit: String(profit)
     }))
+    }
+    
   }, [priceData.pricing, priceData.costOfGoods, priceData.profit]);
+
+  useEffect(() =>{
+    if(priceData.pricing && priceData.profit){
+      const margin = (Number(priceData.profit) / Number(priceData.pricing)) * 100;
+    setPriceData(prev => ({
+      ...prev,
+      margin: String(margin)
+    }))
+    }
+    
+  }, [priceData.pricing, priceData.margin, priceData.profit]);
 
 
   return (
@@ -165,18 +181,9 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData }) => {
           {/* Section -3 */}
           <h2 className="text-lg font-semibold mb-2">Inventory & Profit</h2>
           <div className="flex flex-row w-full">
-            <div className="form-field w-full mx-3">
-              <input
-                placeholder="pricing"
-                type="text"
-                name="pricing"
-                value={priceData.pricing}
-                readOnly
-                className="w-full mx-auto bg-gray-50"
-              />
-            </div>
+            
 
-            <div className="flex w-16 bg-gray-500 h-1 my-auto rounded-full"></div>
+            {/* <div className="flex w-16 bg-gray-500 h-1 my-auto rounded-full"></div> */}
 
             <div className="form-field w-full mx-3">
               <input
@@ -189,7 +196,7 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData }) => {
               />
             </div>
 
-            <div className="flex w-16  h-3 border-b-[3px] border-t-[3px] border-gray-500 my-auto rounded-sm "></div>
+            {/* <div className="flex w-16  h-3 border-b-[3px] border-t-[3px] border-gray-500 my-auto rounded-sm "></div> */}
 
             <div className="form-field w-full mx-3">
               <input
@@ -199,6 +206,17 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData }) => {
                 value={priceData.profit}
                 readOnly
                 className="w-full bg-gray-50"
+              />
+            </div>
+
+            <div className="form-field w-full mx-3">
+              <input
+                placeholder="margin"
+                type="text"
+                name="margin"
+                value={priceData.margin}
+                readOnly
+                className="w-full mx-auto bg-gray-50"
               />
             </div>
 

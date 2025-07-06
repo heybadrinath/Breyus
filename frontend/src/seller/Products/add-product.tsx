@@ -42,7 +42,8 @@ const [productImages, setProductImages] = useState<File[]>([]);
     costOfGoods: '',
     profit: '',
     pricing: '',
-    quantity: ''
+    quantity: '',
+    margin: ''
   });
 
   // tags state
