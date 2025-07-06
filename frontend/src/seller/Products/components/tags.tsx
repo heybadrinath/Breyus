@@ -1,8 +1,50 @@
 import React from "react";
 
-const Tags = () => {
- 
-  
+interface TagsProps {
+  tagsData: {
+    tags: string[];
+    input: string;
+  };
+  setTagsData: React.Dispatch<React.SetStateAction<{
+    tags: string[];
+    input: string;
+  }>>;
+}
+
+const Tags: React.FC<TagsProps> = ({ tagsData, setTagsData }) => {
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addTag();
+    }
+  };
+
+  const addTag = () => {
+    const trimmedInput = tagsData.input.trim();
+    if (trimmedInput && tagsData.tags.length < 5 && !tagsData.tags.includes(trimmedInput)) {
+      setTagsData(prev => ({
+        ...prev,
+        tags: [...prev.tags, trimmedInput],
+        input: ''
+      }));
+    }
+  };
+
+  const removeTag = (index: number) => {
+    setTagsData(prev => ({
+      ...prev,
+      tags: prev.tags.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTagsData(prev => ({
+      ...prev,
+      input: e.target.value
+    }));
+  };
+
   return (
     <div>
       <div className="flex flex-col h-full">
@@ -10,54 +52,33 @@ const Tags = () => {
 
         <div className="product-card">
           <div className="flex justify-between items-center mb-4">
-            {/* <h2 className="text-lg font-semibold">Product Tags <span className="text-sm text-gray-500">({tags.length}/5)</span></h2> */}
+            <h2 className="text-lg font-semibold">Product Tags <span className="text-sm text-gray-500">({tagsData.tags.length}/5)</span></h2>
             <button
-            //   onClick={fetchSuggestedTags}
-            //   disabled={isLoading || !productData?.name}
-            //   className={`flex items-center text-sm px-3 py-1.5 rounded-md ${isLoading || !productData?.name
-                // ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                // : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                // }`}
+              onClick={() => {
+                // Auto-generate tags functionality can be implemented here
+                console.log('Auto-generate tags clicked');
+              }}
+
+              className={`flex items-center text-sm px-3 py-1.5 rounded-md ${'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                }`}
             >
-              {/* {isLoading ? (
-                <span className="flex items-center">
-                  <RefreshCw className="mr-1 animate-spin" size={14} />
-                  Generating...
-                </span>
-              ) : (
-                <>
-                  <RefreshCw className="mr-1" size={14} />
-                  <span>Auto-Generate Tags</span>
-                </>
-              )} */}
+              <span>Auto-Generate Tags</span>
             </button>
           </div>
-
-          {/* {error && ( */}
-            <div className="text-sm mb-4 p-3 rounded bg-yellow-50 text-yellow-700 border border-yellow-200">
-              {/* {error} */}
-            </div>
-          {/* )} */}
-
-          {/* {successMessage && ( */}
-            <div className="text-sm mb-4 p-3 rounded bg-green-50 text-green-700 border border-green-200">
-              {/* {successMessage} */}
-            </div>
-          {/* )} */}
 
           <div className="border border-gray-200 rounded-xl p-4 mb-4">
             <input
               type="text"
-            //   placeholder={tags.length >= 5 ? "Maximum 5 tags reached" : "Add your tag (press Enter or comma)"}
+              placeholder={tagsData.tags.length >= 5 ? "Maximum 5 tags reached" : "Add your tag (press Enter or comma)"}
               className="outline-none px-3 py-2 mb-4 bg-transparent border-b border-gray-200 w-full focus:border-gray-400 transition-all"
-            //   value={input}
-            //   onChange={(e) => setInput(e.target.value)}
-            //   onKeyDown={handleKeyDown}
-            //   disabled={tags.length >= 5}
+              value={tagsData.input}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              disabled={tagsData.tags.length >= 5}
             />
 
             <div className="flex flex-wrap gap-2 mt-2">
-              {/* {tags.map((tag, idx) => (
+              {tagsData.tags.map((tag, idx) => (
                 <div
                   key={`${tag}-${idx}`}
                   className="flex items-center bg-gradient-to-r from-black to-[#353535] text-white rounded-full px-3 py-1.5 transition-all hover:shadow-md"
@@ -71,7 +92,7 @@ const Tags = () => {
                     ×
                   </button>
                 </div>
-              ))} */}
+              ))}
             </div>
           </div>
 
@@ -84,9 +105,8 @@ const Tags = () => {
             </ul>
           </div>
         </div>
-
       </div>
-   </div>
+    </div>
   );
 };
 

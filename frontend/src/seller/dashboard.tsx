@@ -313,7 +313,7 @@ import React, { useEffect, useState } from "react";
 
 const SellerDashboard = () => {
   // return <Analytics />;
-  return <></>;
+  return <div className="mx-auto w-fit my-[40vh]">Coming Soon</div>;
 };
 
 export default SellerDashboard;

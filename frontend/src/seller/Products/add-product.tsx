@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useState} from "react";
 import ProductInformation from "./components/product-information";
 import Media from "./components/media";
 import Price from "./components/price";
@@ -6,25 +6,63 @@ import Tags from "./components/tags";
 import ProgressBar from "../../buyer/components/cart/PurchaseRequestProgress";
 import '../css/product.css';
 
-
-
-
 export const AddProduct = () => {
+
+  // product information state
+  const [productInformation, setProductInformation] = React.useState({
+    name: '',
+    moq: '',
+    moqUnit: '',
+    description: '',
+    detailedDescription: '',
+    category: '',
+    hsnCode: ''
+  });
+
+  // media state
+const [productImages, setProductImages] = useState<File[]>([]);
+  const [testReports, setTestReports] = useState<File[]>([]);
+
+  const handleProductImagesChange = (newImages: File[]) => {
+    setProductImages(newImages);
+  };
+
+  const handleTestReportsChange = (newReports: File[]) => {
+    setTestReports(newReports);
+  };
+
+  // pricing state
+  const [priceData, setPriceData] = React.useState({
+    price: '',
+    currency: 'USD',
+    sku: '',
+    onSale: false,
+    discount: '',
+    salePrice: '',
+    costOfGoods: '',
+    profit: '',
+    margin: '',
+    quantity: ''
+  });
+
+  // tags state
+  const [tagsData, setTagsData] = React.useState({
+    tags: [] as string[],
+    input: ''
+  });
 
   const [step, setStep] = React.useState(0);
 
-
   const renderStepContent = () => {
-
     switch (step) {
       case 0:
-        return <ProductInformation />;
+        return <ProductInformation productInformation={productInformation} setProductInformation={setProductInformation} />;
       case 1:
-        return <Media />;
+        return <Media productImages={productImages} onProductImagesChange={handleProductImagesChange} testReports={testReports} onTestReportsChange={handleTestReportsChange} />;
       case 2:
-        return <Price />;
+        return <Price priceData={priceData} setPriceData={setPriceData} />;
       case 3:
-        return <Tags />;
+        return <Tags tagsData={tagsData} setTagsData={setTagsData} />;
       default:
         return null;
     }
@@ -45,17 +83,17 @@ export const AddProduct = () => {
         <div className="w-[60%] mx-auto translate-y-6 border border-gray-300 rounded-lg px-6 pt-16 pb-6">
           {renderStepContent()}
           <div className="mt-8 flex justify-between">
-            <button
+            {!(step === 0) && <button
               onClick={() => setStep((prev) => Math.max(prev - 1, 0))}
               type="button"
               className="product-btn-prev !bg-[black]"
             >
               Previous
-            </button>
+            </button>}
             <button
               onClick={() => setStep((prev) => Math.min(prev + 1, 3))}
               type="button"
-              className="product-btn"
+              className="product-btn ml-auto"
             >
               Next
             </button>

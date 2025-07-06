@@ -1,15 +1,43 @@
-import React from "react";
+import { Search } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { SearchableInputHSN } from "./searchable_input_hsn";
+
+interface ProductInformationProps {
+  productInformation: {
+    name: string;
+    moq: string;
+    moqUnit: string;
+    description: string;
+    detailedDescription: string;
+    category: string;
+    hsnCode: string;
+  };
+  setProductInformation: React.Dispatch<React.SetStateAction<{
+    name: string;
+    moq: string;
+    moqUnit: string;
+    description: string;
+    detailedDescription: string;
+    category: string;
+    hsnCode: string;
+  }>>;
+}
 
 // Product Information Component
- const ProductInformation = () => {
-  const [productInformation, setProductInformation] = React.useState({
-    name: '',
-    moq: '',
-    description: '',
-    detailedDescription: '',
-    category: '',
-    hsnCode: ''
-  });
+const ProductInformation: React.FC<ProductInformationProps> = ({ productInformation, setProductInformation }) => {
+
+
+  interface HSNRESULTS {
+    _id: string;
+    hsn_code: string;
+    description: string;
+    category: string;
+  }
+  const [hsnQuery, setHsnQuery] = useState<string>(''); // Search query state
+  const [hsnResults, setHsnResults] = useState<HSNRESULTS[]>([]); // Results state
+  const [hsnLoading, setHsnLoading] = useState<boolean>(false); // Loading state
+  const [isHsnSelected, setIsHsnSelected] = useState<boolean>(false); // Selection state
+
 
   const [hsnDetails, setHsnDetails] = React.useState<null | {
     hsn_code: string;
@@ -26,21 +54,68 @@ import React from "react";
       [name]: value
     }));
 
-    if (name === "hsnCode" && value.length >= 4) {
-      fetchHSNDetails(value)
-        .then(data => setHsnDetails(data))
-        .catch(() => setHsnDetails(null));
-    }
+
   };
 
 
-  const fetchHSNDetails = async (hsn_code: string) => {
-    const response = await fetch(`https://hsnapi.com/hsn/${encodeURIComponent(hsn_code)}`);
-    if (!response.ok) {
-    throw new Error('Failed to fetch HSN details');
+  // Debounced search (effect hook)
+  useEffect(() => {
+    if (!hsnQuery) {
+      setHsnResults([]);
+      return;
     }
-    return response.json();
-  }
+
+    if (isHsnSelected) {
+      setHsnResults([]);
+      setIsHsnSelected(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setHsnLoading(true);
+      try {
+        const host = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+        const response = await fetch(`${host}/products/hsn?q=${hsnQuery}`, { credentials: 'include' });
+        if (!response.ok) {
+          throw new Error('Failed to fetch data');
+        }
+        const data: HSNRESULTS[] = await response.json();
+        setHsnResults(data);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setHsnLoading(false);
+      }
+    }, 1600); // Debounce delay in ms
+
+    return () => clearTimeout(timer); // Clean up timer on component unmount
+  }, [hsnQuery]);
+
+  const handleHsnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setHsnQuery(value);
+    // Store the search query in productInformation to persist it
+    setProductInformation(prev => ({
+      ...prev,
+      hsnSearchQuery: value
+    }));
+  };
+
+  const handleSelect = (item: HSNRESULTS) => {
+    // Handle item selection
+    setHsnQuery(item.hsn_code); // Optionally update input with selected HSN code
+    setHsnResults([]);
+    setIsHsnSelected(true);
+    setProductInformation({
+      ...productInformation,
+      hsnCode: item.hsn_code,
+      category: item.category,
+      description: productInformation.description || item.description
+    });
+
+  };
+
+
 
   return (
     <div>
@@ -54,26 +129,105 @@ import React from "react";
               className="w-full"
               type="text"
               name="name"
-            //   value={formData.name}
-            //   onChange={handleChange}
+              value={productInformation.name}
+              onChange={handleChange}
             />
           </div>
-          <div className="form-field">
-            <select
-              className="w-full bg-transparent"
+          <div className="form-field flex flex-row">
+            <input
+              type="text"
+              placeholder="Minimum Order Quantity"
+              className="w-full"
+              value={productInformation.moq}
               name="moq"
-            //   value={formData.moq}
-            //   onChange={handleChange}
+              onChange={handleChange}
+            />
+            <select
+              className="!w-fit mx-3 bg-transparent !px-2 "
+              name="moqUnit"
+              value={productInformation.moqUnit}
+              onChange={handleChange}
             >
-              <option value="" disabled>Minimum Order Quantity (MOQ)</option>
-              <option value="100 KG">100 KG</option>
-              <option value="200 KG">200 KG</option>
-              <option value="500 KG">500 KG</option>
+              <option value="pieces">Pieces</option>
+              <option value="boxes">Boxes</option>
+              <option value="cartons">Cartons</option>
+              <option value="kg">Kilograms (kg)</option>
+              <option value="grams">Grams (g)</option>
+              <option value="liters">Liters (L)</option>
+              <option value="milliliters">Milliliters (mL)</option>
+              <option value="meters">Meters (m)</option>
+              <option value="centimeters">Centimeters (cm)</option>
+              <option value="inches">Inches (in)</option>
+              <option value="yards">Yards (yd)</option>
+              <option value="sets">Sets</option>
+              <option value="dozens">Dozens</option>
+              <option value="pallets">Pallets</option>
+              <option value="square_meters">Square Meters (m²)</option>
+              <option value="square_feet">Square Feet (ft²)</option>
+              <option value="cubic_meters">Cubic Meters (m³)</option>
+              <option value="cubic_feet">Cubic Feet (ft³)</option>
+              <option value="tons">Tons</option>
+              <option value="gallons">Gallons</option>
+              <option value="pounds">Pounds (lbs)</option>
+              <option value="cubic_inches">Cubic Inches (in³)</option>
+              <option value="bottles">Bottles</option>
+              <option value="packs">Packs</option>
+              <option value="bags">Bags</option>
+              <option value="sheets">Sheets</option>
+              <option value="rolls">Rolls</option>
+              <option value="spools">Spools</option>
+              <option value="pairs">Pairs</option>
+              <option value="containers">Containers</option>
+              <option value="pieces_per_box">Pieces per Box</option>
+              <option value="feet">Feet (ft)</option>
+              <option value="cubic_yards">Cubic Yards (yd³)</option>
             </select>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          <div className="product-card flex flex-col">
+            <h2 className="text-lg font-semibold mb-3">Product Details</h2>
+
+            <div className="form-field">
+              {/* Searchable HSN Input */}
+              <>
+                <input
+                  type="text"
+                  value={hsnQuery}
+                  onChange={handleHsnChange}
+                  placeholder="Search by HSN code, description, or category"
+                />
+                {hsnLoading && <p>Loading...</p>}
+                {hsnResults.length > 0 && !isHsnSelected && (
+                  <ul className="w-fit bg-white border border-gray-300 rounded-md px-4 h-[300px] overflow-y-scroll">
+                    {hsnResults.map((item) => (
+                      <li
+                        key={item._id}
+                        onClick={() => handleSelect(item)}
+                        className="py-2 px-4 my-3 hover:bg-gray-100 cursor-pointer"
+                      >
+                        <strong>{item.hsn_code}</strong> - {item.description} - ({item.category})
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+              <p className="text-xs text-gray-500 mt-1">Harmonized System Nomenclature code for product classification</p>
+            </div>
+
+            <div className="form-field mb-6">
+
+              <div className={`w-full ${isHsnSelected ? "text-gray-400": "text-black"}`}>
+                {productInformation.category || "category"}
+              </div>
+            </div>
+
+
+          </div>
+
+
           <div className="product-card">
             <h2 className="text-lg font-semibold mb-3">Description</h2>
             <div className="mb-4">
@@ -90,49 +244,15 @@ import React from "react";
               placeholder="Detailed Description - Include product specifications, features, and benefits"
               className="w-full h-[180px] border border-gray-200 rounded-b-lg px-3 py-2"
               name="detailedDescription"
-              // value={formData.detailedDescription}
-            //   onChange={handleChange}
+              value={productInformation.detailedDescription}
+              onChange={handleChange}
             />
           </div>
 
-          <div className="product-card flex flex-col">
-            <h2 className="text-lg font-semibold mb-3">Product Details</h2>
-            <div className="form-field mb-6">
-              <select
-                className="w-full"
-                name="category"
-                // value={formData.category}
-                // onChange={handleChange}
-              >
-                <option value="">Select Category</option>
-                <option value="Oils">Oils</option>
-                <option value="dummy-1">dummy-1</option>
-                <option value="dummy-2">dummy-2</option>
-              </select>
-            </div>
 
-            <div className="form-field">
-              <input
-                className="w-full"
-                placeholder="HSN Code"
-                type="text"
-                name="hsnCode"
-                value={productInformation.hsnCode}
-                onChange={handleChange}
-                onBlur={() => {
-                  if (productInformation.hsnCode.length >= 4) {
-                    fetchHSNDetails(productInformation.hsnCode)
-                      .then(data => setHsnDetails(data))
-                      .catch(() => setHsnDetails(null));
-                  }
-                }}
-              />
-              <p className="text-xs text-gray-500 mt-1">Harmonized System Nomenclature code for product classification</p>
-            </div>
-          </div>
         </div>
 
-        
+
       </div>
     </div>
   );

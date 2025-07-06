@@ -37,7 +37,7 @@ input[type="text"], input[type="number"], select, textarea {
     @apply transition-all duration-300 ease-in-out relative mb-1;
 }
 
-.form-field input, .form-field select, .form-field textarea {
+.form-field input, .form-field select, .form-field textarea, .form-field div {
     @apply border-2 border-gray-200 rounded-lg outline-none px-4 py-3 w-full;
     @apply transition-all duration-300 ease-in-out;
     @apply hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200;
@@ -71,7 +71,6 @@ input[type="text"], input[type="number"], select, textarea {
 .price-container input, .price-container select {
     @apply border-2 border-gray-200 rounded-lg outline-none px-4 py-3 w-full;
     @apply transition-all duration-300 ease-in-out;
-    @apply hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200;
     background-color: #fafafa;
     margin: 0;
 }
@@ -94,27 +93,13 @@ input[type="text"], input[type="number"], select, textarea {
     transform: translateY(-2px);
 }
 
-.product-card h2 {
-    @apply text-xl font-bold text-gray-800 mb-6;
-    position: relative;
-}
 
-.product-card h2::after {
-    content: '';
-    position: absolute;
-    bottom: -8px;
-    left: 0;
-    width: 40px;
-    height: 3px;
-    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
-    border-radius: 2px;
-}
 
 /* Button styling */
 .product-btn {
     @apply bg-black text-white px-8 py-3 rounded-xl font-semibold;
     @apply transition-all duration-300 ease-in-out;
-    @apply hover:from-blue-700 hover:to-blue-800 hover:shadow-lg hover:scale-105 active:scale-100;
+    /* @apply hover:from-blue-700 hover:to-blue-800 hover:shadow-lg hover:scale-105 active:scale-100; */
     box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
 }
 
