@@ -60,34 +60,37 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData }) => {
   }, [priceData.onSale, priceData.price, priceData.salePrice]);
 
   useEffect(() => {
-    const salePrice = Number(priceData.price) - (Number(priceData.discount) / 100) * Number(priceData.price);
+    const salePrice = Number(priceData.price) - (Number(priceData.discount.replace('%', '')) / 100) * Number(priceData.price);
     setPriceData(prev => ({
       ...prev,
       salePrice: (priceData.onSale) ? String(salePrice) : ''
     }))
   }, [priceData.price, priceData.salePrice, priceData.discount]);
 
-  useEffect(() =>{
-    if(priceData.pricing && priceData.costOfGoods){
+  useEffect(() => {
+    if (priceData.pricing && priceData.costOfGoods) {
       const profit = Number(priceData.pricing) - Number(priceData.costOfGoods);
-    setPriceData(prev => ({
-      ...prev,
-      profit: String(profit)
-    }))
+      setPriceData(prev => ({
+        ...prev,
+        profit: String(profit),
+      }))
     }
-    
+
   }, [priceData.pricing, priceData.costOfGoods, priceData.profit]);
 
-  useEffect(() =>{
-    if(priceData.pricing && priceData.profit){
+  useEffect(() => {
+    if (priceData.pricing && priceData.profit) {
       const margin = (Number(priceData.profit) / Number(priceData.pricing)) * 100;
-    setPriceData(prev => ({
-      ...prev,
-      margin: String(margin)
-    }))
+      setPriceData(prev => ({
+        ...prev,
+        margin: String(margin) + '%',
+      }))
     }
-    
+
   }, [priceData.pricing, priceData.margin, priceData.profit]);
+
+
+
 
 
   return (
@@ -162,6 +165,15 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData }) => {
                 onChange={handleChange}
                 disabled={!priceData.onSale}
                 className={`w-full ${!priceData.onSale ? 'opacity-50' : ''}`}
+                onBlur={() => {
+                  if (!priceData.discount.endsWith('%')) {
+
+                    setPriceData(prev => ({
+                      ...prev,
+                      discount: priceData.discount + '%',
+                    }))
+                  }
+                }}
               />
             </div>
             <div className="form-field">
@@ -181,7 +193,7 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData }) => {
           {/* Section -3 */}
           <h2 className="text-lg font-semibold mb-2">Inventory & Profit</h2>
           <div className="flex flex-row w-full">
-            
+
 
             {/* <div className="flex w-16 bg-gray-500 h-1 my-auto rounded-full"></div> */}
 
