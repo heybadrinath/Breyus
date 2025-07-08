@@ -192,24 +192,24 @@ const Incoterms = () => {
           {/* Row 8: Insurance*/}
           <tr>
             <td className="bg-[#000] text-[#fff] border border-[#F3F3F380] px-2 py-1 text-center">Insurance</td>
-            <DisabledColumnTable term='EXW'><FlipableButton onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
-            <DisabledColumnTable term='FCA'><FlipableButton onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
-            <DisabledColumnTable term='FAS'><FlipableButton onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
-            <DisabledColumnTable term='FOB'><FlipableButton onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
-            <DisabledColumnTable term='CFR'><FlipableButton onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
-            <DisabledColumnTable term='CIF'><FlipableButton onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
+            <DisabledColumnTable term='EXW'><FlipableButton disabled={selectedIncoterm !== 'EXW'} onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
+            <DisabledColumnTable term='FCA'><FlipableButton disabled={selectedIncoterm !== 'FCA'} onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
+            <DisabledColumnTable term='FAS'><FlipableButton disabled={selectedIncoterm !== 'FAS'} onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
+            <DisabledColumnTable term='FOB'><FlipableButton disabled={selectedIncoterm !== 'FOB'} onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
+            <DisabledColumnTable term='CFR'><FlipableButton disabled={selectedIncoterm !== 'CFR'} onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
+            <DisabledColumnTable term='CIF'><FlipableButton disabled={selectedIncoterm !== 'CIF'} onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
             <DisabledColumnTable term='CPT'>Seller "All Risk"</DisabledColumnTable>
-            <DisabledColumnTable term='CIP'><FlipableButton onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
-            <DisabledColumnTable term='DAP'><FlipableButton onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
-            <DisabledColumnTable term='DPU'><FlipableButton onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
-            <DisabledColumnTable term='DDP'><FlipableButton onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
+            <DisabledColumnTable term='CIP'><FlipableButton disabled={selectedIncoterm !== 'CIP'} onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
+            <DisabledColumnTable term='DAP'><FlipableButton disabled={selectedIncoterm !== 'DAP'} onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
+            <DisabledColumnTable term='DPU'><FlipableButton disabled={selectedIncoterm !== 'DPU'} onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
+            <DisabledColumnTable term='DDP'><FlipableButton disabled={selectedIncoterm !== 'DDP'} onClick={() => { }} defaultTrader='Negotiable' /></DisabledColumnTable>
 
           </tr>
           {/* Row 9: Carriage Charges*/}
           <tr>
             <td className="bg-[#000] text-[#fff] border border-[#F3F3F380] px-2 py-1 text-center">Carriage Charges</td>
-            <DisabledColumnTable term='EXW'><FlipableButton onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
-            <DisabledColumnTable term='FCA'><FlipableButton onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
+            <DisabledColumnTable term='EXW'><FlipableButton disabled={selectedIncoterm !== 'EXW'} onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
+            <DisabledColumnTable term='FCA'><FlipableButton disabled={selectedIncoterm !== 'FCA'} onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
             <DisabledColumnTable term='FAS'>Buyer</DisabledColumnTable>
             <DisabledColumnTable term='FOB'>Buyer</DisabledColumnTable>
             <DisabledColumnTable term='CFR'>Seller</DisabledColumnTable>
@@ -230,11 +230,11 @@ const Incoterms = () => {
             <DisabledColumnTable term='FOB'>Buyer</DisabledColumnTable>
             <DisabledColumnTable term='CFR'>Buyer</DisabledColumnTable>
             <DisabledColumnTable term='CIF'>Buyer</DisabledColumnTable>
-            <DisabledColumnTable term='CPT'><FlipableButton onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
-            <DisabledColumnTable term='CIP'><FlipableButton onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
-            <DisabledColumnTable term='DAP'><FlipableButton onClick={() => { }} defaultTrader='Seller' /></DisabledColumnTable>
-            <DisabledColumnTable term='DPU'><FlipableButton onClick={() => { }} defaultTrader='Seller' /></DisabledColumnTable>
-            <DisabledColumnTable term='DDP'><FlipableButton onClick={() => { }} defaultTrader='Seller' /></DisabledColumnTable>
+            <DisabledColumnTable term='CPT'><FlipableButton disabled={selectedIncoterm !== 'CPT'} onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
+            <DisabledColumnTable term='CIP'><FlipableButton disabled={selectedIncoterm !== 'CIP'} onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
+            <DisabledColumnTable term='DAP'><FlipableButton disabled={selectedIncoterm !== 'DAP'} onClick={() => { }} defaultTrader='Seller' /></DisabledColumnTable>
+            <DisabledColumnTable term='DPU'><FlipableButton disabled={selectedIncoterm !== 'DPU'} onClick={() => { }} defaultTrader='Seller' /></DisabledColumnTable>
+            <DisabledColumnTable term='DDP'><FlipableButton disabled={selectedIncoterm !== 'DDP'} onClick={() => { }} defaultTrader='Seller' /></DisabledColumnTable>
 
           </tr>
           {/* Row 11: Delivery to Destination*/}
@@ -256,17 +256,17 @@ const Incoterms = () => {
           {/* Row 12: Unloading at Destination*/}
           <tr>
             <td className="bg-[#000] text-[#fff] border border-[#F3F3F380] px-2 py-1 text-center">Unloading at Destination</td>
-            <DisabledColumnTable term='EXW'><FlipableButton onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
-            <DisabledColumnTable term='FCA'><FlipableButton onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
-            <DisabledColumnTable term='FAS'><FlipableButton onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
-            <DisabledColumnTable term='FOB'><FlipableButton onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
-            <DisabledColumnTable term='CFR'><FlipableButton onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
-            <DisabledColumnTable term='CIF'><FlipableButton onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
-            <DisabledColumnTable term='CPT'><FlipableButton onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
-            <DisabledColumnTable term='CIP'><FlipableButton onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
-            <DisabledColumnTable term='DAP'><FlipableButton onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
+            <DisabledColumnTable term='EXW'><FlipableButton disabled={selectedIncoterm !== 'EXW'} onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
+            <DisabledColumnTable term='FCA'><FlipableButton disabled={selectedIncoterm !== 'FCA'} onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
+            <DisabledColumnTable term='FAS'><FlipableButton disabled={selectedIncoterm !== 'FAS'} onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
+            <DisabledColumnTable term='FOB'><FlipableButton disabled={selectedIncoterm !== 'FOB'} onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
+            <DisabledColumnTable term='CFR'><FlipableButton disabled={selectedIncoterm !== 'CFR'} onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
+            <DisabledColumnTable term='CIF'><FlipableButton disabled={selectedIncoterm !== 'CIF'} onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
+            <DisabledColumnTable term='CPT'><FlipableButton disabled={selectedIncoterm !== 'CPT'} onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
+            <DisabledColumnTable term='CIP'><FlipableButton disabled={selectedIncoterm !== 'CIP'} onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
+            <DisabledColumnTable term='DAP'><FlipableButton disabled={selectedIncoterm !== 'DAP'} onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
             <DisabledColumnTable term='DPU'>Seller</DisabledColumnTable>
-            <DisabledColumnTable term='DDP'><FlipableButton onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
+            <DisabledColumnTable term='DDP'><FlipableButton disabled={selectedIncoterm !== 'DDP'} onClick={() => { }} defaultTrader='Buyer' /></DisabledColumnTable>
 
           </tr>
           {/* Row 13: Import Duty & Taxes*/}
