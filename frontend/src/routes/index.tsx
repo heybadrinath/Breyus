@@ -33,8 +33,6 @@ import SellerForgotPassword from "../seller/forgot-password";
 import { Layout } from "../seller/components";
 import Inbox from "../seller/inbox";
 import { Trade, Feedback } from "../seller/trade";
-import SellerAddProductTerms from "../seller/Products/product-terms";
-import { Incoterms } from "../seller/Products/incoterms";
 
 import BuyerInbox from "../buyer/pages/Inbox";
 import Homepage from "../buyer/pages/Homepage";
@@ -153,12 +151,8 @@ const AppRoutes = () => {
         <Route path="/seller/upgrade" element={<SellerProtectedRoute><Animate page={<Layout Body={<Upgrade />} />} /></SellerProtectedRoute>} />
         <Route path="/seller/add-products" element={<SellerProtectedRoute><Animate page={<Layout Body={<AddProduct />} />} /></SellerProtectedRoute>} />
         <Route path="/seller/Inbox" element={<SellerProtectedRoute><Animate page={<Layout Body={<Inbox />} />} /></SellerProtectedRoute>} />
-        {/* <Route path="/seller/inventory" element={<SellerProtectedRoute><Animate page={<Layout Body={<Inventory/>}/>} /></SellerProtectedRoute>} /> */}
         <Route path="/seller/trade" element={<SellerProtectedRoute><Animate page={<Layout Body={<Trade />} />} /></SellerProtectedRoute>} />
         <Route path="/seller/Product-Feedback" element={<SellerProtectedRoute><Animate page={<Layout Body={<Feedback />} />} /></SellerProtectedRoute>} />
-        {/* <Route path="/seller/incoterms" element={<SellerProtectedRoute><Animate page={<Layout Body={<Incoterms/>}/>} /></SellerProtectedRoute>} /> */}
-        <Route path="/seller/add-product-terms" element={<SellerProtectedRoute><Animate page={<Layout Body={<SellerAddProductTerms />} />} /></SellerProtectedRoute>} />
-        <Route path="/seller/incoterms" element={<SellerProtectedRoute><Animate page={<Layout Body={<Incoterms />} />} /></SellerProtectedRoute>} />
 
 
         {/* Seller settings with default layout */}

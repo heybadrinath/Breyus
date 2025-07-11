@@ -12,7 +12,6 @@ interface PriceProps {
     costOfGoods: string;
     profit: string;
     pricing: string;
-    quantity: string;
     margin: string;
   };
   setPriceData: React.Dispatch<React.SetStateAction<{
@@ -25,7 +24,6 @@ interface PriceProps {
     costOfGoods: string;
     profit: string;
     pricing: string;
-    quantity: string;
     margin: string;
   }>>;
 }

@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import productService from '../../services_old/product.service';
 
 export default function SellerTradeTerms() {
     const [form, setForm] = useState({
         revenueMin: '',
         revenueMax: '',
-        currency: 'USD',
+        currency: 'INR',
         unit: 'Crore',
         yearsTrade: '',
         industry: '',
@@ -26,17 +25,7 @@ export default function SellerTradeTerms() {
         }
     };
 
-    // Map trade terms form to backend fields
-    const getTradeTermsFields = () => {
-        return {
-            preferred_buyer_revenue_range: form.revenueMin && form.revenueMax ? `${form.revenueMin}-${form.revenueMax} ${form.currency} ${form.unit}` : '',
-            potential_years_to_trade: form.yearsTrade,
-            industry_using_product: form.industry,
-            years_in_market: form.marketYears,
-            buyer_market_duration: form.sellerMarketYears,
-            market_capture: form.marketcapture ? parseFloat(form.marketcapture) : undefined,
-        };
-    };
+
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -53,28 +42,17 @@ export default function SellerTradeTerms() {
             setLoading(false);
             return;
         }
-        const tradeTerms = getTradeTermsFields();
-        const finalData = { ...productData, ...tradeTerms };
-        try {
-            const result = await productService.createProduct(finalData);
-            if (result.success) {
-                localStorage.removeItem('productFormData');
-                window.location.href = '/seller/inventory';
-            } else {
-                setError(result.message || 'Failed to add product.');
-            }
-        } catch (err: any) {
-            setError(err.message || 'An unexpected error occurred.');
-        } finally {
-            setLoading(false);
-        }
+        
+       
     };
 
     return (
-        <form className="p-6 space-y-6 max-w-2xl mx-auto" onSubmit={handleSubmit}>
+        <div className=" px-3 space-y-3">
+            <h1 className='section-title font-bold mb-6 text-2xl'>Preffered Product Terms</h1>
+            <div  className='product-card'>
             <div>
                 <label className="block font-medium">
-                    What’s your preferred buyer revenue range? <span className="text-red-500">*</span>
+                    What's your preferred buyer revenue range? <span className="text-red-500">*</span>
                 </label>
                 <div className="flex items-center space-x-2 mt-2">
                     <input
@@ -179,10 +157,7 @@ export default function SellerTradeTerms() {
                 />
             </div>
 
-            {error && <div className="text-red-600 bg-red-50 border border-red-200 p-2 rounded">{error}</div>}
-            <button type="submit" className='bg-black text-white px-6 py-2' disabled={loading}>
-                {loading ? 'Adding Product...' : 'Add Product'}
-            </button>
-        </form>
+        </div>
+        </div>
     );
 }

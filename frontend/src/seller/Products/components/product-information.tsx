@@ -148,6 +148,7 @@ const ProductInformation: React.FC<ProductInformationProps> = ({ productInformat
               value={productInformation.moqUnit}
               onChange={handleChange}
             >
+              <option disabled value={""}>Unit</option>
               <option value="pieces">Pieces</option>
               <option value="boxes">Boxes</option>
               <option value="cartons">Cartons</option>
