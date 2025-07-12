@@ -1,21 +1,45 @@
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 
 
+type Trader = 'Buyer' | 'Seller';
+
+interface IncotermRow {
+  [rowName: string]: Trader;
+}
+
+interface IncotermData {
+  [incoterm: string]: IncotermRow;
+}
+
+interface IncotermsProps {
+  incoterms: IncotermData;
+  setIncoterms: React.Dispatch<React.SetStateAction<IncotermData>>;  
+}
 
 
-
-const Incoterms = () => {
+const Incoterms: React.FC<IncotermsProps> = ({incoterms, setIncoterms}) => {
   const [selectedIncoterm, setSelectedIncoterm] = useState('');
-  const [loadingAndInLandDelivery, setLoadingAndInLandDelivery] = useState('Seller');
-  const [originTerminalHandling, setoriginTerminalHandling] = useState('Buyer');
-  const [Insurance, setInsurance] = useState('Buyer');
+
+
+  const addIncoterm = (key: string, value: any) => {
+  setIncoterms((prevState) => ({
+    ...prevState,         
+    [key]: value,         
+  }));
+};
+
+
+  const removeIncoterm = (key: string) => {
+    const { [key]: removed, ...rest } = incoterms;
+    setIncoterms(rest);
+  };
 
   const FlipableButton = ({ defaultTrader, onClick, disabled }: { defaultTrader: string, onClick: () => void, disabled?: boolean }) => {
     const [trader, setTrader] = useState(defaultTrader);
     return (
       <button
         disabled={disabled}
-        className={` !w-full  ${(!disabled)?'cursor-pointer hover:scale-[1.1]': 'cursor-not-allowed'} py-6 flex transition-all delay-100 ease-in-out ${(trader === 'Buyer') ? 'bg-[#EDE0D3]' : (trader === 'Seller') ? 'bg-[#71DE5F]' : 'bg-[#FFBB00]'}`}
+        className={` !w-full  ${(!disabled) ? 'cursor-pointer hover:scale-[1.1]' : 'cursor-not-allowed'} py-6 flex transition-all delay-100 ease-in-out ${(trader === 'Buyer') ? 'bg-[#EDE0D3]' : (trader === 'Seller') ? 'bg-[#71DE5F]' : 'bg-[#FFBB00]'}`}
         onClick={() => { (trader === 'Buyer' ? setTrader('Seller') : setTrader("Buyer")); onClick() }}>
         <p className='mx-auto flex'>{trader}
           <svg width="12" height="12" className='my-auto ml-2' viewBox="0 0 7 6" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -53,6 +77,11 @@ const Incoterms = () => {
   const handleCheckboxChange = (term: string): void => {
     setSelectedIncoterm(prevTerm => (prevTerm === term ? '' : term));
   };
+
+  // useEffect(() => {
+  //   setSelectedIncoterm((!selectedIncoterm)?incoterms.term: selectedIncoterm)
+  //   addIncoterm("term", selectedIncoterm)
+  // },[selectedIncoterm])
 
   return (
     <div className="overflow-x-auto text-sm w-fit h-fit border-none my-10 p-1">

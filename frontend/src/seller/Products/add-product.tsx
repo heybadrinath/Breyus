@@ -3,7 +3,7 @@ import ProductInformation from "./components/product-information";
 import Media from "./components/media";
 import Price from "./components/price";
 import Tags from "./components/tags";
-import {Incoterms} from './components/incoterms';
+import { Incoterms } from './components/incoterms';
 import AddProductTerms from './components/product-terms';
 import ProgressBar from "../../buyer/components/cart/PurchaseRequestProgress";
 import '../css/product.css';
@@ -54,6 +54,49 @@ export const AddProduct = () => {
     tags: [] as string[],
     input: ''
   });
+
+  // preferred trade terms
+  const [tradeTerms, setTradeTerms] = React.useState({
+    revenueMin: '',
+    revenueMax: '',
+    currency: 'INR',
+    unit: 'Crore',
+    yearsTrade: '',
+    industry: '',
+    marketYears: '',
+    sellerMarketYears: '',
+    marketcapture: '',
+
+  });
+
+
+
+  // preferred inco terms
+  type Trader = 'Buyer' | 'Seller';
+
+  interface IncotermRow {
+    [rowName: string]: Trader;
+  }
+
+  interface IncotermData {
+    [incoterm: string]: IncotermRow;
+  }
+
+  const [incoterm, setIncoterm] = useState<IncotermData>({
+    EXW: {
+      "Loading & Inland Delivery": "Buyer",
+      "Insurance": "Buyer",
+      "Export Duty & Taxes": "Buyer",
+    },
+    FCA: {
+      "Loading & Inland Delivery": "Seller",
+      "Insurance": "Seller",
+      "Export Duty & Taxes": "Seller",
+    },
+    
+  });
+
+
 
 
   const validateStep = () => {
@@ -133,6 +176,8 @@ export const AddProduct = () => {
       //   setErrorMessage(''); // Clear error if all fields are valid
       //   return true;
 
+      // todo trade terms and incoterms
+
       default:
         return true;
     }
@@ -151,9 +196,9 @@ export const AddProduct = () => {
       case 3:
         return <Tags tagsData={tagsData} setTagsData={setTagsData} />;
       case 4:
-        return <AddProductTerms />
+        return <AddProductTerms tradeTerms={tradeTerms} setTradeTerms={setTradeTerms} />
       case 5:
-        return <Incoterms />
+        return <Incoterms incoterms={incoterm} setIncoterms={setIncoterm} />
       default:
         return null;
     }
@@ -162,8 +207,8 @@ export const AddProduct = () => {
   return (
 
     <>
-      <div className={`relative w-full ${(step <4)? 'my-16': ''}`}>
-        { step <4 && <ProgressBar
+      <div className={`relative w-full ${(step < 4) ? 'my-16' : ''}`}>
+        {step < 4 && <ProgressBar
           className="absolute left-1/2 -translate-y-1/2 -translate-x-1/2 top-0 z-20"
           step1="Product Info"
           step2="Media"
@@ -171,7 +216,7 @@ export const AddProduct = () => {
           step4="Tags"
           currentStep={step}
         />}
-        <div className={`${(step < 5)? 'w-[60%] mx-auto translate-y-6 border border-gray-300 rounded-lg px-6 pt-16 pb-6': 'mx-8 mb-8'}`}>
+        <div className={`${(step < 5) ? 'w-[60%] mx-auto translate-y-6 border border-gray-300 rounded-lg px-6 pt-16 pb-6' : 'mx-8 mb-8'}`}>
           {renderStepContent()}
 
           {/* Render errors for each step */}
@@ -190,7 +235,7 @@ export const AddProduct = () => {
               type="button"
               className="product-btn ml-auto"
             >
-              {(step < 5)?"Next":"Publish Product"}
+              {(step < 5) ? "Next" : "Publish Product"}
             </button>
           </div>
         </div>
