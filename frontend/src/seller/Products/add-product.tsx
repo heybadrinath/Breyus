@@ -113,88 +113,57 @@ export const AddProduct = () => {
   // Initialize the default values for each incoterm
   const defaultIncotermValues: Record<IncotermType, IncotermRowData> = {
     EXW: {
-      'Loading & Inland Delivery': 'Buyer',
+    
       'Origin Terminal Handling': 'Buyer',
       'Insurance': 'Buyer',
       'Carriage Charges': 'Buyer',
       'Unloading at Destination': 'Buyer',
-      'Export Duty & Taxes': 'Buyer',
-      'Import Duty & Taxes': 'Buyer',
     },
     FCA: {
       'Loading & Inland Delivery': 'Seller',
       'Insurance': 'Buyer',
       'Carriage Charges': 'Buyer',
       'Unloading at Destination': 'Buyer',
-      'Export Duty & Taxes': 'Seller',
-      'Import Duty & Taxes': 'Buyer',
     },
     FAS: {
       'Insurance': 'Buyer',
-      'Carriage Charges': 'Buyer',
       'Unloading at Destination': 'Buyer',
-      'Export Duty & Taxes': 'Seller',
-      'Import Duty & Taxes': 'Buyer',
     },
     FOB: {
       'Insurance': 'Buyer',
-      'Carriage Charges': 'Buyer',
       'Unloading at Destination': 'Buyer',
-      'Export Duty & Taxes': 'Seller',
-      'Import Duty & Taxes': 'Buyer',
     },
     CFR: {
       'Insurance': 'Buyer',
-      'Carriage Charges': 'Seller',
       'Unloading at Destination': 'Buyer',
-      'Export Duty & Taxes': 'Seller',
-      'Import Duty & Taxes': 'Buyer',
     },
     CIF: {
       'Insurance': 'Seller',
-      'Carriage Charges': 'Seller',
       'Unloading at Destination': 'Buyer',
-      'Export Duty & Taxes': 'Seller',
-      'Import Duty & Taxes': 'Buyer',
     },
     CPT: {
-      'Carriage Charges': 'Seller',
       '*Destination Terminal Handling': 'Buyer',
       'Unloading at Destination': 'Buyer',
-      'Export Duty & Taxes': 'Seller',
-      'Import Duty & Taxes': 'Buyer',
     },
     CIP: {
-      'Insurance': 'Seller',
-      'Carriage Charges': 'Seller',
+      'Insurance': 'Buyer',
       '*Destination Terminal Handling': 'Buyer',
       'Unloading at Destination': 'Buyer',
-      'Export Duty & Taxes': 'Seller',
-      'Import Duty & Taxes': 'Buyer',
+
     },
     DAP: {
       'Insurance': 'Buyer',
-      'Carriage Charges': 'Seller',
       '*Destination Terminal Handling': 'Seller',
       'Unloading at Destination': 'Buyer',
-      'Export Duty & Taxes': 'Seller',
-      'Import Duty & Taxes': 'Buyer',
     },
     DPU: {
       'Insurance': 'Buyer',
-      'Carriage Charges': 'Seller',
       '*Destination Terminal Handling': 'Seller',
-      'Unloading at Destination': 'Seller',
-      'Export Duty & Taxes': 'Seller',
-      'Import Duty & Taxes': 'Buyer',
     },
     DDP: {
       'Insurance': 'Buyer',
-      'Carriage Charges': 'Seller',
       '*Destination Terminal Handling': 'Seller',
       'Unloading at Destination': 'Buyer',
-      'Export Duty & Taxes': 'Seller',
-      'Import Duty & Taxes': 'Seller',
     },
   };
 
@@ -204,6 +173,7 @@ export const AddProduct = () => {
     defaults: defaultIncotermValues,
   });
 
+  console.log(incotermsState);
 
   const validateStep = () => {
     switch (step) {
@@ -282,7 +252,7 @@ export const AddProduct = () => {
       //   setErrorMessage(''); // Clear error if all fields are valid
       //   return true;
 
-      // todo trade terms and incoterms
+      // todo trade terms and incoterms i/p validation
 
       default:
         return true;
