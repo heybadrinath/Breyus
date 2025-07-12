@@ -73,30 +73,136 @@ export const AddProduct = () => {
 
   // preferred inco terms
   type Trader = 'Buyer' | 'Seller';
+  
+  // Define all possible incoterms
+  type IncotermType = 'EXW' | 'FCA' | 'FAS' | 'FOB' | 'CFR' | 'CIF' | 'CPT' | 'CIP' | 'DAP' | 'DPU' | 'DDP';
+  
+  // Define all possible row names
+  type RowName = 
+    | 'Charges/Fees'
+    | 'Transfer of risk'
+    | 'Commercial Invoice'
+    | 'Packaging, Quality Control, Marking'
+    | 'Loading & Inland Delivery'
+    | 'Export Duty & Taxes'
+    | 'Origin Terminal Handling'
+    | 'Insurance'
+    | 'Carriage Charges'
+    | '*Destination Terminal Handling'
+    | 'Delivery to Destination'
+    | 'Unloading at Destination'
+    | 'Import Duty & Taxes';
 
-  interface IncotermRow {
-    [rowName: string]: Trader;
+  // Define the structure for each incoterm row
+  interface IncotermRowData {
+    [key: string]: Trader;
   }
 
-  interface IncotermData {
-    [incoterm: string]: IncotermRow;
+  // Main incoterms state interface
+  interface IncotermsState {
+    // The currently selected incoterm column
+    selectedIncoterm: IncotermType | '';
+    
+    // Data for only the selected incoterm (not all incoterms)
+    selectedIncotermData: IncotermRowData;
+    
+    // Default values for each incoterm (for reference)
+    defaults: Record<IncotermType, IncotermRowData>;
   }
 
-  const [incoterm, setIncoterm] = useState<IncotermData>({
+  // Initialize the default values for each incoterm
+  const defaultIncotermValues: Record<IncotermType, IncotermRowData> = {
     EXW: {
-      "Loading & Inland Delivery": "Buyer",
-      "Insurance": "Buyer",
-      "Export Duty & Taxes": "Buyer",
+      'Loading & Inland Delivery': 'Buyer',
+      'Origin Terminal Handling': 'Buyer',
+      'Insurance': 'Buyer',
+      'Carriage Charges': 'Buyer',
+      'Unloading at Destination': 'Buyer',
+      'Export Duty & Taxes': 'Buyer',
+      'Import Duty & Taxes': 'Buyer',
     },
     FCA: {
-      "Loading & Inland Delivery": "Seller",
-      "Insurance": "Seller",
-      "Export Duty & Taxes": "Seller",
+      'Loading & Inland Delivery': 'Seller',
+      'Insurance': 'Buyer',
+      'Carriage Charges': 'Buyer',
+      'Unloading at Destination': 'Buyer',
+      'Export Duty & Taxes': 'Seller',
+      'Import Duty & Taxes': 'Buyer',
     },
-    
+    FAS: {
+      'Insurance': 'Buyer',
+      'Carriage Charges': 'Buyer',
+      'Unloading at Destination': 'Buyer',
+      'Export Duty & Taxes': 'Seller',
+      'Import Duty & Taxes': 'Buyer',
+    },
+    FOB: {
+      'Insurance': 'Buyer',
+      'Carriage Charges': 'Buyer',
+      'Unloading at Destination': 'Buyer',
+      'Export Duty & Taxes': 'Seller',
+      'Import Duty & Taxes': 'Buyer',
+    },
+    CFR: {
+      'Insurance': 'Buyer',
+      'Carriage Charges': 'Seller',
+      'Unloading at Destination': 'Buyer',
+      'Export Duty & Taxes': 'Seller',
+      'Import Duty & Taxes': 'Buyer',
+    },
+    CIF: {
+      'Insurance': 'Seller',
+      'Carriage Charges': 'Seller',
+      'Unloading at Destination': 'Buyer',
+      'Export Duty & Taxes': 'Seller',
+      'Import Duty & Taxes': 'Buyer',
+    },
+    CPT: {
+      'Carriage Charges': 'Seller',
+      '*Destination Terminal Handling': 'Buyer',
+      'Unloading at Destination': 'Buyer',
+      'Export Duty & Taxes': 'Seller',
+      'Import Duty & Taxes': 'Buyer',
+    },
+    CIP: {
+      'Insurance': 'Seller',
+      'Carriage Charges': 'Seller',
+      '*Destination Terminal Handling': 'Buyer',
+      'Unloading at Destination': 'Buyer',
+      'Export Duty & Taxes': 'Seller',
+      'Import Duty & Taxes': 'Buyer',
+    },
+    DAP: {
+      'Insurance': 'Buyer',
+      'Carriage Charges': 'Seller',
+      '*Destination Terminal Handling': 'Seller',
+      'Unloading at Destination': 'Buyer',
+      'Export Duty & Taxes': 'Seller',
+      'Import Duty & Taxes': 'Buyer',
+    },
+    DPU: {
+      'Insurance': 'Buyer',
+      'Carriage Charges': 'Seller',
+      '*Destination Terminal Handling': 'Seller',
+      'Unloading at Destination': 'Seller',
+      'Export Duty & Taxes': 'Seller',
+      'Import Duty & Taxes': 'Buyer',
+    },
+    DDP: {
+      'Insurance': 'Buyer',
+      'Carriage Charges': 'Seller',
+      '*Destination Terminal Handling': 'Seller',
+      'Unloading at Destination': 'Buyer',
+      'Export Duty & Taxes': 'Seller',
+      'Import Duty & Taxes': 'Seller',
+    },
+  };
+
+  const [incotermsState, setIncotermsState] = useState<IncotermsState>({
+    selectedIncoterm: '',
+    selectedIncotermData: {},
+    defaults: defaultIncotermValues,
   });
-
-
 
 
   const validateStep = () => {
@@ -198,7 +304,7 @@ export const AddProduct = () => {
       case 4:
         return <AddProductTerms tradeTerms={tradeTerms} setTradeTerms={setTradeTerms} />
       case 5:
-        return <Incoterms incoterms={incoterm} setIncoterms={setIncoterm} />
+        return <Incoterms incoterms={incotermsState} setIncoterms={setIncotermsState} />
       default:
         return null;
     }
