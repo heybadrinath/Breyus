@@ -5,6 +5,8 @@ import { SearchableInputHSN } from "./searchable_input_hsn";
 interface ProductInformationProps {
   productInformation: {
     name: string;
+    stock: string;
+    stockUnit: string;
     moq: string;
     moqUnit: string;
     description: string;
@@ -14,6 +16,8 @@ interface ProductInformationProps {
   };
   setProductInformation: React.Dispatch<React.SetStateAction<{
     name: string;
+    stock: string;
+    stockUnit: string;
     moq: string;
     moqUnit: string;
     description: string;
@@ -122,7 +126,9 @@ const ProductInformation: React.FC<ProductInformationProps> = ({ productInformat
       <div className="flex flex-col h-full">
         <h1 className="section-title font-bold mb-6 text-2xl"> Product Information</h1>
 
-        <div className="flex gap-6 mb-6">
+
+        {/* up section  */}
+        <div className="grid grid-cols-3 gap-6 mb-6">
           <div className="form-field">
             <input
               placeholder="Product Name"
@@ -133,19 +139,21 @@ const ProductInformation: React.FC<ProductInformationProps> = ({ productInformat
               onChange={handleChange}
             />
           </div>
-          <div className="form-field flex flex-row">
+
+        {/*  stock  */}
+          <div className="form-field flex flex-row border-2 rounded-lg">
             <input
               type="text"
-              placeholder="Minimum Order Quantity"
-              className="w-full"
-              value={productInformation.moq}
-              name="moq"
+              placeholder="Stock"
+              className="w-full !border-0 !rounded-r-none"
+              value={productInformation.stock}
+              name="stock"
               onChange={handleChange}
             />
             <select
-              className="!w-fit mx-3 bg-transparent !px-2 "
-              name="moqUnit"
-              value={productInformation.moqUnit}
+              className="!w-fit bg-transparent !rounded-l-none !px-2 !border-0"
+              name="stockUnit"
+              value={productInformation.stockUnit}
               onChange={handleChange}
             >
               <option disabled value={""}>Unit</option>
@@ -185,17 +193,18 @@ const ProductInformation: React.FC<ProductInformationProps> = ({ productInformat
             </select>
           </div>
 
-          <div className="form-field flex flex-row">
+          {/* moq */}
+          <div className="form-field flex flex-row border-2 rounded-lg">
             <input
               type="text"
               placeholder="Minimum Order Quantity"
-              className="w-full"
+              className="w-full !border-0 !rounded-r-none"
               value={productInformation.moq}
               name="moq"
               onChange={handleChange}
             />
             <select
-              className="!w-fit mx-3 bg-transparent !px-2 "
+              className="!w-fit bg-transparent !rounded-l-none !px-2 !border-0"
               name="moqUnit"
               value={productInformation.moqUnit}
               onChange={handleChange}
@@ -242,8 +251,10 @@ const ProductInformation: React.FC<ProductInformationProps> = ({ productInformat
 
 
 
-        
 
+
+
+        {/* down secition  */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           <div className="product-card flex flex-col">
@@ -278,7 +289,7 @@ const ProductInformation: React.FC<ProductInformationProps> = ({ productInformat
 
             <div className="form-field mb-6">
 
-              <div className={`w-full ${isHsnSelected ? "text-gray-400": "text-black"}`}>
+              <div className={`w-full ${isHsnSelected ? "text-gray-400" : "text-black"}`}>
                 {productInformation.category || "category"}
               </div>
             </div>

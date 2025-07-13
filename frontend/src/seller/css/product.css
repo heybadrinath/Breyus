@@ -6,8 +6,7 @@
 
 /* Base input and select styling */
 input[type="text"], input[type="number"], select, textarea {
-    @apply transition-all duration-300 ease-in-out;
-    @apply hover:border-[#000000] focus:border-black focus:shadow-sm;
+    @apply transition-all duration-300 ease-in-out;;
 }
 
 /* Animate page transitions */
@@ -40,7 +39,6 @@ input[type="text"], input[type="number"], select, textarea {
 .form-field input, .form-field select, .form-field textarea, .form-field div {
     @apply border-2 border-gray-200 rounded-lg outline-none px-4 py-3 w-full;
     @apply transition-all duration-300 ease-in-out;
-    @apply hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200;
     background-color: #fafafa;
 }
 
@@ -77,7 +75,6 @@ input[type="text"], input[type="number"], select, textarea {
 
 .price-container input:focus, .price-container select:focus {
     background-color: white;
-  
 }
 
 /* Product card styling */

@@ -3,6 +3,8 @@ const BACKEND_END_POINT = process.env.REACT_APP_BACKEND_URL + "/products";
 export interface CreateProductData {
   // Product information
   name: string;
+  stock: string;
+  stockUnit: string;
   moq: string;
   moqUnit: string;
   description: string;

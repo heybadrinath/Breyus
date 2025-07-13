@@ -22,6 +22,14 @@ export class CreateProductDto {
 
   @IsNotEmpty()
   @IsNumberString()
+  stock: string;  // stock available
+
+  @IsNotEmpty()
+  @IsString()
+  stockUnit: string;  // Stock Unit
+
+  @IsNotEmpty()
+  @IsNumberString()
   moq: string;  // Minimum Order Quantity (MOQ)
 
   @IsNotEmpty()

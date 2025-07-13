@@ -21,6 +21,8 @@ export const AddProduct = () => {
   // product information state
   const [productInformation, setProductInformation] = React.useState({
     name: '',
+    stock: '',
+    stockUnit: '',
     moq: '',
     moqUnit: '',
     description: '',
@@ -269,6 +271,8 @@ export const AddProduct = () => {
       const productData: CreateProductData = {
         // Product information
         name: productInformation.name,
+        stock: productInformation.stock,
+        stockUnit: productInformation.stockUnit,
         moq: productInformation.moq,
         moqUnit: productInformation.moqUnit,
         description: productInformation.description,

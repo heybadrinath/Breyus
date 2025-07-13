@@ -20,6 +20,12 @@ export class Product extends Document {
   name: string;  // Product name
 
   @Prop({ required: true })
+  stock: string;  // stock
+
+  @Prop({ required: true })
+  stockUnit: string;  // Stock Unit
+
+  @Prop({ required: true })
   moq: string;  // Minimum Order Quantity (MOQ)
 
   @Prop({ required: true })
