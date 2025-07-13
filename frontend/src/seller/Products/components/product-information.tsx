@@ -122,7 +122,7 @@ const ProductInformation: React.FC<ProductInformationProps> = ({ productInformat
       <div className="flex flex-col h-full">
         <h1 className="section-title font-bold mb-6 text-2xl"> Product Information</h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="flex gap-6 mb-6">
           <div className="form-field">
             <input
               placeholder="Product Name"
@@ -184,7 +184,65 @@ const ProductInformation: React.FC<ProductInformationProps> = ({ productInformat
               <option value="cubic_yards">Cubic Yards (yd³)</option>
             </select>
           </div>
+
+          <div className="form-field flex flex-row">
+            <input
+              type="text"
+              placeholder="Minimum Order Quantity"
+              className="w-full"
+              value={productInformation.moq}
+              name="moq"
+              onChange={handleChange}
+            />
+            <select
+              className="!w-fit mx-3 bg-transparent !px-2 "
+              name="moqUnit"
+              value={productInformation.moqUnit}
+              onChange={handleChange}
+            >
+              <option disabled value={""}>Unit</option>
+              <option value="pieces">Pieces</option>
+              <option value="boxes">Boxes</option>
+              <option value="cartons">Cartons</option>
+              <option value="kg">Kilograms (kg)</option>
+              <option value="grams">Grams (g)</option>
+              <option value="liters">Liters (L)</option>
+              <option value="milliliters">Milliliters (mL)</option>
+              <option value="meters">Meters (m)</option>
+              <option value="centimeters">Centimeters (cm)</option>
+              <option value="inches">Inches (in)</option>
+              <option value="yards">Yards (yd)</option>
+              <option value="sets">Sets</option>
+              <option value="dozens">Dozens</option>
+              <option value="pallets">Pallets</option>
+              <option value="square_meters">Square Meters (m²)</option>
+              <option value="square_feet">Square Feet (ft²)</option>
+              <option value="cubic_meters">Cubic Meters (m³)</option>
+              <option value="cubic_feet">Cubic Feet (ft³)</option>
+              <option value="tons">Tons</option>
+              <option value="gallons">Gallons</option>
+              <option value="pounds">Pounds (lbs)</option>
+              <option value="cubic_inches">Cubic Inches (in³)</option>
+              <option value="bottles">Bottles</option>
+              <option value="packs">Packs</option>
+              <option value="bags">Bags</option>
+              <option value="sheets">Sheets</option>
+              <option value="rolls">Rolls</option>
+              <option value="spools">Spools</option>
+              <option value="pairs">Pairs</option>
+              <option value="containers">Containers</option>
+              <option value="pieces_per_box">Pieces per Box</option>
+              <option value="feet">Feet (ft)</option>
+              <option value="cubic_yards">Cubic Yards (yd³)</option>
+            </select>
+          </div>
         </div>
+
+
+
+
+
+        
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 

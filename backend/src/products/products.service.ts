@@ -65,8 +65,8 @@ export class ProductsService {
     return filePaths;
   }
 
-  async getProductsByUser(): Promise<Product[]> {
-    return this.ProductSchema.find().exec();
+  async getProductsByUser(userId: string): Promise<Product[]> {
+    return this.ProductSchema.find({userId}).exec();
   }
 
   async getProductById(productId: string, userId: string): Promise<Product | null> {

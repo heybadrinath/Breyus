@@ -333,7 +333,7 @@ export const AddProduct = () => {
       case 1:
         return <Media productImages={productImages} onProductImagesChange={handleProductImagesChange} testReports={testReports} onTestReportsChange={handleTestReportsChange} />;
       case 2:
-        return <Price priceData={priceData} setPriceData={setPriceData} />;
+        return <Price priceData={priceData} setPriceData={setPriceData} moq={productInformation.moq + ' ' + productInformation.moqUnit} />;
       case 3:
         return <Tags tagsData={tagsData} setTagsData={setTagsData} />;
       case 4:

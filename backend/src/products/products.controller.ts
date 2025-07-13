@@ -112,28 +112,28 @@ export class ProductsController {
 
     @Get('user-products')
     async getUserProducts(@Res() response: Response) {
-        // try {
-        //     const accountToken = response.req.signedCookies['account'];
+        try {
+            const accountToken = response.req.signedCookies['account'];
             
-        //     if (!accountToken) {
-        //         return response.status(HttpStatus.UNAUTHORIZED).send({
-        //             statusCode: HttpStatus.UNAUTHORIZED,
-        //             message: 'No valid cookie found',
-        //         });
-        //     }
+            if (!accountToken) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'No valid cookie found',
+                });
+            }
 
-        //     let userId: string;
-        //     try {
-        //         const decoded = this.authService.validateAccountToken(accountToken);
-        //         userId = (decoded as any).userId;
-        //     } catch (error) {
-        //         return response.status(HttpStatus.UNAUTHORIZED).send({
-        //             statusCode: HttpStatus.UNAUTHORIZED,
-        //             message: 'Invalid token',
-        //         });
-        //     }
+            let userId: string;
+            try {
+                const decoded = this.authService.validateAccountToken(accountToken);
+                userId = (decoded as any).userId;
+            } catch (error) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'Invalid token',
+                });
+            }
 
-            const products = await this.productsService.getProductsByUser();
+            const products = await this.productsService.getProductsByUser(userId);
             
             return response.status(HttpStatus.OK).send({
                 statusCode: HttpStatus.OK,
@@ -141,57 +141,58 @@ export class ProductsController {
                 data: products,
             });
         } catch (error) {
-            // return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-            //     statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-            //     message: 'Failed to retrieve products',
-            //     error: error.message || 'Internal Server Error',
-            // });
+            return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: 'Failed to retrieve products',
+                error: error.message || 'Internal Server Error',
+            });
         }
     }
 
-    // @Get(':id')
-    // async getProductById(@Param('id') id: string, @Res() response: Response) {
-    //     try {
-    //         const accountToken = response.req.signedCookies['account'];
+    @Get(':id')
+    async getProductById(@Param('id') id: string, @Res() response: Response) {
+        try {
+            const accountToken = response.req.signedCookies['account'];
             
-    //         if (!accountToken) {
-    //             return response.status(HttpStatus.UNAUTHORIZED).send({
-    //                 statusCode: HttpStatus.UNAUTHORIZED,
-    //                 message: 'No valid cookie found',
-    //             });
-    //         }
+            if (!accountToken) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'No valid cookie found',
+                });
+            }
 
-    //         let userId: string;
-    //         try {
-    //             const decoded = this.authService.validateAccountToken(accountToken);
-    //             userId = (decoded as any).userId;
-    //         } catch (error) {
-    //             return response.status(HttpStatus.UNAUTHORIZED).send({
-    //                 statusCode: HttpStatus.UNAUTHORIZED,
-    //                 message: 'Invalid token',
-    //             });
-    //         }
+            let userId: string;
+            try {
+                const decoded = this.authService.validateAccountToken(accountToken);
+                userId = (decoded as any).userId;
+            } catch (error) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'Invalid token',
+                });
+            }
 
-    //         const product = await this.productsService.getProductById(id, userId);
+            const product = await this.productsService.getProductById(id, userId);
             
-    //         if (!product) {
-    //             return response.status(HttpStatus.NOT_FOUND).send({
-    //                 statusCode: HttpStatus.NOT_FOUND,
-    //                 message: 'Product not found',
-    //             });
-    //         }
+            if (!product) {
+                return response.status(HttpStatus.NOT_FOUND).send({
+                    statusCode: HttpStatus.NOT_FOUND,
+                    message: 'Product not found',
+                });
+            }
 
-    //         return response.status(HttpStatus.OK).send({
-    //             statusCode: HttpStatus.OK,
-    //             message: 'Product retrieved successfully',
-    //             data: product,
-    //         });
-    //     } catch (error) {
-    //         return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-    //             statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-    //             message: 'Failed to retrieve product',
-    //             error: error.message || 'Internal Server Error',
-    //         });
-    //     }
-    // }
+            return response.status(HttpStatus.OK).send({
+                statusCode: HttpStatus.OK,
+                message: 'Product retrieved successfully',
+                data: product,
+            });
+        } catch (error) {
+            return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: 'Failed to retrieve product',
+                error: error.message || 'Internal Server Error',
+            });
+        }
+    }
 
+}

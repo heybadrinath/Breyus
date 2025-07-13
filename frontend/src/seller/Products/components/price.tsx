@@ -26,10 +26,11 @@ interface PriceProps {
     pricing: string;
     margin: string;
   }>>;
+  moq:string;
 }
 
 // Price Component
-const Price: React.FC<PriceProps> = ({ priceData, setPriceData }) => {
+const Price: React.FC<PriceProps> = ({ priceData, setPriceData, moq }) => {
 
   const toggleSale = () => {
     setPriceData(prev => ({
@@ -94,7 +95,7 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData }) => {
   return (
     <div>
       <div className="flex flex-col h-full">
-        <h1 className="section-title font-bold mb-6 text-2xl">Pricing</h1>
+        <h1 className="section-title font-bold mb-6 text-2xl">Pricing {" for " + moq}</h1>
 
         <div className="product-card animate-slide-in shadow-none">
           {/* Section-1 */}
