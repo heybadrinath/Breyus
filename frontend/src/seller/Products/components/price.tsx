@@ -115,9 +115,8 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData }) => {
                 name="currency"
                 value={priceData.currency}
                 onChange={handleChange}
-              >
-                <option value="USD">INR</option>
-                <option value="INR">USR</option>
+              > <option value="INR">INR</option>
+                <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
               </select>
             </div>

@@ -38,7 +38,7 @@ export const AddProduct = () => {
   // pricing state
   const [priceData, setPriceData] = React.useState({
     price: '',
-    currency: 'USD',
+    currency: 'INR',
     sku: '',
     onSale: false,
     discount: '',
