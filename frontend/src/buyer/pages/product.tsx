@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Star, Heart, Share2, MessageCircle, ShoppingCart, Package, Shield, Truck, X } from "lucide-react";
-import productService from "../../services_old/product.service";
+import { getProductById } from "../../services/products.service";
 import cartService from "../../services_old/cart.service";
 import wishlistService from "../../services_old/wishlist.service";
 import { Product } from "../../types/product";
@@ -38,11 +38,41 @@ const ProductPage: React.FC = () => {
 
         console.log('Fetching product with ID:', productId);
         
-        const response = await productService.getProductById(productId);
+        const response = await getProductById(productId);
         
-        if (response.success && response.product) {
-          setProduct(response.product);
-          setIsWishlisted(wishlistService.isInWishlist(response.product.id));
+        if (response.statusCode === 200 && response.data) {
+          // Transform backend data to match frontend Product interface
+          const transformedProduct: Product = {
+            id: response.data._id,
+            name: response.data.name,
+            description: response.data.description,
+            detailedDescription: response.data.detailedDescription,
+            category: response.data.category,
+            hsnCode: response.data.hsnCode,
+            price: parseFloat(response.data.price) || 0,
+            sku: response.data.sku,
+            onSale: response.data.onSale || false,
+            discount: parseFloat(response.data.discount) || 0,
+            salePrice: parseFloat(response.data.salePrice) || 0,
+            costOfGoods: parseFloat(response.data.costOfGoods) || 0,
+            profit: parseFloat(response.data.profit) || 0,
+            margin: parseFloat(response.data.margin) || 0,
+            tags: response.data.tags || [],
+            quantity: parseInt(response.data.stock) || 0,
+            // Fix image URLs by adding backend URL prefix
+            productImage: response.data.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${response.data.productImages[0]}` : '',
+            images: response.data.productImages ? response.data.productImages.map((img: string) => `${process.env.REACT_APP_BACKEND_URL}/${img}`) : [],
+            primaryImage: response.data.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${response.data.productImages[0]}` : '',
+            createdAt: new Date(response.data.createdAt),
+            updatedAt: new Date(response.data.updatedAt),
+            moq: response.data.moq,
+            preciseDescription: response.data.description,
+            sellerName: response.data.sellerName || 'Unknown Seller',
+            companyName: response.data.companyName || 'Unknown Company'
+          };
+          
+          setProduct(transformedProduct);
+          setIsWishlisted(wishlistService.isInWishlist(transformedProduct.id));
         } else {
           setError(response.message || 'Failed to load product');
         }
@@ -237,7 +267,7 @@ const ProductPage: React.FC = () => {
               {/* Product Title */}
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
-                <p className="text-gray-600">by {product.sellerName || 'Unknown Seller'}</p>
+                <p className="text-gray-600">by {product.companyName || product.sellerName || 'Unknown Company'}</p>
               </div>
 
               {/* Rating */}

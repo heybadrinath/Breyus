@@ -22,6 +22,7 @@ export interface Product {
   quantity: number;
   sellerId?: string;
   sellerName?: string;
+  companyName?: string;
   createdAt: Date;
   updatedAt: Date;
   rating?: number;

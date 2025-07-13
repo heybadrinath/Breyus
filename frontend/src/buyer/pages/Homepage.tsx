@@ -1,72 +1,133 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import ProductCard from '../components/ProductCard';
 import Banner from '../components/Banner';
 import Navbar from '../components/navbar';
-import productService from '../../services_old/product.service';
+import { getProductsWithPagination, PaginationParams } from '../../services/products.service';
 import { Product } from '../../types/product';
 
 const Homepage: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([]);
+
+  const navigate = useNavigate();
+
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(true);
+  const [totalProducts, setTotalProducts] = useState(0);
   const [filters, setFilters] = useState({
     category: '',
     minPrice: 0,
     maxPrice: 0
   });
 
-  // Fetch products on component mount
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  const observer = useRef<IntersectionObserver | null>(null);
+  const lastProductRef = useRef<HTMLDivElement>(null);
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    setError(null);
-    
+  const loadProducts = useCallback(async (page: number, isInitial: boolean = false) => {
     try {
-      console.log('Fetching products for marketplace...');
-      const response = await productService.getAllProducts();
+      if (isInitial) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const params: PaginationParams = {
+        page,
+        limit: 30,
+        search: searchTerm || undefined,
+        category: filters.category || undefined,
+        minPrice: filters.minPrice > 0 ? filters.minPrice : undefined,
+        maxPrice: filters.maxPrice > 0 ? filters.maxPrice : undefined
+      };
+
+      const response = await getProductsWithPagination(params);
       
-      if (response.success) {
-        setProducts(response.products);
-        console.log('Products loaded successfully:', response.products.length);
+      // Transform backend data to match frontend Product interface
+      const transformedProducts: Product[] = response.data.map((item: any) => ({
+        id: item._id,
+        name: item.name,
+        description: item.description,
+        detailedDescription: item.detailedDescription,
+        category: item.category,
+        hsnCode: item.hsnCode,
+        price: parseFloat(item.price) || 0,
+        currency: item.currency,
+        sku: item.sku,
+        onSale: item.onSale || false,
+        discount: parseFloat(item.discount) || 0,
+        salePrice: parseFloat(item.salePrice) || 0,
+        costOfGoods: parseFloat(item.costOfGoods) || 0,
+        profit: parseFloat(item.profit) || 0,
+        margin: parseFloat(item.margin) || 0,
+        tags: item.tags || [],
+        quantity: parseInt(item.stock) || 0,
+        // Fix image URLs by adding backend URL prefix
+        productImage: item.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${item.productImages[0]}` : '',
+        images: item.productImages ? item.productImages.map((img: string) => `${process.env.REACT_APP_BACKEND_URL}/${img}`) : [],
+        primaryImage: item.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${item.productImages[0]}` : '',
+        createdAt: new Date(item.createdAt),
+        updatedAt: new Date(item.updatedAt),
+        moq: item.moq,
+        preciseDescription: item.description,
+        sellerName: item.sellerName || 'Unknown Seller',
+        companyName: item.companyName || 'Unknown Company'
+      }));
+      
+      if (isInitial) {
+        setProducts(transformedProducts);
       } else {
-        setError(response.message || 'Failed to load products');
-        console.error('Failed to fetch products:', response.message);
+        setProducts(prev => [...prev, ...transformedProducts]);
       }
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      setError('Failed to load products. Please try again.');
+      
+      setCurrentPage(response.pagination.currentPage);
+      setHasNextPage(response.pagination.hasNextPage);
+      setTotalProducts(response.pagination.totalProducts);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load products');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  };
+  }, [searchTerm, filters]);
 
-  const handleSearch = async (term: string) => {
-    if (!term.trim()) {
-      fetchProducts();
-      return;
+  // Load initial products
+  useEffect(() => {
+    setCurrentPage(1);
+    setProducts([]);
+    loadProducts(1, true);
+  }, [searchTerm, filters]);
+
+  // Intersection Observer for infinite scrolling
+  useEffect(() => {
+    if (loading || loadingMore) return;
+
+    if (observer.current) observer.current.disconnect();
+
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasNextPage && !loadingMore) {
+        loadProducts(currentPage + 1);
+      }
+    });
+
+    if (lastProductRef.current) {
+      observer.current.observe(lastProductRef.current);
     }
 
-    setLoading(true);
+    return () => {
+      if (observer.current) {
+        observer.current.disconnect();
+      }
+    };
+  }, [loading, loadingMore, hasNextPage, currentPage, loadProducts]);
+
+  const handleSearch = (term: string) => {
     setSearchTerm(term);
-    
-    try {
-      const response = await productService.searchProducts(term, filters);
-      if (response.success) {
-        setProducts(response.products);
-      } else {
-        setError(response.message || 'Search failed');
-      }
-    } catch (error) {
-      console.error('Search error:', error);
-      setError('Search failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const renderProducts = () => {
@@ -88,7 +149,7 @@ const Homepage: React.FC = () => {
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Failed to Load Products</h3>
             <p className="text-gray-600 mb-4">{error}</p>
             <button
-              onClick={fetchProducts}
+              onClick={() => loadProducts(1, true)}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
               Try Again
@@ -109,10 +170,7 @@ const Homepage: React.FC = () => {
             </p>
             {searchTerm && (
               <button
-                onClick={() => {
-                  setSearchTerm('');
-                  fetchProducts();
-                }}
+                onClick={() => setSearchTerm('')}
                 className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Clear Search
@@ -125,13 +183,31 @@ const Homepage: React.FC = () => {
 
     return (
       <div className="flex flex-wrap gap-8">
-        {products.map((product) => (
-          <ProductCard 
-            key={product.id} 
-            product={product}
-            onClick={() => window.location.href = `/buyer/product-page?id=${product.id}`}
-          />
-        ))}
+        {products.map((product, index) => {
+          if (products.length === index + 1) {
+            return (
+              <div key={product.id} ref={lastProductRef}>
+                <ProductCard 
+                  product={product}
+                  onClick={() => navigate(`/buyer/product-page?id=${product.id}`)}
+                />
+              </div>
+            );
+          } else {
+            return (
+              <ProductCard 
+                key={product.id}
+                product={product}
+                onClick={() => navigate(`/buyer/product-page?id=${product.id}`)}
+              />
+            );
+          }
+        })}
+        {loadingMore && (
+          <div className="w-full flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        )}
       </div>
     );
   };
@@ -163,7 +239,7 @@ const Homepage: React.FC = () => {
                 {searchTerm ? `Search Results for "${searchTerm}"` : 'Available Products'}
               </h2>
               <div className="text-sm text-gray-600">
-                {!loading && `${products.length} products found`}
+                {!loading && `${totalProducts} products found`}
               </div>
             </div>
             

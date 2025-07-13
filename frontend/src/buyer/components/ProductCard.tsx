@@ -208,7 +208,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
           </h3>
           
           <p className="text-xs text-gray-500 mb-2">
-            by {product.sellerName || 'Unknown Seller'}
+            by {product.companyName || product.sellerName || 'Unknown Company'}
           </p>
 
           {/* Rating */}

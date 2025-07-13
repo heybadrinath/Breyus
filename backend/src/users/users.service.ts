@@ -20,4 +20,12 @@ export class UsersService {
             throw new Error('Error fetching user');
         }
     }
+
+    async findById(userId: string): Promise<User | null> {
+        try {
+            return await this.userSchema.findById(userId).exec();
+        } catch (error) {
+            throw new Error('Error fetching user');
+        }
+    }
 }

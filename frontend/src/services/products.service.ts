@@ -48,6 +48,66 @@ export interface ProductResponse {
   data: any;
 }
 
+export interface PaginationParams {
+  page: number;
+  limit: number;
+  search?: string;
+  category?: string;
+  minPrice?: number;
+  maxPrice?: number;
+}
+
+export interface PaginationResponse {
+  statusCode: number;
+  message: string;
+  data: any[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalProducts: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
+export const getProductsWithPagination = async (params: PaginationParams): Promise<PaginationResponse> => {
+  try {
+    const queryParams = new URLSearchParams();
+    queryParams.append('page', params.page.toString());
+    queryParams.append('limit', params.limit.toString());
+    
+    if (params.search) {
+      queryParams.append('search', params.search);
+    }
+    if (params.category) {
+      queryParams.append('category', params.category);
+    }
+    if (params.minPrice !== undefined) {
+      queryParams.append('minPrice', params.minPrice.toString());
+    }
+    if (params.maxPrice !== undefined) {
+      queryParams.append('maxPrice', params.maxPrice.toString());
+    }
+
+    const response = await fetch(`${BACKEND_END_POINT}/list?${queryParams.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to fetch products');
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+  }
+};
+
 export const createProduct = async (productData: CreateProductData, files: File[]): Promise<ProductResponse> => {
   try {
     const formData = new FormData();

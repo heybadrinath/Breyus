@@ -149,6 +149,50 @@ export class ProductsController {
         }
     }
 
+    @Get('list')
+    async getProducts(
+        @Query('page') page: string = '1',
+        @Query('limit') limit: string = '30',
+        @Query('search') search: string = '',
+        @Query('category') category: string = '',
+        @Query('minPrice') minPrice: string = '',
+        @Query('maxPrice') maxPrice: string = '',
+        @Res() response: Response
+    ) {
+        try {
+            const pageNum = parseInt(page, 10);
+            const limitNum = parseInt(limit, 10);
+            
+            const result = await this.productsService.getProductsWithPagination({
+                page: pageNum,
+                limit: limitNum,
+                search,
+                category,
+                minPrice: minPrice ? parseFloat(minPrice) : undefined,
+                maxPrice: maxPrice ? parseFloat(maxPrice) : undefined
+            });
+            
+            return response.status(HttpStatus.OK).send({
+                statusCode: HttpStatus.OK,
+                message: 'Products retrieved successfully',
+                data: result.products,
+                pagination: {
+                    currentPage: result.currentPage,
+                    totalPages: result.totalPages,
+                    totalProducts: result.totalProducts,
+                    hasNextPage: result.hasNextPage,
+                    hasPrevPage: result.hasPrevPage
+                }
+            });
+        } catch (error) {
+            return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: 'Failed to retrieve products',
+                error: error.message || 'Internal Server Error',
+            });
+        }
+    }
+
     @Get(':id')
     async getProductById(@Param('id') id: string, @Res() response: Response) {
         try {
@@ -161,10 +205,9 @@ export class ProductsController {
                 });
             }
 
-            let userId: string;
             try {
                 const decoded = this.authService.validateAccountToken(accountToken);
-                userId = (decoded as any).userId;
+                // We don't need userId for this endpoint as buyers should see all products
             } catch (error) {
                 return response.status(HttpStatus.UNAUTHORIZED).send({
                     statusCode: HttpStatus.UNAUTHORIZED,
@@ -172,7 +215,7 @@ export class ProductsController {
                 });
             }
 
-            const product = await this.productsService.getProductById(id, userId);
+            const product = await this.productsService.getProductByIdWithCompany(id);
             
             if (!product) {
                 return response.status(HttpStatus.NOT_FOUND).send({
