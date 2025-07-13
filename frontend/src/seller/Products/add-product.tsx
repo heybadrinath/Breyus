@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ProductInformation from "./components/product-information";
 import Media from "./components/media";
 import Price from "./components/price";
@@ -7,10 +8,15 @@ import { Incoterms } from './components/incoterms';
 import AddProductTerms from './components/product-terms';
 import ProgressBar from "../../buyer/components/cart/PurchaseRequestProgress";
 import '../css/product.css';
+import { createProduct, CreateProductData } from '../../services/products.service';
+
 
 export const AddProduct = () => {
 
+  const navigate = useNavigate();
+
   const [errorMessage, setErrorMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // product information state
   const [productInformation, setProductInformation] = React.useState({
@@ -177,85 +183,144 @@ export const AddProduct = () => {
 
   const validateStep = () => {
     switch (step) {
-      // case 0: // Product Information
-      //   if (!productInformation.name) {
-      //     setErrorMessage("Name is required.");
-      //     return false;
-      //   }
-      //   if (!productInformation.moq) {
-      //     setErrorMessage("MOQ is required.");
-      //     return false;
-      //   }
-      //   if (!productInformation.moqUnit) {
-      //     setErrorMessage("MOQ Unit is required.");
-      //     return false;
-      //   }
-      //    if (!productInformation.hsnCode) {
-      //     setErrorMessage("HSN Code is required.");
-      //     return false;
-      //   }
-      //   if (!productInformation.category) {
-      //     setErrorMessage("Category is required.");
-      //     return false;
-      //   }
-      //   if (!productInformation.description) {
-      //     setErrorMessage("Description is required.");
-      //     return false;
-      //   }
-      //   if(!productInformation.detailedDescription) {
-      //     setErrorMessage("Detailed Description is required. ")
-      //   }
+      case 0: // Product Information
+        if (!productInformation.name) {
+          setErrorMessage("Name is required.");
+          return false;
+        }
+        if (!productInformation.moq) {
+          setErrorMessage("MOQ is required.");
+          return false;
+        }
+        if (!productInformation.moqUnit) {
+          setErrorMessage("MOQ Unit is required.");
+          return false;
+        }
+        if (!productInformation.hsnCode) {
+          setErrorMessage("HSN Code is required.");
+          return false;
+        }
+        if (!productInformation.category) {
+          setErrorMessage("Category is required.");
+          return false;
+        }
+        if (!productInformation.description) {
+          setErrorMessage("Description is required.");
+          return false;
+        }
+        if(!productInformation.detailedDescription) {
+          setErrorMessage("Detailed Description is required. ")
+          return false;
+        }
+        setErrorMessage(''); // Clear error if all fields are valid
+        return true;
 
+      case 1: // Media
+        if (productImages.length === 0) {
+          setErrorMessage("At least one product image is required.");
+          return false;
+        }
+        if (testReports.length === 0) {
+          setErrorMessage("At least one test report is required.");
+          return false;
+        }
+        setErrorMessage(''); // Clear error if all fields are valid
+        return true;
 
+      case 2: // Pricing
+        if (!priceData.price) {
+          setErrorMessage("Price is required.");
+          return false;
+        }
+        if (!priceData.sku) {
+          setErrorMessage("SKU is required.");
+          return false;
+        }
+        if (!priceData.costOfGoods) {
+          setErrorMessage("Cost of Goods is required.");
+          return false;
+        }
+        if (!priceData.margin) {
+          setErrorMessage("Margin is required.");
+          return false;
+        }
+        setErrorMessage(''); // Clear error if all fields are valid
+        return true;
 
-      //   setErrorMessage(''); // Clear error if all fields are valid
-      //   return true;
-
-      // case 1: // Media
-      //   if (productImages.length === 0) {
-      //     setErrorMessage("At least one product image is required.");
-      //     return false;
-      //   }
-      //   if (testReports.length === 0) {
-      //     setErrorMessage("At least one test report is required.");
-      //     return false;
-      //   }
-      //   setErrorMessage(''); // Clear error if all fields are valid
-      //   return true;
-
-      // case 2: // Pricing
-      //   if (!priceData.price) {
-      //     setErrorMessage("Price is required.");
-      //     return false;
-      //   }
-      //   if (!priceData.sku) {
-      //     setErrorMessage("SKU is required.");
-      //     return false;
-      //   }
-      //   if (!priceData.costOfGoods) {
-      //     setErrorMessage("Cost of Goods is required.");
-      //     return false;
-      //   }
-
-      //   if (!priceData.margin) {
-      //     setErrorMessage("Margin is required.");
-      //     return false;
-      //   }
-      //   setErrorMessage(''); // Clear error if all fields are valid
-      //   return true;
-
-      // case 3: // Tags
-      //   if (tagsData.tags.length === 0) {
-      //     setErrorMessage("At least one tag is required.");
-      //     return false;
-      //   }
-      //   setErrorMessage(''); // Clear error if all fields are valid
-      //   return true;
-
-      // todo trade terms and incoterms i/p validation
+      case 3: // Tags
+        if (tagsData.tags.length === 0) {
+          setErrorMessage("At least one tag is required.");
+          return false;
+        }
+        setErrorMessage(''); // Clear error if all fields are valid
+        return true;
 
       default:
         return true;
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+      setErrorMessage('');
+
+      // Prepare product data
+      const productData: CreateProductData = {
+        // Product information
+        name: productInformation.name,
+        moq: productInformation.moq,
+        moqUnit: productInformation.moqUnit,
+        description: productInformation.description,
+        detailedDescription: productInformation.detailedDescription,
+        category: productInformation.category,
+        hsnCode: productInformation.hsnCode,
+
+        // Pricing
+        price: priceData.price,
+        currency: priceData.currency,
+        sku: priceData.sku,
+        onSale: priceData.onSale,
+        discount: priceData.discount,
+        salePrice: priceData.salePrice,
+        costOfGoods: priceData.costOfGoods,
+        profit: priceData.profit,
+        margin: priceData.margin,
+
+        // Tags
+        tags: tagsData.tags,
+
+        // Trade terms
+        revenueMin: tradeTerms.revenueMin,
+        revenueMax: tradeTerms.revenueMax,
+        currencyTrade: tradeTerms.currency,
+        unitTrade: tradeTerms.unit,
+        yearsTrade: tradeTerms.yearsTrade,
+        industry: tradeTerms.industry,
+        marketYears: tradeTerms.marketYears,
+        sellerMarketYears: tradeTerms.sellerMarketYears,
+        marketcapture: tradeTerms.marketcapture,
+
+        // Incoterms
+        selectedIncoterm: incotermsState.selectedIncoterm,
+        selectedIncotermData: incotermsState.selectedIncotermData,
+      };
+
+      // Combine all files
+      const allFiles = [...productImages, ...testReports];
+
+      // Submit to backend servce
+      const response = await createProduct(productData, allFiles);
+
+      if (response.statusCode === 201) {
+        navigate('/seller/inventory');
+      } else {
+        setErrorMessage(response.message || 'Failed to create product');
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'An unknown error occurred');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -303,15 +368,25 @@ export const AddProduct = () => {
               onClick={() => setStep((prev) => Math.max(prev - 1, 0))}
               type="button"
               className="product-btn !bg-[black]"
+              disabled={isSubmitting}
             >
               Prev
             </button>}
             <button
-              onClick={() => (validateStep()) ? setStep((prev) => Math.min(prev + 1, 5)) : ''}
+              onClick={() => {
+                if (step < 5) {
+                  if (validateStep()) {
+                    setStep((prev) => Math.min(prev + 1, 5));
+                  }
+                } else {
+                  handleSubmit();
+                }
+              }}
               type="button"
               className="product-btn ml-auto"
+              disabled={isSubmitting}
             >
-              {(step < 5) ? "Next" : "Publish Product"}
+              {isSubmitting ? 'Processing...' : (step < 5) ? "Next" : "Publish Product"}
             </button>
           </div>
         </div>

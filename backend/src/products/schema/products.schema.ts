@@ -108,6 +108,23 @@ export class Product extends Document {
   @Prop({ type: Map, of: Map })
   defaults?: Record<IncotermType, IncotermRowData>;  // Default values for each Incoterm type
 
+  // File upload fields
+  @Prop({ type: [String], default: [] })
+  productImages: string[];  // Array of uploaded image file paths
+
+  @Prop({ type: [String], default: [] })
+  testReports: string[];  // Array of uploaded test report file paths
+
+  // User association
+  @Prop({ required: true })
+  userId: string;  // ID of the user who created the product
+
+  // Timestamps
+  @Prop({ default: Date.now })
+  createdAt: Date;
+
+  @Prop({ default: Date.now })
+  updatedAt: Date;
 }
 
 

@@ -9,7 +9,7 @@ import { MongooseModule } from '@nestjs/mongoose/dist/mongoose.module';
 @Module({
   imports: [
     JwtModule.register({
-      secret: process.env.JWT_SECRET || '',
+      secret: process.env.JWT_SECRET_KEY || '',
       signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '3600' },
     }),
     UsersModule,

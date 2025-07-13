@@ -138,4 +138,18 @@ export class CreateProductDto {
   @IsOptional()  // Make this field optional
   @IsObject()  // Validate that it's an object (key-value pairs like { 'Insurance': 'Buyer' })
   selectedIncotermData?: IncotermRowData;  // Data for selected Incoterm (e.g., { 'Insurance': 'Buyer' })
+
+  // File upload fields
+  @IsOptional()
+  @IsArray()
+  productImages?: string[];  // Array of uploaded image file paths
+
+  @IsOptional()
+  @IsArray()
+  testReports?: string[];  // Array of uploaded test report file paths
+
+  // User association
+  @IsOptional()
+  @IsString()
+  userId?: string;  // ID of the user who created the product
 }
