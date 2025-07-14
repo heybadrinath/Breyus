@@ -211,7 +211,7 @@ const ProductPage: React.FC = () => {
               {/* Price */}
               <div className="space-y-2">
                 <div className="flex items-baseline gap-3">
-                  <span className="text-3xl font-bold text-gray-900">₹{product.salePrice.toLocaleString()}</span>
+                  <span className="text-3xl font-bold text-gray-900">₹{(product.salePrice)?product.salePrice.toLocaleString(): product.price.toLocaleString()}</span>
                   {product.onSale && (
                     <>
                       <span className="text-xl text-gray-500 line-through">₹{product.price.toLocaleString()}</span>
