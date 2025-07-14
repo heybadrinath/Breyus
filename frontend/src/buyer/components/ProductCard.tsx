@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Star } from "lucide-react";
+import { Heart } from "lucide-react";
 import { Product } from '../../services/products.service';
 
 interface ProductCardProps {
@@ -174,11 +174,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
          
 
           {/* Price */}
-          <div className="flex items-center justify-between">
-            <p className="text-lg font-bold text-gray-900">
-              ₹{product.price.toLocaleString()}
-            </p>
-          </div>
+          
+          <div className="flex items-baseline gap-3">
+                  <span className="text-lg font-bold text-gray-900">₹{product.salePrice.toLocaleString()}</span>
+                  {product.onSale && (
+                    <>
+                      <span className="text-sm text-gray-500 line-through">₹{product.price.toLocaleString()}</span>
+                    </>
+                  )}
+                </div>
         </div>
 
         {/* Add to Cart Button */}

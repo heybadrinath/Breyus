@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Star, Heart, Share2, MessageCircle, ShoppingCart, Package, Shield, Truck, X } from "lucide-react";
-import { getProductById } from "../../services/products.service";
-import cartService from "../../services_old/cart.service";
-import wishlistService from "../../services_old/wishlist.service";
-import { Product } from "../../types/product";
+import { getProductById, Product } from "../../services/products.service";
 
 const ProductPage: React.FC = () => {
   const [product, setProduct] = useState<Product | null>(null);
@@ -37,9 +34,9 @@ const ProductPage: React.FC = () => {
         }
 
         console.log('Fetching product with ID:', productId);
-        
+
         const response = await getProductById(productId);
-        
+
         if (response.statusCode === 200 && response.data) {
           // Transform backend data to match frontend Product interface
           const transformedProduct: Product = {
@@ -58,7 +55,8 @@ const ProductPage: React.FC = () => {
             profit: parseFloat(response.data.profit) || 0,
             margin: parseFloat(response.data.margin) || 0,
             tags: response.data.tags || [],
-            quantity: parseInt(response.data.stock) || 0,
+            stock: parseInt(response.data.stock) || 0,
+            stockUnit: response.data.stockUnit,
             // Fix image URLs by adding backend URL prefix
             productImage: response.data.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${response.data.productImages[0]}` : '',
             images: response.data.productImages ? response.data.productImages.map((img: string) => `${process.env.REACT_APP_BACKEND_URL}/${img}`) : [],
@@ -66,13 +64,13 @@ const ProductPage: React.FC = () => {
             createdAt: new Date(response.data.createdAt),
             updatedAt: new Date(response.data.updatedAt),
             moq: response.data.moq,
+            moqUnit: response.data.moqUnit,
             preciseDescription: response.data.description,
             sellerName: response.data.sellerName || 'Unknown Seller',
             companyName: response.data.companyName || 'Unknown Company'
           };
-          
+
           setProduct(transformedProduct);
-          setIsWishlisted(wishlistService.isInWishlist(transformedProduct.id));
         } else {
           setError(response.message || 'Failed to load product');
         }
@@ -101,70 +99,10 @@ const ProductPage: React.FC = () => {
     setNotification({ type, message });
   };
 
-  const handleAddToCart = async () => {
-    if (!product) return;
-    
-    setIsAddingToCart(true);
-    
-    try {
-      // Add to cart locally first for immediate feedback
-      const success = await cartService.addToCart(product, quantity);
-      if (success) {
-        setAddedToCart(true);
-        showNotification('success', `${product.name} added to cart successfully!`);
-        setTimeout(() => setAddedToCart(false), 3000);
-      }
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      showNotification('error', 'Failed to add item to cart. Please try again.');
-    } finally {
-      setIsAddingToCart(false);
-    }
-  };
 
-  const handleBuyNow = async () => {
-    if (!product) return;
-    
-    setIsAddingToCart(true);
-    
-    try {
-      // Create trade request directly (quick purchase)
-      const result = await cartService.quickPurchase(
-        product, 
-        quantity, 
-        `I would like to purchase ${quantity} units of ${product.name}. Please review and confirm availability.`
-      );
-      
-      if (result.success) {
-        setTradeRequestSent(true);
-        showNotification(
-          'success', 
-          `Trade request sent successfully! The seller will review your request and respond soon. You can track the status in your trade requests.`
-        );
-        
-        // Redirect to trade page after showing notification
-        setTimeout(() => {
-          window.location.href = '/buyer/trade';
-        }, 3000);
-      } else {
-        showNotification('error', result.message || 'Failed to send trade request');
-      }
-    } catch (error) {
-      console.error('Error creating trade request:', error);
-      showNotification('error', 'Failed to send trade request. Please try again.');
-    } finally {
-      setIsAddingToCart(false);
-    }
-  };
 
-  const handleToggleWishlist = () => {
-    if (!product) return;
-    
-    const success = wishlistService.toggleWishlist(product);
-    if (success) {
-      setIsWishlisted(!isWishlisted);
-    }
-  };
+
+
 
   if (loading) {
     return (
@@ -214,7 +152,7 @@ const ProductPage: React.FC = () => {
   }
 
   const images = product.images && product.images.length > 0 ? product.images : [product.productImage || '/placeholder-product.svg'];
-  const isInCart = cartService.isInCart(product.id);
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -235,16 +173,15 @@ const ProductPage: React.FC = () => {
                   }}
                 />
               </div>
-              
+
               {/* Thumbnail Images */}
               {images.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto">
                   {images.map((image, index) => (
                     <div
                       key={index}
-                      className={`flex-shrink-0 w-20 h-20 bg-gray-100 rounded cursor-pointer border-2 ${
-                        selectedImageIndex === index ? 'border-blue-500' : 'border-transparent'
-                      }`}
+                      className={`flex-shrink-0 w-20 h-20 bg-gray-100 rounded cursor-pointer border-2 ${selectedImageIndex === index ? 'border-blue-500' : 'border-transparent'
+                        }`}
                       onClick={() => setSelectedImageIndex(index)}
                     >
                       <img
@@ -270,42 +207,26 @@ const ProductPage: React.FC = () => {
                 <p className="text-gray-600">by {product.companyName || product.sellerName || 'Unknown Company'}</p>
               </div>
 
-              {/* Rating */}
-              {product.rating && (
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        size={20}
-                        className={i < Math.floor(product.rating!) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}
-                      />
-                    ))}
-                  </div>
-                  <span className="text-lg font-medium">{product.rating.toFixed(1)}</span>
-                  <span className="text-gray-500">({product.reviewCount || 0} reviews)</span>
-                </div>
-              )}
 
               {/* Price */}
               <div className="space-y-2">
                 <div className="flex items-baseline gap-3">
-                  <span className="text-3xl font-bold text-gray-900">₹{product.price.toLocaleString()}</span>
-                  {product.onSale && product.salePrice && (
+                  <span className="text-3xl font-bold text-gray-900">₹{product.salePrice.toLocaleString()}</span>
+                  {product.onSale && (
                     <>
-                      <span className="text-xl text-gray-500 line-through">₹{product.salePrice.toLocaleString()}</span>
-                      <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-medium">
-                        {Math.round(((product.salePrice - product.price) / product.salePrice) * 100)}% OFF
+                      <span className="text-xl text-gray-500 line-through">₹{product.price.toLocaleString()}</span>
+                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm font-medium">
+                        {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
                       </span>
                     </>
                   )}
                 </div>
                 {product.moq && (
-                  <p className="text-sm text-gray-600">Minimum Order Quantity: {product.moq}</p>
+                  <p className="text-sm text-gray-600">Minimum Order Quantity: {product.moq.toString() + ' ' + product.moqUnit}</p>
                 )}
               </div>
 
-              
+
 
               {/* Description */}
               {product.preciseDescription && (
@@ -317,7 +238,7 @@ const ProductPage: React.FC = () => {
 
               {/* Quantity Selector */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Stock</label>
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -333,7 +254,7 @@ const ProductPage: React.FC = () => {
                     +
                   </button>
                   <span className="text-sm text-gray-500 ml-2">
-                    {product.quantity > 0 ? `${product.quantity} available` : 'Out of stock'}
+                    {product.stock > 0 ? `${product.stock + ' ' + product.stockUnit} available` : 'Out of stock'}
                   </span>
                 </div>
               </div>
@@ -341,29 +262,28 @@ const ProductPage: React.FC = () => {
               {/* Action Buttons */}
               <div className="space-y-3">
                 <button
-                  onClick={handleAddToCart}
-                  disabled={isAddingToCart || product.quantity === 0}
-                  className={`w-full py-3 px-6 rounded-lg text-lg font-semibold transition-all ${
-                    isInCart
+
+                  disabled={isAddingToCart || product.stock === 0}
+                  className={`w-full py-3 px-6 rounded-lg text-lg font-semibold transition-all ${false
                       ? 'bg-green-500 text-white cursor-default'
-                      : product.quantity === 0
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : isAddingToCart
-                      ? 'bg-gray-400 text-white cursor-not-allowed'
-                      : 'bg-black text-white hover:bg-gray-800'
-                  }`}
+                      : product.stock === 0
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : isAddingToCart
+                          ? 'bg-gray-400 text-white cursor-not-allowed'
+                          : 'bg-black text-white hover:bg-gray-800'
+                    }`}
                 >
                   {isAddingToCart ? (
                     <div className="flex items-center justify-center">
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                       Adding to Cart...
                     </div>
-                  ) : isInCart ? (
+                  ) : false ? (
                     <>
                       <ShoppingCart className="inline w-5 h-5 mr-2" />
                       In Cart ✓
                     </>
-                  ) : product.quantity === 0 ? (
+                  ) : product.stock === 0 ? (
                     'Out of Stock'
                   ) : (
                     <>
@@ -373,68 +293,39 @@ const ProductPage: React.FC = () => {
                   )}
                 </button>
 
-                {/* <button
-                  onClick={handleBuyNow}
-                  disabled={product.quantity === 0 || isAddingToCart || tradeRequestSent}
-                  className={`w-full py-3 px-6 rounded-lg text-lg font-semibold border transition-all ${
-                    tradeRequestSent
-                      ? 'border-green-300 bg-green-50 text-green-700 cursor-default'
-                      : product.quantity === 0 || isAddingToCart
-                      ? 'border-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  
-                  {tradeRequestSent ? (
-                    <>
-                      <Package className="inline w-5 h-5 mr-2" />
-                      Request Sent ✓
-                    </>
-                  ) : isAddingToCart ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600 mr-2"></div>
-                      Sending Request...
-                    </div>
-                  ) : (
-                    <>
-                      <Package className="inline w-5 h-5 mr-2" />
-                      Send Purchase Request
-                    </>
-                  )}
-                </button> */}
+
                 <button
-                className="w-full py-3 px-6 border border-gray-300 text-gray-700 rounded-lg font-semibold transition"
-                onClick={() => {}}
-              >
-                View Test Reports
-              </button>
+                  className="w-full py-3 px-6 border border-gray-300 text-gray-700 rounded-lg font-semibold transition"
+                  onClick={() => { }}
+                >
+                  View Test Reports
+                </button>
                 {/* View Trade Terms Button */}
-              <button
-                className="w-full py-3 px-6 border border-gray-300 text-gray-700 rounded-lg font-semibold transition"
-                onClick={() => setShowTradeTerms(true)}
-              >
-                View Trade Terms
-              </button>
+                <button
+                  className="w-full py-3 px-6 border border-gray-300 text-gray-700 rounded-lg font-semibold transition"
+                  onClick={() => setShowTradeTerms(true)}
+                >
+                  View Trade Terms
+                </button>
 
                 {/* Secondary Actions */}
                 <div className="flex gap-2">
                   <button
-                    onClick={handleToggleWishlist}
-                    className={`flex-1 py-2 px-4 rounded-lg border transition-all ${
-                      isWishlisted
+                    // onClick={handleToggleWishlist}
+                    className={`flex-1 py-2 px-4 rounded-lg border transition-all ${isWishlisted
                         ? 'border-red-200 bg-red-50 text-red-700'
                         : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     <Heart className={`inline w-4 h-4 mr-2 ${isWishlisted ? 'fill-red-500' : ''}`} />
                     {isWishlisted ? 'Wishlisted' : 'Add to Wishlist'}
                   </button>
-                  
+
                   <button className="flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
                     <MessageCircle className="inline w-4 h-4 mr-2" />
                     Ask Queries
                   </button>
-                  
+
                   <button className="flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
                     <Share2 className="inline w-4 h-4 mr-2" />
                     Share
@@ -475,13 +366,12 @@ const ProductPage: React.FC = () => {
 
         {/* Notifications */}
         {notification && (
-          <div className={`fixed bottom-4 right-4 max-w-md p-4 rounded-lg shadow-lg animate-bounce z-50 ${
-            notification.type === 'success' 
-              ? 'bg-green-500 text-white' 
+          <div className={`fixed bottom-4 right-4 max-w-md p-4 rounded-lg shadow-lg animate-bounce z-50 ${notification.type === 'success'
+              ? 'bg-green-500 text-white'
               : notification.type === 'error'
-              ? 'bg-red-500 text-white'
-              : 'bg-blue-500 text-white'
-          }`}>
+                ? 'bg-red-500 text-white'
+                : 'bg-blue-500 text-white'
+            }`}>
             <div className="flex items-start">
               <div className="flex-shrink-0">
                 {notification.type === 'success' && <span className="text-xl">✅</span>}
@@ -512,46 +402,7 @@ const ProductPage: React.FC = () => {
         )}
 
         {/* Trade Terms Modal */}
-        {showTradeTerms && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative animate-fade-in">
-              <button
-                className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
-                onClick={() => setShowTradeTerms(false)}
-                aria-label="Close"
-              >
-                <X size={22} />
-              </button>
-              <h2 className="text-xl font-bold mb-4 text-center">Trade Terms</h2>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <span className="font-semibold">Preferred Buyer Revenue Range:</span><br />
-                  <span>{product.preferred_buyer_revenue_range || "-"}</span>
-                </div>
-                <div>
-                  <span className="font-semibold">Potential Years to Trade:</span><br />
-                  <span>{product.potential_years_to_trade || "-"}</span>
-                </div>
-                <div>
-                  <span className="font-semibold">Industry Using Product:</span><br />
-                  <span>{product.industry_using_product || "-"}</span>
-                </div>
-                <div>
-                  <span className="font-semibold">Years in Market:</span><br />
-                  <span>{product.years_in_market || "-"}</span>
-                </div>
-                <div>
-                  <span className="font-semibold">Buyer Market Duration:</span><br />
-                  <span>{product.buyer_market_duration || "-"}</span>
-                </div>
-                <div>
-                  <span className="font-semibold">Market Capture:</span><br />
-                  <span>{product.market_capture !== undefined && product.market_capture !== null ? product.market_capture + "%" : "-"}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+
       </div>
     </div>
   );

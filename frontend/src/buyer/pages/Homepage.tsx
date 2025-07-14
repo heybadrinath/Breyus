@@ -4,8 +4,8 @@ import Sidebar from '../components/Sidebar';
 import ProductCard from '../components/ProductCard';
 import Banner from '../components/Banner';
 import Navbar from '../components/navbar';
-import { getProductsWithPagination, PaginationParams } from '../../services/products.service';
-import {Product} from '../../services/products.service';
+import { getProductsWithPagination, PaginationParams, Product } from '../../services/products.service';
+
 
 const Homepage: React.FC = () => {
 
@@ -65,7 +65,8 @@ const Homepage: React.FC = () => {
         profit: parseFloat(item.profit) || 0,
         margin: parseFloat(item.margin) || 0,
         tags: item.tags || [],
-        quantity: parseInt(item.stock) || 0,
+        stock: parseInt(item.stock) || 0,
+        stockUnit: item.stockUnit,
         // Fix image URLs by adding backend URL prefix
         productImage: item.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${item.productImages[0]}` : '',
         images: item.productImages ? item.productImages.map((img: string) => `${process.env.REACT_APP_BACKEND_URL}/${img}`) : [],
@@ -73,10 +74,13 @@ const Homepage: React.FC = () => {
         createdAt: new Date(item.createdAt),
         updatedAt: new Date(item.updatedAt),
         moq: item.moq,
+        moqUnit: item.moqUnit,
         preciseDescription: item.description,
         sellerName: item.sellerName || 'Unknown Seller',
         companyName: item.companyName || 'Unknown Company'
       }));
+
+     
       
       if (isInitial) {
         setProducts(transformedProducts);

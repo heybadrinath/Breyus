@@ -16,13 +16,15 @@ export interface Product {
   profit: number;
   margin: number;
   tags: string[];
-  quantity: number;
+  stock: number;
+  stockUnit: string;
   productImage: string;
   images: string[];
   primaryImage: string;
   createdAt: Date;
   updatedAt: Date;
   moq: number;
+  moqUnit: string;
   preciseDescription: string;
   sellerName: string;
   companyName: string;
