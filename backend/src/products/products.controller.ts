@@ -12,7 +12,7 @@ export class ProductsController {
     constructor(
         private readonly productsService: ProductsService,
         private readonly authService: AuthService
-    ) {}
+    ) { }
 
     @Get('hsn')
     async search(@Query('q') query: string, @Res() response: Response): Promise<HSN[]> {
@@ -33,14 +33,14 @@ export class ProductsController {
     @Post('add-product')
     @UseInterceptors(FileUploadInterceptor)
     async createProduct(
-        @Res() response: Response, 
+        @Res() response: Response,
         @Body() body: any,
         @UploadedFiles() files?: Express.Multer.File[]
     ) {
         try {
             // Extract the account token from the signed cookies
             const accountToken = response.req.signedCookies['account'];
-            
+
             // If accountToken is not present, return 401 Unauthorized
             if (!accountToken) {
                 return response.status(HttpStatus.UNAUTHORIZED).send({
@@ -114,7 +114,7 @@ export class ProductsController {
     async getUserProducts(@Res() response: Response) {
         try {
             const accountToken = response.req.signedCookies['account'];
-            
+
             if (!accountToken) {
                 return response.status(HttpStatus.UNAUTHORIZED).send({
                     statusCode: HttpStatus.UNAUTHORIZED,
@@ -134,7 +134,7 @@ export class ProductsController {
             }
 
             const products = await this.productsService.getProductsByUser(userId);
-            
+
             return response.status(HttpStatus.OK).send({
                 statusCode: HttpStatus.OK,
                 message: 'Products retrieved successfully',
@@ -160,9 +160,29 @@ export class ProductsController {
         @Res() response: Response
     ) {
         try {
+            const accountToken = response.req.signedCookies['account'];
+
+            if (!accountToken) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'No valid cookie found',
+                });
+            }
+
+            let userId: string;
+            try {
+                const decoded = this.authService.validateAccountToken(accountToken);
+                userId = (decoded as any).userId;
+            } catch (error) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'Invalid token',
+                });
+            }
+
             const pageNum = parseInt(page, 10);
             const limitNum = parseInt(limit, 10);
-            
+
             const result = await this.productsService.getProductsWithPagination({
                 page: pageNum,
                 limit: limitNum,
@@ -171,7 +191,7 @@ export class ProductsController {
                 minPrice: minPrice ? parseFloat(minPrice) : undefined,
                 maxPrice: maxPrice ? parseFloat(maxPrice) : undefined
             });
-            
+
             return response.status(HttpStatus.OK).send({
                 statusCode: HttpStatus.OK,
                 message: 'Products retrieved successfully',
@@ -197,7 +217,7 @@ export class ProductsController {
     async getProductById(@Param('id') id: string, @Res() response: Response) {
         try {
             const accountToken = response.req.signedCookies['account'];
-            
+
             if (!accountToken) {
                 return response.status(HttpStatus.UNAUTHORIZED).send({
                     statusCode: HttpStatus.UNAUTHORIZED,
@@ -216,7 +236,7 @@ export class ProductsController {
             }
 
             const product = await this.productsService.getProductByIdWithCompany(id);
-            
+
             if (!product) {
                 return response.status(HttpStatus.NOT_FOUND).send({
                     statusCode: HttpStatus.NOT_FOUND,
