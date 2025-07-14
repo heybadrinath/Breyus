@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Star } from "lucide-react";
-import cartService from "../../services_old/cart.service";
-import wishlistService from "../../services_old/wishlist.service";
-import { Product } from "../../types/product";
+import { Heart } from "lucide-react";
+import { Product } from '../../services/products.service';
 
 interface ProductCardProps {
   product?: Product;
@@ -27,26 +25,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
     return () => clearTimeout(timer);
   }, [showAnimation]);
 
-  // Check if product is in wishlist
-  useEffect(() => {
-    if (product) {
-      setIsWishlisted(wishlistService.isInWishlist(product.id));
-    }
-  }, [product]);
+  
 
-  // Listen for wishlist updates
-  useEffect(() => {
-    const handleWishlistUpdate = () => {
-      if (product) {
-        setIsWishlisted(wishlistService.isInWishlist(product.id));
-      }
-    };
-
-    window.addEventListener('wishlist-updated', handleWishlistUpdate);
-    return () => {
-      window.removeEventListener('wishlist-updated', handleWishlistUpdate);
-    };
-  }, [product]);
 
   // Handle case when no product is provided (placeholder)
   if (!product) {
@@ -62,41 +42,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
     );
   }
 
-  const toggleWishlist = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const success = wishlistService.toggleWishlist(product);
-    if (success && !isWishlisted) {
-      setShowAnimation(true);
-    }
-  };
+  
 
-  const handleAddToCart = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsAddingToCart(true);
-    
-    try {
-      const success = await cartService.addToCart(product, 1);
-      if (success) {
-        setAddedToCart(true);
-        setTimeout(() => setAddedToCart(false), 2000);
-      }
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-    } finally {
-      setIsAddingToCart(false);
-    }
-  };
+  
 
-  const handleCardClick = () => {
-    if (onClick) {
-      onClick();
-    } else {
-      window.location.href = `/buyer/product-page?id=${product.id}`;
-    }
-  };
+ 
 
   // Check if product is already in cart
-  const isInCart = cartService.isInCart(product.id);
 
   // Enhanced image component with loading state
   const ProductImage = () => {
@@ -160,6 +112,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
     setImageError(true);
   };
 
+  const handleCardClick = () => {
+    if (onClick) {
+      onClick();
+    } else {
+      window.location.href = `/buyer/product-page?id=${product.id}`;
+    }
+  };
+
   return (
     <div 
       onClick={handleCardClick} 
@@ -175,7 +135,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
             className={`w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-100 cursor-pointer transition-colors ${
               isWishlisted ? 'bg-red-50 border-red-200' : 'border-gray-300 bg-white/80'
             }`}
-            onClick={toggleWishlist}
+            // onClick={toggleWishlist}
             title={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
           >
             <Heart 
@@ -208,35 +168,29 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
           </h3>
           
           <p className="text-xs text-gray-500 mb-2">
-            by {product.sellerName || 'Unknown Seller'}
+            by {product.companyName || product.sellerName || 'Unknown Company'}
           </p>
 
-          {/* Rating */}
-          {product.rating && (
-            <div className="flex items-center mb-2">
-              <div className="flex items-center">
-                <Star size={12} className="text-yellow-400 fill-yellow-400" />
-                <span className="text-xs text-gray-600 ml-1">
-                  {product.rating} ({product.reviewCount || 0})
-                </span>
-              </div>
-            </div>
-          )}
+         
 
           {/* Price */}
-          <div className="flex items-center justify-between">
-            <p className="text-lg font-bold text-gray-900">
-              ₹{product.price.toLocaleString()}
-            </p>
-          </div>
+          
+          <div className="flex items-baseline gap-3">
+                  <span className="text-lg font-bold text-gray-900">{(product.salePrice)? product.salePrice.toLocaleString() + ' ' + product.currency: product.price.toLocaleString() + ' ' + product.currency}</span>
+                  {product.onSale && (
+                    <>
+                      <span className="text-sm text-gray-500 line-through">{product.price.toLocaleString() + ' ' + product.currency}</span>
+                    </>
+                  )}
+                </div>
         </div>
 
         {/* Add to Cart Button */}
         <button
-          onClick={handleAddToCart}
+          // onClick={handleAddToCart}
           disabled={isAddingToCart}
           className={`mt-3 w-full py-2 px-4 rounded-lg text-sm font-medium transition-all duration-300 ${
-            isInCart
+            false
               ? 'bg-green-500 text-white cursor-default'
               : isAddingToCart
               ? 'bg-gray-400 text-white cursor-not-allowed'
@@ -248,7 +202,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
               Adding...
             </div>
-          ) : isInCart ? (
+          ) : false ? (
             'In Cart ✓'
           ) : (
             'Add to Cart'

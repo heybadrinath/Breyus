@@ -9,6 +9,7 @@ import { CompanyModule } from './company/company.module';
 import { MailModule } from './mail/mail.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { LoginModule } from './login/login.module';
+import { ProductsModule } from './products/products.module';
 
 
 
@@ -25,6 +26,7 @@ import { LoginModule } from './login/login.module';
     MailModule,
     OnboardingModule,
     LoginModule,
+    ProductsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

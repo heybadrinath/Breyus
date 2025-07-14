@@ -1,5 +1,4 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { prop } from '@typegoose/typegoose';
 import { Document, Types } from 'mongoose';
 import { MeanMonthlyRevenue } from 'src/onboarding/dto/onboarding.dto';
 

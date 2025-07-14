@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpException, HttpStatus, Post, Session, Headers, Res } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpException, HttpStatus, Post, Session, Headers, Res, Header } from '@nestjs/common';
 import { SendEmailOtpDto, VerifyEmailOtpDto, continueOnboardingDto, SetPasswordDto, Step2Dto, Step3Dto, Step4Dto, Step5Dto } from './dto/onboarding.dto';
 import { OnboardingService } from './onboarding.service';
 import { AuthService } from 'src/auth/auth.service';
@@ -157,5 +157,17 @@ export class OnboardingController {
         } catch (e) {
             throw new HttpException(e.message, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    // Endpoint to get the onboarding progress and details
+    @Post('get-onboarding-progress-details')
+    async getOnboardingProgress(@Headers('Authorization') token: string, @Res() response: Response): Promise<void> {
+        try {
+            const result = await this.onboardingService.fetchOnboardingDetails(token);
+            await response.status(HttpStatus.OK).json({ message: 'Onboarding progress retrieved successfully', company: result });
+        } catch (error) {
+            throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
     }
 }

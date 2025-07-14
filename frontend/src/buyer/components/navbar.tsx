@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Bell, ShoppingCart } from "lucide-react";
-import cartService from '../../services_old/cart.service';
+
 
 interface NavbarProps {
   onSearch?: (searchTerm: string) => void;
@@ -8,7 +8,7 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ onSearch }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [cartCount, setCartCount] = useState(cartService.getCartCount());
+  const [cartCount, setCartCount] = useState(0);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +32,7 @@ const Navbar: React.FC<NavbarProps> = ({ onSearch }) => {
   // Update cart count when cart changes
   React.useEffect(() => {
     const updateCartCount = () => {
-      setCartCount(cartService.getCartCount());
+      setCartCount(0);
     };
 
     // Listen for cart updates
