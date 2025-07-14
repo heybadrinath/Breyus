@@ -4,12 +4,7 @@ import { SellerProtectedRoute, BuyerProtectedRoute } from "./ProtectedRoute"; //
 import { Routes, Route, useLocation } from "react-router-dom";
 
 
-// Signin imports
-import Signin from "../buyer/signin";  // Buyer Signin
-import SellerSignin from "../seller/signin";  // Seller Signin
 
-import Signup from "../buyer/signup";  // Buyer Signup
-import SellerSignup from "../seller/signup";  // Seller Signup
 
 // Main links
 import { OnBoarding } from "../main/OnBoarding";
@@ -45,6 +40,7 @@ import BuyerInformation from "../buyer/pages/buyer_information";
 import BuyerAddress from "../buyer/pages/buyer_address";
 import PurchaseRequest from "../buyer/pages/purchase-request";
 import PurchaseRequestSuccess from "../buyer/pages/PurchaseRequestSuccess";
+import { Inventory } from "../seller/Products/inventory";
 
 // ai imports 
 import BuyerAi from "../buyer/pages/ai";
@@ -117,8 +113,6 @@ const AppRoutes = () => {
 
 
         {/* Buyer Routes */}
-        <Route path="/buyer/signin" element={<Animate page={<Signin />} />} />
-        <Route path="/buyer/signup" element={<Animate page={<Signup />} />} />
         <Route path="/buyer/forgot-password" element={<Animate page={<ForgotPassword />} />} />
 
         <Route path="/buyer/homepage" element={<BuyerProtectedRoute><Animate page={<Homepage />} /></BuyerProtectedRoute>} />
@@ -141,8 +135,6 @@ const AppRoutes = () => {
 
 
         {/* Seller Routes */}
-        <Route path="/seller/signin" element={<Animate page={<SellerSignin />} />} />
-        <Route path="/seller/signup" element={<Animate page={<SellerSignup />} />} />
         <Route path="/seller/forgot-password" element={<Animate page={<SellerForgotPassword />} />} />
 
         <Route path="/seller/dashboard" element={<SellerProtectedRoute><Animate page={<Layout Body={<SellerDashboard />} />} /></SellerProtectedRoute>} />
@@ -153,6 +145,9 @@ const AppRoutes = () => {
         <Route path="/seller/Inbox" element={<SellerProtectedRoute><Animate page={<Layout Body={<Inbox />} />} /></SellerProtectedRoute>} />
         <Route path="/seller/trade" element={<SellerProtectedRoute><Animate page={<Layout Body={<Trade />} />} /></SellerProtectedRoute>} />
         <Route path="/seller/Product-Feedback" element={<SellerProtectedRoute><Animate page={<Layout Body={<Feedback />} />} /></SellerProtectedRoute>} />
+        <Route path="/seller/inventory" element={<SellerProtectedRoute><Animate page={<Layout Body={<Inventory />} />} /></SellerProtectedRoute>} />
+
+
 
 
         {/* Seller settings with default layout */}

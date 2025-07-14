@@ -50,6 +50,7 @@ const ProductPage: React.FC = () => {
             category: response.data.category,
             hsnCode: response.data.hsnCode,
             price: parseFloat(response.data.price) || 0,
+            currency: response.data.currency,
             sku: response.data.sku,
             onSale: response.data.onSale || false,
             discount: parseFloat(response.data.discount) || 0,
@@ -215,10 +216,10 @@ const ProductPage: React.FC = () => {
               {/* Price */}
               <div className="space-y-2">
                 <div className="flex items-baseline gap-3">
-                  <span className="text-3xl font-bold text-gray-900">₹{(product.salePrice) ? product.salePrice.toLocaleString() : product.price.toLocaleString()}</span>
+                  <span className="text-3xl font-bold text-gray-900">{(product.salePrice) ?  product.salePrice.toLocaleString() + ' ' + product.currency :  product.price.toLocaleString() + ' ' + product.currency}</span>
                   {product.onSale && (
                     <>
-                      <span className="text-xl text-gray-500 line-through">₹{product.price.toLocaleString()}</span>
+                      <span className="text-xl text-gray-500 line-through">{product.price.toLocaleString() + ' ' + product.currency}</span>
                       <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm font-medium">
                         {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
                       </span>

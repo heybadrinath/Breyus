@@ -8,6 +8,7 @@ export interface Product {
   category: string;
   hsnCode: string;
   price: number;
+  currency: string;
   sku: string;
   onSale: boolean;
   discount: number;
