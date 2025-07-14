@@ -62,8 +62,8 @@ interface ProductRowProp {
             </td>
             <td className="px-6 py-4 text-sm font-medium">
                 <div className="flex items-center gap-2">
-                    <a
-                        href="/seller/product/123"
+                    <button
+                        onClick={onEyeClick} 
                         className="text-blue-600 hover:text-blue-900 transition-colors duration-200"
                         title="View Details"
                     >
@@ -86,9 +86,9 @@ interface ProductRowProp {
                                 d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                             />
                         </svg>
-                    </a>
-                    <a
-                        href="/seller/add-products?id=123"
+                    </button>
+                    <button
+                        onClick={onEditClick}
                         className="text-gray-600 hover:text-gray-900 transition-colors duration-200"
                         title="Edit Product"
                     >
@@ -105,8 +105,9 @@ interface ProductRowProp {
                                 d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                             />
                         </svg>
-                    </a>
+                    </button>
                     <button
+                        onClick={onDeleteClick}
                         className="text-red-600 hover:text-red-900 transition-colors duration-200"
                         title="Delete Product"
                     >

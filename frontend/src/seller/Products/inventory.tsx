@@ -174,7 +174,7 @@ export const Inventory: React.FC = () => {
                                     <ProductRow
                                         imageUrl="http://localhost:5000/uploads/product-images/1752429680987-grapes-2.webp"
                                         productName="Grapes"
-                                        productDescription="Grapes description"
+                                        productDescription="Grapes Description"
                                         hsn="0806"
                                         stock="10000"
                                         stockUnit="tons"
@@ -186,6 +186,7 @@ export const Inventory: React.FC = () => {
                                         category="Fruits"
                                         status="In Stock"
                                     />
+                                   
 
                                 </tbody>
                             </table>
