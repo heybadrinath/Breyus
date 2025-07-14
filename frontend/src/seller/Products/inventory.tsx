@@ -1,16 +1,47 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {ProductRow} from "../Products/components/productRowInventory";
+import { ProductRow } from "../Products/components/productRowInventory";
+import { getUserProducts } from "../../services/products.service";
 
 export const Inventory: React.FC = () => {
-
     const navigate = useNavigate();
 
+    const [products, setProducts] = useState<any[]>([]);
     const [totalProducts, setTotalProducts] = useState(0);
-    const [inStockProducts, setInStockProducts] = useState(0)
-    const [lowStockProducts, setLowStockProducts] = useState(0)
-    const [outOfStockProducts, setOutOfStockProducts] = useState(0)
+    const [inStockProducts, setInStockProducts] = useState(0);
+    const [lowStockProducts, setLowStockProducts] = useState(0);
+    const [outOfStockProducts, setOutOfStockProducts] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
+    useEffect(() => {
+        const fetchProducts = async () => {
+            setLoading(true);
+            setError("");
+            try {
+                const response = await getUserProducts();
+                const data = response.data || [];
+                setProducts(data);
+                setTotalProducts(data.length);
+                // Calculate stock stats
+                let inStock = 0, lowStock = 0, outOfStock = 0;
+                data.forEach((product: any) => {
+                    const stock = parseFloat(product.stock);
+                    if (stock > 10) inStock++;
+                    else if (stock > 0) lowStock++;
+                    else outOfStock++;
+                });
+                setInStockProducts(inStock);
+                setLowStockProducts(lowStock);
+                setOutOfStockProducts(outOfStock);
+            } catch (err: any) {
+                setError(err.message || "Failed to fetch products");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProducts();
+    }, []);
 
     return (
         <div className="min-h-screen bg-gray-50 p-6">
@@ -27,7 +58,6 @@ export const Inventory: React.FC = () => {
                         <button onClick={() => navigate('/seller/add-products')} className="bg-black hover:bg-gray-800 text-white px-6 py-2 w-fit h-fit ml-auto my-auto font-medium transition-colors duration-200 rounded-lg">
                             New Product
                         </button>
-
                     </div>
 
                     {/* Stats */}
@@ -118,37 +148,36 @@ export const Inventory: React.FC = () => {
       */}
                 </div>
 
-                {/* Error Message (Hidden by default in static version) */}
-                {/*
-    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-      An error occurred.
-    </div>
-    */}
+                {/* Error Message */}
+                {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                        {error}
+                    </div>
+                )}
 
                 {/* Products Table */}
                 <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                    {/* Conditional rendering for no products - uncomment and adjust when integrating */}
-                    {/*       
-      <div className="text-center py-16">
-        <div className="text-gray-400 text-6xl mb-4">📦</div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">No Products Found</h3>
-        <p className="text-gray-600 mb-6">
-          You haven't added any products yet. Start by adding your first product!
-        </p>
-        <a
-          href='/seller/add-products?new=true'
-          className="bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-none font-medium transition-colors duration-200 inline-block"
-        >
-          New Product
-        </a>
-      </div>
-      */}
-                    <>
+                    {loading ? (
+                        <div className="text-center py-16 text-gray-500">Loading...</div>
+                    ) : products.length === 0 ? (
+                        <div className="text-center py-16">
+                            <div className="text-gray-400 text-6xl mb-4">📦</div>
+                            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Products Found</h3>
+                            <p className="text-gray-600 mb-6">
+                                You haven't added any products yet. Start by adding your first product!
+                            </p>
+                            <a
+                                href='/seller/add-products?new=true'
+                                className="bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-none font-medium transition-colors duration-200 inline-block"
+                            >
+                                New Product
+                            </a>
+                        </div>
+                    ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead className="bg-gray-50">
                                     <tr>
-
                                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 uppercase tracking-wider">
                                             Product
                                         </th>
@@ -170,73 +199,80 @@ export const Inventory: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    
-                                    <ProductRow
-                                        imageUrl="http://localhost:5000/uploads/product-images/1752429680987-grapes-2.webp"
-                                        productName="Grapes"
-                                        productDescription="Grapes Description"
-                                        hsn="0806"
-                                        stock="10000"
-                                        stockUnit="tons"
-                                        moq="100"
-                                        moqUnit="tons"
-                                        price="100"
-                                        onSalePrice="80"
-                                        currency="INR"
-                                        category="Fruits"
-                                        status="In Stock"
-                                    />
-                                   
-
+                                    {products.map((product: any) => {
+                                        // Determine status
+                                        let status = "";
+                                        const stock = parseFloat(product.stock);
+                                        if (stock > 10) status = "In Stock";
+                                        else if (stock > 0) status = "Low Stock";
+                                        else status = "Out of Stock";
+                                        return (
+                                            <ProductRow
+                                                key={product._id || product.id}
+                                                imageUrl={product.productImages && product.productImages.length > 0 ? process.env.REACT_APP_BACKEND_URL + '/' +product.productImages[0] : undefined}
+                                                productName={product.name}
+                                                productDescription={product.description}
+                                                hsn={product.hsnCode}
+                                                stock={product.stock}
+                                                stockUnit={product.stockUnit}
+                                                moq={product.moq}
+                                                moqUnit={product.moqUnit}
+                                                price={product.price}
+                                                onSalePrice={product.salePrice}
+                                                currency={product.currency}
+                                                category={product.category}
+                                                status={status}
+                                            />
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
-
-                        {/* Pagination */}
-                        <div className="bg-white px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="text-sm text-gray-700">
-                                    Showing 1 to 5 of 100 products
-                                </div>
-                                <select className="border border-gray-300 rounded px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-                                    <option value={5}>5 per page</option>
-                                    <option value={10}>10 per page</option>
-                                    <option value={25}>25 per page</option>
-                                    <option value={50}>50 per page</option>
-                                </select>
+                    )}
+                    {/* Pagination */}
+                    <div className="bg-white px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="text-sm text-gray-700">
+                                Showing 1 to 5 of {totalProducts} products
                             </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    disabled
-                                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    Previous
-                                </button>
-                                <div className="flex items-center gap-1">
-                                    <button className="px-3 py-2 border text-sm font-medium rounded-md border-blue-500 bg-blue-50 text-blue-600">
-                                        1
-                                    </button>
-                                    <button className="px-3 py-2 border text-sm font-medium rounded-md border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
-                                        2
-                                    </button>
-                                    <button className="px-3 py-2 border text-sm font-medium rounded-md border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
-                                        3
-                                    </button>
-                                    <button className="px-3 py-2 border text-sm font-medium rounded-md border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
-                                        4
-                                    </button>
-                                    <button className="px-3 py-2 border text-sm font-medium rounded-md border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
-                                        5
-                                    </button>
-                                </div>
-                                <button
-                                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    Next
-                                </button>
-                            </div>
+                            <select className="border border-gray-300 rounded px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                                <option value={5}>5 per page</option>
+                                <option value={10}>10 per page</option>
+                                <option value={25}>25 per page</option>
+                                <option value={50}>50 per page</option>
+                            </select>
                         </div>
-                    </>
+                        <div className="flex items-center gap-2">
+                            <button
+                                disabled
+                                className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Previous
+                            </button>
+                            <div className="flex items-center gap-1">
+                                <button className="px-3 py-2 border text-sm font-medium rounded-md border-blue-500 bg-blue-50 text-blue-600">
+                                    1
+                                </button>
+                                <button className="px-3 py-2 border text-sm font-medium rounded-md border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
+                                    2
+                                </button>
+                                <button className="px-3 py-2 border text-sm font-medium rounded-md border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
+                                    3
+                                </button>
+                                <button className="px-3 py-2 border text-sm font-medium rounded-md border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
+                                    4
+                                </button>
+                                <button className="px-3 py-2 border text-sm font-medium rounded-md border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
+                                    5
+                                </button>
+                            </div>
+                            <button
+                                className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
