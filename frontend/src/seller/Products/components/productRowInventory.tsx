@@ -32,10 +32,10 @@ interface ProductRowProp {
                         />
                     </div>
                     <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900 line-clamp-2">
+                        <div className="text-sm font-medium text-gray-900 line-clamp">
                             {productName}
                         </div>
-                        <div className="text-sm text-gray-500 line-clamp-1">
+                        <div className="text-sm text-gray-500 max-w-[250px] line-clamp-1">
                             {productDescription}
                         </div>
                         <div className="text-xs text-gray-400">{(hsn) ? `HSN: ${hsn}` : ''}</div>
