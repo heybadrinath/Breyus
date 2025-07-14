@@ -21,6 +21,7 @@ export interface Product {
   productImage: string;
   images: string[];
   primaryImage: string;
+  testReport: string;
   createdAt: Date;
   updatedAt: Date;
   moq: number;

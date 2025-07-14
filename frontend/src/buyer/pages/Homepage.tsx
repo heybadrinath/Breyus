@@ -71,6 +71,7 @@ const Homepage: React.FC = () => {
         productImage: item.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${item.productImages[0]}` : '',
         images: item.productImages ? item.productImages.map((img: string) => `${process.env.REACT_APP_BACKEND_URL}/${img}`) : [],
         primaryImage: item.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${item.productImages[0]}` : '',
+        testReport: item.testReport? `${process.env.REACT_APP_BACKEND_URL}/${item.testReport}`: '',
         createdAt: new Date(item.createdAt),
         updatedAt: new Date(item.updatedAt),
         moq: item.moq,

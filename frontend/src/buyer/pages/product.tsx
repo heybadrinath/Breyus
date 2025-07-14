@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Star, Heart, Share2, MessageCircle, ShoppingCart, Package, Shield, Truck, X } from "lucide-react";
 import { getProductById, Product } from "../../services/products.service";
+import TestReport from "../../buyer/components/webUrlframe";
 
 const ProductPage: React.FC = () => {
   const [product, setProduct] = useState<Product | null>(null);
@@ -16,6 +17,8 @@ const ProductPage: React.FC = () => {
     type: 'success' | 'error' | 'info';
     message: string;
   } | null>(null);
+    const [showTestReport, setShowTestReport] = useState(false)
+  
   const [showTradeTerms, setShowTradeTerms] = useState(false);
 
   useEffect(() => {
@@ -61,6 +64,7 @@ const ProductPage: React.FC = () => {
             productImage: response.data.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${response.data.productImages[0]}` : '',
             images: response.data.productImages ? response.data.productImages.map((img: string) => `${process.env.REACT_APP_BACKEND_URL}/${img}`) : [],
             primaryImage: response.data.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${response.data.productImages[0]}` : '',
+            testReport: response.data.testReports?.[0] ?`${process.env.REACT_APP_BACKEND_URL}/${response.data.testReports[0]}`: '',
             createdAt: new Date(response.data.createdAt),
             updatedAt: new Date(response.data.updatedAt),
             moq: response.data.moq,
@@ -84,7 +88,7 @@ const ProductPage: React.FC = () => {
 
     fetchProduct();
   }, []);
-
+  console.log(product?.testReport)
   // Auto-hide notifications after 5 seconds
   useEffect(() => {
     if (notification) {
@@ -211,7 +215,7 @@ const ProductPage: React.FC = () => {
               {/* Price */}
               <div className="space-y-2">
                 <div className="flex items-baseline gap-3">
-                  <span className="text-3xl font-bold text-gray-900">₹{(product.salePrice)?product.salePrice.toLocaleString(): product.price.toLocaleString()}</span>
+                  <span className="text-3xl font-bold text-gray-900">₹{(product.salePrice) ? product.salePrice.toLocaleString() : product.price.toLocaleString()}</span>
                   {product.onSale && (
                     <>
                       <span className="text-xl text-gray-500 line-through">₹{product.price.toLocaleString()}</span>
@@ -221,9 +225,17 @@ const ProductPage: React.FC = () => {
                     </>
                   )}
                 </div>
-                {product.moq && (
-                  <p className="text-sm text-gray-600">Minimum Order Quantity: {product.moq.toString() + ' ' + product.moqUnit}</p>
-                )}
+
+                {/* moq and stock  */}
+                <div className="flex">
+                  {product.moq && (
+                    <p className="text-sm text-gray-600">Minimum Order Quantity: {product.moq.toString() + ' ' + product.moqUnit}</p>
+                  )}
+                  <span className="text-sm text-gray-500 ml-auto">
+                    Stock: {product.stock > 0 ? `${product.stock + ' ' + product.stockUnit} available` : 'Out of stock'}
+                  </span>
+                </div>
+
               </div>
 
 
@@ -236,27 +248,71 @@ const ProductPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Quantity Selector */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Stock</label>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-10 h-10 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50"
-                  >
-                    -
-                  </button>
-                  <span className="text-lg font-medium min-w-[3rem] text-center">{quantity}</span>
-                  <button
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="w-10 h-10 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50"
-                  >
-                    +
-                  </button>
-                  <span className="text-sm text-gray-500 ml-2">
-                    {product.stock > 0 ? `${product.stock + ' ' + product.stockUnit} available` : 'Out of stock'}
-                  </span>
+
+              {/* Quantity  and sample*/}
+              <label className="block text-sm font-medium text-gray-700">Quantity</label>
+              <div className="flex gap-5">
+                <div>
+
+                  <div className="form-field flex flex-row border-2 rounded-lg">
+                    <input
+                      type="text"
+                      placeholder="Quantity"
+                      className="w-full !border-0 !rounded-r-none"
+                      // value={}
+                      name="quantity"
+                    // onChange={}
+                    />
+                    <select
+                      className="!w-fit bg-transparent !rounded-l-none !px-2 !border-0"
+                      name="quantityUnit"
+                    // value={}
+                    // onChange={}
+                    >
+                      <option disabled value={""}>Unit</option>
+                      <option value="pieces">Pieces</option>
+                      <option value="boxes">Boxes</option>
+                      <option value="cartons">Cartons</option>
+                      <option value="kg">Kilograms (kg)</option>
+                      <option value="grams">Grams (g)</option>
+                      <option value="liters">Liters (L)</option>
+                      <option value="milliliters">Milliliters (mL)</option>
+                      <option value="meters">Meters (m)</option>
+                      <option value="centimeters">Centimeters (cm)</option>
+                      <option value="inches">Inches (in)</option>
+                      <option value="yards">Yards (yd)</option>
+                      <option value="sets">Sets</option>
+                      <option value="dozens">Dozens</option>
+                      <option value="pallets">Pallets</option>
+                      <option value="square_meters">Square Meters (m²)</option>
+                      <option value="square_feet">Square Feet (ft²)</option>
+                      <option value="cubic_meters">Cubic Meters (m³)</option>
+                      <option value="cubic_feet">Cubic Feet (ft³)</option>
+                      <option value="tons">Tons</option>
+                      <option value="gallons">Gallons</option>
+                      <option value="pounds">Pounds (lbs)</option>
+                      <option value="cubic_inches">Cubic Inches (in³)</option>
+                      <option value="bottles">Bottles</option>
+                      <option value="packs">Packs</option>
+                      <option value="bags">Bags</option>
+                      <option value="sheets">Sheets</option>
+                      <option value="rolls">Rolls</option>
+                      <option value="spools">Spools</option>
+                      <option value="pairs">Pairs</option>
+                      <option value="containers">Containers</option>
+                      <option value="pieces_per_box">Pieces per Box</option>
+                      <option value="feet">Feet (ft)</option>
+                      <option value="cubic_yards">Cubic Yards (yd³)</option>
+                    </select>
+                  </div>
                 </div>
+
+                {/* sample input  */}
+                <div className=" flex h-fit w-[35%] px-3 py-3  border-2 rounded-lg">
+                  <input type="checkbox" name="sample" value="sample" />
+                  <label className="ml-2" htmlFor="sample"> Sample only</label>
+                </div>
+
               </div>
 
               {/* Action Buttons */}
@@ -265,12 +321,12 @@ const ProductPage: React.FC = () => {
 
                   disabled={isAddingToCart || product.stock === 0}
                   className={`w-full py-3 px-6 rounded-lg text-lg font-semibold transition-all ${false
-                      ? 'bg-green-500 text-white cursor-default'
-                      : product.stock === 0
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : isAddingToCart
-                          ? 'bg-gray-400 text-white cursor-not-allowed'
-                          : 'bg-black text-white hover:bg-gray-800'
+                    ? 'bg-green-500 text-white cursor-default'
+                    : product.stock === 0
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : isAddingToCart
+                        ? 'bg-gray-400 text-white cursor-not-allowed'
+                        : 'bg-black text-white hover:bg-gray-800'
                     }`}
                 >
                   {isAddingToCart ? (
@@ -293,10 +349,10 @@ const ProductPage: React.FC = () => {
                   )}
                 </button>
 
-
+                
                 <button
                   className="w-full py-3 px-6 border border-gray-300 text-gray-700 rounded-lg font-semibold transition"
-                  onClick={() => { }}
+                  onClick={() => { setShowTestReport(true)}}
                 >
                   View Test Reports
                 </button>
@@ -313,8 +369,8 @@ const ProductPage: React.FC = () => {
                   <button
                     // onClick={handleToggleWishlist}
                     className={`flex-1 py-2 px-4 rounded-lg border transition-all ${isWishlisted
-                        ? 'border-red-200 bg-red-50 text-red-700'
-                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                      ? 'border-red-200 bg-red-50 text-red-700'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                       }`}
                   >
                     <Heart className={`inline w-4 h-4 mr-2 ${isWishlisted ? 'fill-red-500' : ''}`} />
@@ -367,10 +423,10 @@ const ProductPage: React.FC = () => {
         {/* Notifications */}
         {notification && (
           <div className={`fixed bottom-4 right-4 max-w-md p-4 rounded-lg shadow-lg animate-bounce z-50 ${notification.type === 'success'
-              ? 'bg-green-500 text-white'
-              : notification.type === 'error'
-                ? 'bg-red-500 text-white'
-                : 'bg-blue-500 text-white'
+            ? 'bg-green-500 text-white'
+            : notification.type === 'error'
+              ? 'bg-red-500 text-white'
+              : 'bg-blue-500 text-white'
             }`}>
             <div className="flex items-start">
               <div className="flex-shrink-0">
@@ -402,6 +458,11 @@ const ProductPage: React.FC = () => {
         )}
 
         {/* Trade Terms Modal */}
+          <TestReport onClose={() => setShowTestReport(false)} url={product.testReport} show={showTestReport}/>
+
+        {/* View Test Reports model */}
+        
+
 
       </div>
     </div>
