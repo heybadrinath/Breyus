@@ -5,7 +5,7 @@ import ProductCard from '../components/ProductCard';
 import Banner from '../components/Banner';
 import Navbar from '../components/navbar';
 import { getProductsWithPagination, PaginationParams } from '../../services/products.service';
-import { Product } from '../../types/product';
+import {Product} from '../../services/products.service';
 
 const Homepage: React.FC = () => {
 

@@ -1,5 +1,33 @@
 const BACKEND_END_POINT = process.env.REACT_APP_BACKEND_URL + "/products";
 
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  detailedDescription: string;
+  category: string;
+  hsnCode: string;
+  price: number;
+  sku: string;
+  onSale: boolean;
+  discount: number;
+  salePrice: number;
+  costOfGoods: number;
+  profit: number;
+  margin: number;
+  tags: string[];
+  quantity: number;
+  productImage: string;
+  images: string[];
+  primaryImage: string;
+  createdAt: Date;
+  updatedAt: Date;
+  moq: number;
+  preciseDescription: string;
+  sellerName: string;
+  companyName: string;
+}
+
 export interface CreateProductData {
   // Product information
   name: string;
