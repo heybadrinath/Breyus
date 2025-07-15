@@ -80,13 +80,14 @@ export const AddProduct = () => {
 
 
   // preferred inco terms
+
   type Trader = 'Buyer' | 'Seller';
-  
+
   // Define all possible incoterms
   type IncotermType = 'EXW' | 'FCA' | 'FAS' | 'FOB' | 'CFR' | 'CIF' | 'CPT' | 'CIP' | 'DAP' | 'DPU' | 'DDP';
-  
+
   // Define all possible row names
-  type RowName = 
+  type RowName =
     | 'Charges/Fees'
     | 'Transfer of risk'
     | 'Commercial Invoice'
@@ -110,10 +111,10 @@ export const AddProduct = () => {
   interface IncotermsState {
     // The currently selected incoterm column
     selectedIncoterm: IncotermType | '';
-    
+
     // Data for only the selected incoterm (not all incoterms)
     selectedIncotermData: IncotermRowData;
-    
+
     // Default values for each incoterm (for reference)
     defaults: Record<IncotermType, IncotermRowData>;
   }
@@ -121,7 +122,7 @@ export const AddProduct = () => {
   // Initialize the default values for each incoterm
   const defaultIncotermValues: Record<IncotermType, IncotermRowData> = {
     EXW: {
-    
+
       'Origin Terminal Handling': 'Buyer',
       'Insurance': 'Buyer',
       'Carriage Charges': 'Buyer',
@@ -210,7 +211,7 @@ export const AddProduct = () => {
           setErrorMessage("Description is required.");
           return false;
         }
-        if(!productInformation.detailedDescription) {
+        if (!productInformation.detailedDescription) {
           setErrorMessage("Detailed Description is required. ")
           return false;
         }
@@ -255,6 +256,38 @@ export const AddProduct = () => {
           return false;
         }
         setErrorMessage(''); // Clear error if all fields are valid
+        return true;
+
+      case 4: // preferred trade terms 
+        if (!(tradeTerms.revenueMin && tradeTerms.revenueMax && tradeTerms.currency && tradeTerms.unit)) {
+          setErrorMessage("All the revenue fields are required.")
+          return false;
+        }
+        if (!tradeTerms.yearsTrade) {
+          setErrorMessage("How many potential years you want to trade with buyer? is required.")
+          return false;
+        }
+        if (!tradeTerms.yearsTrade) {
+          setErrorMessage("How many potential years you want to trade with buyer? is required.")
+          return false;
+        }
+        if (!tradeTerms.marketYears) {
+          setErrorMessage("How long have you been in the market? is required");
+          return false;
+        }
+        if (!tradeTerms.sellerMarketYears) {
+          setErrorMessage("How long you want to have your buyer to be in the market? is required");
+          return false;
+        }
+        setErrorMessage('');
+        return true
+
+        case 5: // preferred Incoterms
+        if(!incotermsState.selectedIncoterm) {
+          setErrorMessage("Select Your preferred incoterm.")
+          return false;
+        }
+        setErrorMessage('');
         return true;
 
       default:
