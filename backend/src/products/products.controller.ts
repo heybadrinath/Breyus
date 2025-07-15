@@ -74,20 +74,7 @@ export class ProductsController {
 
             // Handle file uploads if files are provided
             if (files && files.length > 0) {
-                const productImages: string[] = [];
-                const testReports: string[] = [];
-
-                for (const file of files) {
-                    if (file.mimetype.startsWith('image/')) {
-                        const imagePaths = await this.productsService.uploadFiles([file], 'product-images');
-                        productImages.push(...imagePaths);
-                    } else if (file.mimetype === 'application/pdf') {
-                        const reportPaths = await this.productsService.uploadFiles([file], 'test-reports');
-                        testReports.push(...reportPaths);
-                    }
-                }
-
-                // Add file paths to the DTO
+                const { productImages, testReports } = await this.productsService.uploadFiles(files);
                 createProductDto.productImages = productImages;
                 createProductDto.testReports = testReports;
             }

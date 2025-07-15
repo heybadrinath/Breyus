@@ -34,10 +34,14 @@ const MediaUpload: React.FC<MediaUploadProps> = ({productImages, testReports, on
     
     const files = e.dataTransfer.files;
     if (files.length) {
-      const fileArray = Array.from(files);
+      let fileArray = Array.from(files);
       if (type === 'product') {
+        fileArray = fileArray.filter(file => file.type.startsWith('image/'));
+        fileArray = fileArray.map(file => new File([file], `product-images-${file.name}`, { type: file.type }));
         onProductImagesChange([...productImages, ...fileArray]);
       } else {
+        fileArray = fileArray.filter(file => file.type.startsWith('image/') || file.type === 'application/pdf');
+        fileArray = fileArray.map(file => new File([file], `test-reports-${file.name}`, { type: file.type }));
         onTestReportsChange([...testReports, ...fileArray]);
       }
     }
@@ -47,10 +51,18 @@ const MediaUpload: React.FC<MediaUploadProps> = ({productImages, testReports, on
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'product' | 'test') => {
     const files = e.target.files;
     if (files) {
-      const fileArray = Array.from(files);
+      let fileArray = Array.from(files);
       if (type === 'product') {
+        // Only allow images
+        fileArray = fileArray.filter(file => file.type.startsWith('image/'));
+        // Rename files
+        fileArray = fileArray.map(file => new File([file], `product-images-${file.name}`, { type: file.type }));
         onProductImagesChange([...productImages, ...fileArray]);
       } else {
+        // Allow images and PDFs
+        fileArray = fileArray.filter(file => file.type.startsWith('image/') || file.type === 'application/pdf');
+        // Rename files
+        fileArray = fileArray.map(file => new File([file], `test-reports-${file.name}`, { type: file.type }));
         onTestReportsChange([...testReports, ...fileArray]);
       }
     }
@@ -61,15 +73,19 @@ const MediaUpload: React.FC<MediaUploadProps> = ({productImages, testReports, on
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.multiple = true;
-    fileInput.accept = type === 'product' ? 'image/*' : '.pdf,.jpg,.jpeg';
+    fileInput.accept = type === 'product' ? 'image/*' : '.pdf,image/*';
     
     fileInput.onchange = (event) => {
       if (event.target && event.target instanceof HTMLInputElement && event.target.files) {
         const files = event.target.files;
-        const fileArray = Array.from(files);
+        let fileArray = Array.from(files);
         if (type === 'product') {
+          fileArray = fileArray.filter(file => file.type.startsWith('image/'));
+          fileArray = fileArray.map(file => new File([file], `product-images-${file.name}`, { type: file.type }));
           onProductImagesChange([...productImages, ...fileArray]);
         } else {
+          fileArray = fileArray.filter(file => file.type.startsWith('image/') || file.type === 'application/pdf');
+          fileArray = fileArray.map(file => new File([file], `test-reports-${file.name}`, { type: file.type }));
           onTestReportsChange([...testReports, ...fileArray]);
         }
       }

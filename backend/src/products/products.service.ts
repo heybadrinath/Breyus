@@ -67,29 +67,34 @@ export class ProductsService {
     return newProduct.save();
   }
 
-  async uploadFiles(files: Express.Multer.File[], folder: string): Promise<string[]> {
-    const uploadDir = path.join(process.cwd(), 'uploads', folder);
-    
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    const filePaths: string[] = [];
+  async uploadFiles(files: Express.Multer.File[]): Promise<{ productImages: string[], testReports: string[] }> {
+    const productImages: string[] = [];
+    const testReports: string[] = [];
 
     for (const file of files) {
+      let folder = '';
+      if (file.originalname.includes('product-images')) {
+        folder = 'product-images';
+      } else if (file.originalname.includes('test-reports')) {
+        folder = 'test-reports';
+      } else {
+        continue; // skip files with no valid identifier
+      }
+      const uploadDir = path.join(process.cwd(), 'uploads', folder);
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
       const fileName = `${Date.now()}-${file.originalname}`;
       const filePath = path.join(uploadDir, fileName);
-      
-      // Write file to disk
       fs.writeFileSync(filePath, file.buffer);
-      
-      // Store relative path for database
       const relativePath = `uploads/${folder}/${fileName}`;
-      filePaths.push(relativePath);
+      if (folder === 'product-images') {
+        productImages.push(relativePath);
+      } else if (folder === 'test-reports') {
+        testReports.push(relativePath);
+      }
     }
-
-    return filePaths;
+    return { productImages, testReports };
   }
 
   async getProductsByUser(userId: string): Promise<Product[]> {
