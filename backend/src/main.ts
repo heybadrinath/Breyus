@@ -29,10 +29,12 @@ async function bootstrap() {
   
   // Serve static files from uploads directory
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-    prefix: '/uploads/',
+    prefix: '/backend/uploads/',
   });
   
-  await app.listen(process.env.PORT || 5000);
+  await app.setGlobalPrefix('backend')
+
+  await app.listen(process.env.PORT || 5000); 
   const appName = process.env.APP_NAME;
   console.log(`${appName} is running on port ${process.env.PORT || 5000}`);
 }
