@@ -6,6 +6,32 @@ import { login, validateOtp } from '../services/login.service';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  // Add this useEffect to check login status on mount
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      try {
+        const response = await fetch(
+          process.env.REACT_APP_BACKEND_URL + "/auth/validate-cookie",
+          { credentials: "include" }
+        );
+        if (response.ok) {
+          const data = await response.json();
+          if (data.valid) {
+            if (data.role === "Seller and Buyer") {
+              navigate("/select-role");
+            } else if (data.role === "Buyer") {
+              navigate("/buyer/homepage");
+            } else if (data.role === "Seller") {
+              navigate("/seller/dashboard");
+            }
+          }
+        }
+      } catch (err) {
+        // Not logged in or error, do nothing
+      }
+    };
+    checkLoginStatus();
+  }, [navigate]);
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
