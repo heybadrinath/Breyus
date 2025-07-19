@@ -35,7 +35,6 @@ import Wishlist from "../buyer/pages/Wishlist";
 import CartPage from "../buyer/pages/Cartpage";
 import BuyerTrade from "../buyer/pages/trade";
 import ProductPage from "../buyer/pages/product";
-import OrderRequestQuantity from "../buyer/pages/order_request_quantity";
 import BuyerInformation from "../buyer/pages/buyer_information";
 import BuyerAddress from "../buyer/pages/buyer_address";
 import PurchaseRequest from "../buyer/pages/purchase-request";
@@ -122,7 +121,6 @@ const AppRoutes = () => {
         <Route path="/buyer/trade" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<BuyerTrade />} />} /></BuyerProtectedRoute>} />
         <Route path="/buyer/buyer-address" element={<BuyerProtectedRoute><Animate page={<BuyerAddress />} /></BuyerProtectedRoute>} />
         <Route path="/buyer/product-page" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<ProductPage />} />} /></BuyerProtectedRoute>} />
-        <Route path="/buyer/product-request-quantity" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<OrderRequestQuantity />} />} /></BuyerProtectedRoute>} />
         <Route path="/buyer/buyer-information" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<BuyerInformation />} />} /></BuyerProtectedRoute>} />
         <Route path="/buyer/purchase-request" element={<BuyerProtectedRoute><Animate page={<PurchaseRequest />} /></BuyerProtectedRoute>} />
         <Route path="/buyer/purchase-request-success" element={<BuyerProtectedRoute><Animate page={<PurchaseRequestSuccess />} /></BuyerProtectedRoute>} />
