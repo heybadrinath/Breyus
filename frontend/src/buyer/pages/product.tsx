@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Star, Heart, Share2, MessageCircle, ShoppingCart, Package, Shield, Truck, X } from "lucide-react";
+import { Star, Heart, Share2, MessageCircle, ShoppingCart, Package, Shield, Truck, X, Copy, } from "lucide-react";
 import { getProductById, Product } from "../../services/products.service";
 import TestReport from "../../buyer/components/webUrlframe";
 import { Incoterms } from "../../seller/Products/components/incoterms";
+
+// import social media icons
+import fb from "../../assets/social-icons/fb.svg";
+import ln from "../../assets/social-icons/ln.svg";
+import whatsapp from "../../assets/social-icons/whatsapp.svg";
+import x_twitter from "../../assets/social-icons/x.svg";
 
 const ProductPage: React.FC = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState ('');
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -18,9 +24,13 @@ const ProductPage: React.FC = () => {
     type: 'success' | 'error' | 'info';
     message: string;
   } | null>(null);
-  const [showTestReport, setShowTestReport] = useState(false)
+  const [showTestReport, setShowTestReport] = useState(false);
 
   const [showTradeTerms, setShowTradeTerms] = useState(false);
+
+
+
+  const [showShare, setShowShare] = useState(false);
 
   // incoterms state 
   type Trader = 'Buyer' | 'Seller';
@@ -151,7 +161,6 @@ const ProductPage: React.FC = () => {
           return;
         }
 
-        console.log('Fetching product with ID:', productId);
 
         const response = await getProductById(productId);
 
@@ -203,7 +212,7 @@ const ProductPage: React.FC = () => {
             defaults: response.data.defaults
           };
 
-          console.log(incotermsState)
+
 
 
 
@@ -221,7 +230,7 @@ const ProductPage: React.FC = () => {
 
     fetchProduct();
   }, []);
-  
+
   // Auto-hide notifications after 5 seconds
   useEffect(() => {
     if (notification) {
@@ -237,7 +246,7 @@ const ProductPage: React.FC = () => {
   };
 
 
-
+  
 
 
 
@@ -290,6 +299,17 @@ const ProductPage: React.FC = () => {
 
   const images = product.images && product.images.length > 0 ? product.images : [product.productImage || '/placeholder-product.svg'];
 
+  const handleQuantityValidation = () => {
+    if (Number(quantity) < product.moq) {
+      setNotification({ type: 'error', message: `Minimum order quantity is ${product.moq} ${product.moqUnit}` });
+      return;
+    }
+    if (Number(quantity) > product.stock) {
+      setNotification({ type: 'error', message: `Only ${product.stock} ${product.stockUnit} available in stock.` });
+      return;
+    }
+    // If valid, you can proceed with add to cart logic here
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -389,54 +409,14 @@ const ProductPage: React.FC = () => {
 
                   <div className="form-field flex flex-row border-2 rounded-lg">
                     <input
-                      type="text"
+                      type="number"
                       placeholder="Quantity"
                       className="w-full !border-0 !rounded-r-none"
-                      // value={}
+                      value={quantity}
+                      onChange={(event) => { setQuantity(event.target.value) }}
                       name="quantity"
-                    // onChange={}
                     />
-                    <select
-                      className="!w-fit bg-transparent !rounded-l-none !px-2 !border-0"
-                      name="quantityUnit"
-                    // value={}
-                    // onChange={}
-                    >
-                      <option disabled value={""}>Unit</option>
-                      <option value="pieces">Pieces</option>
-                      <option value="boxes">Boxes</option>
-                      <option value="cartons">Cartons</option>
-                      <option value="kg">Kilograms (kg)</option>
-                      <option value="grams">Grams (g)</option>
-                      <option value="liters">Liters (L)</option>
-                      <option value="milliliters">Milliliters (mL)</option>
-                      <option value="meters">Meters (m)</option>
-                      <option value="centimeters">Centimeters (cm)</option>
-                      <option value="inches">Inches (in)</option>
-                      <option value="yards">Yards (yd)</option>
-                      <option value="sets">Sets</option>
-                      <option value="dozens">Dozens</option>
-                      <option value="pallets">Pallets</option>
-                      <option value="square_meters">Square Meters (m²)</option>
-                      <option value="square_feet">Square Feet (ft²)</option>
-                      <option value="cubic_meters">Cubic Meters (m³)</option>
-                      <option value="cubic_feet">Cubic Feet (ft³)</option>
-                      <option value="tons">Tons</option>
-                      <option value="gallons">Gallons</option>
-                      <option value="pounds">Pounds (lbs)</option>
-                      <option value="cubic_inches">Cubic Inches (in³)</option>
-                      <option value="bottles">Bottles</option>
-                      <option value="packs">Packs</option>
-                      <option value="bags">Bags</option>
-                      <option value="sheets">Sheets</option>
-                      <option value="rolls">Rolls</option>
-                      <option value="spools">Spools</option>
-                      <option value="pairs">Pairs</option>
-                      <option value="containers">Containers</option>
-                      <option value="pieces_per_box">Pieces per Box</option>
-                      <option value="feet">Feet (ft)</option>
-                      <option value="cubic_yards">Cubic Yards (yd³)</option>
-                    </select>
+                    <span className="my-auto mx-2">{product.moqUnit}</span>
                   </div>
                 </div>
 
@@ -451,6 +431,7 @@ const ProductPage: React.FC = () => {
               {/* Action Buttons */}
               <div className="space-y-3">
                 <button
+                onClick={handleQuantityValidation}
 
                   disabled={isAddingToCart || product.stock === 0}
                   className={`w-full py-3 px-6 rounded-lg text-lg font-semibold transition-all ${false
@@ -523,7 +504,7 @@ const ProductPage: React.FC = () => {
                     Ask Queries
                   </button>
 
-                  <button className="flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
+                  <button onClick={() => setShowShare(true)} className="flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
                     <Share2 className="inline w-4 h-4 mr-2" />
                     Share
                   </button>
@@ -667,10 +648,37 @@ const ProductPage: React.FC = () => {
           </div>
         )}
 
+        {/* Share product model */}
+        {showShare && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative animate-fade-in">
+              <button
+                className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
+                onClick={() => setShowShare(false)}
+                aria-label="Close"
+              >
+                <X size={22} />
+              </button>
+              <p className="text-xl f mb-4">Share link</p>
+              <div>
+                <div className="text-sm border  rounded-lg flex px-3 py-2 overflow-x-auto bg-gray-200">
+                  <div className=" w-full whitespace-nowrap text-gray-700 ">{window.location.href}</div>
+                  <div onClick={() => { navigator.clipboard.writeText(window.location.href) }} className="right-6 absolute bg-gray-200 px-2 cursor-pointer"><Copy className="h-5 hover:scale-[1.05] hover:shadow-lg transition-all ease-in-out delay-300" /> </div>
+                </div>
+                <div className="mt-6 flex justify-evenly">
+                  <img className="cursor-pointer" src={whatsapp} alt="Whatsapp" />
+                  <img className="cursor-pointer" src={ln} alt="Linkedin" />
+                  <img className="cursor-pointer" src={fb} alt="FaceBook" />
+                  <img className="cursor-pointer" src={x_twitter} alt="X" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
   );
 };
-
+console.log(window.location.href);
 export default ProductPage;

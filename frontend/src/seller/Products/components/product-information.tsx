@@ -284,10 +284,10 @@ const ProductInformation: React.FC<ProductInformationProps> = ({ productInformat
                   </ul>
                 )}
               </>
-              <p className="text-xs text-gray-500 mt-1">Harmonized System Nomenclature code for product classification</p>
+              <p className="text-[10px] text-gray-500 mt-1">(HSN) Harmonized System Nomenclature code for product classification</p>
             </div>
 
-            <div className="form-field mb-6">
+            <div className="form-field mt-4">
 
               <div className={`w-full ${isHsnSelected ? "text-gray-400" : "text-black"}`}>
                 {productInformation.category || "category"}
