@@ -64,8 +64,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
 
   
 
- 
-
   // Check if product is already in cart
 
   // Enhanced image component with loading state
@@ -77,15 +75,24 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
       if (currentImageError) {
         return '/placeholder-product.svg';
       }
-
-      // Try primary image first, then first image from array, then product image, then fallback
-      const imageUrl = product.primaryImage || 
-                       (product.images && product.images[0]) || 
-                       product.productImage || 
-                       '/placeholder-product.svg';
-      
-      return imageUrl;
+      // Prefer images, then productImages, then fallback
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
+      let img = '';
+      if (product.images && product.images.length > 0) {
+        img = product.images[0];
+      } else if ((product as any).productImages && (product as any).productImages.length > 0) {
+        img = (product as any).productImages[0];
+      } else if (product.primaryImage) {
+        img = product.primaryImage;
+      } else if (product.productImage) {
+        img = product.productImage;
+      }
+      if (img && !img.startsWith('http')) {
+        img = `${backendUrl}/${img}`;
+      }
+      return img || '/placeholder-product.svg';
     };
+  
 
     const handleImageLoad = () => {
       setIsLoading(false);

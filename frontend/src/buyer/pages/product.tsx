@@ -9,16 +9,23 @@ import fb from "../../assets/social-icons/fb.svg";
 import ln from "../../assets/social-icons/ln.svg";
 import whatsapp from "../../assets/social-icons/whatsapp.svg";
 import x_twitter from "../../assets/social-icons/x.svg";
+import { useNavigate } from "react-router-dom";
+import { addToWishlist, removeFromWishlist, getWishlist } from '../../services/wishlist.service';
 
 const ProductPage: React.FC = () => {
+
+  const navigate = useNavigate();
+
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [quantity, setQuantity] = useState ('');
+  const [quantity, setQuantity] = useState('');
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+
   const [tradeRequestSent, setTradeRequestSent] = useState(false);
   const [notification, setNotification] = useState<{
     type: 'success' | 'error' | 'info';
@@ -31,6 +38,22 @@ const ProductPage: React.FC = () => {
 
 
   const [showShare, setShowShare] = useState(false);
+
+   useEffect(() => {
+      let ignore = false;
+      const checkWishlist = async () => {
+        if (!product) return;
+        try {
+          const wishlist = await getWishlist();
+          if (ignore) return;
+          setIsWishlisted(wishlist.some((item: any) => item.id === product.id));
+        } catch (e) {
+          // ignore error
+        }
+      };
+      checkWishlist();
+      return () => { ignore = true; };
+    }, [product]);
 
   // incoterms state 
   type Trader = 'Buyer' | 'Seller';
@@ -246,7 +269,7 @@ const ProductPage: React.FC = () => {
   };
 
 
-  
+
 
 
 
@@ -269,7 +292,7 @@ const ProductPage: React.FC = () => {
           <h3 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Product</h3>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
-            onClick={() => window.location.href = '/buyer/homepage'}
+            onClick={() => navigate('/buyer/homepage')}
             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
             Back to Homepage
@@ -431,7 +454,7 @@ const ProductPage: React.FC = () => {
               {/* Action Buttons */}
               <div className="space-y-3">
                 <button
-                onClick={handleQuantityValidation}
+                  onClick={handleQuantityValidation}
 
                   disabled={isAddingToCart || product.stock === 0}
                   className={`w-full py-3 px-6 rounded-lg text-lg font-semibold transition-all ${false
@@ -489,14 +512,28 @@ const ProductPage: React.FC = () => {
                 {/* Secondary Actions */}
                 <div className="flex gap-2">
                   <button
-                    // onClick={handleToggleWishlist}
-                    className={`flex-1 py-2 px-4 rounded-lg border transition-all ${isWishlisted
-                      ? 'border-red-200 bg-red-50 text-red-700'
-                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (!product || wishlistLoading) return;
+                      setWishlistLoading(true);
+                      try {
+                        if (isWishlisted) {
+                          await removeFromWishlist(product.id);
+                          setIsWishlisted(false);
+                        } else {
+                          await addToWishlist(product.id);
+                          setIsWishlisted(true);
+                        }
+                      } catch (err) {
+                        // Optionally show error
+                      } finally {
+                        setWishlistLoading(false);
+                      }
+                    }}
+                    className={`flex py-2 px-4 rounded-lg border transition-all  border-gray-300 text-gray-700 hover:bg-gray-50`}
                   >
-                    <Heart className={`inline w-4 h-4 mr-2 ${isWishlisted ? 'fill-red-500' : ''}`} />
-                    {isWishlisted ? 'Wishlisted' : 'Add to Wishlist'}
+                    <Heart className={` inline w-4 my-auto h-4 mr-2 ${isWishlisted ? 'fill-red-500 border-none' : ''}`} />
+                    {isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
                   </button>
 
                   <button className="flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
