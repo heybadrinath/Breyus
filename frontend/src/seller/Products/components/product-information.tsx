@@ -267,7 +267,7 @@ const ProductInformation: React.FC<ProductInformationProps> = ({ productInformat
                   type="text"
                   value={hsnQuery}
                   onChange={handleHsnChange}
-                  placeholder="Search by HSN code, description, or category"
+                  placeholder="Search your HSN CODE by HSN or description or name"
                 />
                 {hsnLoading && <p>Loading...</p>}
                 {hsnResults.length > 0 && !isHsnSelected && (

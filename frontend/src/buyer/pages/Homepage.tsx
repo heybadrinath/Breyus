@@ -46,7 +46,7 @@ const Homepage: React.FC = () => {
       };
 
       const response = await getProductsWithPagination(params);
-      
+
       // Transform backend data to match frontend Product interface
       const transformedProducts: Product[] = response.data.map((item: any) => ({
         id: item._id,
@@ -71,24 +71,40 @@ const Homepage: React.FC = () => {
         productImage: item.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${item.productImages[0]}` : '',
         images: item.productImages ? item.productImages.map((img: string) => `${process.env.REACT_APP_BACKEND_URL}/${img}`) : [],
         primaryImage: item.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${item.productImages[0]}` : '',
-        testReport: item.testReport? `${process.env.REACT_APP_BACKEND_URL}/${item.testReport}`: '',
+        testReport: item.testReport ? `${process.env.REACT_APP_BACKEND_URL}/${item.testReport}` : '',
         createdAt: new Date(item.createdAt),
         updatedAt: new Date(item.updatedAt),
         moq: item.moq,
         moqUnit: item.moqUnit,
         preciseDescription: item.description,
         sellerName: item.sellerName || 'Unknown Seller',
-        companyName: item.companyName || 'Unknown Company'
+        companyName: item.companyName || 'Unknown Company',
+
+        // product terms
+        revenueMin: item.revenueMin,
+        revenueMax: item.revenueMax,
+        currencyTrade: item.currencyTrade,
+        unitTrade: item.unitTrade,
+        yearsTrade: item.yearsTrade,
+        industry: item.industry,
+        marketYears: item.marketYears,
+        sellerMarketYears: item.sellerMarketYears,
+        marketcapture: item.marketcapture,
+
+        // intco terms
+        selectedIncoterm: item.selectedIncoterm,
+        selectedIncotermData: item.selectedIncotermData,
+        defaults: item.defaults
       }));
 
-     
-      
+
+
       if (isInitial) {
         setProducts(transformedProducts);
       } else {
         setProducts(prev => [...prev, ...transformedProducts]);
       }
-      
+
       setCurrentPage(response.pagination.currentPage);
       setHasNextPage(response.pagination.hasNextPage);
       setTotalProducts(response.pagination.totalProducts);
@@ -192,7 +208,7 @@ const Homepage: React.FC = () => {
           if (products.length === index + 1) {
             return (
               <div key={product.id} ref={lastProductRef}>
-                <ProductCard 
+                <ProductCard
                   product={product}
                   onClick={() => navigate(`/buyer/product-page?id=${product.id}`)}
                 />
@@ -200,7 +216,7 @@ const Homepage: React.FC = () => {
             );
           } else {
             return (
-              <ProductCard 
+              <ProductCard
                 key={product.id}
                 product={product}
                 onClick={() => navigate(`/buyer/product-page?id=${product.id}`)}
@@ -236,7 +252,7 @@ const Homepage: React.FC = () => {
           <div className="mt-6">
             <Banner />
           </div>
-          
+
           {/* Products Section */}
           <div className="mt-8">
             <div className="flex items-center justify-between mb-6">
@@ -247,7 +263,7 @@ const Homepage: React.FC = () => {
                 {!loading && `${totalProducts} products found`}
               </div>
             </div>
-            
+
             {renderProducts()}
           </div>
         </div>

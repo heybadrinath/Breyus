@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Star, Heart, Share2, MessageCircle, ShoppingCart, Package, Shield, Truck, X } from "lucide-react";
 import { getProductById, Product } from "../../services/products.service";
 import TestReport from "../../buyer/components/webUrlframe";
+import { Incoterms } from "../../seller/Products/components/incoterms";
 
 const ProductPage: React.FC = () => {
   const [product, setProduct] = useState<Product | null>(null);
@@ -17,9 +18,123 @@ const ProductPage: React.FC = () => {
     type: 'success' | 'error' | 'info';
     message: string;
   } | null>(null);
-    const [showTestReport, setShowTestReport] = useState(false)
-  
+  const [showTestReport, setShowTestReport] = useState(false)
+
   const [showTradeTerms, setShowTradeTerms] = useState(false);
+
+  // incoterms state 
+  type Trader = 'Buyer' | 'Seller';
+
+  // Define all possible incoterms
+  type IncotermType = 'EXW' | 'FCA' | 'FAS' | 'FOB' | 'CFR' | 'CIF' | 'CPT' | 'CIP' | 'DAP' | 'DPU' | 'DDP';
+
+  // Define all possible row names
+  type RowName =
+    | 'Charges/Fees'
+    | 'Transfer of risk'
+    | 'Commercial Invoice'
+    | 'Packaging, Quality Control, Marking'
+    | 'Loading & Inland Delivery'
+    | 'Export Duty & Taxes'
+    | 'Origin Terminal Handling'
+    | 'Insurance'
+    | 'Carriage Charges'
+    | '*Destination Terminal Handling'
+    | 'Delivery to Destination'
+    | 'Unloading at Destination'
+    | 'Import Duty & Taxes';
+
+  // Define the structure for each incoterm row
+  interface IncotermRowData {
+    [key: string]: Trader;
+  }
+
+  // Main incoterms state interface
+  interface IncotermsState {
+    // The currently selected incoterm column
+    selectedIncoterm: IncotermType | '';
+
+    // Data for only the selected incoterm (not all incoterms)
+    selectedIncotermData: IncotermRowData;
+
+    // Default values for each incoterm (for reference)
+    defaults: Record<IncotermType, IncotermRowData>;
+  }
+
+  // Initialize the default values for each incoterm
+  const defaultIncotermValues: Record<IncotermType, IncotermRowData> = {
+    EXW: {
+
+      'Origin Terminal Handling': 'Buyer',
+      'Insurance': 'Buyer',
+      'Carriage Charges': 'Buyer',
+      'Unloading at Destination': 'Buyer',
+    },
+    FCA: {
+      'Loading & Inland Delivery': 'Seller',
+      'Insurance': 'Buyer',
+      'Carriage Charges': 'Buyer',
+      'Unloading at Destination': 'Buyer',
+    },
+    FAS: {
+      'Insurance': 'Buyer',
+      'Unloading at Destination': 'Buyer',
+    },
+    FOB: {
+      'Insurance': 'Buyer',
+      'Unloading at Destination': 'Buyer',
+    },
+    CFR: {
+      'Insurance': 'Buyer',
+      'Unloading at Destination': 'Buyer',
+    },
+    CIF: {
+      'Insurance': 'Seller',
+      'Unloading at Destination': 'Buyer',
+    },
+    CPT: {
+      '*Destination Terminal Handling': 'Buyer',
+      'Unloading at Destination': 'Buyer',
+    },
+    CIP: {
+      'Insurance': 'Buyer',
+      '*Destination Terminal Handling': 'Buyer',
+      'Unloading at Destination': 'Buyer',
+
+    },
+    DAP: {
+      'Insurance': 'Buyer',
+      '*Destination Terminal Handling': 'Seller',
+      'Unloading at Destination': 'Buyer',
+    },
+    DPU: {
+      'Insurance': 'Buyer',
+      '*Destination Terminal Handling': 'Seller',
+    },
+    DDP: {
+      'Insurance': 'Buyer',
+      '*Destination Terminal Handling': 'Seller',
+      'Unloading at Destination': 'Buyer',
+    },
+  };
+
+  const [incotermsState, setIncotermsState] = useState<IncotermsState>({
+    selectedIncoterm: "",
+    selectedIncotermData: {},
+    defaults: defaultIncotermValues
+  });
+
+  useEffect(() => {
+    if (product) {
+      setIncotermsState({
+        selectedIncoterm: product.selectedIncoterm || "",
+        selectedIncotermData: product.selectedIncotermData || {},
+        defaults: product.defaults || defaultIncotermValues
+      });
+    }
+  }, [product]);
+
+  const [showIncoterms, setShowIncoterms] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -65,15 +180,32 @@ const ProductPage: React.FC = () => {
             productImage: response.data.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${response.data.productImages[0]}` : '',
             images: response.data.productImages ? response.data.productImages.map((img: string) => `${process.env.REACT_APP_BACKEND_URL}/${img}`) : [],
             primaryImage: response.data.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${response.data.productImages[0]}` : '',
-            testReport: response.data.testReports?.[0] ?`${process.env.REACT_APP_BACKEND_URL}/${response.data.testReports[0]}`: '',
+            testReport: response.data.testReports?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${response.data.testReports[0]}` : '',
             createdAt: new Date(response.data.createdAt),
             updatedAt: new Date(response.data.updatedAt),
             moq: response.data.moq,
             moqUnit: response.data.moqUnit,
             preciseDescription: response.data.description,
             sellerName: response.data.sellerName || 'Unknown Seller',
-            companyName: response.data.companyName || 'Unknown Company'
+            companyName: response.data.companyName || 'Unknown Company',
+            // trade terms
+            revenueMin: response.data.revenueMin,
+            revenueMax: response.data.revenueMax,
+            currencyTrade: response.data.currencyTrade,
+            unitTrade: response.data.unitTrade,
+            yearsTrade: response.data.yearsTrade,
+            industry: response.data.industry,
+            marketYears: response.data.marketYears,
+            sellerMarketYears: response.data.sellerMarketYears,
+            marketcapture: response.data.marketcapture,
+            selectedIncoterm: response.data.selectedIncoterm,
+            selectedIncotermData: response.data.selectedIncotermData,
+            defaults: response.data.defaults
           };
+
+          console.log(incotermsState)
+
+
 
           setProduct(transformedProduct);
         } else {
@@ -89,7 +221,7 @@ const ProductPage: React.FC = () => {
 
     fetchProduct();
   }, []);
-  console.log(product?.testReport)
+  
   // Auto-hide notifications after 5 seconds
   useEffect(() => {
     if (notification) {
@@ -216,7 +348,7 @@ const ProductPage: React.FC = () => {
               {/* Price */}
               <div className="space-y-2">
                 <div className="flex items-baseline gap-3">
-                  <span className="text-3xl font-bold text-gray-900">{(product.salePrice) ?  product.salePrice.toLocaleString() + ' ' + product.currency :  product.price.toLocaleString() + ' ' + product.currency}</span>
+                  <span className="text-3xl font-bold text-gray-900">{(product.salePrice) ? product.salePrice.toLocaleString() + ' ' + product.currency : product.price.toLocaleString() + ' ' + product.currency}</span>
                   {product.onSale && (
                     <>
                       <span className="text-xl text-gray-500 line-through">{product.price.toLocaleString() + ' ' + product.currency}</span>
@@ -309,10 +441,10 @@ const ProductPage: React.FC = () => {
                 </div>
 
                 {/* sample input  */}
-                <div className=" flex h-fit w-[35%] px-3 py-3  border-2 rounded-lg">
+                {/* <div className=" flex h-fit w-[35%] px-3 py-3  border-2 rounded-lg">
                   <input type="checkbox" name="sample" value="sample" />
                   <label className="ml-2" htmlFor="sample"> Sample only</label>
-                </div>
+                </div> */}
 
               </div>
 
@@ -350,20 +482,28 @@ const ProductPage: React.FC = () => {
                   )}
                 </button>
 
-                
+
                 <button
                   className="w-full py-3 px-6 border border-gray-300 text-gray-700 rounded-lg font-semibold transition"
-                  onClick={() => { setShowTestReport(true)}}
+                  onClick={() => { setShowTestReport(true) }}
                 >
                   View Test Reports
                 </button>
-                {/* View Trade Terms Button */}
-                <button
-                  className="w-full py-3 px-6 border border-gray-300 text-gray-700 rounded-lg font-semibold transition"
-                  onClick={() => setShowTradeTerms(true)}
-                >
-                  View Trade Terms
-                </button>
+                {/* View Trade Terms Button  and incoterms button*/}
+                <div className="flex gap-3">
+                  <button
+                    className="w-full py-3 px-6 border border-gray-300 text-gray-700 rounded-lg font-semibold transition"
+                    onClick={() => setShowTradeTerms(true)}
+                  >
+                    Preferred Trade Terms
+                  </button>
+                  <button
+                    className="w-full py-3 px-6 border border-gray-300 text-gray-700 rounded-lg font-semibold transition"
+                    onClick={() => setShowIncoterms(true)}
+                  >
+                    Preferred Inco Terms
+                  </button>
+                </div>
 
                 {/* Secondary Actions */}
                 <div className="flex gap-2">
@@ -459,10 +599,73 @@ const ProductPage: React.FC = () => {
         )}
 
         {/* Trade Terms Modal */}
-          <TestReport onClose={() => setShowTestReport(false)} url={product.testReport} show={showTestReport}/>
+        <TestReport onClose={() => setShowTestReport(false)} url={product.testReport} show={showTestReport} />
 
-        {/* View Test Reports model */}
-        
+
+
+        {/* Trade Terms Modal */}
+        {showTradeTerms && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative animate-fade-in">
+              <button
+                className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
+                onClick={() => setShowTradeTerms(false)}
+                aria-label="Close"
+              >
+                <X size={22} />
+              </button>
+              <h2 className="text-xl font-bold mb-4 text-center">Trade Terms</h2>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <span className="font-semibold">Preferred Buyer Revenue Range:</span><br />
+                  <span>{product.revenueMin + ' to ' + product.revenueMax + ' ' + product.currencyTrade + ' ' + product.unitTrade || "-"}</span>
+                </div>
+                <div>
+                  <span className="font-semibold">Potential Years to Trade:</span><br />
+                  <span>{product.yearsTrade || "-"}</span>
+                </div>
+                <div>
+                  <span className="font-semibold">Industry Using Product:</span><br />
+                  <span>{product.industry || "-"}</span>
+                </div>
+                <div>
+                  <span className="font-semibold">Years in Market:</span><br />
+                  <span>{product.marketYears || "-"}</span>
+                </div>
+                <div>
+                  <span className="font-semibold">Buyer Market Duration:</span><br />
+                  <span>{product.sellerMarketYears || "-"}</span>
+                </div>
+                <div>
+                  <span className="font-semibold">Market Capture:</span><br />
+                  <span>{product.marketcapture !== undefined && product.marketcapture !== null ? product.marketcapture + "%" : "-"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+
+        {/* Incoterms model  */}
+        {showIncoterms && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+            <div className="bg-white rounded-lg shadow-xl w-[98vw] h-[96vh] mx-auto  p-6 relative animate-fade-in flex flex-col">
+              <button
+                className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
+                onClick={() => setShowIncoterms(false)}
+                aria-label="Close"
+              >
+                <X size={22} />
+              </button>
+              <h2 className="text-xl font-bold mb-4 text-center">Preferred Inco Terms</h2>
+              <div className="flex-1 overflow-y-auto">
+                <div>
+                  <Incoterms incoterms={incotermsState} setIncoterms={() => { }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
 
       </div>

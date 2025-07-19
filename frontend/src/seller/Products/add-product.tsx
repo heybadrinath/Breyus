@@ -182,7 +182,6 @@ export const AddProduct = () => {
     defaults: defaultIncotermValues,
   });
 
-  console.log(incotermsState);
 
   const validateStep = () => {
     switch (step) {
