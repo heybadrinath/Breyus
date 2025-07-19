@@ -45,9 +45,43 @@ export class WishlistService {
   async getUserWishlist(userId: string) {
     const wishlistItems = await this.wishlistSchema
       .find({ user: new Types.ObjectId(userId) })
-      .populate('product')
+      .populate({
+        path: 'product',
+        model: 'Product',
+        populate: {
+          path: 'userId',
+          model: 'User',
+          select: 'mail company',
+          populate: {
+            path: 'company',
+            model: 'Company',
+            select: 'companyName'
+          }
+        }
+      })
+      .lean()
       .exec();
 
-    return wishlistItems.map(item => item.product);
+    return wishlistItems.map(item => {
+      const product = item.product;
+      let sellerName = 'Unknown Seller';
+      let companyName = 'Unknown Company';
+      let user: any = undefined;
+      if (product && typeof product === 'object' && product !== null && (product as any).userId) {
+        user = (product as any).userId;
+      }
+      if (user && typeof user.mail === 'string') {
+        sellerName = user.mail;
+        if (user.company && typeof user.company === 'object' && typeof user.company.companyName === 'string') {
+          companyName = user.company.companyName;
+        }
+      }
+      return {
+        ...product,
+        id: product._id?.toString?.() || product._id,
+        companyName,
+        sellerName,
+      };
+    });
   }
 }

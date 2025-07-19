@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Heart } from "lucide-react";
 import { Product } from '../../services/products.service';
+import { addToWishlist, removeFromWishlist, getWishlist } from '../../services/wishlist.service';
 
 interface ProductCardProps {
   product?: Product;
@@ -13,6 +14,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
 
   // All hooks must be called before any conditional logic
   useEffect(() => {
@@ -24,6 +26,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
     }
     return () => clearTimeout(timer);
   }, [showAnimation]);
+
+  useEffect(() => {
+    let ignore = false;
+    const checkWishlist = async () => {
+      if (!product) return;
+      try {
+        const wishlist = await getWishlist();
+        if (ignore) return;
+        setIsWishlisted(wishlist.some((item: any) => item.id === product.id));
+      } catch (e) {
+        // ignore error
+      }
+    };
+    checkWishlist();
+    return () => { ignore = true; };
+  }, [product]);
 
   
 
@@ -135,7 +153,25 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
             className={`w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-100 cursor-pointer transition-colors ${
               isWishlisted ? 'bg-red-50 border-red-200' : 'border-gray-300 bg-white/80'
             }`}
-            // onClick={toggleWishlist}
+            onClick={async (e) => {
+              e.stopPropagation();
+              if (!product || wishlistLoading) return;
+              setWishlistLoading(true);
+              try {
+                if (isWishlisted) {
+                  await removeFromWishlist(product.id);
+                  setIsWishlisted(false);
+                } else {
+                  await addToWishlist(product.id);
+                  setIsWishlisted(true);
+                  setShowAnimation(true);
+                }
+              } catch (err) {
+                // Optionally show error
+              } finally {
+                setWishlistLoading(false);
+              }
+            }}
             title={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
           >
             <Heart 

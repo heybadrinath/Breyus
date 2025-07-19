@@ -1,8 +1,7 @@
 const BACKEND_END_POINT = process.env.REACT_APP_BACKEND_URL + "/wishlist";
 
 export const getWishlist = async (): Promise<any[]> => {
-  // The backend ignores the userId param and uses the cookie
-  const response = await fetch(`${BACKEND_END_POINT}/me`, {
+  const response = await fetch(`${BACKEND_END_POINT}`, {
     method: 'GET',
     credentials: 'include',
   });

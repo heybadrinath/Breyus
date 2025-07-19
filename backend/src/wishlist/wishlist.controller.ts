@@ -64,8 +64,8 @@ export class WishlistController {
         }
     }
 
-    @Get(':userId')
-    async getUserWishlist(@Res() response: Response) {
+    @Get()
+    async getOwnWishlist(@Res() response: Response) {
         const accountToken = response.req.signedCookies['account'];
         if (!accountToken) {
             response.status(401).send('No valid cookie found');
