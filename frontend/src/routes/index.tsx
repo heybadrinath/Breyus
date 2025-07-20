@@ -15,9 +15,9 @@ import ForgotPassword from "../main/forgot-password";
 
 
 import Hero from "../main/Hero";
-import SellerSettings from "../seller/settings";
+// import SellerSettings from "../seller/settings";
 import SellerDashboard from "../seller/dashboard";
-import Security from "../seller/security";
+// import Security from "../seller/security";
 import { motion, AnimatePresence } from "framer-motion";
 import Sales from "../seller/sales";
 import Upgrade from "../seller/upgrade";
@@ -26,17 +26,17 @@ import BuyerLayout from "../buyer/components/layout";
 
 
 import { Layout } from "../seller/components";
-import Inbox from "../seller/inbox";
-import { Trade, Feedback } from "../seller/trade";
+// import Inbox from "../seller/inbox";
+// import { Trade, Feedback } from "../seller/trade";
 
-import BuyerInbox from "../buyer/pages/Inbox";
+// import BuyerInbox from "../buyer/pages/Inbox";
 import Homepage from "../buyer/pages/Homepage";
 import Wishlist from "../buyer/pages/Wishlist";
-import CartPage from "../buyer/pages/Cartpage";
-import BuyerTrade from "../buyer/pages/trade";
+// import CartPage from "../buyer/pages/Cartpage";
+// import BuyerTrade from "../buyer/pages/trade";
 import ProductPage from "../buyer/pages/product";
-import BuyerAddress from "../buyer/pages/buyer_address";
-import PurchaseRequest from "../buyer/pages/purchase-request";
+// import BuyerAddress from "../buyer/pages/buyer_address";
+// import PurchaseRequest from "../buyer/pages/purchase-request";
 import PurchaseRequestSuccess from "../buyer/pages/PurchaseRequestSuccess";
 import { Inventory } from "../seller/Products/inventory";
 
@@ -114,13 +114,13 @@ const AppRoutes = () => {
         {/* Buyer Routes */}
 
         <Route path="/buyer/homepage" element={<BuyerProtectedRoute><Animate page={<Homepage />} /></BuyerProtectedRoute>} />
-        <Route path="/buyer/inbox" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<BuyerInbox />} />} /></BuyerProtectedRoute>} />
+        {/* <Route path="/buyer/inbox" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<BuyerInbox />} />} /></BuyerProtectedRoute>} /> */}
         <Route path="/buyer/wishlist" element={<BuyerProtectedRoute><Animate page={<Wishlist />} /></BuyerProtectedRoute>} />
-        <Route path="/buyer/cartpage" element={<BuyerProtectedRoute><Animate page={<CartPage />} /></BuyerProtectedRoute>} />
-        <Route path="/buyer/trade" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<BuyerTrade />} />} /></BuyerProtectedRoute>} />
-        <Route path="/buyer/buyer-address" element={<BuyerProtectedRoute><Animate page={<BuyerAddress />} /></BuyerProtectedRoute>} />
+        {/* <Route path="/buyer/cartpage" element={<BuyerProtectedRoute><Animate page={<CartPage />} /></BuyerProtectedRoute>} /> */}
+        {/* <Route path="/buyer/trade" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<BuyerTrade />} />} /></BuyerProtectedRoute>} /> */}
+        {/* <Route path="/buyer/buyer-address" element={<BuyerProtectedRoute><Animate page={<BuyerAddress />} /></BuyerProtectedRoute>} /> */}
         <Route path="/buyer/product-page" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<ProductPage />} />} /></BuyerProtectedRoute>} />
-        <Route path="/buyer/purchase-request" element={<BuyerProtectedRoute><Animate page={<PurchaseRequest />} /></BuyerProtectedRoute>} />
+        {/* <Route path="/buyer/purchase-request" element={<BuyerProtectedRoute><Animate page={<PurchaseRequest />} /></BuyerProtectedRoute>} /> */}
         <Route path="/buyer/purchase-request-success" element={<BuyerProtectedRoute><Animate page={<PurchaseRequestSuccess />} /></BuyerProtectedRoute>} />
 
         {/* AI Routes */}
@@ -132,13 +132,13 @@ const AppRoutes = () => {
 
         {/* Seller Routes */}
         <Route path="/seller/dashboard" element={<SellerProtectedRoute><Animate page={<Layout Body={<SellerDashboard />} />} /></SellerProtectedRoute>} />
-        <Route path="/seller/security" element={<SellerProtectedRoute><Animate page={<Layout Body={<Security />} />} /></SellerProtectedRoute>} />
+        {/* <Route path="/seller/security" element={<SellerProtectedRoute><Animate page={<Layout Body={<Security />} />} /></SellerProtectedRoute>} /> */}
         <Route path="/seller/sales" element={<SellerProtectedRoute><Animate page={<Layout Body={<Sales />} />} /></SellerProtectedRoute>} />
         <Route path="/seller/upgrade" element={<SellerProtectedRoute><Animate page={<Layout Body={<Upgrade />} />} /></SellerProtectedRoute>} />
         <Route path="/seller/add-products" element={<SellerProtectedRoute><Animate page={<Layout Body={<AddProduct />} />} /></SellerProtectedRoute>} />
-        <Route path="/seller/Inbox" element={<SellerProtectedRoute><Animate page={<Layout Body={<Inbox />} />} /></SellerProtectedRoute>} />
-        <Route path="/seller/trade" element={<SellerProtectedRoute><Animate page={<Layout Body={<Trade />} />} /></SellerProtectedRoute>} />
-        <Route path="/seller/Product-Feedback" element={<SellerProtectedRoute><Animate page={<Layout Body={<Feedback />} />} /></SellerProtectedRoute>} />
+        {/* <Route path="/seller/Inbox" element={<SellerProtectedRoute><Animate page={<Layout Body={<Inbox />} />} /></SellerProtectedRoute>} /> */}
+        {/* <Route path="/seller/trade" el`ement={<SellerProtectedRoute><Animate page={<Layout Body={<Trade />} />} /></SellerProtectedRoute>} /> */}
+        {/* <Route path="/seller/Product-Feedback" element={<SellerProtectedRoute><Animate page={<Layout Body={<Feedback />} />} /></SellerProtectedRoute>} /> */}
         <Route path="/seller/inventory" element={<SellerProtectedRoute><Animate page={<Layout Body={<Inventory />} />} /></SellerProtectedRoute>} />
 
 
@@ -147,7 +147,7 @@ const AppRoutes = () => {
         {/* Seller settings with default layout */}
 
         {/* Seller settings with different layout */}
-        <Route path="/seller/settings" element={<SellerProtectedRoute><Animate page={<SellerSettings />} /></SellerProtectedRoute>} />
+        {/* <Route path="/seller/settings" element={<SellerProtectedRoute><Animate page={<SellerSettings />} /></SellerProtectedRoute>} /> */}
 
 
 

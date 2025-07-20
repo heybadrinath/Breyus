@@ -1,7 +1,6 @@
 import React, { ReactNode, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../seller/css/components.css";
-import authService from "../services_old/auth.service";
 import { usernameService } from "../services/users.service";
 // assets import 
 import downArrow from "../seller/vectors/down-arrow.svg";
@@ -19,7 +18,7 @@ const Header = () => {
     const navigate = useNavigate();
 
     const handleLogout = () => {
-        authService.logout();
+        // authService.logout();
         navigate('/');
     };
 
@@ -52,7 +51,7 @@ const LeftnavSettings = ({ username }: { username: String }) => {
     const navigate = useNavigate();
 
     const handleLogout = () => {
-        authService.logout();
+        // authService.logout();
         navigate('/');
     };
 
