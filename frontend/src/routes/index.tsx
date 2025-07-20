@@ -11,6 +11,8 @@ import { OnBoarding } from "../main/OnBoarding";
 import { Login } from "../main/login";
 import SelectRole from "../main/selectRole";
 import ScheduleMeeting from "../main/scheduleMeeting";
+import ForgotPassword from "../main/forgot-password";
+
 
 import Hero from "../main/Hero";
 import SellerSettings from "../seller/settings";
@@ -20,11 +22,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import Sales from "../seller/sales";
 import Upgrade from "../seller/upgrade";
 import { AddProduct } from "../seller/Products/add-product";
-import ForgotPassword from "../buyer/forgot-password";
 import BuyerLayout from "../buyer/components/layout";
 
 
-import SellerForgotPassword from "../seller/forgot-password";
 import { Layout } from "../seller/components";
 import Inbox from "../seller/inbox";
 import { Trade, Feedback } from "../seller/trade";
@@ -107,11 +107,11 @@ const AppRoutes = () => {
         <Route path="/login" element={<Animate page={<Login />} />} />
         <Route path="/select-role" element={<Animate page={<SelectRole />} />} />
         <Route path="/schedule-meeting" element={<Animate page={<ScheduleMeeting />} />} />
+        <Route path="/forgot-password" element={<Animate page={<ForgotPassword />} />} />
 
 
 
         {/* Buyer Routes */}
-        <Route path="/buyer/forgot-password" element={<Animate page={<ForgotPassword />} />} />
 
         <Route path="/buyer/homepage" element={<BuyerProtectedRoute><Animate page={<Homepage />} /></BuyerProtectedRoute>} />
         <Route path="/buyer/inbox" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<BuyerInbox />} />} /></BuyerProtectedRoute>} />
@@ -131,8 +131,6 @@ const AppRoutes = () => {
 
 
         {/* Seller Routes */}
-        <Route path="/seller/forgot-password" element={<Animate page={<SellerForgotPassword />} />} />
-
         <Route path="/seller/dashboard" element={<SellerProtectedRoute><Animate page={<Layout Body={<SellerDashboard />} />} /></SellerProtectedRoute>} />
         <Route path="/seller/security" element={<SellerProtectedRoute><Animate page={<Layout Body={<Security />} />} /></SellerProtectedRoute>} />
         <Route path="/seller/sales" element={<SellerProtectedRoute><Animate page={<Layout Body={<Sales />} />} /></SellerProtectedRoute>} />
