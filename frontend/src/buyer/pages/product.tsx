@@ -5,10 +5,10 @@ import TestReport from "../../buyer/components/webUrlframe";
 import { Incoterms } from "../../seller/Products/components/incoterms";
 
 // import social media icons
-import fb from "../../assets/social-icons/fb.svg";
-import ln from "../../assets/social-icons/ln.svg";
-import whatsapp from "../../assets/social-icons/whatsapp.svg";
-import x_twitter from "../../assets/social-icons/x.svg";
+import fb from "../assets/social-icons/fb.svg";
+import ln from "../assets/social-icons/ln.svg";
+import whatsapp from "../assets/social-icons/whatsapp.svg";
+import x_twitter from "../assets/social-icons/x.svg";
 import { useNavigate } from "react-router-dom";
 import { addToWishlist, removeFromWishlist, getWishlist } from '../../services/wishlist.service';
 

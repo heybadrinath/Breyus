@@ -203,7 +203,7 @@ const Homepage: React.FC = () => {
     }
 
     return (
-      <div className="flex flex-wrap gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 3xl:grid-cols-6 mx-auto w-fit">
         {products.map((product, index) => {
           if (products.length === index + 1) {
             return (
@@ -254,7 +254,7 @@ const Homepage: React.FC = () => {
           </div>
 
           {/* Products Section */}
-          <div className="mt-8">
+          <div className="mt-8 mx-auto !w-full">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">
                 {searchTerm ? `Search Results for "${searchTerm}"` : 'Available Products'}
