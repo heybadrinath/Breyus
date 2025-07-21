@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
 import ProductCard from '../components/ProductCard';
 import Banner from '../components/Banner';
-import Navbar from '../components/navbar';
+import { SearchHeader } from '../../components/Header';
 import { getProductsWithPagination, PaginationParams, Product } from '../../services/products.service';
+import { Search } from 'lucide-react';
 
 
 const Homepage: React.FC = () => {
@@ -46,7 +46,7 @@ const Homepage: React.FC = () => {
       };
 
       const response = await getProductsWithPagination(params);
-      
+
       // Transform backend data to match frontend Product interface
       const transformedProducts: Product[] = response.data.map((item: any) => ({
         id: item._id,
@@ -71,24 +71,40 @@ const Homepage: React.FC = () => {
         productImage: item.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${item.productImages[0]}` : '',
         images: item.productImages ? item.productImages.map((img: string) => `${process.env.REACT_APP_BACKEND_URL}/${img}`) : [],
         primaryImage: item.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${item.productImages[0]}` : '',
-        testReport: item.testReport? `${process.env.REACT_APP_BACKEND_URL}/${item.testReport}`: '',
+        testReport: item.testReport ? `${process.env.REACT_APP_BACKEND_URL}/${item.testReport}` : '',
         createdAt: new Date(item.createdAt),
         updatedAt: new Date(item.updatedAt),
         moq: item.moq,
         moqUnit: item.moqUnit,
         preciseDescription: item.description,
         sellerName: item.sellerName || 'Unknown Seller',
-        companyName: item.companyName || 'Unknown Company'
+        companyName: item.companyName || 'Unknown Company',
+
+        // product terms
+        revenueMin: item.revenueMin,
+        revenueMax: item.revenueMax,
+        currencyTrade: item.currencyTrade,
+        unitTrade: item.unitTrade,
+        yearsTrade: item.yearsTrade,
+        industry: item.industry,
+        marketYears: item.marketYears,
+        sellerMarketYears: item.sellerMarketYears,
+        marketcapture: item.marketcapture,
+
+        // intco terms
+        selectedIncoterm: item.selectedIncoterm,
+        selectedIncotermData: item.selectedIncotermData,
+        defaults: item.defaults
       }));
 
-     
-      
+
+
       if (isInitial) {
         setProducts(transformedProducts);
       } else {
         setProducts(prev => [...prev, ...transformedProducts]);
       }
-      
+
       setCurrentPage(response.pagination.currentPage);
       setHasNextPage(response.pagination.hasNextPage);
       setTotalProducts(response.pagination.totalProducts);
@@ -187,12 +203,12 @@ const Homepage: React.FC = () => {
     }
 
     return (
-      <div className="flex flex-wrap gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 3xl:grid-cols-6 mx-auto w-fit">
         {products.map((product, index) => {
           if (products.length === index + 1) {
             return (
               <div key={product.id} ref={lastProductRef}>
-                <ProductCard 
+                <ProductCard
                   product={product}
                   onClick={() => navigate(`/buyer/product-page?id=${product.id}`)}
                 />
@@ -200,7 +216,7 @@ const Homepage: React.FC = () => {
             );
           } else {
             return (
-              <ProductCard 
+              <ProductCard
                 key={product.id}
                 product={product}
                 onClick={() => navigate(`/buyer/product-page?id=${product.id}`)}
@@ -218,41 +234,35 @@ const Homepage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Fixed Sidebar */}
-      <div className="fixed left-0 top-0 h-screen">
-        <Sidebar />
+
+    <div className="">
+      {/* Fixed Header */}
+      <div className="fixed top-0 right-0 left-64 z-10 p-6">
+        <SearchHeader onSearch={handleSearch} />
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 ml-64 overflow-y-auto">
-        {/* Fixed Navbar */}
-        <div className="fixed top-0 right-0 left-64 z-10 p-6">
-          <Navbar onSearch={handleSearch} />
+      {/* Scrollable Content */}
+      <div className='pt-24 px-6'>
+        <div className="mt-6">
+          <Banner />
         </div>
 
-        {/* Scrollable Content */}
-        <div className="p-6 mt-28">
-          <div className="mt-6">
-            <Banner />
-          </div>
-          
-          {/* Products Section */}
-          <div className="mt-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {searchTerm ? `Search Results for "${searchTerm}"` : 'Available Products'}
-              </h2>
-              <div className="text-sm text-gray-600">
-                {!loading && `${totalProducts} products found`}
-              </div>
+        {/* Products Section */}
+        <div className="mt-8 mx-auto !w-full">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">
+              {searchTerm ? `Search Results for "${searchTerm}"` : 'Available Products'}
+            </h2>
+            <div className="text-sm text-gray-600">
+              {!loading && `${totalProducts} products found`}
             </div>
-            
-            {renderProducts()}
           </div>
+
+          {renderProducts()}
         </div>
       </div>
     </div>
+
   );
 };
 

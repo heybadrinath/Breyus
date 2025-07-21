@@ -1,5 +1,16 @@
 const BACKEND_END_POINT = process.env.REACT_APP_BACKEND_URL + "/products";
 
+type IncotermType = 'EXW' | 'FCA' | 'FAS' | 'FOB' | 'CFR' | 'CIF' | 'CPT' | 'CIP' | 'DAP' | 'DPU' | 'DDP';
+
+// Define the structure for each Incoterm row (e.g., Insurance, Carriage Charges)
+type IncotermRowData = Record<string, 'Buyer' | 'Seller'>;
+
+// Define the structure for Incoterms (selected and defaults)
+interface Incoterms {
+  selectedIncotermData?: IncotermRowData;  // Data for selected Incoterm
+  defaults?: Record<IncotermType, IncotermRowData>;  // Default Incoterm values
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -30,6 +41,22 @@ export interface Product {
   preciseDescription: string;
   sellerName: string;
   companyName: string;
+
+  // trade terms
+  revenueMin: string;
+  revenueMax: string;
+  currencyTrade: string;
+  unitTrade: string;
+  yearsTrade: string;
+  industry: string;
+  marketYears: string;
+  sellerMarketYears: string;
+  marketcapture: string;
+
+  // incoterms
+  selectedIncoterm: IncotermType;
+  selectedIncotermData: IncotermRowData;
+  defaults: Record<IncotermType, IncotermRowData>;
 }
 
 export interface CreateProductData {

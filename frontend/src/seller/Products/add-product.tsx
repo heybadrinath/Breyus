@@ -9,6 +9,7 @@ import AddProductTerms from './components/product-terms';
 import ProgressBar from "../../buyer/components/cart/PurchaseRequestProgress";
 import '../css/product.css';
 import { createProduct, CreateProductData } from '../../services/products.service';
+import { TryBreyusCoreHeader } from "../../components/Header";
 
 
 export const AddProduct = () => {
@@ -182,7 +183,6 @@ export const AddProduct = () => {
     defaults: defaultIncotermValues,
   });
 
-  console.log(incotermsState);
 
   const validateStep = () => {
     switch (step) {
@@ -385,6 +385,7 @@ export const AddProduct = () => {
   return (
 
     <>
+    <TryBreyusCoreHeader />
       <div className={`relative w-full ${(step < 4) ? 'my-16' : ''}`}>
         {step < 4 && <ProgressBar
           className="absolute left-1/2 -translate-y-1/2 -translate-x-1/2 top-0 z-20"

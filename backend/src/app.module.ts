@@ -10,6 +10,7 @@ import { MailModule } from './mail/mail.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { LoginModule } from './login/login.module';
 import { ProductsModule } from './products/products.module';
+import { WishlistModule } from './wishlist/wishlist.module';
 
 
 
@@ -27,6 +28,7 @@ import { ProductsModule } from './products/products.module';
     OnboardingModule,
     LoginModule,
     ProductsModule,
+    WishlistModule,
   ],
   controllers: [AppController],
   providers: [AppService],

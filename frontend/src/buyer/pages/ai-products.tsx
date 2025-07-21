@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
-import BreyusLogo from "../../seller/vectors/full-logo.svg";
+import BreyusLogo from "../../assets/Logos/full-logo.svg";
 
 interface SellerCardProps {
     company: string;

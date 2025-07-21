@@ -1,7 +1,7 @@
 import React, { useState, ChangeEvent, useRef } from "react";
 import OnboardingProgress from "../components/OnboardingProgress";
 import { motion, AnimatePresence } from "framer-motion";
-import BreyusLogo from "../seller/vectors/full-logo.svg";
+import BreyusLogo from "../assets/Logos/full-logo.svg";
 
 // import service (backend integration)
 import { sendOtpService, verifyOtpService, validateTokenService, setPasswordService, continueOnboardingService, step2Service, step3Service, MeanMonthlyRevenueEnum, step4Service, step5Service, getOnboardingProgressService } from '../services/onboarding.service';
