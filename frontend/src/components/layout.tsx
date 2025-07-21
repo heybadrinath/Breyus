@@ -1,8 +1,8 @@
 import Sidebar from "../components/Sidebar";
 interface LayoutProps {
     Body?: React.ReactNode;
-    Buyer?: Boolean;
-    Seller?: Boolean;
+    Buyer?: boolean;
+    Seller?: boolean;
 }
 
 const Layout: React.FC<LayoutProps> = ({ Body, Buyer, Seller }) => {
@@ -10,7 +10,7 @@ const Layout: React.FC<LayoutProps> = ({ Body, Buyer, Seller }) => {
         <div className="flex h-screen overflow-hidden">
             {/* Fixed Sidebar */}
             <div className="fixed left-0 top-0 h-screen">
-                <Sidebar />
+                <Sidebar Buyer={Buyer} Seller={Seller}/>
             </div>
 
             {/* Main Content Area */}

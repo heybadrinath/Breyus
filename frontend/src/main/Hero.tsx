@@ -7,7 +7,7 @@ import NovalLogo from "../assets/noval_logo.svg";
 
 
 // Section-3 Image imports 
-import BreyusLogo from "../seller/vectors/full-logo.svg";
+import BreyusLogo from "../assets/Logos/full-logo.svg";
 import LaptopHero from "../assets/laptop-hero.svg";
 import PersonalisedAnalysisImg from "../assets/section-3/personalised-analysis.svg"
 import IntegratedDashboardImg from "../assets/section-3/integrated-dashboard.svg"

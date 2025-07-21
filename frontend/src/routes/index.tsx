@@ -111,15 +111,15 @@ const AppRoutes = () => {
 
         {/* Buyer Routes */}
 
-        <Route path="/buyer/homepage" element={<BuyerProtectedRoute><Animate page={<Layout Body={<Homepage />} />} /></BuyerProtectedRoute>} />
+        <Route path="/buyer/homepage" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<Homepage />} />} /></BuyerProtectedRoute>} />
         {/* <Route path="/buyer/inbox" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<BuyerInbox />} />} /></BuyerProtectedRoute>} /> */}
-        <Route path="/buyer/wishlist" element={<BuyerProtectedRoute><Animate page={<Layout Body={<Wishlist />} /> } /></BuyerProtectedRoute>} />
+        <Route path="/buyer/wishlist" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<Wishlist />} /> } /></BuyerProtectedRoute>} />
         {/* <Route path="/buyer/cartpage" element={<BuyerProtectedRoute><Animate page={<CartPage />} /></BuyerProtectedRoute>} /> */}
         {/* <Route path="/buyer/trade" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<BuyerTrade />} />} /></BuyerProtectedRoute>} /> */}
         {/* <Route path="/buyer/buyer-address" element={<BuyerProtectedRoute><Animate page={<BuyerAddress />} /></BuyerProtectedRoute>} /> */}
-        <Route path="/buyer/product-page" element={<BuyerProtectedRoute><Animate page={<Layout Body={<ProductPage />} />} /></BuyerProtectedRoute>} />
+        <Route path="/buyer/product-page" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<ProductPage />} />} /></BuyerProtectedRoute>} />
         {/* <Route path="/buyer/purchase-request" element={<BuyerProtectedRoute><Animate page={<PurchaseRequest />} /></BuyerProtectedRoute>} /> */}
-        <Route path="/buyer/purchase-request-success" element={<BuyerProtectedRoute><Animate page={<PurchaseRequestSuccess />} /></BuyerProtectedRoute>} />
+        {/* <Route path="/buyer/purchase-request-success" element={<BuyerProtectedRoute><Animate page={<PurchaseRequestSuccess />} /></BuyerProtectedRoute>} /> */}
 
         {/* AI Routes */}
         <Route path="/buyer/ai" element={<Animate page={<BuyerAi />} />} />
@@ -129,15 +129,15 @@ const AppRoutes = () => {
 
 
         {/* Seller Routes */}
-        <Route path="/seller/dashboard" element={<SellerProtectedRoute><Animate page={<Layout Body={<SellerDashboard />} />} /></SellerProtectedRoute>} />
+        <Route path="/seller/dashboard" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<SellerDashboard />} />} /></SellerProtectedRoute>} />
         {/* <Route path="/seller/security" element={<SellerProtectedRoute><Animate page={<Layout Body={<Security />} />} /></SellerProtectedRoute>} /> */}
-        <Route path="/seller/sales" element={<SellerProtectedRoute><Animate page={<Layout Body={<Sales />} />} /></SellerProtectedRoute>} />
-        <Route path="/seller/upgrade" element={<SellerProtectedRoute><Animate page={<Layout Body={<Upgrade />} />} /></SellerProtectedRoute>} />
-        <Route path="/seller/add-products" element={<SellerProtectedRoute><Animate page={<Layout Body={<AddProduct />} />} /></SellerProtectedRoute>} />
+        <Route path="/seller/sales" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<Sales />} />} /></SellerProtectedRoute>} />
+        <Route path="/seller/upgrade" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<Upgrade />} />} /></SellerProtectedRoute>} />
+        <Route path="/seller/add-products" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<AddProduct />} />} /></SellerProtectedRoute>} />
         {/* <Route path="/seller/Inbox" element={<SellerProtectedRoute><Animate page={<Layout Body={<Inbox />} />} /></SellerProtectedRoute>} /> */}
         {/* <Route path="/seller/trade" el`ement={<SellerProtectedRoute><Animate page={<Layout Body={<Trade />} />} /></SellerProtectedRoute>} /> */}
         {/* <Route path="/seller/Product-Feedback" element={<SellerProtectedRoute><Animate page={<Layout Body={<Feedback />} />} /></SellerProtectedRoute>} /> */}
-        <Route path="/seller/inventory" element={<SellerProtectedRoute><Animate page={<Layout Body={<Inventory />} />} /></SellerProtectedRoute>} />
+        <Route path="/seller/inventory" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<Inventory />} />} /></SellerProtectedRoute>} />
 
 
 

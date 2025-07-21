@@ -4,7 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 
 // image imports
 import AiAnimation from "../../assets/ai/ai-animation.svg";
-import BreyusLogo from "../../seller/vectors/full-logo.svg";
+import BreyusLogo from "../../assets/Logos/full-logo.svg";
 
 const Navbar = () => {
   const navigate = useNavigate();
