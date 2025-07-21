@@ -1,6 +1,6 @@
 import React, { useEffect, useState} from 'react';
 import ProductCard from '../components/ProductCard';
-import Navbar from '../../components/navbar';
+import { SearchHeader } from '../../components/Header';
 import { useNavigate } from 'react-router-dom';
 import { getWishlist } from '../../services/wishlist.service';
 
@@ -15,8 +15,8 @@ const Wishlist: React.FC = () => {
   return (
   
       <div>
-        <div className="fixed top-0 right-0 left-64 z-10 p-6"><Navbar /></div>
-        <div className="mt-28">
+        <div className="fixed top-0 right-0 left-64 z-10 p-6"><SearchHeader /></div>
+        <div className="mt-28 px-6">
           <h1 className="text-2xl font-bold mb-6">My Wishlist</h1>
           {wishlistItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16">

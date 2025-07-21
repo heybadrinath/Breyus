@@ -1,4 +1,6 @@
 import React from "react";
+import { SortHeader } from "../components/Header";
+
 import {
     LineChart,
     Line,
@@ -172,136 +174,139 @@ const CurrentOrdersRadarGraph: React.FC<CurrentOrdersRadarGraphProps> = ({ class
 
 const Sales = () => {
     return (
-        <div className="flex flex-col m-4">
+        <>
+            <SortHeader />
             <div className="flex flex-col m-4">
-                <h1 className="font-extrabold text-4xl">Sales</h1>
-                <p className="text-[#353535]">Check the sales, value and bounce rate by country</p>
-            </div>
-
-
-            {/* Sales section  */}
-            <div className="flex">
-                <div className="shadow-lg p-4 rounded-lg w-full mx-8 border-[#cccccc] border-2">
-                    <p className="text-[#353535]">Sales</p>
-                    <h1 className=" text-[#353535] text-3xl">{"$" + sales.toLocaleString()}</h1>
-                    <hr className="border-0 h-[1.5px] bg-gradient-to-r from-[#ECECEC] via-[#00000080] to-[#ECECEC]" />
-                    <p className="text-[#acabab]"> <span className=" text-[#71DE5F]  " >+{salesIncrease + "%"}</span> than last month</p>
+                <div className="flex flex-col m-4">
+                    <h1 className="font-extrabold text-4xl">Sales</h1>
+                    <p className="text-[#353535]">Check the sales, value and bounce rate by country</p>
                 </div>
 
-                <div className="shadow-lg p-4 rounded-lg w-full mx-8 border-[#cccccc] border-2">
-                    <p className="text-[#353535]">Customers</p>
-                    <h1 className=" text-[#353535] text-3xl">{"$" + customers.toLocaleString()}</h1>
-                    <hr className="border-0 h-[1.5px] bg-gradient-to-r from-[#ECECEC] via-[#00000080] to-[#ECECEC]" />
-                    <p className="text-[#acabab]"> <span className=" text-[#71DE5F]  " >+{customersIncrease + "%"}</span> since last month</p>
-                </div>
 
-                <div className="shadow-lg p-4 rounded-lg w-full mx-8 border-[#cccccc] border-2">
-                    <p className="text-[#353535]">Revenue</p>
-                    <h1 className=" text-[#353535] text-3xl">{"$" + Revenue.toLocaleString()}</h1>
-                    <hr className="border-0 h-[1.5px] bg-gradient-to-r from-[#ECECEC] via-[#00000080] to-[#ECECEC]" />
-                    <p className="text-[#acabab]"> <span className=" text-[#71DE5F]  " >+{revenueincrease + "%"}</span> than last month</p>
-                </div>
-
-                <div className="shadow-lg p-4 rounded-lg w-full mx-8 border-[#cccccc] border-2">
-                    <p className="text-[#353535]">Average Revenue</p>
-                    <h1 className=" text-[#353535] text-3xl">{"$" + AvereageRevenue.toLocaleString()}</h1>
-                    <hr className="border-0 h-[1.5px] bg-gradient-to-r from-[#ECECEC] via-[#00000080] to-[#ECECEC]" />
-                    <p className="text-[#acabab]"> <span className=" text-[#71DE5F]  " >+{"$"+AvereageRevenueIncrease}</span> than last week</p>
-                </div>
-            </div>
-            {/* Insert the SalesGraph component here */}
-            <div className="flex m-4">
-                <SalesGraph className="my-4"/>
-                <SalesAreaGraph className="my-4"/>
-            </div>
-
-            {/* Sales by Country and Current Orders Radar Graph */}
-            <div className="flex flex-col md:flex-row m-4 w-full bg-white rounded-xl shadow-lg p-6">
-                {/* Sales by Country Table */}
-                <div className="md:w-1/2 w-full md:mr-4 mb-6 md:mb-0 flex flex-col justify-start">
-                    <div>
-                        <h2 className="font-bold text-2xl mb-1">Sales by Country</h2>
-                        <p className="text-gray-400 text-sm mb-2">
-                            Check the sales, value and bounce rate by country.
-                        </p>
+                {/* Sales section  */}
+                <div className="flex">
+                    <div className="shadow-lg p-4 rounded-lg w-full mx-8 border-[#cccccc] border-2">
+                        <p className="text-[#353535]">Sales</p>
+                        <h1 className=" text-[#353535] text-3xl">{"$" + sales.toLocaleString()}</h1>
+                        <hr className="border-0 h-[1.5px] bg-gradient-to-r from-[#ECECEC] via-[#00000080] to-[#ECECEC]" />
+                        <p className="text-[#acabab]"> <span className=" text-[#71DE5F]  " >+{salesIncrease + "%"}</span> than last month</p>
                     </div>
-                    <div className="overflow-y-scroll max-h-96 px-6 py-2">
-                    <table className="w-full text-left mt-0">
-                        <thead>
-                            <tr className="text-gray-400 text-sm">
-                                <th className="pb-2 text-left">Country</th>
-                                <th className="pb-2 text-right">Number of Sales</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {/* Example row, you can map your data here */}
-                            <tr>
-                                <td className="py-2 font-medium text-gray-700 text-left">United States</td>
-                                <td className="py-2 font-semibold text-black text-right">29.09%</td>
-                            </tr>
-                            <tr>
-                                <td className="py-2 font-medium text-gray-700 text-left">United States</td>
-                                <td className="py-2 font-semibold text-black text-right">29.09%</td>
-                            </tr>
-                            <tr>
-                                <td className="py-2 font-medium text-gray-700 text-left">United States</td>
-                                <td className="py-2 font-semibold text-black text-right">29.09%</td>
-                            </tr>
-                            <tr>
-                                <td className="py-2 font-medium text-gray-700 text-left">United States</td>
-                                <td className="py-2 font-semibold text-black text-right">29.09%</td>
-                            </tr>
-                            <tr>
-                                <td className="py-2 font-medium text-gray-700 text-left">United States</td>
-                                <td className="py-2 font-semibold text-black text-right">29.09%</td>
-                            </tr>
-                            <tr>
-                                <td className="py-2 font-medium text-gray-700 text-left">United States</td>
-                                <td className="py-2 font-semibold text-black text-right">29.09%</td>
-                            </tr>
-                            <tr>
-                                <td className="py-2 font-medium text-gray-700 text-left">United States</td>
-                                <td className="py-2 font-semibold text-black text-right">29.09%</td>
-                            </tr>
-                            <tr>
-                                <td className="py-2 font-medium text-gray-700 text-left">United States</td>
-                                <td className="py-2 font-semibold text-black text-right">29.09%</td>
-                            </tr>
-                            <tr>
-                                <td className="py-2 font-medium text-gray-700 text-left">United States</td>
-                                <td className="py-2 font-semibold text-black text-right">29.09%</td>
-                            </tr>
-                            <tr>
-                                <td className="py-2 font-medium text-gray-700 text-left">United States</td>
-                                <td className="py-2 font-semibold text-black text-right">29.09%</td>
-                            </tr>
-                            <tr>
-                                <td className="py-2 font-medium text-gray-700 text-left">United States</td>
-                                <td className="py-2 font-semibold text-black text-right">29.09%</td>
-                            </tr>
-                            <tr>
-                                <td className="py-2 font-medium text-gray-700 text-left">United States</td>
-                                <td className="py-2 font-semibold text-black text-right">29.09%</td>
-                            </tr>
-                            <tr>
-                                <td className="py-2 font-medium text-gray-700 text-left">United States</td>
-                                <td className="py-2 font-semibold text-black text-right">29.09%</td>
-                            </tr>
-                            <tr>
-                                <td className="py-2 font-medium text-gray-700 text-left">United States</td>
-                                <td className="py-2 font-semibold text-black text-right">29.09%</td>
-                            </tr>
-                        </tbody>
-                    </table>
+
+                    <div className="shadow-lg p-4 rounded-lg w-full mx-8 border-[#cccccc] border-2">
+                        <p className="text-[#353535]">Customers</p>
+                        <h1 className=" text-[#353535] text-3xl">{"$" + customers.toLocaleString()}</h1>
+                        <hr className="border-0 h-[1.5px] bg-gradient-to-r from-[#ECECEC] via-[#00000080] to-[#ECECEC]" />
+                        <p className="text-[#acabab]"> <span className=" text-[#71DE5F]  " >+{customersIncrease + "%"}</span> since last month</p>
+                    </div>
+
+                    <div className="shadow-lg p-4 rounded-lg w-full mx-8 border-[#cccccc] border-2">
+                        <p className="text-[#353535]">Revenue</p>
+                        <h1 className=" text-[#353535] text-3xl">{"$" + Revenue.toLocaleString()}</h1>
+                        <hr className="border-0 h-[1.5px] bg-gradient-to-r from-[#ECECEC] via-[#00000080] to-[#ECECEC]" />
+                        <p className="text-[#acabab]"> <span className=" text-[#71DE5F]  " >+{revenueincrease + "%"}</span> than last month</p>
+                    </div>
+
+                    <div className="shadow-lg p-4 rounded-lg w-full mx-8 border-[#cccccc] border-2">
+                        <p className="text-[#353535]">Average Revenue</p>
+                        <h1 className=" text-[#353535] text-3xl">{"$" + AvereageRevenue.toLocaleString()}</h1>
+                        <hr className="border-0 h-[1.5px] bg-gradient-to-r from-[#ECECEC] via-[#00000080] to-[#ECECEC]" />
+                        <p className="text-[#acabab]"> <span className=" text-[#71DE5F]  " >+{"$" + AvereageRevenueIncrease}</span> than last week</p>
                     </div>
                 </div>
-                {/* Current Orders Radar Graph */}
-                <div className="md:w-1/2 w-full md:ml-4 flex flex-col items-center justify-center">
-                    <CurrentOrdersRadarGraph className="my-4 w-full" />
+                {/* Insert the SalesGraph component here */}
+                <div className="flex m-4">
+                    <SalesGraph className="my-4" />
+                    <SalesAreaGraph className="my-4" />
                 </div>
+
+                {/* Sales by Country and Current Orders Radar Graph */}
+                <div className="flex flex-col md:flex-row m-4 w-full bg-white rounded-xl shadow-lg p-6">
+                    {/* Sales by Country Table */}
+                    <div className="md:w-1/2 w-full md:mr-4 mb-6 md:mb-0 flex flex-col justify-start">
+                        <div>
+                            <h2 className="font-bold text-2xl mb-1">Sales by Country</h2>
+                            <p className="text-gray-400 text-sm mb-2">
+                                Check the sales, value and bounce rate by country.
+                            </p>
+                        </div>
+                        <div className="overflow-y-scroll max-h-96 px-6 py-2">
+                            <table className="w-full text-left mt-0">
+                                <thead>
+                                    <tr className="text-gray-400 text-sm">
+                                        <th className="pb-2 text-left">Country</th>
+                                        <th className="pb-2 text-right">Number of Sales</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {/* Example row, you can map your data here */}
+                                    <tr>
+                                        <td className="py-2 font-medium text-gray-700 text-left">United States</td>
+                                        <td className="py-2 font-semibold text-black text-right">29.09%</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-2 font-medium text-gray-700 text-left">United States</td>
+                                        <td className="py-2 font-semibold text-black text-right">29.09%</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-2 font-medium text-gray-700 text-left">United States</td>
+                                        <td className="py-2 font-semibold text-black text-right">29.09%</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-2 font-medium text-gray-700 text-left">United States</td>
+                                        <td className="py-2 font-semibold text-black text-right">29.09%</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-2 font-medium text-gray-700 text-left">United States</td>
+                                        <td className="py-2 font-semibold text-black text-right">29.09%</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-2 font-medium text-gray-700 text-left">United States</td>
+                                        <td className="py-2 font-semibold text-black text-right">29.09%</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-2 font-medium text-gray-700 text-left">United States</td>
+                                        <td className="py-2 font-semibold text-black text-right">29.09%</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-2 font-medium text-gray-700 text-left">United States</td>
+                                        <td className="py-2 font-semibold text-black text-right">29.09%</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-2 font-medium text-gray-700 text-left">United States</td>
+                                        <td className="py-2 font-semibold text-black text-right">29.09%</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-2 font-medium text-gray-700 text-left">United States</td>
+                                        <td className="py-2 font-semibold text-black text-right">29.09%</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-2 font-medium text-gray-700 text-left">United States</td>
+                                        <td className="py-2 font-semibold text-black text-right">29.09%</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-2 font-medium text-gray-700 text-left">United States</td>
+                                        <td className="py-2 font-semibold text-black text-right">29.09%</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-2 font-medium text-gray-700 text-left">United States</td>
+                                        <td className="py-2 font-semibold text-black text-right">29.09%</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-2 font-medium text-gray-700 text-left">United States</td>
+                                        <td className="py-2 font-semibold text-black text-right">29.09%</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {/* Current Orders Radar Graph */}
+                    <div className="md:w-1/2 w-full md:ml-4 flex flex-col items-center justify-center">
+                        <CurrentOrdersRadarGraph className="my-4 w-full" />
+                    </div>
+                </div>
+
             </div>
-            
-        </div>
+        </>
     );
 };
 

@@ -16,7 +16,7 @@ const Layout: React.FC<LayoutProps> = ({ Body, Buyer, Seller }) => {
             {/* Main Content Area */}
             <div className="flex-1 ml-64 overflow-y-auto">
                 {/* Scrollable Content */}
-                <div className="px-6">{Body}</div>
+                <div>{Body}</div>
             </div>
         </div>
     );

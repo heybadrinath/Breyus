@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Star, Heart, Share2, MessageCircle, ShoppingCart, Package, Shield, Truck, X, Copy, } from "lucide-react";
+import { Heart, Share2, MessageCircle, ShoppingCart, Package, Shield, Truck, X, Copy, } from "lucide-react";
 import { getProductById, Product } from "../../services/products.service";
 import TestReport from "../../buyer/components/webUrlframe";
 import { Incoterms } from "../../seller/Products/components/incoterms";
@@ -11,6 +11,7 @@ import whatsapp from "../assets/social-icons/whatsapp.svg";
 import x_twitter from "../assets/social-icons/x.svg";
 import { useNavigate } from "react-router-dom";
 import { addToWishlist, removeFromWishlist, getWishlist } from '../../services/wishlist.service';
+import { TryBreyusCoreHeader } from "../../components/Header";
 
 const ProductPage: React.FC = () => {
 
@@ -39,21 +40,21 @@ const ProductPage: React.FC = () => {
 
   const [showShare, setShowShare] = useState(false);
 
-   useEffect(() => {
-      let ignore = false;
-      const checkWishlist = async () => {
-        if (!product) return;
-        try {
-          const wishlist = await getWishlist();
-          if (ignore) return;
-          setIsWishlisted(wishlist.some((item: any) => item.id === product.id));
-        } catch (e) {
-          // ignore error
-        }
-      };
-      checkWishlist();
-      return () => { ignore = true; };
-    }, [product]);
+  useEffect(() => {
+    let ignore = false;
+    const checkWishlist = async () => {
+      if (!product) return;
+      try {
+        const wishlist = await getWishlist();
+        if (ignore) return;
+        setIsWishlisted(wishlist.some((item: any) => item.id === product.id));
+      } catch (e) {
+        // ignore error
+      }
+    };
+    checkWishlist();
+    return () => { ignore = true; };
+  }, [product]);
 
   // incoterms state 
   type Trader = 'Buyer' | 'Seller';
@@ -335,387 +336,391 @@ const ProductPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 p-6">
-            {/* Left: Product Images */}
-            <div className="space-y-4">
-              {/* Main Image */}
-              <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                <img
-                  src={images[selectedImageIndex]}
-                  alt={product.name}
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = '/placeholder-product.svg';
-                  }}
-                />
-              </div>
-
-              {/* Thumbnail Images */}
-              {images.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto">
-                  {images.map((image, index) => (
-                    <div
-                      key={index}
-                      className={`flex-shrink-0 w-20 h-20 bg-gray-100 rounded cursor-pointer border-2 ${selectedImageIndex === index ? 'border-blue-500' : 'border-transparent'
-                        }`}
-                      onClick={() => setSelectedImageIndex(index)}
-                    >
-                      <img
-                        src={image}
-                        alt={`${product.name} ${index + 1}`}
-                        className="w-full h-full object-contain rounded"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = '/placeholder-product.svg';
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Right: Product Details */}
-            <div className="space-y-6">
-              {/* Product Title */}
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
-                <p className="text-gray-600">by {product.companyName || product.sellerName || 'Unknown Company'}</p>
-              </div>
-
-
-              {/* Price */}
-              <div className="space-y-2">
-                <div className="flex items-baseline gap-3">
-                  <span className="text-3xl font-bold text-gray-900">{(product.salePrice) ? product.salePrice.toLocaleString() + ' ' + product.currency : product.price.toLocaleString() + ' ' + product.currency}</span>
-                  {product.onSale && (
-                    <>
-                      <span className="text-xl text-gray-500 line-through">{product.price.toLocaleString() + ' ' + product.currency}</span>
-                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm font-medium">
-                        {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
-                      </span>
-                    </>
-                  )}
+    <>
+      <TryBreyusCoreHeader />
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 p-6">
+              {/* Left: Product Images */}
+              <div className="space-y-4">
+                {/* Main Image */}
+                <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                  <img
+                    src={images[selectedImageIndex]}
+                    alt={product.name}
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/placeholder-product.svg';
+                    }}
+                  />
                 </div>
 
-                {/* moq and stock  */}
-                <div className="flex">
-                  {product.moq && (
-                    <p className="text-sm text-gray-600">Minimum Order Quantity: {product.moq.toString() + ' ' + product.moqUnit}</p>
-                  )}
-                  <span className="text-sm text-gray-500 ml-auto">
-                    Stock: {product.stock > 0 ? `${product.stock + ' ' + product.stockUnit} available` : 'Out of stock'}
-                  </span>
-                </div>
-
-              </div>
-
-
-
-              {/* Description */}
-              {product.preciseDescription && (
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Description</h3>
-                  <p className="text-gray-700">{product.preciseDescription}</p>
-                </div>
-              )}
-
-
-              {/* Quantity  and sample*/}
-              <label className="block text-sm font-medium text-gray-700">Quantity</label>
-              <div className="flex gap-5">
-                <div>
-
-                  <div className="form-field flex flex-row border-2 rounded-lg">
-                    <input
-                      type="number"
-                      placeholder="Quantity"
-                      className="w-full !border-0 !rounded-r-none"
-                      value={quantity}
-                      onChange={(event) => { setQuantity(event.target.value) }}
-                      name="quantity"
-                    />
-                    <span className="my-auto mx-2">{product.moqUnit}</span>
+                {/* Thumbnail Images */}
+                {images.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto">
+                    {images.map((image, index) => (
+                      <div
+                        key={index}
+                        className={`flex-shrink-0 w-20 h-20 bg-gray-100 rounded cursor-pointer border-2 ${selectedImageIndex === index ? 'border-blue-500' : 'border-transparent'
+                          }`}
+                        onClick={() => setSelectedImageIndex(index)}
+                      >
+                        <img
+                          src={image}
+                          alt={`${product.name} ${index + 1}`}
+                          className="w-full h-full object-contain rounded"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = '/placeholder-product.svg';
+                          }}
+                        />
+                      </div>
+                    ))}
                   </div>
+                )}
+              </div>
+
+              {/* Right: Product Details */}
+              <div className="space-y-6">
+                {/* Product Title */}
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
+                  <p className="text-gray-600">by {product.companyName || product.sellerName || 'Unknown Company'}</p>
                 </div>
 
-                {/* sample input  */}
-                {/* <div className=" flex h-fit w-[35%] px-3 py-3  border-2 rounded-lg">
+
+                {/* Price */}
+                <div className="space-y-2">
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-3xl font-bold text-gray-900">{(product.salePrice) ? product.salePrice.toLocaleString() + ' ' + product.currency : product.price.toLocaleString() + ' ' + product.currency}</span>
+                    {product.onSale && (
+                      <>
+                        <span className="text-xl text-gray-500 line-through">{product.price.toLocaleString() + ' ' + product.currency}</span>
+                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm font-medium">
+                          {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* moq and stock  */}
+                  <div className="flex">
+                    {product.moq && (
+                      <p className="text-sm text-gray-600">Minimum Order Quantity: {product.moq.toString() + ' ' + product.moqUnit}</p>
+                    )}
+                    <span className="text-sm text-gray-500 ml-auto">
+                      Stock: {product.stock > 0 ? `${product.stock + ' ' + product.stockUnit} available` : 'Out of stock'}
+                    </span>
+                  </div>
+
+                </div>
+
+
+
+                {/* Description */}
+                {product.preciseDescription && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Description</h3>
+                    <p className="text-gray-700">{product.preciseDescription}</p>
+                  </div>
+                )}
+
+
+                {/* Quantity  and sample*/}
+                <label className="block text-sm font-medium text-gray-700">Quantity</label>
+                <div className="flex gap-5">
+                  <div>
+
+                    <div className="form-field flex flex-row border-2 rounded-lg">
+                      <input
+                        type="number"
+                        placeholder="Quantity"
+                        className="w-full !border-0 !rounded-r-none"
+                        value={quantity}
+                        onChange={(event) => { setQuantity(event.target.value) }}
+                        name="quantity"
+                      />
+                      <span className="my-auto mx-2">{product.moqUnit}</span>
+                    </div>
+                  </div>
+
+                  {/* sample input  */}
+                  {/* <div className=" flex h-fit w-[35%] px-3 py-3  border-2 rounded-lg">
                   <input type="checkbox" name="sample" value="sample" />
                   <label className="ml-2" htmlFor="sample"> Sample only</label>
                 </div> */}
 
-              </div>
-
-              {/* Action Buttons */}
-              <div className="space-y-3">
-                <button
-                  onClick={handleQuantityValidation}
-
-                  disabled={isAddingToCart || product.stock === 0}
-                  className={`w-full py-3 px-6 rounded-lg text-lg font-semibold transition-all ${false
-                    ? 'bg-green-500 text-white cursor-default'
-                    : product.stock === 0
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : isAddingToCart
-                        ? 'bg-gray-400 text-white cursor-not-allowed'
-                        : 'bg-black text-white hover:bg-gray-800'
-                    }`}
-                >
-                  {isAddingToCart ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Adding to Cart...
-                    </div>
-                  ) : false ? (
-                    <>
-                      <ShoppingCart className="inline w-5 h-5 mr-2" />
-                      In Cart ✓
-                    </>
-                  ) : product.stock === 0 ? (
-                    'Out of Stock'
-                  ) : (
-                    <>
-                      <ShoppingCart className="inline w-5 h-5 mr-2" />
-                      Add to Cart
-                    </>
-                  )}
-                </button>
-
-
-                <button
-                  className="w-full py-3 px-6 border border-gray-300 text-gray-700 rounded-lg font-semibold transition"
-                  onClick={() => { setShowTestReport(true) }}
-                >
-                  View Test Reports
-                </button>
-                {/* View Trade Terms Button  and incoterms button*/}
-                <div className="flex gap-3">
-                  <button
-                    className="w-full py-3 px-6 border border-gray-300 text-gray-700 rounded-lg font-semibold transition"
-                    onClick={() => setShowTradeTerms(true)}
-                  >
-                    Preferred Trade Terms
-                  </button>
-                  <button
-                    className="w-full py-3 px-6 border border-gray-300 text-gray-700 rounded-lg font-semibold transition"
-                    onClick={() => setShowIncoterms(true)}
-                  >
-                    Preferred Inco Terms
-                  </button>
                 </div>
 
-                {/* Secondary Actions */}
-                <div className="flex gap-2">
+                {/* Action Buttons */}
+                <div className="space-y-3">
                   <button
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      if (!product || wishlistLoading) return;
-                      setWishlistLoading(true);
-                      try {
-                        if (isWishlisted) {
-                          await removeFromWishlist(product.id);
-                          setIsWishlisted(false);
-                        } else {
-                          await addToWishlist(product.id);
-                          setIsWishlisted(true);
+                    onClick={handleQuantityValidation}
+
+                    disabled={isAddingToCart || product.stock === 0}
+                    className={`w-full py-3 px-6 rounded-lg text-lg font-semibold transition-all ${false
+                      ? 'bg-green-500 text-white cursor-default'
+                      : product.stock === 0
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : isAddingToCart
+                          ? 'bg-gray-400 text-white cursor-not-allowed'
+                          : 'bg-black text-white hover:bg-gray-800'
+                      }`}
+                  >
+                    {isAddingToCart ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Adding to Cart...
+                      </div>
+                    ) : false ? (
+                      <>
+                        <ShoppingCart className="inline w-5 h-5 mr-2" />
+                        In Cart ✓
+                      </>
+                    ) : product.stock === 0 ? (
+                      'Out of Stock'
+                    ) : (
+                      <>
+                        <ShoppingCart className="inline w-5 h-5 mr-2" />
+                        Add to Cart
+                      </>
+                    )}
+                  </button>
+
+
+                  <button
+                    className="w-full py-3 px-6 border border-gray-300 text-gray-700 rounded-lg font-semibold transition"
+                    onClick={() => { setShowTestReport(true) }}
+                  >
+                    View Test Reports
+                  </button>
+                  {/* View Trade Terms Button  and incoterms button*/}
+                  <div className="flex gap-3">
+                    <button
+                      className="w-full py-3 px-6 border border-gray-300 text-gray-700 rounded-lg font-semibold transition"
+                      onClick={() => setShowTradeTerms(true)}
+                    >
+                      Preferred Trade Terms
+                    </button>
+                    <button
+                      className="w-full py-3 px-6 border border-gray-300 text-gray-700 rounded-lg font-semibold transition"
+                      onClick={() => setShowIncoterms(true)}
+                    >
+                      Preferred Inco Terms
+                    </button>
+                  </div>
+
+                  {/* Secondary Actions */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (!product || wishlistLoading) return;
+                        setWishlistLoading(true);
+                        try {
+                          if (isWishlisted) {
+                            await removeFromWishlist(product.id);
+                            setIsWishlisted(false);
+                          } else {
+                            await addToWishlist(product.id);
+                            setIsWishlisted(true);
+                          }
+                        } catch (err) {
+                          // Optionally show error
+                        } finally {
+                          setWishlistLoading(false);
                         }
-                      } catch (err) {
-                        // Optionally show error
-                      } finally {
-                        setWishlistLoading(false);
-                      }
-                    }}
-                    className={`flex py-2 px-4 rounded-lg border transition-all  border-gray-300 text-gray-700 hover:bg-gray-50`}
-                  >
-                    <Heart className={` inline w-4 my-auto h-4 mr-2 ${isWishlisted ? 'fill-red-500 border-none' : ''}`} />
-                    {isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
-                  </button>
+                      }}
+                      className={`flex py-2 px-4 rounded-lg border transition-all  border-gray-300 text-gray-700 hover:bg-gray-50`}
+                    >
+                      <Heart className={` inline w-4 my-auto h-4 mr-2 ${isWishlisted ? 'fill-red-500 border-none' : ''}`} />
+                      {isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                    </button>
 
-                  <button className="flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
-                    <MessageCircle className="inline w-4 h-4 mr-2" />
-                    Ask Queries
-                  </button>
+                    <button className="flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
+                      <MessageCircle className="inline w-4 h-4 mr-2" />
+                      Ask Queries
+                    </button>
 
-                  <button onClick={() => setShowShare(true)} className="flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
-                    <Share2 className="inline w-4 h-4 mr-2" />
-                    Share
-                  </button>
+                    <button onClick={() => setShowShare(true)} className="flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
+                      <Share2 className="inline w-4 h-4 mr-2" />
+                      Share
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              {/* Product Features */}
-              <div className="border-t pt-6">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Shield className="w-4 h-4 text-green-600" />
-                    Quality Assured
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Truck className="w-4 h-4 text-blue-600" />
-                    Fast Delivery
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Package className="w-4 h-4 text-purple-600" />
-                    Secure Packaging
+                {/* Product Features */}
+                <div className="border-t pt-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Shield className="w-4 h-4 text-green-600" />
+                      Quality Assured
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Truck className="w-4 h-4 text-blue-600" />
+                      Fast Delivery
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Package className="w-4 h-4 text-purple-600" />
+                      Secure Packaging
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Product Details Tabs */}
+            {product.detailedDescription && (
+              <div className="border-t bg-gray-50 p-6">
+                <h3 className="text-xl font-semibold mb-4">Detailed Information</h3>
+                <div className="prose max-w-none">
+                  <p className="text-gray-700 whitespace-pre-wrap">{product.detailedDescription}</p>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Product Details Tabs */}
-          {product.detailedDescription && (
-            <div className="border-t bg-gray-50 p-6">
-              <h3 className="text-xl font-semibold mb-4">Detailed Information</h3>
-              <div className="prose max-w-none">
-                <p className="text-gray-700 whitespace-pre-wrap">{product.detailedDescription}</p>
+          {/* Notifications */}
+          {notification && (
+            <div className={`fixed bottom-4 right-4 max-w-md p-4 rounded-lg shadow-lg animate-bounce z-50 ${notification.type === 'success'
+              ? 'bg-green-500 text-white'
+              : notification.type === 'error'
+                ? 'bg-red-500 text-white'
+                : 'bg-blue-500 text-white'
+              }`}>
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  {notification.type === 'success' && <span className="text-xl">✅</span>}
+                  {notification.type === 'error' && <span className="text-xl">❌</span>}
+                  {notification.type === 'info' && <span className="text-xl">ℹ️</span>}
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium">{notification.message}</p>
+                  {notification.type === 'success' && tradeRequestSent && (
+                    <p className="text-xs mt-1 opacity-90">Redirecting to trade requests...</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setNotification(null)}
+                  className="ml-auto -mx-1.5 -my-1.5 text-white hover:bg-black hover:bg-opacity-20 rounded-lg p-1.5"
+                >
+                  <span className="text-sm">✕</span>
+                </button>
               </div>
             </div>
           )}
+
+          {/* Legacy cart success message - keeping for cart operations */}
+          {addedToCart && !notification && (
+            <div className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-bounce">
+              Added to Cart Successfully!
+            </div>
+          )}
+
+          {/* Trade Terms Modal */}
+          <TestReport onClose={() => setShowTestReport(false)} url={product.testReport} show={showTestReport} />
+
+
+
+          {/* Trade Terms Modal */}
+          {showTradeTerms && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+              <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative animate-fade-in">
+                <button
+                  className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
+                  onClick={() => setShowTradeTerms(false)}
+                  aria-label="Close"
+                >
+                  <X size={22} />
+                </button>
+                <h2 className="text-xl font-bold mb-4 text-center">Trade Terms</h2>
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <span className="font-semibold">Preferred Buyer Revenue Range:</span><br />
+                    <span>{product.revenueMin + ' to ' + product.revenueMax + ' ' + product.currencyTrade + ' ' + product.unitTrade || "-"}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">Potential Years to Trade:</span><br />
+                    <span>{product.yearsTrade || "-"}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">Industry Using Product:</span><br />
+                    <span>{product.industry || "-"}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">Years in Market:</span><br />
+                    <span>{product.marketYears || "-"}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">Buyer Market Duration:</span><br />
+                    <span>{product.sellerMarketYears || "-"}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">Market Capture:</span><br />
+                    <span>{product.marketcapture !== undefined && product.marketcapture !== null ? product.marketcapture + "%" : "-"}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+
+          {/* Incoterms model  */}
+          {showIncoterms && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+              <div className="bg-white rounded-lg shadow-xl w-[98vw] h-[96vh] mx-auto  p-6 relative animate-fade-in flex flex-col">
+                <button
+                  className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
+                  onClick={() => setShowIncoterms(false)}
+                  aria-label="Close"
+                >
+                  <X size={22} />
+                </button>
+                <h2 className="text-xl font-bold mb-4 text-center">Preferred Inco Terms</h2>
+                <div className="flex-1 overflow-y-auto">
+                  <div>
+                    <Incoterms incoterms={incotermsState} setIncoterms={() => { }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Share product model */}
+          {showShare && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+              <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative animate-fade-in">
+                <button
+                  className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
+                  onClick={() => setShowShare(false)}
+                  aria-label="Close"
+                >
+                  <X size={22} />
+                </button>
+                <p className="text-xl f mb-4">Share link</p>
+                <div>
+                  <div className="text-sm border  rounded-lg flex px-3 py-2 overflow-x-auto bg-gray-200">
+                    <div className=" w-full whitespace-nowrap text-gray-700 ">{window.location.href}</div>
+                    <div onClick={() => { navigator.clipboard.writeText(window.location.href) }} className="right-6 absolute bg-gray-200 px-2 cursor-pointer"><Copy className="h-5 hover:scale-[1.05] hover:shadow-lg transition-all ease-in-out delay-300" /> </div>
+                  </div>
+                  <div className="mt-6 flex justify-evenly">
+                    <img className="cursor-pointer" src={whatsapp} alt="Whatsapp" />
+                    <img className="cursor-pointer" src={ln} alt="Linkedin" />
+                    <img className="cursor-pointer" src={fb} alt="FaceBook" />
+                    <img className="cursor-pointer" src={x_twitter} alt="X" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
-
-        {/* Notifications */}
-        {notification && (
-          <div className={`fixed bottom-4 right-4 max-w-md p-4 rounded-lg shadow-lg animate-bounce z-50 ${notification.type === 'success'
-            ? 'bg-green-500 text-white'
-            : notification.type === 'error'
-              ? 'bg-red-500 text-white'
-              : 'bg-blue-500 text-white'
-            }`}>
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                {notification.type === 'success' && <span className="text-xl">✅</span>}
-                {notification.type === 'error' && <span className="text-xl">❌</span>}
-                {notification.type === 'info' && <span className="text-xl">ℹ️</span>}
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium">{notification.message}</p>
-                {notification.type === 'success' && tradeRequestSent && (
-                  <p className="text-xs mt-1 opacity-90">Redirecting to trade requests...</p>
-                )}
-              </div>
-              <button
-                onClick={() => setNotification(null)}
-                className="ml-auto -mx-1.5 -my-1.5 text-white hover:bg-black hover:bg-opacity-20 rounded-lg p-1.5"
-              >
-                <span className="text-sm">✕</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Legacy cart success message - keeping for cart operations */}
-        {addedToCart && !notification && (
-          <div className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-bounce">
-            Added to Cart Successfully!
-          </div>
-        )}
-
-        {/* Trade Terms Modal */}
-        <TestReport onClose={() => setShowTestReport(false)} url={product.testReport} show={showTestReport} />
-
-
-
-        {/* Trade Terms Modal */}
-        {showTradeTerms && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative animate-fade-in">
-              <button
-                className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
-                onClick={() => setShowTradeTerms(false)}
-                aria-label="Close"
-              >
-                <X size={22} />
-              </button>
-              <h2 className="text-xl font-bold mb-4 text-center">Trade Terms</h2>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <span className="font-semibold">Preferred Buyer Revenue Range:</span><br />
-                  <span>{product.revenueMin + ' to ' + product.revenueMax + ' ' + product.currencyTrade + ' ' + product.unitTrade || "-"}</span>
-                </div>
-                <div>
-                  <span className="font-semibold">Potential Years to Trade:</span><br />
-                  <span>{product.yearsTrade || "-"}</span>
-                </div>
-                <div>
-                  <span className="font-semibold">Industry Using Product:</span><br />
-                  <span>{product.industry || "-"}</span>
-                </div>
-                <div>
-                  <span className="font-semibold">Years in Market:</span><br />
-                  <span>{product.marketYears || "-"}</span>
-                </div>
-                <div>
-                  <span className="font-semibold">Buyer Market Duration:</span><br />
-                  <span>{product.sellerMarketYears || "-"}</span>
-                </div>
-                <div>
-                  <span className="font-semibold">Market Capture:</span><br />
-                  <span>{product.marketcapture !== undefined && product.marketcapture !== null ? product.marketcapture + "%" : "-"}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-
-        {/* Incoterms model  */}
-        {showIncoterms && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-            <div className="bg-white rounded-lg shadow-xl w-[98vw] h-[96vh] mx-auto  p-6 relative animate-fade-in flex flex-col">
-              <button
-                className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
-                onClick={() => setShowIncoterms(false)}
-                aria-label="Close"
-              >
-                <X size={22} />
-              </button>
-              <h2 className="text-xl font-bold mb-4 text-center">Preferred Inco Terms</h2>
-              <div className="flex-1 overflow-y-auto">
-                <div>
-                  <Incoterms incoterms={incotermsState} setIncoterms={() => { }} />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Share product model */}
-        {showShare && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 relative animate-fade-in">
-              <button
-                className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
-                onClick={() => setShowShare(false)}
-                aria-label="Close"
-              >
-                <X size={22} />
-              </button>
-              <p className="text-xl f mb-4">Share link</p>
-              <div>
-                <div className="text-sm border  rounded-lg flex px-3 py-2 overflow-x-auto bg-gray-200">
-                  <div className=" w-full whitespace-nowrap text-gray-700 ">{window.location.href}</div>
-                  <div onClick={() => { navigator.clipboard.writeText(window.location.href) }} className="right-6 absolute bg-gray-200 px-2 cursor-pointer"><Copy className="h-5 hover:scale-[1.05] hover:shadow-lg transition-all ease-in-out delay-300" /> </div>
-                </div>
-                <div className="mt-6 flex justify-evenly">
-                  <img className="cursor-pointer" src={whatsapp} alt="Whatsapp" />
-                  <img className="cursor-pointer" src={ln} alt="Linkedin" />
-                  <img className="cursor-pointer" src={fb} alt="FaceBook" />
-                  <img className="cursor-pointer" src={x_twitter} alt="X" />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
       </div>
-    </div>
+    </>
   );
+
 };
 console.log(window.location.href);
 export default ProductPage;

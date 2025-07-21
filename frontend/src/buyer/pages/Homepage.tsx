@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import Banner from '../components/Banner';
-import Navbar from '../../components/navbar';
+import { SearchHeader } from '../../components/Header';
 import { getProductsWithPagination, PaginationParams, Product } from '../../services/products.service';
+import { Search } from 'lucide-react';
 
 
 const Homepage: React.FC = () => {
@@ -235,13 +236,13 @@ const Homepage: React.FC = () => {
   return (
 
     <div className="">
-      {/* Fixed Navbar */}
+      {/* Fixed Header */}
       <div className="fixed top-0 right-0 left-64 z-10 p-6">
-        <Navbar onSearch={handleSearch} />
+        <SearchHeader onSearch={handleSearch} />
       </div>
 
       {/* Scrollable Content */}
-      <div className='pt-24'>
+      <div className='pt-24 px-6'>
         <div className="mt-6">
           <Banner />
         </div>
