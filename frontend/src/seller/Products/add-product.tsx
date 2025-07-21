@@ -9,6 +9,7 @@ import AddProductTerms from './components/product-terms';
 import ProgressBar from "../../buyer/components/cart/PurchaseRequestProgress";
 import '../css/product.css';
 import { createProduct, CreateProductData } from '../../services/products.service';
+import { Header } from "../../components/Header";
 
 
 export const AddProduct = () => {
