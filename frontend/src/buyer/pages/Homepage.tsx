@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
 import ProductCard from '../components/ProductCard';
 import Banner from '../components/Banner';
-import Navbar from '../components/navbar';
+import Navbar from '../../components/navbar';
 import { getProductsWithPagination, PaginationParams, Product } from '../../services/products.service';
 
 
@@ -234,41 +233,35 @@ const Homepage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Fixed Sidebar */}
-      <div className="fixed left-0 top-0 h-screen">
-        <Sidebar />
+
+    <div className="">
+      {/* Fixed Navbar */}
+      <div className="fixed top-0 right-0 left-64 z-10 p-6">
+        <Navbar onSearch={handleSearch} />
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 ml-64 overflow-y-auto">
-        {/* Fixed Navbar */}
-        <div className="fixed top-0 right-0 left-64 z-10 p-6">
-          <Navbar onSearch={handleSearch} />
+      {/* Scrollable Content */}
+      <div className='pt-24'>
+        <div className="mt-6">
+          <Banner />
         </div>
 
-        {/* Scrollable Content */}
-        <div className="p-6 mt-28">
-          <div className="mt-6">
-            <Banner />
-          </div>
-
-          {/* Products Section */}
-          <div className="mt-8 mx-auto !w-full">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {searchTerm ? `Search Results for "${searchTerm}"` : 'Available Products'}
-              </h2>
-              <div className="text-sm text-gray-600">
-                {!loading && `${totalProducts} products found`}
-              </div>
+        {/* Products Section */}
+        <div className="mt-8 mx-auto !w-full">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">
+              {searchTerm ? `Search Results for "${searchTerm}"` : 'Available Products'}
+            </h2>
+            <div className="text-sm text-gray-600">
+              {!loading && `${totalProducts} products found`}
             </div>
-
-            {renderProducts()}
           </div>
+
+          {renderProducts()}
         </div>
       </div>
     </div>
+
   );
 };
 

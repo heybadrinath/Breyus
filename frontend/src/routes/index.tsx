@@ -22,10 +22,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import Sales from "../seller/sales";
 import Upgrade from "../seller/upgrade";
 import { AddProduct } from "../seller/Products/add-product";
-import BuyerLayout from "../buyer/components/layout";
+import {Layout} from "../components/layout";
 
-
-import { Layout } from "../seller/components";
 // import Inbox from "../seller/inbox";
 // import { Trade, Feedback } from "../seller/trade";
 
@@ -113,13 +111,13 @@ const AppRoutes = () => {
 
         {/* Buyer Routes */}
 
-        <Route path="/buyer/homepage" element={<BuyerProtectedRoute><Animate page={<Homepage />} /></BuyerProtectedRoute>} />
+        <Route path="/buyer/homepage" element={<BuyerProtectedRoute><Animate page={<Layout Body={<Homepage />} />} /></BuyerProtectedRoute>} />
         {/* <Route path="/buyer/inbox" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<BuyerInbox />} />} /></BuyerProtectedRoute>} /> */}
-        <Route path="/buyer/wishlist" element={<BuyerProtectedRoute><Animate page={<Wishlist />} /></BuyerProtectedRoute>} />
+        <Route path="/buyer/wishlist" element={<BuyerProtectedRoute><Animate page={<Layout Body={<Wishlist />} /> } /></BuyerProtectedRoute>} />
         {/* <Route path="/buyer/cartpage" element={<BuyerProtectedRoute><Animate page={<CartPage />} /></BuyerProtectedRoute>} /> */}
         {/* <Route path="/buyer/trade" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<BuyerTrade />} />} /></BuyerProtectedRoute>} /> */}
         {/* <Route path="/buyer/buyer-address" element={<BuyerProtectedRoute><Animate page={<BuyerAddress />} /></BuyerProtectedRoute>} /> */}
-        <Route path="/buyer/product-page" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<ProductPage />} />} /></BuyerProtectedRoute>} />
+        <Route path="/buyer/product-page" element={<BuyerProtectedRoute><Animate page={<Layout Body={<ProductPage />} />} /></BuyerProtectedRoute>} />
         {/* <Route path="/buyer/purchase-request" element={<BuyerProtectedRoute><Animate page={<PurchaseRequest />} /></BuyerProtectedRoute>} /> */}
         <Route path="/buyer/purchase-request-success" element={<BuyerProtectedRoute><Animate page={<PurchaseRequestSuccess />} /></BuyerProtectedRoute>} />
 

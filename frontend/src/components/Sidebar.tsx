@@ -2,10 +2,10 @@ import UserProfile from "./Userprofile";
 import SidebarItem from "./SidebarItem";
 import SidebarBottom from "./SidebarButtom";
 import { Store, Inbox, ShoppingCart, Repeat, Heart } from "lucide-react";
-import BreyusLogo from "../../seller/vectors/full-logo.svg"
+import BreyusLogo from "../seller/vectors/full-logo.svg"
 import { useState } from "react";
 import React from "react";
-import { usernameService } from "../../services/users.service";
+import { usernameService } from "../services/users.service";
 
 
 

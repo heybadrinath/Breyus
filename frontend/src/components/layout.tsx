@@ -1,10 +1,11 @@
 import Sidebar from "../components/Sidebar";
-import Navbar from "../components/navbar";
-interface BuyerLayoutProps {
-    content?: React.ReactNode;
+interface LayoutProps {
+    Body?: React.ReactNode;
+    Buyer?: Boolean;
+    Seller?: Boolean;
 }
 
-const BuyerLayout: React.FC<BuyerLayoutProps> = ({ content }) => {
+const Layout: React.FC<LayoutProps> = ({ Body, Buyer, Seller }) => {
     return (
         <div className="flex h-screen overflow-hidden">
             {/* Fixed Sidebar */}
@@ -14,15 +15,10 @@ const BuyerLayout: React.FC<BuyerLayoutProps> = ({ content }) => {
 
             {/* Main Content Area */}
             <div className="flex-1 ml-64 overflow-y-auto">
-                {/* Fixed Navbar */}
-                <div className="fixed top-0 right-0 left-64 z-10 p-6">
-                    <Navbar />
-                </div>
-
                 {/* Scrollable Content */}
-                <div className="pt-24 px-6">{content}</div>
+                <div className="px-6">{Body}</div>
             </div>
         </div>
     );
 };
-export default BuyerLayout;
+export { Layout };
