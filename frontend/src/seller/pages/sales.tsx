@@ -1,5 +1,5 @@
 import React from "react";
-import { SortHeader } from "../components/Header";
+import { SortHeader } from "../../components/Header";
 
 import {
     LineChart,

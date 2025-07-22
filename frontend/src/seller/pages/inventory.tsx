@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ProductRow } from "../Products/components/productRowInventory";
+import { ProductRow } from "../components/Products/productRowInventory";
 import { getUserProducts } from "../../services/products.service";
 
 export const Inventory: React.FC = () => {

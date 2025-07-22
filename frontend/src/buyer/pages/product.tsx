@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Heart, Share2, MessageCircle, ShoppingCart, Package, Shield, Truck, X, Copy, } from "lucide-react";
 import { getProductById, Product } from "../../services/products.service";
 import TestReport from "../../buyer/components/webUrlframe";
-import { Incoterms } from "../../seller/Products/components/incoterms";
+import { Incoterms } from "../../components/incoterms";
 
 // import social media icons
 import fb from "../assets/social-icons/fb.svg";

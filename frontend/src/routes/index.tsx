@@ -16,12 +16,12 @@ import ForgotPassword from "../main/forgot-password";
 
 import Hero from "../main/Hero";
 // import SellerSettings from "../seller/settings";
-import SellerDashboard from "../seller/dashboard";
+import SellerDashboard from "../seller/pages/dashboard";
 // import Security from "../seller/security";
 import { motion, AnimatePresence } from "framer-motion";
-import Sales from "../seller/sales";
-import Upgrade from "../seller/upgrade";
-import { AddProduct } from "../seller/Products/add-product";
+import Sales from "../seller/pages/sales";
+import Upgrade from "../seller/pages/upgrade";
+import { AddProduct } from "../seller/pages/add-product";
 import {Layout} from "../components/layout";
 
 // import Inbox from "../seller/inbox";
@@ -36,7 +36,7 @@ import ProductPage from "../buyer/pages/product";
 // import BuyerAddress from "../buyer/pages/buyer_address";
 // import PurchaseRequest from "../buyer/pages/purchase-request";
 import PurchaseRequestSuccess from "../buyer/pages/PurchaseRequestSuccess";
-import { Inventory } from "../seller/Products/inventory";
+import { Inventory } from "../seller/pages/inventory";
 
 // ai imports 
 import BuyerAi from "../buyer/pages/ai";
