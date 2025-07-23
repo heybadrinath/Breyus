@@ -6,8 +6,6 @@ const inboxSidebar: React.FC<InboxSidebarProps> = ({
     conversations,
     unreadCount,
     onConversationSelect
-    
-
 }) => {
 
 

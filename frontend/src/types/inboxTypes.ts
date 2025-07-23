@@ -11,13 +11,13 @@ export interface ConversationProps {
   time: string;          
   message: Message[];   
   isUnread: boolean;    
-  unreadCount?: number;  
+  unreadCount: number;  
   productInfo?: string; 
 }
 
 export interface InboxSidebarProps {
   conversations: ConversationProps[]; 
-  unreadCount?: number;                 
+  unreadCount: number;                 
   searchQuery: string;                
   handleSearch: (query: string) => void; 
   onConversationSelect: (conversationId: string) => void; 
@@ -27,6 +27,6 @@ export interface InboxConversationProps {
   name: string;           
   productName: string;    
   messages: Message[];    
-  onSendMessage?: (messageText: string) => void; 
+  onSendMessage: (messageText: string) => void; 
   onAttachFile?: () => void; 
 }

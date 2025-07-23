@@ -1,9 +1,28 @@
-import React from "react";
+import React, { useState } from "react";
 import { ArrowLeft, Phone, Video, MoreVertical, Paperclip, Send } from 'lucide-react';
 import { InboxConversationProps } from "../types/inboxTypes";
 
 
 const InboxConversation: React.FC<InboxConversationProps> = ({ name, productName, messages, onAttachFile, onSendMessage }) => {
+    const [message, setMessage] = useState<string>("");
+
+    const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setMessage(e.target.value);
+    };
+
+    const handleSendMessage = () => {
+        if (message.trim()) {
+            onSendMessage(message);  
+            setMessage("");  
+        }
+    };
+
+    const handleKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleSendMessage();
+        }
+    };
     return (
         <div className="flex-1 flex flex-col bg-white">
             {/* Chat Header " */}
@@ -28,10 +47,10 @@ const InboxConversation: React.FC<InboxConversationProps> = ({ name, productName
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-5 bg-gray-50">
-                
+
                 {messages.map((message, index) => (
                     <div className={`flex mb-4 ${(!message.isSender) ? "justify-end" : "justify-start"}`}>
-                        <div key={index} className={`max-w-[70%] p-3.5 rounded-2xl shadow-sm relative ${(!message.isSender)?"bg-gray-600 text-white":"bg-white text-gray-900"}`}>
+                        <div key={index} className={`max-w-[70%] p-3.5 rounded-2xl shadow-sm relative ${(!message.isSender) ? "bg-gray-600 text-white" : "bg-white text-gray-900"}`}>
                             <div className="text-base leading-tight break-words">
                                 {message.text}
                             </div>
@@ -54,13 +73,18 @@ const InboxConversation: React.FC<InboxConversationProps> = ({ name, productName
                         <input
                             placeholder="Type a message..."
                             className="w-full py-2.5 pl-4 pr-10 border border-gray-300 rounded-full text-base outline-none resize-none max-h-32 min-h-[44px]"
+                            value={message}
+                            onChange={handleMessageChange}
+                            onKeyDown={handleKeyPress}
                         />
 
                     </div>
 
                     <button
-                        className="bg-gray-600 text-white border-none rounded-full w-11 h-11 cursor-pointer flex items-center justify-center transition-colors
-                                hover:bg-gray-700 disabled:bg-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed"
+                    onClick={handleSendMessage}
+                        className="bg-gray-600 text-white border-none rounded-full w-11 h-11 cursor-pointer flex items-center justify-center transition-colors hover:bg-gray-700 disabled:bg-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed"
+                        disabled={!message.trim()}
+
                     >
                         <Send size={18} />
                     </button>

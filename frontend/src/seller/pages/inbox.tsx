@@ -128,16 +128,16 @@ const SellerInbox = () => {
             <SearchHeaderLight />
 
             <div className="flex h-full bg-gray-50 font-sans">
-                <InboxSidebar
+                {/* <InboxSidebar
                     conversations={conversations}
-                    unreadCount={unreadCount}
+                    unreadCount={unreadCount || 0}
                     searchQuery={searchQuery}
                     handleSearch={handleSearch}
                     onConversationSelect={handleConversationSelect}
-                />
-                {selectedConversation &&
-                    <InboxConversation name={selectedConversation.name} productName={selectedConversation.productInfo || ''} messages={selectedConversation.message} />
-                }
+                /> */}
+                {/* {selectedConversation &&
+                    <InboxConversation name={selectedConversation.name} productName={selectedConversation.productInfo || ''} messages={selectedConversation.message} onSendMessage={()=> {}}/>
+                } */}
 
             </div>
         </div>

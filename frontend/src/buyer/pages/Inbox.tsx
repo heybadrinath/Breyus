@@ -5,16 +5,13 @@ import InboxConversation from '../../components/InboxConversation';
 import { ConversationProps, Message } from '../../types/inboxTypes';
 import { SearchHeaderLight } from '../../components/Header';
 
-
-
-
 const BuyerInbox = () => {
-
     const [conversations, setConversations] = useState<ConversationProps[]>([]);
     const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [unreadCount, setUnreadCount] = useState<number>();
 
+    // Mock conversations data
     useEffect(() => {
         const mockConversations: ConversationProps[] = [
             {
@@ -101,10 +98,8 @@ const BuyerInbox = () => {
             },
         ];
 
-        // Set mock data into state
         setConversations(mockConversations);
 
-        // Calculate the unread count
         const totalUnreadCount = mockConversations.reduce(
             (acc, conv) => acc + (conv.isUnread ? 1 : 0),
             0
@@ -112,13 +107,48 @@ const BuyerInbox = () => {
         setUnreadCount(totalUnreadCount);
     }, []);
 
-
+    // Handle search input
     const handleSearch = (query: string) => {
         setSearchQuery(query);
     };
 
+    // Handle conversation selection
     const handleConversationSelect = (conversationId: string) => {
         setSelectedConversationId(conversationId);
+    };
+
+    // Handle sending a message in the selected conversation
+    const handleSendMessage = (messageText: string) => {
+        if (!selectedConversationId) return;
+
+        const updatedConversations = conversations.map(conv => {
+            if (conv.id === selectedConversationId) {
+                const newMessage: Message = {
+                    text: messageText,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    isSender: false, 
+                    isRead: true,  
+                };
+
+                const updatedMessages = [...conv.message, newMessage];
+
+                return {
+                    ...conv,
+                    message: updatedMessages,
+                    isUnread: true,  // Mark the conversation as having unread messages
+                    unreadCount: conv.unreadCount + 1,  // Increment the unread count
+                };
+            }
+            return conv;
+        });
+
+        setConversations(updatedConversations);
+
+        const totalUnreadCount = updatedConversations.reduce(
+            (acc, conv) => acc + conv.unreadCount,
+            0
+        );
+        setUnreadCount(totalUnreadCount);
     };
 
     const selectedConversation = conversations.find(conv => conv.id === selectedConversationId);
@@ -130,15 +160,19 @@ const BuyerInbox = () => {
             <div className="flex h-full bg-gray-50 font-sans">
                 <InboxSidebar
                     conversations={conversations}
-                    unreadCount={unreadCount}
+                    unreadCount={unreadCount || 0}
                     searchQuery={searchQuery}
                     handleSearch={handleSearch}
                     onConversationSelect={handleConversationSelect}
                 />
-                {selectedConversation &&
-                    <InboxConversation name={selectedConversation.name} productName={selectedConversation.productInfo || ''} messages={selectedConversation.message} />
-                }
-
+                {selectedConversation && (
+                    <InboxConversation
+                        name={selectedConversation.name}
+                        productName={selectedConversation.productInfo || ''}
+                        messages={selectedConversation.message}
+                        onSendMessage={handleSendMessage}  // Pass handleSendMessage as a prop
+                    />
+                )}
             </div>
         </div>
     );
