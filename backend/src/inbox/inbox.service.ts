@@ -1,32 +1,49 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Inbox } from './inbox.schema';
-import { CreateMessageDto } from './inbox.dto';
+import { CreateConversationDto } from './dto/create-conversation.dto';
 import { Product } from 'src/products/schema/products.schema';
+import { Conversation } from './schemas/conversations.schema';
+import { Message } from './schemas/messages.schema';
+import { User } from 'src/users/user.schema';
 
 @Injectable()
 export class InboxService {
   constructor(
-    @InjectModel(Inbox.name) private messageModel: Model<Inbox>,
-    @InjectModel(Product.name) private productModel: Model<Product>,
-  ) {}
+    @InjectModel(Conversation.name) private conversationModel: Model<Conversation>,
+    @InjectModel(Message.name) private messageModel: Model<Message>,
+    @InjectModel(User.name) private userModel: Model<User>,
 
-  async createMessage(senderId: string, createMessageDto: CreateMessageDto) {
-    const product = await this.productModel.findById(createMessageDto.product);
+    @InjectModel(Product.name) private productModel: Model<Product>,
+  ) { }
+
+  async createConversation(createConversationDto: CreateConversationDto, companyId: string): Promise<string> {
+    const product = await this.productModel
+      .findById(createConversationDto.product)
+      .exec();
+
     if (!product) {
       throw new NotFoundException('Product not found');
     }
 
-    const recipient = product;  
+    const user = await this.userModel.findById(product.userId).exec();
 
-    // Create a new message using the sender (from JWT) and the recipient (from the product)
-    const newMessage = new this.messageModel({
-      sender: senderId,  // Sender is from JWT token (provided in controller)
-      recipient,         // Recipient is derived from the product
-      ...createMessageDto,
-    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    const senderId = companyId;
+    const receiverId = (user.company as unknown as string)
+          const participants = [senderId, receiverId];
 
-    return await newMessage.save();  // Save the new message to the database
+    const conversation = (await this.conversationModel.create({...createConversationDto, participants}));
+    return conversation._id as string;
+  }
+
+  async getConversationsByCompanyId(companyId: string): Promise<Conversation[]> {
+    return this.conversationModel
+      .find({ participants: companyId })
+      .populate('participants')
+      .populate('messages')
+      .exec();
   }
 }

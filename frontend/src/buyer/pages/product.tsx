@@ -3,6 +3,7 @@ import { Heart, Share2, MessageCircle, ShoppingCart, Package, Shield, Truck, X, 
 import { getProductById, Product } from "../../services/products.service";
 import TestReport from "../../buyer/components/webUrlframe";
 import { Incoterms } from "../../components/incoterms";
+import { createConversation } from "../../services/inbox.service";
 
 // import social media icons
 import fb from "../assets/social-icons/fb.svg";
@@ -539,7 +540,17 @@ const ProductPage: React.FC = () => {
                       {isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
                     </button>
 
-                    <button className="flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
+                    <button className="flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                      onClick={async () => {
+                        try{
+                            const result =  createConversation(product.id);
+                            if((await result).status === 'success'){
+                              navigate('/buyer/inbox');
+                            } } catch (error) {
+                              console.error('Error creating conversation:', error);
+                            }
+                      }}
+                    >
                       <MessageCircle className="inline w-4 h-4 mr-2" />
                       Ask Queries
                     </button>
