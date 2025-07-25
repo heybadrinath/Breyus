@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-
 import InboxSidebar from '../../components/InboxSidebar';
 import InboxConversation from '../../components/InboxConversation';
 import { ConversationProps, Message } from '../../types/inboxTypes';
@@ -12,21 +11,22 @@ const BuyerInbox = () => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [unreadCount, setUnreadCount] = useState<number>(0);
-    const [currentCompanyId, setCurrentCompanyId] = useState<string>('');
     const [selectedConversation, setSelectedConversation] = useState<ConversationProps | null>(null);
+    const [currentCompanyId, setCurrentCompanyId] = useState<string>('');
 
     // Fetch conversations
     const fetchConversations = useCallback(async () => {
         try {
             const response = await getConversation('');
             if (response.status === 'success') {
-                // Add id field if missing
+                // Add id field if missing, reconstruct companyIds if possible
                 const convs = response.data.map((conv: any, idx: number) => ({
                     ...conv,
                     id: conv._id || conv.id || idx.toString(),
+                    // companyIds is not returned by backend, so leave as [] for now
+                    companyIds: conv.companyIds || [],
                 }));
                 setConversations(convs);
-                // Calculate total unread
                 setUnreadCount(convs.reduce((acc: number, conv: any) => acc + (conv.unreadCount || 0), 0));
             } else {
                 console.error('Failed to fetch conversations:', response.message);
@@ -40,53 +40,28 @@ const BuyerInbox = () => {
         fetchConversations();
     }, [fetchConversations]);
 
+    // Helper to get string ID from sender (string or object)
+    const getId = (val: any) => typeof val === 'string' ? val : val?._id;
+
     // Fetch messages for selected conversation
     useEffect(() => {
         const fetchMsgs = async () => {
-            if (!selectedConversationId) return;
+            if (!selectedConversationId || !selectedConversation) return;
             const response = await getMessages(selectedConversationId);
             if (response.status === 'success') {
-                // Get current companyId from first message or conversation
-                let companyId = currentCompanyId;
-                if (!companyId && response.data.length > 0) {
-                    // Try to infer from sender/receiver
-                    // (In real app, get from auth context)
-                    companyId = response.data[0].sender;
-                    setCurrentCompanyId(companyId);
-                }
-                // Mark as read
-                await markMessagesAsRead(selectedConversationId);
-                // Set messages with isSender for alignment
+                const senderId = selectedConversation.companyIds[0];
                 setMessages(response.data.map((msg: any) => ({
                     ...msg,
-                    isSender: msg.sender === companyId,
+                    isSender: getId(msg.sender) === senderId,
                 })));
-                // Update selected conversation info
-                const conv = conversations.find(c => c.id === selectedConversationId) || null;
-                setSelectedConversation(conv);
-                // Refresh conversations to update unread
-                fetchConversations();
+                await markMessagesAsRead(selectedConversationId);
             }
         };
-        fetchMsgs();
+        if (selectedConversationId && selectedConversation) {
+            fetchMsgs();
+        }
         // eslint-disable-next-line
-    }, [selectedConversationId]);
-
-    // Set currentCompanyId when a conversation is selected
-    useEffect(() => {
-        if (!selectedConversationId) return;
-        // For now, set a fixed companyId for debugging
-        let companyId: string = currentCompanyId || '';
-        if (!companyId && messages.length > 0) {
-            // Fallback: try to infer from messages
-            companyId = messages.find(m => m.isSender)?.sender || '';
-        }
-        if (!companyId) {
-            // As a last resort, prompt (for debugging)
-            companyId = window.prompt('Enter your companyId for debugging:') || '';
-        }
-        setCurrentCompanyId(companyId);
-    }, [selectedConversationId]);
+    }, [selectedConversationId, selectedConversation]);
 
     // Handle search input
     const handleSearch = (query: string) => {
@@ -94,33 +69,39 @@ const BuyerInbox = () => {
     };
 
     // Handle conversation selection
-    const handleConversationSelect = (conversationId: string) => {
-        setSelectedConversationId(conversationId);
+    const handleConversationSelect = (conversation: ConversationProps) => {
+        setSelectedConversation(conversation);
+        setSelectedConversationId(conversation.id);
+        // Set currentCompanyId to sender (index 0)
+        if (conversation.companyIds && conversation.companyIds.length > 0) {
+            setCurrentCompanyId(conversation.companyIds[0]);
+        }
     };
 
     // Handle sending a message in the selected conversation
     const handleSendMessage = async (messageText: string) => {
-        console.log("Parent received message in BuyerInbox:", messageText);
-        if (!selectedConversationId || !currentCompanyId) return;
-        // Optimistically append
+        if (!selectedConversationId || !selectedConversation) return;
+        const senderId = selectedConversation.companyIds[0];
+        const receiverId = selectedConversation.companyIds[1];
         const newMsg: Message = {
             _id: Math.random().toString(),
             text: messageText,
-            sender: currentCompanyId,
-            receiver: '', // will be set by backend
+            sender: senderId,
+            receiver: receiverId,
             createdAt: new Date().toISOString(),
-            readBy: [currentCompanyId],
+            readBy: [senderId],
             isSender: true,
         };
         setMessages(prev => [...prev, newMsg]);
-        // Send to backend
-        const response = await sendMessage(selectedConversationId, messageText);
-        if (response.status === 'success') {
-            // Replace optimistic message with real one
-            setMessages(prev => prev.map(m => m._id === newMsg._id ? { ...response.data, isSender: true } : m));
-            fetchConversations();
-        } else {
-            // Remove optimistic message on error
+        try {
+            const response = await sendMessage(selectedConversationId, messageText);
+            if (response.status === 'success') {
+                setMessages(prev => prev.map(m => m._id === newMsg._id ? { ...response.data, isSender: true } : m));
+                fetchConversations();
+            } else {
+                setMessages(prev => prev.filter(m => m._id !== newMsg._id));
+            }
+        } catch (error) {
             setMessages(prev => prev.filter(m => m._id !== newMsg._id));
         }
     };

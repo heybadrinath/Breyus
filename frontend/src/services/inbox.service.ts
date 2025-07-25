@@ -106,6 +106,7 @@ export const sendMessage = async (conversationId: string, text: string) => {
     });
     if (!response.ok) throw new Error('Failed to send message');
     const data = await response.json();
+    console.log(data);
     return { status: 'success', data };
   } catch (error) {
     return { status: 'error', message: 'Failed to send message' };

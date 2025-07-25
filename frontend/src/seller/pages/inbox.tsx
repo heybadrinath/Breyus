@@ -20,13 +20,14 @@ const SellerInbox = () => {
         try {
             const response = await getConversation('');
             if (response.status === 'success') {
-                // Add id field if missing
+                // Add id field if missing, reconstruct companyIds if possible
                 const convs = response.data.map((conv: any, idx: number) => ({
                     ...conv,
                     id: conv._id || conv.id || idx.toString(),
+                    // companyIds is not returned by backend, so leave as [] for now
+                    companyIds: conv.companyIds || [],
                 }));
                 setConversations(convs);
-                // Calculate total unread
                 setUnreadCount(convs.reduce((acc: number, conv: any) => acc + (conv.unreadCount || 0), 0));
             } else {
                 console.error('Failed to fetch conversations:', response.message);
@@ -43,34 +44,21 @@ const SellerInbox = () => {
     // Fetch messages for selected conversation
     useEffect(() => {
         const fetchMsgs = async () => {
-            if (!selectedConversationId) return;
+            if (!selectedConversationId || !selectedConversation) return;
             const response = await getMessages(selectedConversationId);
             if (response.status === 'success') {
-                // Get current companyId from first message or conversation
-                let companyId = currentCompanyId;
-                if (!companyId && response.data.length > 0) {
-                    // Try to infer from sender/receiver
-                    // (In real app, get from auth context)
-                    companyId = response.data[0].receiver;
-                    setCurrentCompanyId(companyId);
-                }
-                // Mark as read
+                const senderId = selectedConversation.companyIds[1];
                 await markMessagesAsRead(selectedConversationId);
-                // Set messages with isSender for alignment
                 setMessages(response.data.map((msg: any) => ({
                     ...msg,
-                    isSender: msg.sender === companyId,
+                    isSender: getId(msg.sender) === senderId,
                 })));
-                // Update selected conversation info
-                const conv = conversations.find(c => c.id === selectedConversationId) || null;
-                setSelectedConversation(conv);
-                // Refresh conversations to update unread
                 fetchConversations();
             }
         };
         fetchMsgs();
         // eslint-disable-next-line
-    }, [selectedConversationId]);
+    }, [selectedConversationId, selectedConversation]);
 
     // Handle search input
     const handleSearch = (query: string) => {
@@ -78,36 +66,41 @@ const SellerInbox = () => {
     };
 
     // Handle conversation selection
-    const handleConversationSelect = (conversationId: string) => {
-        setSelectedConversationId(conversationId);
+    const handleConversationSelect = (conversation: ConversationProps) => {
+        setSelectedConversation(conversation);
+        setSelectedConversationId(conversation.id);
+        // Set currentCompanyId to receiver (index 1)
+        if (conversation.companyIds && conversation.companyIds.length > 1) {
+            setCurrentCompanyId(conversation.companyIds[1]);
+        }
     };
 
     // Handle sending a message in the selected conversation
     const handleSendMessage = async (messageText: string) => {
-        console.log("Parent received message in SellerInbox:", messageText);
-        if (!selectedConversationId || !currentCompanyId) return;
-        // Optimistically append
+        if (!selectedConversationId || !selectedConversation) return;
+        const senderId = selectedConversation.companyIds[1];
+        const receiverId = selectedConversation.companyIds[0];
         const newMsg: Message = {
             _id: Math.random().toString(),
             text: messageText,
-            sender: currentCompanyId,
-            receiver: '', // will be set by backend
+            sender: senderId,
+            receiver: receiverId,
             createdAt: new Date().toISOString(),
-            readBy: [currentCompanyId],
+            readBy: [senderId],
             isSender: true,
         };
         setMessages(prev => [...prev, newMsg]);
-        // Send to backend
         const response = await sendMessage(selectedConversationId, messageText);
         if (response.status === 'success') {
-            // Replace optimistic message with real one
             setMessages(prev => prev.map(m => m._id === newMsg._id ? { ...response.data, isSender: true } : m));
             fetchConversations();
         } else {
-            // Remove optimistic message on error
             setMessages(prev => prev.filter(m => m._id !== newMsg._id));
         }
     };
+
+    // Helper to get string ID from sender (string or object)
+    const getId = (val: any) => typeof val === 'string' ? val : val?._id;
 
     return (
         <div className='h-screen flex flex-col'>

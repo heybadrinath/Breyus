@@ -31,7 +31,7 @@ const inboxSidebar: React.FC<InboxSidebarProps> = ({
             <div className="flex-1 overflow-y-auto">
                 {filteredConversations.map((conversation) => (
                     <div
-                        onClick={() => onConversationSelect(conversation.id)}
+                        onClick={() => onConversationSelect(conversation)}
                         key={conversation.id}
                         className={`p-4 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-100`}
                     >
