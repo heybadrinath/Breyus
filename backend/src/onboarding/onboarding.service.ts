@@ -136,7 +136,7 @@ export class OnboardingService {
             );
         }
 
-        const JwtToken = this.authService.generateAccountToken(savedUser._id);
+        const JwtToken = this.authService.generateAccountToken(savedUser._id, savedCompany._id);
         return JwtToken;
     }
 
@@ -157,7 +157,7 @@ export class OnboardingService {
             }
             const userId = (decodeToken as jwt.JwtPayload).userId;
 
-            const user = await this.userSchema.findById(userId);
+            const user = await this.userSchema.findById(userId).populate('company');
 
             if (!user) {
                 throw new HttpException("User not found", HttpStatus.NOT_FOUND);
@@ -169,7 +169,7 @@ export class OnboardingService {
                 throw new HttpException("Invalid Password", HttpStatus.BAD_REQUEST);
             }
 
-            const JwtToken = this.authService.generateAccountToken(userId as string);
+            const JwtToken = this.authService.generateAccountToken(userId as string, user.company._id as unknown as string);
             return JwtToken;
 
         } catch (e) {

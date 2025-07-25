@@ -1,4 +1,4 @@
-import { Store, Inbox, ShoppingCart, Repeat, Heart, HelpCircle, Settings, ChevronDown, LayoutDashboard, Tag } from "lucide-react";
+import { Store, Inbox, ShoppingCart, Repeat, Heart, HelpCircle, Settings, ChevronDown, LayoutDashboard, Tag, CircleUser } from "lucide-react";
 import BreyusLogo from "../assets/Logos/full-logo.svg"
 import { useState } from "react";
 import React from "react";
@@ -20,7 +20,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ name, className = '' }) => {
       borderLeft: 'none',
       borderRight: 'none'
     }} className={`flex items-center w-fit mx-auto border px-6 py-4 ${className}`}>
-      <div className="w-10 h-10 rounded-full bg-black"></div>
+      <CircleUser strokeWidth={1.8} size={40}/>
       <div className="ml-4 text-base font-semibold text-gray-800 capitalize">{name}</div>
     </div>
   );

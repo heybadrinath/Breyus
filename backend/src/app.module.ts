@@ -11,6 +11,7 @@ import { OnboardingModule } from './onboarding/onboarding.module';
 import { LoginModule } from './login/login.module';
 import { ProductsModule } from './products/products.module';
 import { WishlistModule } from './wishlist/wishlist.module';
+import { InboxModule } from './inbox/inbox.module';
 
 
 
@@ -29,6 +30,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
     LoginModule,
     ProductsModule,
     WishlistModule,
+    InboxModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -62,7 +62,7 @@ export class LoginService {
             )
         }
 
-        const AccountToken = this.authService.generateAccountToken(user._id as string);
+        const AccountToken = this.authService.generateAccountToken(user._id as string, user.company._id as string);
 
         return { AccountToken, role: user.company.role };
 
