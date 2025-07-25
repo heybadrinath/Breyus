@@ -59,14 +59,17 @@ export class InboxService {
     .exec();
 
   return conversations.map(conversation => {
-    // Get company name of participant at index 1 (if exists and populated)
-    const companyName =
-      Array.isArray(conversation.participants) &&
-      conversation.participants[1] &&
-      typeof conversation.participants[1] === 'object' &&
-      'companyName' in conversation.participants[1]
-        ? conversation.participants[1].companyName
-        : null;
+    // Map participants to array of { id, companyName }
+    const participants = Array.isArray(conversation.participants)
+      ? conversation.participants.map((p: any) => ({
+          id: p._id ? p._id.toString() : p.toString(),
+          companyName: p.companyName || '',
+        }))
+      : [];
+
+    // Find the other participant's name (not the current user)
+    const otherParticipant = participants.find(p => p.id !== companyId);
+    const companyName = otherParticipant ? otherParticipant.companyName : '';
 
     // Get product name
     const productName =
@@ -99,6 +102,8 @@ export class InboxService {
       lastMessageTime,
       lastMessage,
       id: conversation._id,
+      companyIds: participants.map(p => p.id),
+      participantNames: participants.map(p => p.companyName),
     };
   });
 }

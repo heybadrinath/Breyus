@@ -20,12 +20,20 @@ const BuyerInbox = () => {
             const response = await getConversation('');
             if (response.status === 'success') {
                 // Add id field if missing, reconstruct companyIds if possible
-                const convs = response.data.map((conv: any, idx: number) => ({
-                    ...conv,
-                    id: conv._id || conv.id || idx.toString(),
-                    // companyIds is not returned by backend, so leave as [] for now
-                    companyIds: conv.companyIds || [],
-                }));
+                const convs = response.data.map((conv: any, idx: number) => {
+                    // Find the other participant's name
+                    let companyName = conv.companyName;
+                    if (conv.companyIds && conv.participantNames && currentCompanyId) {
+                        const idxOther = conv.companyIds.findIndex((id: string) => id !== currentCompanyId);
+                        if (idxOther !== -1) companyName = conv.participantNames[idxOther];
+                    }
+                    return {
+                        ...conv,
+                        id: conv._id || conv.id || idx.toString(),
+                        companyIds: conv.companyIds || [],
+                        companyName,
+                    };
+                });
                 setConversations(convs);
                 setUnreadCount(convs.reduce((acc: number, conv: any) => acc + (conv.unreadCount || 0), 0));
             } else {
@@ -34,7 +42,7 @@ const BuyerInbox = () => {
         } catch (error) {
             console.error('Error fetching conversations:', error);
         }
-    }, []);
+    }, [currentCompanyId]);
 
     useEffect(() => {
         fetchConversations();
