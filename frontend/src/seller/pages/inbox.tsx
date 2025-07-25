@@ -15,102 +15,102 @@ const SellerInbox = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [unreadCount, setUnreadCount] = useState<number>();
 
-    useEffect(() => {
-        const mockConversations: ConversationProps[] = [
-            {
-                id: '1',
-                name: 'John Doe',
-                time: '10:30 AM',
-                message: [
-                    {
-                        text: 'Hi, is the lamp still available?',
-                        time: '10:30 AM',
-                        isSender: false,
-                        isRead: true,
-                    },
-                    {
-                        text: 'Yes, it is! Would you like to come by and check it out?',
-                        time: '10:32 AM',
-                        isSender: true,
-                        isRead: true,
-                    },
-                ],
-                isUnread: false,
-                unreadCount: 0,
-                productInfo: 'Vintage Table Lamp',
-            },
-            {
-                id: '2',
-                name: 'Sahan',
-                time: '10:35 AM',
-                message: [
-                    {
-                        text: 'I want to buy some wheat.',
-                        time: '10:35 AM',
-                        isSender: false,
-                        isRead: true,
-                    },
-                    {
-                        text: 'Sure, I have some available. What quantity are you looking for?',
-                        time: '10:36 AM',
-                        isSender: true,
-                        isRead: true,
-                    },
-                ],
-                isUnread: false,
-                unreadCount: 0,
-                productInfo: 'Wheat',
-            },
-            {
-                id: '3',
-                name: 'Alice Smith',
-                time: '11:00 AM',
-                message: [
-                    {
-                        text: 'How much is the vintage chair?',
-                        time: '11:00 AM',
-                        isSender: false,
-                        isRead: false,
-                    },
-                ],
-                isUnread: true,
-                unreadCount: 1,
-                productInfo: 'Vintage Chair',
-            },
-            {
-                id: '4',
-                name: 'Robert Brown',
-                time: '11:15 AM',
-                message: [
-                    {
-                        text: 'Is the bike still available?',
-                        time: '11:15 AM',
-                        isSender: false,
-                        isRead: false,
-                    },
-                    {
-                        text: 'Yes, it’s available. Would you like to buy it?',
-                        time: '11:16 AM',
-                        isSender: true,
-                        isRead: false,
-                    },
-                ],
-                isUnread: true,
-                unreadCount: 2,
-                productInfo: 'Mountain Bike',
-            },
-        ];
+    // useEffect(() => {
+    //     const mockConversations: ConversationProps[] = [
+    //         {
+    //             id: '1',
+    //             name: 'John Doe',
+    //             time: '10:30 AM',
+    //             message: [
+    //                 {
+    //                     text: 'Hi, is the lamp still available?',
+    //                     time: '10:30 AM',
+    //                     isSender: false,
+    //                     isRead: true,
+    //                 },
+    //                 {
+    //                     text: 'Yes, it is! Would you like to come by and check it out?',
+    //                     time: '10:32 AM',
+    //                     isSender: true,
+    //                     isRead: true,
+    //                 },
+    //             ],
+    //             isUnread: false,
+    //             unreadCount: 0,
+    //             productInfo: 'Vintage Table Lamp',
+    //         },
+    //         {
+    //             id: '2',
+    //             name: 'Sahan',
+    //             time: '10:35 AM',
+    //             message: [
+    //                 {
+    //                     text: 'I want to buy some wheat.',
+    //                     time: '10:35 AM',
+    //                     isSender: false,
+    //                     isRead: true,
+    //                 },
+    //                 {
+    //                     text: 'Sure, I have some available. What quantity are you looking for?',
+    //                     time: '10:36 AM',
+    //                     isSender: true,
+    //                     isRead: true,
+    //                 },
+    //             ],
+    //             isUnread: false,
+    //             unreadCount: 0,
+    //             productInfo: 'Wheat',
+    //         },
+    //         {
+    //             id: '3',
+    //             name: 'Alice Smith',
+    //             time: '11:00 AM',
+    //             message: [
+    //                 {
+    //                     text: 'How much is the vintage chair?',
+    //                     time: '11:00 AM',
+    //                     isSender: false,
+    //                     isRead: false,
+    //                 },
+    //             ],
+    //             isUnread: true,
+    //             unreadCount: 1,
+    //             productInfo: 'Vintage Chair',
+    //         },
+    //         {
+    //             id: '4',
+    //             name: 'Robert Brown',
+    //             time: '11:15 AM',
+    //             message: [
+    //                 {
+    //                     text: 'Is the bike still available?',
+    //                     time: '11:15 AM',
+    //                     isSender: false,
+    //                     isRead: false,
+    //                 },
+    //                 {
+    //                     text: 'Yes, it’s available. Would you like to buy it?',
+    //                     time: '11:16 AM',
+    //                     isSender: true,
+    //                     isRead: false,
+    //                 },
+    //             ],
+    //             isUnread: true,
+    //             unreadCount: 2,
+    //             productInfo: 'Mountain Bike',
+    //         },
+    //     ];
 
-        // Set mock data into state
-        setConversations(mockConversations);
+    //     // Set mock data into state
+    //     setConversations(mockConversations);
 
-        // Calculate the unread count
-        const totalUnreadCount = mockConversations.reduce(
-            (acc, conv) => acc + (conv.isUnread ? 1 : 0),
-            0
-        );
-        setUnreadCount(totalUnreadCount);
-    }, []);
+    //     // Calculate the unread count
+    //     const totalUnreadCount = mockConversations.reduce(
+    //         (acc, conv) => acc + (conv.isUnread ? 1 : 0),
+    //         0
+    //     );
+    //     setUnreadCount(totalUnreadCount);
+    // }, []);
 
 
     const handleSearch = (query: string) => {
@@ -121,7 +121,7 @@ const SellerInbox = () => {
         setSelectedConversationId(conversationId);
     };
 
-    const selectedConversation = conversations.find(conv => conv.id === selectedConversationId);
+    // const selectedConversation = conversations.find(conv => conv.id === selectedConversationId);
 
     return (
         <div className='h-screen flex flex-col'>

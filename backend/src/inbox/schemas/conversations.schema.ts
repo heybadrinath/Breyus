@@ -6,7 +6,7 @@ import { Message } from './messages.schema';
 export class Conversation extends Document {
   @Prop({ required: true, type: [MongooseSchema.Types.ObjectId], ref: 'Company' })
   participants: MongooseSchema.Types.ObjectId[];
-  @Prop({ required: true, type: [MongooseSchema.Types.ObjectId], ref: 'Product' })
+  @Prop({ required: true, type: MongooseSchema.Types.ObjectId, ref: 'Product' })
   product: MongooseSchema.Types.ObjectId;    
 
   @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Message' }] })

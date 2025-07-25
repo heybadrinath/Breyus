@@ -6,13 +6,11 @@ export interface Message {
 }
 
 export interface ConversationProps {
-  id: string;          
-  name: string;       
-  time: string;          
-  message: Message[];   
-  isUnread: boolean;    
-  unreadCount: number;  
-  productInfo?: string; 
+  productName: string;
+  companyName: string;
+  unreadCount: number;
+  lastMessageTime: string;
+  lastMessage: string;
 }
 
 export interface InboxSidebarProps {
