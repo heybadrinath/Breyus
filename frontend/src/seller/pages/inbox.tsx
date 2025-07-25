@@ -54,6 +54,7 @@ const SellerInbox = () => {
 
     // Fetch messages for selected conversation
     useEffect(() => {
+        let interval: NodeJS.Timeout | null = null;
         const fetchMsgs = async () => {
             if (!selectedConversationId || !currentCompanyId) return;
             const response = await getMessages(selectedConversationId);
@@ -66,8 +67,13 @@ const SellerInbox = () => {
                 fetchConversations();
             }
         };
-        fetchMsgs();
-        // eslint-disable-next-line
+        if (selectedConversationId && currentCompanyId) {
+            fetchMsgs();
+            interval = setInterval(fetchMsgs, 4000);
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
     }, [selectedConversationId, currentCompanyId]);
 
     // Handle search input
