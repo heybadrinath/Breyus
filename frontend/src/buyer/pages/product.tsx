@@ -545,7 +545,14 @@ const ProductPage: React.FC = () => {
                         try {
                           const result = await createConversation(product.id);
                           if (result.status === 'success') {
-                            navigate('/buyer/inbox');
+                            // Use the returned conversation ID
+                            const conversationId = result.data;
+                            navigate(`/buyer/inbox?conversationId=${conversationId}`);
+                          } else if (
+                            result.message === 'Conversation already exists' && result.conversationId
+                          ) {
+                            // Navigate to inbox and select the existing conversation
+                            navigate(`/buyer/inbox?conversationId=${result.conversationId}`);
                           } else if (
                             result.message === "You can't send a message to yourself" ||
                             (result.message && result.message.toLowerCase().includes('yourself'))

@@ -32,9 +32,16 @@ export const createConversation = async (productId: string) => {
     console.error('Error creating conversation:', error);
 
     // Return a more structured error response
+    let conversationId = undefined;
+    let message = error instanceof Error ? error.message : 'An unknown error occurred';
+    if (message.startsWith('Conversation already exists:')) {
+      conversationId = message.split(':')[1];
+      message = 'Conversation already exists';
+    }
     return {
       status: 'error',
-      message: error instanceof Error ? error.message : 'An unknown error occurred',
+      message,
+      conversationId,
     };
   }
 };

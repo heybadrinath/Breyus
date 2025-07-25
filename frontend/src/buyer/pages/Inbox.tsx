@@ -4,6 +4,7 @@ import InboxConversation from '../../components/InboxConversation';
 import { ConversationProps, Message } from '../../types/inboxTypes';
 import { SearchHeaderLight } from '../../components/Header';
 import { getConversation, getMessages, sendMessage, markMessagesAsRead, getCurrentCompanyId } from '../../services/inbox.service';
+import { useLocation } from 'react-router-dom';
 
 const BuyerInbox = () => {
     const [conversations, setConversations] = useState<ConversationProps[]>([]);
@@ -13,6 +14,7 @@ const BuyerInbox = () => {
     const [unreadCount, setUnreadCount] = useState<number>(0);
     const [selectedConversation, setSelectedConversation] = useState<ConversationProps | null>(null);
     const [currentCompanyId, setCurrentCompanyId] = useState<string>('');
+    const location = useLocation();
 
     // Fetch conversations
     const fetchConversations = useCallback(async () => {
@@ -58,6 +60,19 @@ const BuyerInbox = () => {
         };
         fetchCompanyId();
     }, []);
+
+    // Select conversation from URL if present
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const urlConversationId = params.get('conversationId');
+        if (urlConversationId && conversations.length > 0) {
+            const conv = conversations.find(c => c.id === urlConversationId);
+            if (conv) {
+                setSelectedConversation(conv);
+                setSelectedConversationId(conv.id);
+            }
+        }
+    }, [location.search, conversations]);
 
     // Helper to get string ID from sender (string or object)
     const getId = (val: any) => typeof val === 'string' ? val : val?._id;

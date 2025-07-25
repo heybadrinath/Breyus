@@ -38,6 +38,14 @@ export class InboxService {
     if (String(senderId) === String(receiverId)) {
       throw new Error("You can't send a message to yourself");
     }
+    // Prevent duplicate conversation for same product and participants
+    const existing = await this.conversationModel.findOne({
+      product: createConversationDto.product,
+      participants: { $all: [senderId, receiverId], $size: 2 },
+    });
+    if (existing) {
+      throw new Error(`Conversation already exists:${existing._id}`);
+    }
     const participants = [senderId, receiverId];
 
     const conversation = (await this.conversationModel.create({...createConversationDto, participants}));
