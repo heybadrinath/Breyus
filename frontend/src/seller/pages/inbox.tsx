@@ -4,7 +4,7 @@ import InboxSidebar from '../../components/InboxSidebar';
 import InboxConversation from '../../components/InboxConversation';
 import { ConversationProps, Message } from '../../types/inboxTypes';
 import { SearchHeaderLight } from '../../components/Header';
-import { getConversation, getMessages, sendMessage, markMessagesAsRead } from '../../services/inbox.service';
+import { getConversation, getMessages, sendMessage, markMessagesAsRead, getCurrentCompanyId } from '../../services/inbox.service';
 
 const SellerInbox = () => {
     const [conversations, setConversations] = useState<ConversationProps[]>([]);
@@ -41,24 +41,34 @@ const SellerInbox = () => {
         fetchConversations();
     }, [fetchConversations]);
 
+    useEffect(() => {
+        // Fetch the current user's companyId on mount
+        const fetchCompanyId = async () => {
+            const res = await getCurrentCompanyId();
+            if (res.status === 'success') {
+                setCurrentCompanyId(res.companyId);
+            }
+        };
+        fetchCompanyId();
+    }, []);
+
     // Fetch messages for selected conversation
     useEffect(() => {
         const fetchMsgs = async () => {
-            if (!selectedConversationId || !selectedConversation) return;
+            if (!selectedConversationId || !currentCompanyId) return;
             const response = await getMessages(selectedConversationId);
             if (response.status === 'success') {
-                const senderId = selectedConversation.companyIds[1];
                 await markMessagesAsRead(selectedConversationId);
                 setMessages(response.data.map((msg: any) => ({
                     ...msg,
-                    isSender: getId(msg.sender) === senderId,
+                    isSender: getId(msg.sender) === currentCompanyId,
                 })));
                 fetchConversations();
             }
         };
         fetchMsgs();
         // eslint-disable-next-line
-    }, [selectedConversationId, selectedConversation]);
+    }, [selectedConversationId, currentCompanyId]);
 
     // Handle search input
     const handleSearch = (query: string) => {
@@ -69,24 +79,20 @@ const SellerInbox = () => {
     const handleConversationSelect = (conversation: ConversationProps) => {
         setSelectedConversation(conversation);
         setSelectedConversationId(conversation.id);
-        // Set currentCompanyId to receiver (index 1)
-        if (conversation.companyIds && conversation.companyIds.length > 1) {
-            setCurrentCompanyId(conversation.companyIds[1]);
-        }
     };
 
     // Handle sending a message in the selected conversation
     const handleSendMessage = async (messageText: string) => {
-        if (!selectedConversationId || !selectedConversation) return;
-        const senderId = selectedConversation.companyIds[1];
-        const receiverId = selectedConversation.companyIds[0];
+        if (!selectedConversationId || !selectedConversation || !currentCompanyId) return;
+        // Find the other participant as receiver
+        const receiverId = selectedConversation.companyIds.find(id => id !== currentCompanyId) || '';
         const newMsg: Message = {
             _id: Math.random().toString(),
             text: messageText,
-            sender: senderId,
+            sender: currentCompanyId,
             receiver: receiverId,
             createdAt: new Date().toISOString(),
-            readBy: [senderId],
+            readBy: [currentCompanyId],
             isSender: true,
         };
         setMessages(prev => [...prev, newMsg]);

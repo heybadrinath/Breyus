@@ -127,3 +127,18 @@ export const markMessagesAsRead = async (conversationId: string) => {
     return { status: 'error', message: 'Failed to mark messages as read' };
   }
 };
+
+export const getCurrentCompanyId = async () => {
+  try {
+    const backendUri = process.env.REACT_APP_BACKEND_URL;
+    if (!backendUri) throw new Error('Backend URL is not defined');
+    const response = await fetch(`${backendUri}/auth/me`, {
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error('Failed to fetch companyId');
+    const data = await response.json();
+    return { status: 'success', companyId: data.companyId };
+  } catch (error) {
+    return { status: 'error', message: 'Failed to fetch companyId' };
+  }
+};
