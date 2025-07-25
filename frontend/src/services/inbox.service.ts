@@ -34,7 +34,7 @@ export const createConversation = async (productId: string) => {
     // Return a more structured error response
     return {
       status: 'error',
-      message: 'An unknown error occurred',
+      message: error instanceof Error ? error.message : 'An unknown error occurred',
     };
   }
 };

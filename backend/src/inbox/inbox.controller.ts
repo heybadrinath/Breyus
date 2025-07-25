@@ -24,6 +24,7 @@ export class InboxController {
                 statusCode: HttpStatus.UNAUTHORIZED,
                 message: 'No valid cookie found',
             });
+            return;
         }
 
         let senderCompanyId: string | undefined;
@@ -35,13 +36,14 @@ export class InboxController {
                 statusCode: HttpStatus.UNAUTHORIZED,
                 message: 'Invalid token',
             });
+            return;
         }
 
         try {
-            const conversationId = this.InboxService.createConversation(CreateConversationDto, senderCompanyId as string);
+            const conversationId = await this.InboxService.createConversation(CreateConversationDto, senderCompanyId as string);
             response.status(HttpStatus.CREATED).send(conversationId);
-        } catch (e) {
-            response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: "Failed to Create Conversation" })
+        } catch (e: any) {
+            response.status(HttpStatus.BAD_REQUEST).send({ statusCode: HttpStatus.BAD_REQUEST, message: e.message || "Failed to Create Conversation" });
         }
     }
 

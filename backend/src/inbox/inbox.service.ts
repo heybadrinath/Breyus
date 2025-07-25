@@ -33,8 +33,12 @@ export class InboxService {
       throw new NotFoundException('User not found');
     }
     const senderId = companyId;
-    const receiverId = (user.company as unknown as string)
-          const participants = [senderId, receiverId];
+    const receiverId = user.company;
+    // Prevent self-conversation (compare as strings)
+    if (String(senderId) === String(receiverId)) {
+      throw new Error("You can't send a message to yourself");
+    }
+    const participants = [senderId, receiverId];
 
     const conversation = (await this.conversationModel.create({...createConversationDto, participants}));
     return conversation._id as string;

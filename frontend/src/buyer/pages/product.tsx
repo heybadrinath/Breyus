@@ -542,13 +542,22 @@ const ProductPage: React.FC = () => {
 
                     <button className="flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
                       onClick={async () => {
-                        try{
-                            const result =  createConversation(product.id);
-                            if((await result).status === 'success'){
-                              navigate('/buyer/inbox');
-                            } } catch (error) {
-                              console.error('Error creating conversation:', error);
-                            }
+                        try {
+                          const result = await createConversation(product.id);
+                          if (result.status === 'success') {
+                            navigate('/buyer/inbox');
+                          } else if (
+                            result.message === "You can't send a message to yourself" ||
+                            (result.message && result.message.toLowerCase().includes('yourself'))
+                          ) {
+                            showNotification('error', "You can't send a message to yourself.");
+                          } else {
+                            showNotification('error', result.message || 'Failed to create conversation');
+                          }
+                        } catch (error) {
+                          showNotification('error', 'Error creating conversation.');
+                          console.error('Error creating conversation:', error);
+                        }
                       }}
                     >
                       <MessageCircle className="inline w-4 h-4 mr-2" />
