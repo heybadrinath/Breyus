@@ -1,16 +1,21 @@
 export interface Message {
-  text: string;    
-  time: string;      
-  isSender: boolean;  
-  isRead?: boolean;   
+  _id: string;
+  text: string;
+  sender: string; // companyId
+  receiver: string; // companyId
+  createdAt: string;
+  readBy: string[];
+  isSender?: boolean; // for frontend alignment
 }
 
 export interface ConversationProps {
+  id: string;
   productName: string;
   companyName: string;
   unreadCount: number;
   lastMessageTime: string;
   lastMessage: string;
+  productInfo?: string;
 }
 
 export interface InboxSidebarProps {

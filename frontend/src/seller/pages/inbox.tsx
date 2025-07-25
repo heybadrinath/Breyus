@@ -1,144 +1,133 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 import InboxSidebar from '../../components/InboxSidebar';
 import InboxConversation from '../../components/InboxConversation';
 import { ConversationProps, Message } from '../../types/inboxTypes';
 import { SearchHeaderLight } from '../../components/Header';
-
-
-
+import { getConversation, getMessages, sendMessage, markMessagesAsRead } from '../../services/inbox.service';
 
 const SellerInbox = () => {
-
     const [conversations, setConversations] = useState<ConversationProps[]>([]);
     const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+    const [messages, setMessages] = useState<Message[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [unreadCount, setUnreadCount] = useState<number>();
+    const [unreadCount, setUnreadCount] = useState<number>(0);
+    const [currentCompanyId, setCurrentCompanyId] = useState<string>('');
+    const [selectedConversation, setSelectedConversation] = useState<ConversationProps | null>(null);
 
-    // useEffect(() => {
-    //     const mockConversations: ConversationProps[] = [
-    //         {
-    //             id: '1',
-    //             name: 'John Doe',
-    //             time: '10:30 AM',
-    //             message: [
-    //                 {
-    //                     text: 'Hi, is the lamp still available?',
-    //                     time: '10:30 AM',
-    //                     isSender: false,
-    //                     isRead: true,
-    //                 },
-    //                 {
-    //                     text: 'Yes, it is! Would you like to come by and check it out?',
-    //                     time: '10:32 AM',
-    //                     isSender: true,
-    //                     isRead: true,
-    //                 },
-    //             ],
-    //             isUnread: false,
-    //             unreadCount: 0,
-    //             productInfo: 'Vintage Table Lamp',
-    //         },
-    //         {
-    //             id: '2',
-    //             name: 'Sahan',
-    //             time: '10:35 AM',
-    //             message: [
-    //                 {
-    //                     text: 'I want to buy some wheat.',
-    //                     time: '10:35 AM',
-    //                     isSender: false,
-    //                     isRead: true,
-    //                 },
-    //                 {
-    //                     text: 'Sure, I have some available. What quantity are you looking for?',
-    //                     time: '10:36 AM',
-    //                     isSender: true,
-    //                     isRead: true,
-    //                 },
-    //             ],
-    //             isUnread: false,
-    //             unreadCount: 0,
-    //             productInfo: 'Wheat',
-    //         },
-    //         {
-    //             id: '3',
-    //             name: 'Alice Smith',
-    //             time: '11:00 AM',
-    //             message: [
-    //                 {
-    //                     text: 'How much is the vintage chair?',
-    //                     time: '11:00 AM',
-    //                     isSender: false,
-    //                     isRead: false,
-    //                 },
-    //             ],
-    //             isUnread: true,
-    //             unreadCount: 1,
-    //             productInfo: 'Vintage Chair',
-    //         },
-    //         {
-    //             id: '4',
-    //             name: 'Robert Brown',
-    //             time: '11:15 AM',
-    //             message: [
-    //                 {
-    //                     text: 'Is the bike still available?',
-    //                     time: '11:15 AM',
-    //                     isSender: false,
-    //                     isRead: false,
-    //                 },
-    //                 {
-    //                     text: 'Yes, it’s available. Would you like to buy it?',
-    //                     time: '11:16 AM',
-    //                     isSender: true,
-    //                     isRead: false,
-    //                 },
-    //             ],
-    //             isUnread: true,
-    //             unreadCount: 2,
-    //             productInfo: 'Mountain Bike',
-    //         },
-    //     ];
+    // Fetch conversations
+    const fetchConversations = useCallback(async () => {
+        try {
+            const response = await getConversation('');
+            if (response.status === 'success') {
+                // Add id field if missing
+                const convs = response.data.map((conv: any, idx: number) => ({
+                    ...conv,
+                    id: conv._id || conv.id || idx.toString(),
+                }));
+                setConversations(convs);
+                // Calculate total unread
+                setUnreadCount(convs.reduce((acc: number, conv: any) => acc + (conv.unreadCount || 0), 0));
+            } else {
+                console.error('Failed to fetch conversations:', response.message);
+            }
+        } catch (error) {
+            console.error('Error fetching conversations:', error);
+        }
+    }, []);
 
-    //     // Set mock data into state
-    //     setConversations(mockConversations);
+    useEffect(() => {
+        fetchConversations();
+    }, [fetchConversations]);
 
-    //     // Calculate the unread count
-    //     const totalUnreadCount = mockConversations.reduce(
-    //         (acc, conv) => acc + (conv.isUnread ? 1 : 0),
-    //         0
-    //     );
-    //     setUnreadCount(totalUnreadCount);
-    // }, []);
+    // Fetch messages for selected conversation
+    useEffect(() => {
+        const fetchMsgs = async () => {
+            if (!selectedConversationId) return;
+            const response = await getMessages(selectedConversationId);
+            if (response.status === 'success') {
+                // Get current companyId from first message or conversation
+                let companyId = currentCompanyId;
+                if (!companyId && response.data.length > 0) {
+                    // Try to infer from sender/receiver
+                    // (In real app, get from auth context)
+                    companyId = response.data[0].receiver;
+                    setCurrentCompanyId(companyId);
+                }
+                // Mark as read
+                await markMessagesAsRead(selectedConversationId);
+                // Set messages with isSender for alignment
+                setMessages(response.data.map((msg: any) => ({
+                    ...msg,
+                    isSender: msg.sender === companyId,
+                })));
+                // Update selected conversation info
+                const conv = conversations.find(c => c.id === selectedConversationId) || null;
+                setSelectedConversation(conv);
+                // Refresh conversations to update unread
+                fetchConversations();
+            }
+        };
+        fetchMsgs();
+        // eslint-disable-next-line
+    }, [selectedConversationId]);
 
-
+    // Handle search input
     const handleSearch = (query: string) => {
         setSearchQuery(query);
     };
 
+    // Handle conversation selection
     const handleConversationSelect = (conversationId: string) => {
         setSelectedConversationId(conversationId);
     };
 
-    // const selectedConversation = conversations.find(conv => conv.id === selectedConversationId);
+    // Handle sending a message in the selected conversation
+    const handleSendMessage = async (messageText: string) => {
+        console.log("Parent received message in SellerInbox:", messageText);
+        if (!selectedConversationId || !currentCompanyId) return;
+        // Optimistically append
+        const newMsg: Message = {
+            _id: Math.random().toString(),
+            text: messageText,
+            sender: currentCompanyId,
+            receiver: '', // will be set by backend
+            createdAt: new Date().toISOString(),
+            readBy: [currentCompanyId],
+            isSender: true,
+        };
+        setMessages(prev => [...prev, newMsg]);
+        // Send to backend
+        const response = await sendMessage(selectedConversationId, messageText);
+        if (response.status === 'success') {
+            // Replace optimistic message with real one
+            setMessages(prev => prev.map(m => m._id === newMsg._id ? { ...response.data, isSender: true } : m));
+            fetchConversations();
+        } else {
+            // Remove optimistic message on error
+            setMessages(prev => prev.filter(m => m._id !== newMsg._id));
+        }
+    };
 
     return (
         <div className='h-screen flex flex-col'>
             <SearchHeaderLight />
-
             <div className="flex h-full bg-gray-50 font-sans">
-                {/* <InboxSidebar
+                <InboxSidebar
                     conversations={conversations}
-                    unreadCount={unreadCount || 0}
+                    unreadCount={unreadCount}
                     searchQuery={searchQuery}
                     handleSearch={handleSearch}
                     onConversationSelect={handleConversationSelect}
-                /> */}
-                {/* {selectedConversation &&
-                    <InboxConversation name={selectedConversation.name} productName={selectedConversation.productInfo || ''} messages={selectedConversation.message} onSendMessage={()=> {}}/>
-                } */}
-
+                />
+                {selectedConversation && (
+                    <InboxConversation
+                        name={selectedConversation.companyName}
+                        productName={selectedConversation.productName}
+                        messages={messages}
+                        onSendMessage={handleSendMessage}
+                    />
+                )}
             </div>
         </div>
     );

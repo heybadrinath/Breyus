@@ -78,3 +78,51 @@ export const getConversation = async (productId: string) => {
     };
   }
 };
+
+export const getMessages = async (conversationId: string) => {
+  try {
+    const backendUri = process.env.REACT_APP_BACKEND_URL;
+    if (!backendUri) throw new Error('Backend URL is not defined');
+    const response = await fetch(`${backendUri}/inbox/${conversationId}/messages`, {
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error('Failed to fetch messages');
+    const data = await response.json();
+    return { status: 'success', data };
+  } catch (error) {
+    return { status: 'error', message: 'Failed to fetch messages' };
+  }
+};
+
+export const sendMessage = async (conversationId: string, text: string) => {
+  try {
+    const backendUri = process.env.REACT_APP_BACKEND_URL;
+    if (!backendUri) throw new Error('Backend URL is not defined');
+    const response = await fetch(`${backendUri}/inbox/${conversationId}/send-message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error('Failed to send message');
+    const data = await response.json();
+    return { status: 'success', data };
+  } catch (error) {
+    return { status: 'error', message: 'Failed to send message' };
+  }
+};
+
+export const markMessagesAsRead = async (conversationId: string) => {
+  try {
+    const backendUri = process.env.REACT_APP_BACKEND_URL;
+    if (!backendUri) throw new Error('Backend URL is not defined');
+    const response = await fetch(`${backendUri}/inbox/${conversationId}/mark-read`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error('Failed to mark messages as read');
+    return { status: 'success' };
+  } catch (error) {
+    return { status: 'error', message: 'Failed to mark messages as read' };
+  }
+};
