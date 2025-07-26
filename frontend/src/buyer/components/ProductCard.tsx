@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Heart } from "lucide-react";
 import { Product } from '../../services/products.service';
 import { addToWishlist, removeFromWishlist, getWishlist } from '../../services/wishlist.service';
+import { useNavigate } from 'react-router-dom';
+
 
 interface ProductCardProps {
   product?: Product;
@@ -9,11 +11,10 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
+  const navigate = useNavigate()
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [showAnimation, setShowAnimation] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
-  const [addedToCart, setAddedToCart] = useState(false);
-  const [imageError, setImageError] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
 
   // All hooks must be called before any conditional logic
@@ -132,15 +133,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
     );
   };
 
-  const handleImageError = () => {
-    setImageError(true);
+ 
+
+  const handlePurchaseRequest = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate('/buyer/purchase-request');
+    
   };
 
   const handleCardClick = () => {
     if (onClick) {
       onClick();
     } else {
-      window.location.href = `/buyer/product-page?id=${product.id}`;
+     navigate(`/buyer/product-page?id=${product.id}`);
     }
   };
 
@@ -222,7 +227,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
 
         {/* Add to Cart Button */}
         <button
-          // onClick={handleAddToCart}
+          onClick={handlePurchaseRequest}
           disabled={isAddingToCart}
           className={`mt-3 w-full py-2 px-4 rounded-lg text-sm font-medium transition-all duration-300 bg-black text-white hover:bg-gray-800 hover:scale-[1.02]`}
         >

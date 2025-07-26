@@ -1,11 +1,27 @@
 import React from "react";
-import Payment from "../components/Payment";
-import PurchaseRequestSuccess from "../components/PurchaseRequestSuccess";
+import { PurchaseRequestProgress } from "../components/purchaseRequestProgress";
+import TradeStatusProgress from "../components/tradeStatusProgress";
+
 export const PurchaseRequest = () => {
     return (
-        <div>
-            <h1>Purchase Request</h1>
-            <p>This is the Purchase Request page.</p>
+        <div className="flex flex-col h-screen">
+            <PurchaseRequestProgress />
+            <div className="flex w-full h-[65%] my-auto px-4">
+                {/* Left */}
+                <div className=" w-[30%] h-full">
+                    <h1 className="  text-xl font-bold ">Trade Status</h1>
+                    <div className="flex flex-col border border-gray-300 rounded-lg">
+                       <TradeStatusProgress currentStep={6}/>
+                    
+                    </div>
+                </div>
+
+
+                {/* Right */}
+                <div className="bg-red-500 w-full h-full">
+                    
+                </div>
+            </div>
         </div>
     );
 }
