@@ -43,7 +43,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
     return () => { ignore = true; };
   }, [product]);
 
-  
+
 
 
   // Handle case when no product is provided (placeholder)
@@ -60,9 +60,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
     );
   }
 
-  
 
-  
+
+
 
   // Check if product is already in cart
 
@@ -92,7 +92,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
       }
       return img || '/placeholder-product.svg';
     };
-  
+
 
     const handleImageLoad = () => {
       setIsLoading(false);
@@ -113,9 +113,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
         <img
           src={getProductImage()}
           alt={product.name}
-          className={`w-full h-full object-cover rounded-lg transition-opacity duration-200 ${
-            isLoading ? 'opacity-0' : 'opacity-100'
-          }`}
+          className={`w-full h-full object-cover rounded-lg transition-opacity duration-200 ${isLoading ? 'opacity-0' : 'opacity-100'
+            }`}
           onLoad={handleImageLoad}
           onError={handleImageError}
           loading="lazy"
@@ -146,20 +145,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
   };
 
   return (
-    <div 
-      onClick={handleCardClick} 
+    <div
+      onClick={handleCardClick}
       className="bg-white rounded-xl shadow-sm p-4 flex w-[240px] h-[320px] flex-col cursor-pointer hover:shadow-lg transition-shadow duration-300"
     >
       {/* Image Area */}
       <div className="relative">
         <ProductImage />
-        
+
         {/* Heart Icon */}
         <div className="absolute top-3 right-3">
-          <div 
-            className={`w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-100 cursor-pointer transition-colors ${
-              isWishlisted ? 'bg-red-50 border-red-200' : 'border-gray-300 bg-white/80'
-            }`}
+          <div
+            className={`w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-100 cursor-pointer transition-colors ${isWishlisted ? 'bg-red-50 border-red-200' : 'border-gray-300 bg-white/80'
+              }`}
             onClick={async (e) => {
               e.stopPropagation();
               if (!product || wishlistLoading) return;
@@ -181,9 +179,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
             }}
             title={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
           >
-            <Heart 
-              size={16} 
-              className={isWishlisted ? 'text-red-500 fill-red-500' : 'text-gray-600'} 
+            <Heart
+              size={16}
+              className={isWishlisted ? 'text-red-500 fill-red-500' : 'text-gray-600'}
             />
           </div>
         </div>
@@ -195,12 +193,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
           </div>
         )}
 
-        {/* Cart Animation */}
-        {addedToCart && (
-          <div className="absolute bottom-3 left-3 bg-green-500 text-white text-xs px-2 py-1 rounded animate-bounce">
-            Added to Cart!
-          </div>
-        )}
       </div>
 
       {/* Product Info */}
@@ -209,47 +201,32 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
           <h3 className="text-sm font-medium text-gray-900 line-clamp-2 mb-1">
             {product.name}
           </h3>
-          
+
           <p className="text-xs text-gray-500 mb-2">
             by {product.companyName || product.sellerName || 'Unknown Company'}
           </p>
 
-         
+
 
           {/* Price */}
-          
+
           <div className="flex items-baseline gap-3">
-                  <span className="text-lg font-bold text-gray-900">{(product.salePrice)? product.salePrice.toLocaleString() + ' ' + product.currency: product.price.toLocaleString() + ' ' + product.currency}</span>
-                  {product.onSale && (
-                    <>
-                      <span className="text-sm text-gray-500 line-through">{product.price.toLocaleString() + ' ' + product.currency}</span>
-                    </>
-                  )}
-                </div>
+            <span className="text-lg font-bold text-gray-900">{(product.salePrice) ? product.salePrice.toLocaleString() + ' ' + product.currency : product.price.toLocaleString() + ' ' + product.currency}</span>
+            {product.onSale && (
+              <>
+                <span className="text-sm text-gray-500 line-through">{product.price.toLocaleString() + ' ' + product.currency}</span>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Add to Cart Button */}
         <button
           // onClick={handleAddToCart}
           disabled={isAddingToCart}
-          className={`mt-3 w-full py-2 px-4 rounded-lg text-sm font-medium transition-all duration-300 ${
-            false
-              ? 'bg-green-500 text-white cursor-default'
-              : isAddingToCart
-              ? 'bg-gray-400 text-white cursor-not-allowed'
-              : 'bg-black text-white hover:bg-gray-800 hover:scale-[1.02]'
-          }`}
+          className={`mt-3 w-full py-2 px-4 rounded-lg text-sm font-medium transition-all duration-300 bg-black text-white hover:bg-gray-800 hover:scale-[1.02]`}
         >
-          {isAddingToCart ? (
-            <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Adding...
-            </div>
-          ) : false ? (
-            'In Cart ✓'
-          ) : (
-            'Add to Cart'
-          )}
+          Send Purchase Request
         </button>
       </div>
     </div>
