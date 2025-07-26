@@ -6,7 +6,7 @@ import Price from "../components/Products/price";
 import Tags from "../components/Products/tags";
 import { Incoterms } from '../../components/incoterms';
 import AddProductTerms from '../components/Products/product-terms';
-import ProgressBar from "../../buyer/components/cart/PurchaseRequestProgress";
+import ProgressBar from "../../components/PurchaseRequestProgress";
 import '../css/product.css';
 import { createProduct, CreateProductData } from '../../services/products.service';
 import { TryBreyusCoreHeader } from "../../components/Header";

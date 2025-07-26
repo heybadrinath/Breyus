@@ -462,7 +462,9 @@ const ProductPage: React.FC = () => {
                 <div className="space-y-3">
                   
 
-                  <button className="w-full py-3 px-6 border border-gray-300 bg-black text-white rounded-lg font-semibold transition">
+                  <button className="w-full py-3 px-6 border border-gray-300 bg-black text-white rounded-lg font-semibold transition"
+                  onClick={() => navigate('/buyer/purchase-request')}
+                  >
                     <Repeat className="inline pr-2 py-auto" /> Send Purchase Request 
                   </button>
 

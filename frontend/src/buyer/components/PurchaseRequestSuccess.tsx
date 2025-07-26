@@ -1,10 +1,8 @@
 import React from "react";
-import CheckoutStepper from "../components/cart/CheckoutStepper";
 
 
 const PurchaseRequestSuccess: React.FC = () => (
     <div>
-        <CheckoutStepper currentStep={2} />
         <div className="w-full flex flex-col items-center min-h-screen bg-gray-50 py-12 h-100vh">
 
             <div className="w-full max-w-4xl my-auto h-full">

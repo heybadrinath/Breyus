@@ -26,8 +26,7 @@ import { Inventory } from "../seller/pages/inventory";
 import { Feedback } from "../seller/pages/feedback";
 import Inbox from "../seller/pages/inbox";
 import { Trade } from "../seller/pages/trade";
-// import SellerSettings from "../seller/settings";
-// import Security from "../seller/security";
+
 
 
 
@@ -36,13 +35,11 @@ import { Trade } from "../seller/pages/trade";
 // Buyer links
 import Homepage from "../buyer/pages/Homepage";
 import ProductPage from "../buyer/pages/product";
+import { PurchaseRequest } from "../buyer/pages/purchase-request"
 import BuyerInbox from "../buyer/pages/Inbox";
+import { Trade as BuyerTrade } from "../buyer/pages/trade";
 import Wishlist from "../buyer/pages/Wishlist";
-// import CartPage from "../buyer/pages/Cartpage";
-// import BuyerTrade from "../buyer/pages/trade";
-// import BuyerAddress from "../buyer/pages/buyer_address";
-// import PurchaseRequest from "../buyer/pages/purchase-request";
-// import PurchaseRequestSuccess from "../buyer/pages/PurchaseRequestSuccess";
+
 
 
 // ai imports 
@@ -114,13 +111,10 @@ const AppRoutes = () => {
         {/* Buyer Routes */}
         <Route path="/buyer/homepage" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<Homepage />} />} /></BuyerProtectedRoute>} />
         <Route path="/buyer/product-page" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<ProductPage />} />} /></BuyerProtectedRoute>} />
+        <Route path="/buyer/purchase-request" element={<BuyerProtectedRoute><Animate page={<PurchaseRequest />} /></BuyerProtectedRoute>} />
         <Route path="/buyer/inbox" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<BuyerInbox />} />} /></BuyerProtectedRoute>} />
         <Route path="/buyer/wishlist" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<Wishlist />} />} /></BuyerProtectedRoute>} />
-        {/* <Route path="/buyer/cartpage" element={<BuyerProtectedRoute><Animate page={<CartPage />} /></BuyerProtectedRoute>} /> */}
-        {/* <Route path="/buyer/trade" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<BuyerTrade />} />} /></BuyerProtectedRoute>} /> */}
-        {/* <Route path="/buyer/buyer-address" element={<BuyerProtectedRoute><Animate page={<BuyerAddress />} /></BuyerProtectedRoute>} /> */}
-        {/* <Route path="/buyer/purchase-request" element={<BuyerProtectedRoute><Animate page={<PurchaseRequest />} /></BuyerProtectedRoute>} /> */}
-        {/* <Route path="/buyer/purchase-request-success" element={<BuyerProtectedRoute><Animate page={<PurchaseRequestSuccess />} /></BuyerProtectedRoute>} /> */}
+        <Route path="/buyer/trade" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<BuyerTrade />} />} /></BuyerProtectedRoute>} />
 
 
 
@@ -135,8 +129,6 @@ const AppRoutes = () => {
         <Route path="/seller/Product-Feedback" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<Feedback />} />} /></SellerProtectedRoute>} />
         <Route path="/seller/Inbox" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<Inbox />} />} /></SellerProtectedRoute>} />
         <Route path="/seller/trade" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<Trade />} />} /></SellerProtectedRoute>} />
-        {/* <Route path="/seller/security" element={<SellerProtectedRoute><Animate page={<Layout Body={<Security />} />} /></SellerProtectedRoute>} /> */}
-        {/* <Route path="/seller/settings" element={<SellerProtectedRoute><Animate page={<SellerSettings />} /></SellerProtectedRoute>} /> */}
 
 
 
