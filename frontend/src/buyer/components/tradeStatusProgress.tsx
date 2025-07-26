@@ -16,13 +16,13 @@ const TradeStatusProgress: React.FC<ProgressProps> = ({ currentStep }) => {
       id: 2,
       title: 'Countered',
       description: 'Seller Submitted Counter Offer.',
-      color: "#0076D3"
+      color: "#D45500"
     },
     {
       id: 3,
       title: 'Purchase Request Sent',
       description: 'Awaiting Seller Response.',
-      color: "#D45500"
+      color: "#0076D3"
     },
     {
       id: 4,
@@ -55,7 +55,7 @@ const TradeStatusProgress: React.FC<ProgressProps> = ({ currentStep }) => {
                 }`}
             >
             </div>
-            <div className="ml-2 underline">
+            <div className="ml-2 underline cursor-pointer">
               <h3 style={{ color: `${(step.color) ? step.color : '#000'}` }} className={`text-sm font-semibold ${currentStep >= step.id ? 'opacity-100' : 'opacity-50'}`}>
                 {step.title}
               </h3>
