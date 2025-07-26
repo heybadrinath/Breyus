@@ -221,7 +221,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 // const TradeStatusBadge: React.FC<{ status: string; urgent?: boolean }> = ({ status, urgent }) => {
 //   const statusColor = tradeService.getStatusColor(status);
 //   const urgentBadge = urgent ? tradeService.getUrgencyBadge(urgent) : '';
-  
+
 //   return (
 //     <div className="flex items-center gap-2">
 //       <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor}`}>
@@ -252,7 +252,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 
 //   const handleCounterOffer = async () => {
 //     if (!counterPrice || parseFloat(counterPrice) <= 0) return;
-    
+
 //     setIsLoading(true);
 //     try {
 //       await onCounterOffer(trade.id, parseFloat(counterPrice), counterMessage);
@@ -304,7 +304,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 //             <p><User className="inline w-4 h-4 mr-1" /> {trade.buyer?.firstName} {trade.buyer?.lastName}</p>
 //             <p className="text-sm text-gray-600">{trade.buyer?.email}</p>
 //           </div>
-          
+
 //           <div>
 //             <h3 className="font-semibold mb-2">Product Information</h3>
 //             <p><Package className="inline w-4 h-4 mr-1" /> {trade.product?.name}</p>
@@ -465,7 +465,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 //     const connectWebSocket = async () => {
 //       try {
 //         await tradeService.connectWebSocket();
-        
+
 //         // Listen for real-time updates
 //         tradeService.addEventListener('new-trade-request', (data: TradeNotification) => {
 //           setNotification(data);
@@ -557,7 +557,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 
 //   const handleBulkAccept = async () => {
 //     if (bulkSelected.size === 0) return;
-    
+
 //     try {
 //       await tradeService.bulkAcceptTrades(Array.from(bulkSelected));
 //       setBulkSelected(new Set());
@@ -738,11 +738,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 //       // Get all trades and filter out pending ones on the frontend
 //       const response = await tradeService.getIncomingTrades(filters);
 //       console.log('🔍 All trades received:', response);
-      
+
 //       // Filter out pending trades to show only processed orders
 //       const processedOrders = response.trades.filter(trade => trade.status !== 'pending');
 //       console.log('🔍 Processed orders:', processedOrders);
-      
+
 //       setOrders(processedOrders);
 //       setTotalPages(response.totalPages);
 //     } catch (error) {
@@ -781,7 +781,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 
 //   const handleDeleteSelected = async () => {
 //     if (selectedOrderIds.size === 0) return;
-    
+
 //     if (!window.confirm(`Are you sure you want to delete ${selectedOrderIds.size} selected order(s)? This action cannot be undone.`)) {
 //       return;
 //     }
@@ -789,11 +789,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 //     try {
 //       // Here you would call a delete API endpoint
 //       // await tradeService.deleteOrders(Array.from(selectedOrderIds));
-      
+
 //       // For now, just remove from local state
 //       setOrders(prev => prev.filter(order => !selectedOrderIds.has(order.id)));
 //       setSelectedOrderIds(new Set());
-      
+
 //       setNotification({
 //         type: 'success',
 //         message: `Successfully deleted ${selectedOrderIds.size} order(s)`,
@@ -1096,7 +1096,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 //             <Clock className="h-3 w-3 text-white" />
 //           </div>
 //         </div>
-        
+
 //         <h3 className="text-2xl font-semibold text-gray-500 mb-3">No Trade History Yet</h3>
 //         <p className="text-gray-400 text-center max-w-lg mb-8">
 //           Your completed trades, delivered orders, and transaction history will appear here. 
@@ -1109,13 +1109,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 //             <h4 className="font-semibold text-purple-700 mb-1">Completed Sales</h4>
 //             <p className="text-sm text-purple-600">Track your revenue</p>
 //           </div>
-          
+
 //           <div className="p-4 bg-green-50 rounded-lg border border-green-200 text-center">
 //             <Star className="h-8 w-8 text-green-500 mx-auto mb-2" />
 //             <h4 className="font-semibold text-green-700 mb-1">Customer Reviews</h4>
 //             <p className="text-sm text-green-600">Build your reputation</p>
 //           </div>
-          
+
 //           <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 text-center">
 //             <User className="h-8 w-8 text-blue-500 mx-auto mb-2" />
 //             <h4 className="font-semibold text-blue-700 mb-1">Buyer Relationships</h4>
@@ -1139,7 +1139,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 //       <div className='flex border-b-[2px] border-gray-300 px-6 py-4 bg-white'>
 //         <h1 className='text-3xl font-semibold'>Trade Tracking</h1>
 //       </div>
-      
+
 //       <div className="flex flex-col items-center justify-center py-20">
 //         <div className="relative mb-6">
 //           <div className="h-20 w-20 bg-gray-100 rounded-full flex items-center justify-center">
@@ -1151,7 +1151,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 //             </svg>
 //           </div>
 //         </div>
-        
+
 //         <h3 className="text-2xl font-semibold text-gray-500 mb-3">No Shipments to Track</h3>
 //         <p className="text-gray-400 text-center max-w-lg mb-8">
 //           Once you ship orders to customers, tracking information will appear here. 
@@ -1169,7 +1169,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 //             <h4 className="font-semibold text-orange-700 mb-2">In Transit</h4>
 //             <p className="text-sm text-orange-600">Real-time tracking updates</p>
 //           </div>
-          
+
 //           <div className="p-6 bg-green-50 rounded-lg border border-green-200 text-center">
 //             <div className="h-12 w-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-3">
 //               <svg className="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -1321,7 +1321,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 
 //   const handleSubmitReply = async (reviewId: string) => {
 //     if (!replyText.trim()) return;
-    
+
 //     setIsSubmitting(true);
 //     try {
 //       const success = await feedbackService.replyToReview(reviewId, replyText);
@@ -1336,7 +1336,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 //       setIsSubmitting(false);
 //     }
 //   };
-  
+
 //   if (!product) return (
 //     <div className="w-full bg-white rounded-lg shadow-md border border-gray-200 p-6 my-6 h-[96%] overflow-y-auto">
 //       <div className="flex justify-between items-center mb-4">
@@ -1356,7 +1356,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 //   );
 
 //   const reviews = product.reviews || [];
-  
+
 //   return (
 //     <div className="w-full bg-white rounded-lg shadow-md border border-gray-200 p-6 my-6 h-[96%] overflow-y-auto">
 //       <div className="flex justify-between items-center mb-4">
@@ -1372,7 +1372,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 //           </button>
 //         </div>
 //       </div>
-      
+
 //       {reviews.length === 0 ? (
 //         <div className="flex flex-col items-center justify-center py-10">
 //           <MessageCircle className="h-10 w-10 text-gray-300 mb-4" />
@@ -1425,7 +1425,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 //                     </div>
 //                   </div>
 //                   <p className="text-gray-700 mt-2">{review.content}</p>
-                  
+
 //                   {/* Review images */}
 //                   {review.images && review.images.length > 0 && (
 //                     <div className="flex flex-wrap gap-2 mt-3">
@@ -1439,7 +1439,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 //                       ))}
 //                     </div>
 //                   )}
-                  
+
 //                   {/* Reply section */}
 //                   <div className="mt-4">
 //                     {replyingTo === review.id ? (
@@ -1489,176 +1489,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 //   );
 // };
 
-// const Feedback: React.FC = () => {
-//   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
-//   const [products, setProducts] = useState<ProductFeedbackSummary[]>([]);
-//   const [selectedProduct, setSelectedProduct] = useState<ProductFeedbackSummary | null>(null);
-//   const [isLoading, setIsLoading] = useState(true);
-//   const [error, setError] = useState<string | null>(null);
-//   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-//   // Fetch seller's products with feedback on mount
-//   useEffect(() => {
-//     fetchProductsFeedback();
-//   }, []);
-
-//   // Fetch product feedback when a product is selected
-//   useEffect(() => {
-//     if (selectedProductId) {
-//       fetchProductFeedback(selectedProductId);
-//     } else {
-//       setSelectedProduct(null);
-//     }
-//   }, [selectedProductId]);
-
-//   const fetchProductsFeedback = async () => {
-//     setIsLoading(true);
-//     setError(null);
-    
-//     try {
-//       const productsData = await feedbackService.getSellerProductsFeedback();
-//       setProducts(productsData);
-      
-//       // Select the first product by default if available
-//       if (productsData.length > 0 && !selectedProductId) {
-//         setSelectedProductId(productsData[0].productId);
-//         setSelectedProduct(productsData[0]);
-//       } else {
-//         setIsLoading(false);
-//       }
-//     } catch (error) {
-//       console.error('Error fetching products feedback:', error);
-//       setError('Failed to load product feedback. Please try again.');
-//       setIsLoading(false);
-//     }
-//   };
-
-//   const fetchProductFeedback = async (productId: string) => {
-//     setIsLoading(true);
-//     setError(null);
-    
-//     try {
-//       const productData = await feedbackService.getProductFeedback(productId);
-//       if (productData) {
-//         setSelectedProduct(productData);
-//       } else {
-//         setError('Failed to load product details');
-//       }
-//     } catch (error) {
-//       console.error('Error fetching product feedback:', error);
-//       setError('Failed to load product feedback. Please try again.');
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   };
-
-//   const handleRefresh = () => {
-//     if (selectedProductId) {
-//       fetchProductFeedback(selectedProductId);
-//     } else {
-//       fetchProductsFeedback();
-//     }
-//   };
-
-//   const handleProductChange = (productId: string) => {
-//     setSelectedProductId(productId === "" ? null : productId);
-//     setDropdownOpen(false);
-//   };
-
-//   return (
-//     <div className="w-full max-w-6xl mt-12 mb-8 mx-auto">
-//       <div className="mb-6 flex justify-between items-center">
-//         <h1 className="text-2xl font-bold">Product Feedback</h1>
-//         <div className="flex items-center gap-4">
-//           {/* Custom dropdown */}
-//           <div className="relative">
-//             <button 
-//               onClick={() => setDropdownOpen(!dropdownOpen)}
-//               className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white flex items-center justify-between min-w-[200px]"
-//               disabled={isLoading && products.length === 0}
-//             >
-//               <span className="text-gray-800">
-//                 {selectedProduct ? selectedProduct.productName : 'Select a product'}
-//               </span>
-//               <svg className={`w-4 h-4 ml-2 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-//                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-//               </svg>
-//             </button>
-            
-//             {/* Dropdown menu */}
-//             {dropdownOpen && (
-//               <div className="absolute z-10 mt-1 w-full bg-white rounded-md shadow-lg max-h-60 overflow-auto">
-//                 <div className="py-1">
-//                   <button
-//                     className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100"
-//                     onClick={() => handleProductChange("")}
-//                   >
-//                     Select a product
-//                   </button>
-//                   {products.map((product) => (
-//                     <button
-//                       key={product.productId}
-//                       className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${
-//                         selectedProductId === product.productId ? 'bg-gray-200' : ''
-//                       }`}
-//                       onClick={() => handleProductChange(product.productId)}
-//                     >
-//                       {product.productName}
-//                     </button>
-//                   ))}
-//                 </div>
-//               </div>
-//             )}
-//           </div>
-          
-//           <button
-//             onClick={handleRefresh}
-//             className="p-2 text-blue-500 hover:text-blue-700 focus:outline-none"
-//             disabled={isLoading}
-//             aria-label="Refresh feedback data"
-//             title="Refresh feedback data"
-//           >
-//             <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
-//           </button>
-//         </div>
-//       </div>
-
-//       {error && (
-//         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-6">
-//           {error}
-//         </div>
-//       )}
-
-//       {isLoading && products.length === 0 ? (
-//         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-lg shadow-md">
-//           <RefreshCw className="animate-spin h-12 w-12 text-blue-500 mb-4" />
-//           <p className="text-gray-500 text-lg">Loading products...</p>
-//         </div>
-//       ) : products.length === 0 ? (
-//         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-lg shadow-md">
-//           <p className="text-gray-500 text-lg">No products available</p>
-//           <p className="text-gray-400 text-sm mt-2">Add some products to see feedback</p>
-//           <button 
-//             onClick={handleRefresh}
-//             className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-//           >
-//             Refresh
-//           </button>
-//         </div>
-//       ) : (
-//         <div className="flex flex-col md:flex-row gap-8">
-//           <div className="flex-1 min-w-[340px] max-w-[420px]">
-//             <ProductName product={selectedProduct} />
-//             <Ratings product={selectedProduct} />
-//       </div>
-//       <div className="flex-1 min-w-[340px] max-w-[600px]">
-//             <ProductReviews product={selectedProduct} onRefresh={handleRefresh} />
-//           </div>
-//       </div>
-//       )}
-//     </div>
-//   );
-// };
 
 // // Main Trade component
 // const Trade: React.FC = () => {
@@ -1730,3 +1561,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 // };
 
 // export{Trade,Tabs,Table,TableRow,PurchaseRequestStatus,PurchaseOrder,OngoingTrades,TrackTrade,Ratings,ProductName,ProductReviews,Feedback};
+
+export const Trade = () => {
+    return (
+        <div className="h-screen w-full flex items-center justify-center">
+            Coming Soon
+        </div>
+    )
+}

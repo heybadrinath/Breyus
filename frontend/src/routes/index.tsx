@@ -23,8 +23,9 @@ import Sales from "../seller/pages/sales";
 import Upgrade from "../seller/pages/upgrade";
 import { AddProduct } from "../seller/pages/add-product";
 import { Inventory } from "../seller/pages/inventory";
+import { Feedback } from "../seller/pages/feedback";
 import Inbox from "../seller/pages/inbox";
-// import { Trade, Feedback } from "../seller/trade";
+import { Trade } from "../seller/pages/trade";
 // import SellerSettings from "../seller/settings";
 // import Security from "../seller/security";
 
@@ -131,11 +132,10 @@ const AppRoutes = () => {
         <Route path="/seller/upgrade" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<Upgrade />} />} /></SellerProtectedRoute>} />
         <Route path="/seller/add-products" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<AddProduct />} />} /></SellerProtectedRoute>} />
         <Route path="/seller/inventory" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<Inventory />} />} /></SellerProtectedRoute>} />
-        {/* <Route path="/seller/Product-Feedback" element={<SellerProtectedRoute><Animate page={<Layout Body={<Feedback />} />} /></SellerProtectedRoute>} /> */}
+        <Route path="/seller/Product-Feedback" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<Feedback />} />} /></SellerProtectedRoute>} />
         <Route path="/seller/Inbox" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<Inbox />} />} /></SellerProtectedRoute>} />
-        {/* <Route path="/seller/trade" el`ement={<SellerProtectedRoute><Animate page={<Layout Body={<Trade />} />} /></SellerProtectedRoute>} /> */}
+        <Route path="/seller/trade" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<Trade />} />} /></SellerProtectedRoute>} />
         {/* <Route path="/seller/security" element={<SellerProtectedRoute><Animate page={<Layout Body={<Security />} />} /></SellerProtectedRoute>} /> */}
-        {/* Seller settings with different layout */}
         {/* <Route path="/seller/settings" element={<SellerProtectedRoute><Animate page={<SellerSettings />} /></SellerProtectedRoute>} /> */}
 
 
