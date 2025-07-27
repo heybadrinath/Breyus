@@ -1,10 +1,10 @@
-import React from 'react';
-
+import React from "react";
+import {SearchHeaderLight  } from "../../components/Header"
 
 export const Trade = () => {
     return (
-        <div className="h-screen w-full flex items-center justify-center">
-            Coming Soon
+        <div>
+            <SearchHeaderLight />
         </div>
-    )
+    );
 }

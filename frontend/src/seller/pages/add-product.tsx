@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import ProductInformation from "../components/Products/product-information";
-import Media from "../components/Products/media";
-import Price from "../components/Products/price";
-import Tags from "../components/Products/tags";
+import ProductInformation from "../components/product-information";
+import Media from "../components/media";
+import Price from "../components/price";
+import Tags from "../components/tags";
 import { Incoterms } from '../../components/incoterms';
-import AddProductTerms from '../components/Products/product-terms';
+import AddProductTerms from '../components/product-terms';
 import ProgressBar from "../../components/PurchaseRequestProgress";
 import '../css/product.css';
 import { createProduct, CreateProductData } from '../../services/products.service';
