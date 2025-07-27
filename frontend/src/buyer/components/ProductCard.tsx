@@ -137,7 +137,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
 
   const handlePurchaseRequest = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigate('/buyer/purchase-request');
+    navigate(`/buyer/purchase-request?id=${product.id}`);
     
   };
 

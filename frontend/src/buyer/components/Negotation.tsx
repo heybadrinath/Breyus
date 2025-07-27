@@ -1,8 +1,17 @@
 import React from "react";
 import TradeStatusProgress from "./tradeStatusProgress";
 import { Edit, Timer } from "lucide-react";
+import { N } from "framer-motion/dist/types.d-CtuPurYT";
+import { useNavigate } from "react-router-dom";
 
-export const Negoatation = () => {
+interface NegotationProps {
+    handlestep: (step: number) => void;
+    currentStep: number;
+    productId: string;
+}
+
+export const Negoatation: React.FC<NegotationProps> = ({ handlestep, currentStep, productId }) => {
+    const navigate = useNavigate();
     return (
         <div className="flex w-full h-[75%] my-auto px-8">
             {/* Left */}
@@ -61,7 +70,7 @@ export const Negoatation = () => {
                                         <span className="text-xs text-gray-500 ml-auto">Stock: 100000 tons</span>
                                     </div>
                                 </div>
-                                <div className=" px-2 py-2 mt-auto mb-6 flex flex-row border-2 rounded-lg">
+                                <div className=" px-2 py-2 mt-6 mb-6 flex flex-row border-2 rounded-lg">
                                     <div className="w-full !border-0 !rounded-r-none text-xs"> 100 </div>
                                     <span className="my-auto mx-2 text-xs">tons</span>
                                 </div>
@@ -83,20 +92,21 @@ export const Negoatation = () => {
                 {/* Buttons */}
                 <div className="mt-8 mb-2 flex justify-between mx-8">
                     <button
+                        onClick={() => navigate(`/buyer/product-page?id=${productId}`)}
                         type="button"
                         className=" bg-gradient-to-r from-[#e7e7e7] to-[#ffffff] border-2 text-black px-12 py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out hover:from-[#e1e2e4] hover:to-[#f8fafc] hover:shadow-lg hover:scale-105 active:scale-100 "
                     >
                         Back to Product Page
                     </button>
                     <button
-
+                        onClick={() => handlestep(currentStep + 1)}
                         type="button"
                         className=" bg-gradient-to-r ml-auto from-[#e7e7e7] to-[#ffffff] border-2 text-black px-12 py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out hover:from-[#e1e2e4] hover:to-[#f8fafc] hover:shadow-lg hover:scale-105 active:scale-100 "
                     >
                         Skip Counter Offer
                     </button>
                     <button
-
+                        onClick={() => handlestep(currentStep + 1)}
                         type="button"
                         className=" ml-8 bg-gradient-to-r from-[#5e5959] to-[black] text-white px-12 py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out hover:from-gray-600 hover:to-gray-700 hover:shadow-lg hover:scale-105 active:scale-100 "
                     >

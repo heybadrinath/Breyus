@@ -450,11 +450,7 @@ const ProductPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* sample input  */}
-                  {/* <div className=" flex h-fit w-[35%] px-3 py-3  border-2 rounded-lg">
-                  <input type="checkbox" name="sample" value="sample" />
-                  <label className="ml-2" htmlFor="sample"> Sample only</label>
-                </div> */}
+               
 
                 </div>
 
@@ -463,7 +459,7 @@ const ProductPage: React.FC = () => {
                   
 
                   <button className="w-full py-3 px-6 border border-gray-300 bg-black text-white rounded-lg font-semibold transition"
-                  onClick={() => navigate('/buyer/purchase-request')}
+                  onClick={() => navigate(`/buyer/purchase-request?id=${product.id}`)}
                   >
                     <Repeat className="inline pr-2 py-auto" /> Send Purchase Request 
                   </button>
@@ -618,12 +614,7 @@ const ProductPage: React.FC = () => {
             </div>
           )}
 
-          {/* Legacy cart success message - keeping for cart operations */}
-          {addedToCart && !notification && (
-            <div className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-bounce">
-              Added to Cart Successfully!
-            </div>
-          )}
+         
 
           {/* Trade Terms Modal */}
           <TestReport onClose={() => setShowTestReport(false)} url={product.testReport} show={showTestReport} />
@@ -728,5 +719,4 @@ const ProductPage: React.FC = () => {
   );
 
 };
-console.log(window.location.href);
 export default ProductPage;

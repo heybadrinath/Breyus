@@ -7,17 +7,17 @@ import { Payment } from "../components/Payment";
 
 export const PurchaseRequest = () => {
 
-    const [step, setStep] = useState(2);
-
+    const [step, setStep] = useState(1);
     const handleStep = (step: number) => {
-    setStep(step);
-  };
+        setStep(step);
+    };
 
-
+    const urlParams = new URLSearchParams(window.location.search);
+    const productId = urlParams.get('id');
     const renderStep = () => {
         switch (step) {
             case 1:
-                return <Negoatation />;
+                return <Negoatation handlestep={handleStep} currentStep={step} productId={productId as string} />;
             case 2:
                 return <Address handlestep={handleStep} currentStep={step} />;
             case 3:
@@ -30,7 +30,7 @@ export const PurchaseRequest = () => {
     }
 
     return (
-        <div className="flex flex-col h-screen"> 
+        <div className="flex flex-col h-screen">
             <PurchaseRequestProgress currentStep={step} />
             {renderStep()}
         </div>
