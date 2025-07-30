@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-
 import InboxSidebar from '../../components/InboxSidebar';
 import InboxConversation from '../../components/InboxConversation';
 import { ConversationProps, Message } from '../../types/inboxTypes';
