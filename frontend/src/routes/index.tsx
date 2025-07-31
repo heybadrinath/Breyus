@@ -1,10 +1,7 @@
 import React from "react";
 import { ReactNode } from "react";
-import { SellerProtectedRoute, BuyerProtectedRoute } from "./ProtectedRoute"; // Protected Route for authenticated users
+import { SellerProtectedRoute, BuyerProtectedRoute } from "./ProtectedRoute";
 import { Routes, Route, useLocation } from "react-router-dom";
-
-
-
 
 // Main links
 import { OnBoarding } from "../main/OnBoarding";
@@ -12,57 +9,51 @@ import { Login } from "../main/login";
 import SelectRole from "../main/selectRole";
 import ScheduleMeeting from "../main/scheduleMeeting";
 import ForgotPassword from "../main/forgot-password";
-
-
 import Hero from "../main/Hero";
-// import SellerSettings from "../seller/settings";
+
 import SellerDashboard from "../seller/pages/dashboard";
-// import Security from "../seller/security";
-import { motion, AnimatePresence } from "framer-motion";
 import Sales from "../seller/pages/sales";
 import Upgrade from "../seller/pages/upgrade";
 import { AddProduct } from "../seller/pages/add-product";
-import {Layout} from "../components/layout";
+import { Inventory } from "../seller/pages/inventory";
+import { Layout } from "../components/layout";
 
-// import Inbox from "../seller/inbox";
-// import { Trade, Feedback } from "../seller/trade";
-
-// import BuyerInbox from "../buyer/pages/Inbox";
 import Homepage from "../buyer/pages/Homepage";
 import Wishlist from "../buyer/pages/Wishlist";
-// import CartPage from "../buyer/pages/Cartpage";
-// import BuyerTrade from "../buyer/pages/trade";
 import ProductPage from "../buyer/pages/product";
-// import BuyerAddress from "../buyer/pages/buyer_address";
-// import PurchaseRequest from "../buyer/pages/purchase-request";
 import PurchaseRequestSuccess from "../buyer/pages/PurchaseRequestSuccess";
-import { Inventory } from "../seller/pages/inventory";
 
-// ai imports 
+// AI imports
 import BuyerAi from "../buyer/pages/ai";
 import BuyerAiproduct from "../buyer/pages/ai-products";
+import BuyerAiCountry from "../buyer/pages/ai-country";
+import BuyerAiPort from "../buyer/pages/ai-port";
+import BuyerAiResult from "../buyer/pages/ai-result";
 
-// const pageVariants = { 
-//   initial: { opacity: 0 },
-//   animate: { opacity: 1, transition: { duration: 0.4 } },
-//   exit: { opacity: 0, transition: { duration: 0.4 } }
-// };
+// Seller AI Pages
+import SellerSearchOption from "../seller/pages/SellerSearchOption";
+import SellerSearchInput from "../seller/pages/SellerSearchInput";
+import SellerSearchResult from "../seller/pages/SellerSearchResult";
 
+// Framer Motion
+import { motion, AnimatePresence } from "framer-motion";
+import { easeIn, easeOut } from "framer-motion";
+
+// Page transition animation
 const pageVariants = {
   initial: { opacity: 0, y: 20 },
   animate: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.3, ease: "easeOut" },
+    transition: { duration: 0.3, ease: easeOut },
   },
   exit: {
     opacity: 0,
     y: -10,
-    transition: { duration: 0.2, ease: "easeIn" },
+    transition: { duration: 0.2, ease: easeIn },
   },
 };
 
-// wrapper for seller div is already available 
 const Animate = ({ page }: { page: ReactNode }) => {
   return (
     <motion.div
@@ -76,9 +67,6 @@ const Animate = ({ page }: { page: ReactNode }) => {
   );
 };
 
-// Wrapper for seller dashboard pages that includes layout
-
-
 const Notfoundpage = () => {
   return (
     <div className="shadow-2xl max-w-fit whitespace-nowrap flex p-5 my-72 mx-auto max-h-fit text-3xl">
@@ -87,18 +75,14 @@ const Notfoundpage = () => {
   );
 };
 
-
 const AppRoutes = () => {
   const location = useLocation();
   return (
     <AnimatePresence mode="wait">
-
       <Routes location={location} key={location.pathname}>
+
         {/* Hero Page */}
-        {/* <Route path="/" element={<Animate page={<Hero />} />} /> */}
         <Route path="/" element={<Animate page={<Hero />} />} />
-
-
 
         {/* Main routes */}
         <Route path="/onboarding" element={<Animate page={<OnBoarding />} />} />
@@ -107,56 +91,83 @@ const AppRoutes = () => {
         <Route path="/schedule-meeting" element={<Animate page={<ScheduleMeeting />} />} />
         <Route path="/forgot-password" element={<Animate page={<ForgotPassword />} />} />
 
-
-
         {/* Buyer Routes */}
+        <Route path="/buyer/homepage" element={
+          <BuyerProtectedRoute>
+            <Animate page={<Layout Buyer={true} Body={<Homepage />} />} />
+          </BuyerProtectedRoute>
+        } />
+        <Route path="/buyer/wishlist" element={
+          <BuyerProtectedRoute>
+            <Animate page={<Layout Buyer={true} Body={<Wishlist />} />} />
+          </BuyerProtectedRoute>
+        } />
+        <Route path="/buyer/product-page" element={
+          <BuyerProtectedRoute>
+            <Animate page={<Layout Buyer={true} Body={<ProductPage />} />} />
+          </BuyerProtectedRoute>
+        } />
+        <Route path="/buyer/purchase-request-success" element={
+          <BuyerProtectedRoute>
+            <Animate page={<PurchaseRequestSuccess />} />
+          </BuyerProtectedRoute>
+        } />
 
-        <Route path="/buyer/homepage" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<Homepage />} />} /></BuyerProtectedRoute>} />
-        {/* <Route path="/buyer/inbox" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<BuyerInbox />} />} /></BuyerProtectedRoute>} /> */}
-        <Route path="/buyer/wishlist" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<Wishlist />} /> } /></BuyerProtectedRoute>} />
-        {/* <Route path="/buyer/cartpage" element={<BuyerProtectedRoute><Animate page={<CartPage />} /></BuyerProtectedRoute>} /> */}
-        {/* <Route path="/buyer/trade" element={<BuyerProtectedRoute><Animate page={<BuyerLayout content={<BuyerTrade />} />} /></BuyerProtectedRoute>} /> */}
-        {/* <Route path="/buyer/buyer-address" element={<BuyerProtectedRoute><Animate page={<BuyerAddress />} /></BuyerProtectedRoute>} /> */}
-        <Route path="/buyer/product-page" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<ProductPage />} />} /></BuyerProtectedRoute>} />
-        {/* <Route path="/buyer/purchase-request" element={<BuyerProtectedRoute><Animate page={<PurchaseRequest />} /></BuyerProtectedRoute>} /> */}
-        {/* <Route path="/buyer/purchase-request-success" element={<BuyerProtectedRoute><Animate page={<PurchaseRequestSuccess />} /></BuyerProtectedRoute>} /> */}
-
-        {/* AI Routes */}
+        {/* Buyer AI Routes */}
         <Route path="/buyer/ai" element={<Animate page={<BuyerAi />} />} />
+        <Route path="/buyer/ai-country" element={<Animate page={<BuyerAiCountry />} />} />
+        <Route path="/buyer/ai-port" element={<Animate page={<BuyerAiPort />} />} />
+        <Route path="/buyer/ai-result" element={<Animate page={<BuyerAiResult />} />} />
         <Route path="/buyer/ai-product" element={<Animate page={<BuyerAiproduct />} />} />
 
-
-
-
         {/* Seller Routes */}
-        <Route path="/seller/dashboard" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<SellerDashboard />} />} /></SellerProtectedRoute>} />
-        {/* <Route path="/seller/security" element={<SellerProtectedRoute><Animate page={<Layout Body={<Security />} />} /></SellerProtectedRoute>} /> */}
-        <Route path="/seller/sales" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<Sales />} />} /></SellerProtectedRoute>} />
-        <Route path="/seller/upgrade" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<Upgrade />} />} /></SellerProtectedRoute>} />
-        <Route path="/seller/add-products" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<AddProduct />} />} /></SellerProtectedRoute>} />
-        {/* <Route path="/seller/Inbox" element={<SellerProtectedRoute><Animate page={<Layout Body={<Inbox />} />} /></SellerProtectedRoute>} /> */}
-        {/* <Route path="/seller/trade" el`ement={<SellerProtectedRoute><Animate page={<Layout Body={<Trade />} />} /></SellerProtectedRoute>} /> */}
-        {/* <Route path="/seller/Product-Feedback" element={<SellerProtectedRoute><Animate page={<Layout Body={<Feedback />} />} /></SellerProtectedRoute>} /> */}
-        <Route path="/seller/inventory" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<Inventory />} />} /></SellerProtectedRoute>} />
+        <Route path="/seller/dashboard" element={
+          <SellerProtectedRoute>
+            <Animate page={<Layout Seller={true} Body={<SellerDashboard />} />} />
+          </SellerProtectedRoute>
+        } />
+        <Route path="/seller/sales" element={
+          <SellerProtectedRoute>
+            <Animate page={<Layout Seller={true} Body={<Sales />} />} />
+          </SellerProtectedRoute>
+        } />
+        <Route path="/seller/upgrade" element={
+          <SellerProtectedRoute>
+            <Animate page={<Layout Seller={true} Body={<Upgrade />} />} />
+          </SellerProtectedRoute>
+        } />
+        <Route path="/seller/add-products" element={
+          <SellerProtectedRoute>
+            <Animate page={<Layout Seller={true} Body={<AddProduct />} />} />
+          </SellerProtectedRoute>
+        } />
+        <Route path="/seller/inventory" element={
+          <SellerProtectedRoute>
+            <Animate page={<Layout Seller={true} Body={<Inventory />} />} />
+          </SellerProtectedRoute>
+        } />
 
+        {/* Seller AI Pages */}
+        <Route path="/seller/search-option" element={
+            <Animate page={<Layout Seller={true} Body={<SellerSearchOption />} />} />
+        } />
+        <Route path="/seller/search-input" element={
+            <Animate page={<Layout Seller={true} Body={<SellerSearchInput />} />} />
+        } />
+        <Route path="/seller/search-result" element={
+            <Animate page={<Layout Seller={true} Body={<SellerSearchResult />} />} />
+        } />
 
-
-
-        {/* Seller settings with default layout */}
-
-        {/* Seller settings with different layout */}
-        {/* <Route path="/seller/settings" element={<SellerProtectedRoute><Animate page={<SellerSettings />} /></SellerProtectedRoute>} /> */}
-
-
-
-        {/* 404 page  */}
+        {/* 404 Not Found */}
         <Route path="*" element={<Notfoundpage />} />
 
-        {/* Internal Error  */}
-        <Route path="/internal-error" element={<div className="shadow-2xl max-w-fit whitespace-nowrap flex p-5 my-72 mx-auto max-h-fit text-3xl rounded-lg text-center">Error code 500 <br /> Internal Server Error</div>} />
+        {/* 500 Internal Error */}
+        <Route path="/internal-error" element={
+          <div className="shadow-2xl max-w-fit whitespace-nowrap flex p-5 my-72 mx-auto max-h-fit text-3xl rounded-lg text-center">
+            Error code 500 <br /> Internal Server Error
+          </div>
+        } />
       </Routes>
-
-
     </AnimatePresence>
   );
 };

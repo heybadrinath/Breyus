@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+python-dotenv
+groq
+matplotlib # Not strictly needed for API, but included for local testing of plots if you separate them
+seaborn    # Not strictly needed for API, but included for local testing of plots if you separate them
+numpy
+pandas
+python-dateutil # For relativedelta
