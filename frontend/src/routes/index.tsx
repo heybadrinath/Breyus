@@ -142,16 +142,16 @@ const AppRoutes = () => {
 
 
         {/*Buyer AI Routes */}
-        <Route path="/buyer/ai" element={<Animate page={<BuyerAi />} />} />
-        <Route path="/buyer/ai-country" element={<Animate page={<BuyerAiCountry />} />} />
-        <Route path="/buyer/ai-port" element={<Animate page={<BuyerAiPort />} />} />
-        <Route path="/buyer/ai-result" element={<Animate page={<BuyerAiResult />} />} />
-        <Route path="/buyer/ai-product" element={<Animate page={<BuyerAiproduct />} />} />
+        <Route path="/buyer/ai" element={<BuyerProtectedRoute><Animate page={<BuyerAi />} /></BuyerProtectedRoute>} />
+        <Route path="/buyer/ai-country" element={<BuyerProtectedRoute><Animate page={<BuyerAiCountry />} /></BuyerProtectedRoute>} />
+        <Route path="/buyer/ai-port" element={<BuyerProtectedRoute><Animate page={<BuyerAiPort />} /></BuyerProtectedRoute>} />
+        <Route path="/buyer/ai-result" element={<BuyerProtectedRoute><Animate page={<BuyerAiResult />} /></BuyerProtectedRoute>} />
+        <Route path="/buyer/ai-product" element={<BuyerProtectedRoute><Animate page={<BuyerAiproduct />} /></BuyerProtectedRoute>} />
         
         {/*Seller Ai Routes */}
-        <Route path="/seller/search-option" element={ <Animate page={<Layout Seller={true} Body={<SellerSearchOption />} />} />} />
-        <Route path="/seller/search-input" element={ <Animate page={<Layout Seller={true} Body={<SellerSearchInput />} />} /> } />
-        <Route path="/seller/search-result" element={ <Animate page={<Layout Seller={true} Body={<SellerSearchResult />} />} />} />
+        <Route path="/seller/search-option" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<SellerSearchOption />} />} /></SellerProtectedRoute> } />
+        <Route path="/seller/search-input" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<SellerSearchInput />} />} /></SellerProtectedRoute>  } />
+        <Route path="/seller/search-result" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<SellerSearchResult />} />} /></SellerProtectedRoute> } />
         
 
         {/* Essential Error routes */}
