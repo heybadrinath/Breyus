@@ -42,9 +42,17 @@ import Wishlist from "../buyer/pages/Wishlist";
 
 
 
-// ai imports 
+// Buyer AI Imports
 import BuyerAi from "../buyer/pages/ai";
 import BuyerAiproduct from "../buyer/pages/ai-products";
+import BuyerAiCountry from "../buyer/pages/ai-country";
+import BuyerAiPort from "../buyer/pages/ai-port";
+import BuyerAiResult from "../buyer/pages/ai-result";
+
+// Seller AI Imports
+import SellerSearchOption from "../seller/pages/SellerSearchOption";
+import SellerSearchInput from "../seller/pages/SellerSearchInput";
+import SellerSearchResult from "../seller/pages/SellerSearchResult";
 
 
 
@@ -133,10 +141,18 @@ const AppRoutes = () => {
 
 
 
-        {/* AI Routes */}
+        {/*Buyer AI Routes */}
         <Route path="/buyer/ai" element={<Animate page={<BuyerAi />} />} />
+        <Route path="/buyer/ai-country" element={<Animate page={<BuyerAiCountry />} />} />
+        <Route path="/buyer/ai-port" element={<Animate page={<BuyerAiPort />} />} />
+        <Route path="/buyer/ai-result" element={<Animate page={<BuyerAiResult />} />} />
         <Route path="/buyer/ai-product" element={<Animate page={<BuyerAiproduct />} />} />
-
+        
+        {/*Seller Ai Routes */}
+        <Route path="/seller/search-option" element={ <Animate page={<Layout Seller={true} Body={<SellerSearchOption />} />} />} />
+        <Route path="/seller/search-input" element={ <Animate page={<Layout Seller={true} Body={<SellerSearchInput />} />} /> } />
+        <Route path="/seller/search-result" element={ <Animate page={<Layout Seller={true} Body={<SellerSearchResult />} />} />} />
+        
 
         {/* Essential Error routes */}
         <Route path="*" element={<Animate page={<Notfoundpage />} />} />
