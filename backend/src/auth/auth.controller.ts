@@ -41,4 +41,25 @@ export class AuthController {
             return response.status(401).send('Invalid or expired cookie');
         }
     }
+
+    @Get('me')
+    async getMe(@Res() response: Response): Promise<any> {
+        const accountToken = response.req.signedCookies['account'];
+        if (!accountToken) {
+            return response.status(401).send({ message: 'No valid cookie found' });
+        }
+        try {
+            const decodeToken = this.authService.validateAccountToken(accountToken);
+            if (!decodeToken) {
+                return response.status(401).send({ message: 'Invalid or expired cookie' });
+            }
+            const companyId = (decodeToken as any).companyId;
+            if (!companyId) {
+                return response.status(401).send({ message: 'No companyId in token' });
+            }
+            return response.status(200).json({ companyId });
+        } catch (error) {
+            return response.status(401).send({ message: 'Invalid or expired cookie' });
+        }
+    }
 }

@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Heart, Share2, MessageCircle, ShoppingCart, Package, Shield, Truck, X, Copy, } from "lucide-react";
+import { Heart, Share2, MessageCircle, Package, Shield, Truck, X, Copy, Repeat, FlaskConical } from "lucide-react";
 import { getProductById, Product } from "../../services/products.service";
 import TestReport from "../../buyer/components/webUrlframe";
 import { Incoterms } from "../../components/incoterms";
+import { createConversation } from "../../services/inbox.service";
+import { useNavigate } from "react-router-dom";
+import { addToWishlist, removeFromWishlist, getWishlist } from '../../services/wishlist.service';
+import { TryBreyusCoreHeader } from "../../components/Header";
 
 // import social media icons
 import fb from "../assets/social-icons/fb.svg";
 import ln from "../assets/social-icons/ln.svg";
 import whatsapp from "../assets/social-icons/whatsapp.svg";
 import x_twitter from "../assets/social-icons/x.svg";
-import { useNavigate } from "react-router-dom";
-import { addToWishlist, removeFromWishlist, getWishlist } from '../../services/wishlist.service';
-import { TryBreyusCoreHeader } from "../../components/Header";
+
+
+
 
 const ProductPage: React.FC = () => {
 
@@ -446,47 +450,18 @@ const ProductPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* sample input  */}
-                  {/* <div className=" flex h-fit w-[35%] px-3 py-3  border-2 rounded-lg">
-                  <input type="checkbox" name="sample" value="sample" />
-                  <label className="ml-2" htmlFor="sample"> Sample only</label>
-                </div> */}
+               
 
                 </div>
 
                 {/* Action Buttons */}
                 <div className="space-y-3">
-                  <button
-                    onClick={handleQuantityValidation}
+                  
 
-                    disabled={isAddingToCart || product.stock === 0}
-                    className={`w-full py-3 px-6 rounded-lg text-lg font-semibold transition-all ${false
-                      ? 'bg-green-500 text-white cursor-default'
-                      : product.stock === 0
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : isAddingToCart
-                          ? 'bg-gray-400 text-white cursor-not-allowed'
-                          : 'bg-black text-white hover:bg-gray-800'
-                      }`}
+                  <button className="w-full py-3 px-6 border border-gray-300 bg-black text-white rounded-lg font-semibold transition"
+                  onClick={() => navigate(`/buyer/purchase-request?id=${product.id}`)}
                   >
-                    {isAddingToCart ? (
-                      <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                        Adding to Cart...
-                      </div>
-                    ) : false ? (
-                      <>
-                        <ShoppingCart className="inline w-5 h-5 mr-2" />
-                        In Cart ✓
-                      </>
-                    ) : product.stock === 0 ? (
-                      'Out of Stock'
-                    ) : (
-                      <>
-                        <ShoppingCart className="inline w-5 h-5 mr-2" />
-                        Add to Cart
-                      </>
-                    )}
+                    <Repeat className="inline pr-2 py-auto" /> Send Purchase Request 
                   </button>
 
 
@@ -494,6 +469,7 @@ const ProductPage: React.FC = () => {
                     className="w-full py-3 px-6 border border-gray-300 text-gray-700 rounded-lg font-semibold transition"
                     onClick={() => { setShowTestReport(true) }}
                   >
+                    <FlaskConical className="inline pr-2 py-auto text-black" />
                     View Test Reports
                   </button>
                   {/* View Trade Terms Button  and incoterms button*/}
@@ -539,7 +515,33 @@ const ProductPage: React.FC = () => {
                       {isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
                     </button>
 
-                    <button className="flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
+                    <button className="flex-1 py-2 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                      onClick={async () => {
+                        try {
+                          const result = await createConversation(product.id);
+                          if (result.status === 'success') {
+                            // Use the returned conversation ID
+                            const conversationId = result.data;
+                            navigate(`/buyer/inbox?conversationId=${conversationId}`);
+                          } else if (
+                            result.message === 'Conversation already exists' && result.conversationId
+                          ) {
+                            // Navigate to inbox and select the existing conversation
+                            navigate(`/buyer/inbox?conversationId=${result.conversationId}`);
+                          } else if (
+                            result.message === "You can't send a message to yourself" ||
+                            (result.message && result.message.toLowerCase().includes('yourself'))
+                          ) {
+                            showNotification('error', "You can't send a message to yourself.");
+                          } else {
+                            showNotification('error', result.message || 'Failed to create conversation');
+                          }
+                        } catch (error) {
+                          showNotification('error', 'Error creating conversation.');
+                          console.error('Error creating conversation:', error);
+                        }
+                      }}
+                    >
                       <MessageCircle className="inline w-4 h-4 mr-2" />
                       Ask Queries
                     </button>
@@ -612,12 +614,7 @@ const ProductPage: React.FC = () => {
             </div>
           )}
 
-          {/* Legacy cart success message - keeping for cart operations */}
-          {addedToCart && !notification && (
-            <div className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-bounce">
-              Added to Cart Successfully!
-            </div>
-          )}
+         
 
           {/* Trade Terms Modal */}
           <TestReport onClose={() => setShowTestReport(false)} url={product.testReport} show={showTestReport} />
@@ -722,5 +719,4 @@ const ProductPage: React.FC = () => {
   );
 
 };
-console.log(window.location.href);
 export default ProductPage;
