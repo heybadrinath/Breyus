@@ -1,7 +1,6 @@
 import React from "react";
 import TradeStatusProgress from "./tradeStatusProgress";
 import { Edit, Timer } from "lucide-react";
-import { N } from "framer-motion/dist/types.d-CtuPurYT";
 import { useNavigate } from "react-router-dom";
 
 interface NegotationProps {
