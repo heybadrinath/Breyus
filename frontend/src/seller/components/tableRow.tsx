@@ -10,7 +10,7 @@ export const TableRow: React.FC<tableRowProps> = ( {tableData, className} ) => {
     return (
         <tr className="mx-auto border-b-2">
             {tableData.map((data, index) => (
-                <td key={index} className={className + "mx-auto py-6 align-middle text-center"}>{data}</td>
+                <td key={index} className={className + "mx-auto py-5 align-middle text-center"}>{data}</td>
             ))}
         </tr>
     );
