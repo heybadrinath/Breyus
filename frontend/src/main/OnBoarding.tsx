@@ -1,6 +1,6 @@
 import React, { useState, ChangeEvent, useRef } from "react";
 import OnboardingProgress from "../components/OnboardingProgress";
-import { motion, AnimatePresence, Variants } from "framer-motion";
+import { motion, AnimatePresence, Variants, Variant } from "framer-motion";
 import BreyusLogo from "../assets/Logos/full-logo.svg";
 
 // import service (backend integration)

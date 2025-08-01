@@ -44,9 +44,6 @@ import Wishlist from "../buyer/pages/Wishlist";
 
 // Buyer AI Imports
 import BuyerAi from "../buyer/pages/ai";
-import BuyerAiproduct from "../buyer/pages/ai-products";
-import BuyerAiCountry from "../buyer/pages/ai-country";
-import BuyerAiPort from "../buyer/pages/ai-port";
 import BuyerAiResult from "../buyer/pages/ai-result";
 
 // Seller AI Imports
@@ -143,15 +140,15 @@ const AppRoutes = () => {
 
         {/*Buyer AI Routes */}
         <Route path="/buyer/ai" element={<BuyerProtectedRoute><Animate page={<BuyerAi />} /></BuyerProtectedRoute>} />
-        <Route path="/buyer/ai-country" element={<BuyerProtectedRoute><Animate page={<BuyerAiCountry />} /></BuyerProtectedRoute>} />
-        <Route path="/buyer/ai-port" element={<BuyerProtectedRoute><Animate page={<BuyerAiPort />} /></BuyerProtectedRoute>} />
         <Route path="/buyer/ai-result" element={<BuyerProtectedRoute><Animate page={<BuyerAiResult />} /></BuyerProtectedRoute>} />
-        <Route path="/buyer/ai-product" element={<BuyerProtectedRoute><Animate page={<BuyerAiproduct />} /></BuyerProtectedRoute>} />
+        {/* <Route path="/buyer/ai-country" element={<BuyerProtectedRoute><Animate page={<BuyerAiCountry />} /></BuyerProtectedRoute>} /> */}
+        {/* <Route path="/buyer/ai-port" element={<BuyerProtectedRoute><Animate page={<BuyerAiPort />} /></BuyerProtectedRoute>} /> */}
+        {/* <Route path="/buyer/ai-product" element={<BuyerProtectedRoute><Animate page={<BuyerAiproduct />} /></BuyerProtectedRoute>} /> */}
         
         {/*Seller Ai Routes */}
-        <Route path="/seller/search-option" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<SellerSearchOption />} />} /></SellerProtectedRoute> } />
-        <Route path="/seller/search-input" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<SellerSearchInput />} />} /></SellerProtectedRoute>  } />
-        <Route path="/seller/search-result" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<SellerSearchResult />} />} /></SellerProtectedRoute> } />
+        <Route path="/seller/search-option" element={<SellerProtectedRoute><Animate page={<SellerSearchOption />} /></SellerProtectedRoute> } />
+        <Route path="/seller/search-input" element={<SellerProtectedRoute><Animate page={<SellerSearchInput />} /></SellerProtectedRoute>  } />
+        <Route path="/seller/search-result" element={<SellerProtectedRoute><Animate page={<SellerSearchResult />} /></SellerProtectedRoute> } />
         
 
         {/* Essential Error routes */}
