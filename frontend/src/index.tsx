@@ -5,16 +5,42 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { BrowserRouter } from 'react-router-dom';
 
+// --- ADD THESE CHART.JS IMPORTS ---
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler, // Required for area charts (fill: true)
+  RadialLinearScale, // Required for Radar charts
+} from 'chart.js';
+
+// --- ADD THIS CHART.JS REGISTRATION ---
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+  RadialLinearScale
+);
+// --- END CHART.JS REGISTRATION ---
+
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 root.render(
   <React.StrictMode>
     <BrowserRouter>
-    <App />
+      <App />
     </BrowserRouter>
-   
-   
   </React.StrictMode>
 );
 
