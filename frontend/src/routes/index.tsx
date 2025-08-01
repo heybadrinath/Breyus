@@ -1,7 +1,7 @@
 import React, { ReactNode } from "react";
 import { SellerProtectedRoute, BuyerProtectedRoute } from "./ProtectedRoute"; // Protected Route for authenticated users
 import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import { Layout } from "../components/layout";
 
 
@@ -56,7 +56,7 @@ import SellerSearchResult from "../seller/pages/SellerSearchResult";
 
 
 
-const pageVariants = {
+const pageVariants: Variants = {
   initial: { opacity: 0.5, y: 5 },
   animate: {
     opacity: 1,

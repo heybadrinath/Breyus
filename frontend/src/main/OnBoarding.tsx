@@ -1,6 +1,6 @@
 import React, { useState, ChangeEvent, useRef } from "react";
 import OnboardingProgress from "../components/OnboardingProgress";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import BreyusLogo from "../assets/Logos/full-logo.svg";
 
 // import service (backend integration)
@@ -42,7 +42,7 @@ const OnBoarding: React.FC = () => {
         }
     };
 
-    const itemVariants = {
+    const itemVariants: Variants = {
         hidden: { opacity: 0, y: 20 },
         visible: {
             opacity: 1,
