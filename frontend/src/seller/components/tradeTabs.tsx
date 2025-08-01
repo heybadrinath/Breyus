@@ -1,8 +1,5 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PurchaseRequestStatus } from "./purchaseRequestStatus";
-import { PurchaseOrderStatus } from "./purchaseOrderStatus";
-import { OngoingTrades } from "./ongoingTrades";
 
 const tabs = [
     { id: 1, label: "Purchase Request Status" },
@@ -12,21 +9,16 @@ const tabs = [
     { id: 5, label: "History" },
 ];
 
-export const TradeTabs = () => {
+interface TradeTabsProps {
+    tabContent: React.ReactNode[];
+}
+
+
+
+
+export const TradeTabs: React.FC<TradeTabsProps> = ({tabContent}) => {
     const [activeTab, setActiveTab] = React.useState(tabs[0].id);
 
-    const renderContent = () => {
-        switch (activeTab) {
-            case 1:
-                return <PurchaseRequestStatus />;
-            case 2:
-                return <PurchaseOrderStatus />;
-            case 3:
-                return <OngoingTrades />;
-            default:
-                return null;
-        }
-    }
 
     return (
         <div className="px-8 py-10 h-full">
@@ -37,13 +29,13 @@ export const TradeTabs = () => {
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`relative px-3 py-2.5 transition-colors duration-200 ${activeTab === tab.id ? "text-gray-700" : "hover:text-gray-600"
+                            className={`relative px-3 py-2.5 transition-colors duration-200 font-extrabold ${activeTab === tab.id ? "text-gray-800" : "hover:text-gray-700"
                                 }`}
                         >
                             {tab.label}
                             {activeTab === tab.id && (
                                 <motion.div
-                                    className="absolute bottom-[-2px] left-0 right-0 h-[3px] bg-gray-700"
+                                    className="absolute bottom-[-2px] left-0 right-0 h-[3px] bg-gray-800"
                                     layoutId="underline"
                                 />
                             )}
@@ -60,7 +52,7 @@ export const TradeTabs = () => {
                     exit={{ y: -10, opacity: 0 }}
                     transition={{ duration: 0.2 }}
                 >
-                    {renderContent()}
+                    {tabContent[activeTab -1]}
                 </motion.div>
             </AnimatePresence>
         </div>
