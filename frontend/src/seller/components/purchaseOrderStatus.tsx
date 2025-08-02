@@ -33,7 +33,7 @@ export const PurchaseOrderStatus = () => {
                     <th className=" text-gray-600 font-medium py-2">Buyer</th>
                     <th className=" text-gray-600 font-medium py-2">Product</th>
                     <th className=" text-gray-600 font-medium py-2">Negotiation</th>
-                    {/* <th className=" text-gray-600 font-medium py-2">Request Analysis</th> */}
+                    {/* <th className=" text-gray-600 font-medium py-2">Payment Status</th> */}
                     <th className=" text-gray-600 font-medium py-2">Request</th>
                 </tr>
                 <TableRow tableData={[
@@ -41,7 +41,7 @@ export const PurchaseOrderStatus = () => {
                     "User",
                     "Copper",
                     <button className="text-[#0076D3]">Check Buyer Terms</button>,
-                    // "10% match",
+                    // "success",
                     <div className="flex w-full justify-items-center justify-center">
                         <button className="border-2 border-green-400 rounded-full p-[0.4px] mr-3"><Check className=" text-green-400 " /></button>
                         <button className="border-2 rounded-full p-[0.4px] border-red-400"><X className="text-red-400"/></button>
@@ -53,7 +53,7 @@ export const PurchaseOrderStatus = () => {
                     "User",
                     "Copper",
                     <button className="text-[#0076D3]">Check Buyer Terms</button>,
-                    // "10% match",
+                    // "pending",
                     <div className="flex w-full justify-items-center justify-center">
                         <button className="border-2 border-green-400 rounded-full p-[0.4px] mr-3"><Check className=" text-green-400 " /></button>
                         <button className="border-2 rounded-full p-[0.4px] border-red-400"><X className="text-red-400"/></button>

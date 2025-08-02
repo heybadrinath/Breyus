@@ -21,7 +21,7 @@ export const TradeTabs: React.FC<TradeTabsProps> = ({tabContent}) => {
 
 
     return (
-        <div className="px-8 py-10 h-full">
+        <div className="px-8 py-10 h-[90%]">
             {/* Tabs */}
             <div className="flex border-b-2">
                 <div className="flex gap-x-16 h-12 mx-auto text-xl font-bold text-gray-400">
@@ -51,6 +51,7 @@ export const TradeTabs: React.FC<TradeTabsProps> = ({tabContent}) => {
                     animate={{ y: 0, opacity: 1 }}
                     exit={{ y: -10, opacity: 0 }}
                     transition={{ duration: 0.2 }}
+                    className="h-[85%]"
                 >
                     {tabContent[activeTab -1]}
                 </motion.div>

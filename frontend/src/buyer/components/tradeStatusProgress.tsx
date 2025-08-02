@@ -44,9 +44,9 @@ const TradeStatusProgress: React.FC<ProgressProps> = ({ currentStep }) => {
       {steps.map((step, index) => (
         <div key={step.id} className="flex relative w-full mb-2">
           {index < steps.length - 1 && (
-            <div className={`absolute left-[5px] top-[20px] h-[40px] border-l-2 border-dashed ${currentStep > step.id ? 'border-black' : 'border-gray-300'}`}></div>
+            <div className={`absolute left-[5px] top-[20px] h-[51px] border-l-2 border-dashed ${currentStep > step.id ? 'border-black' : 'border-gray-300'}`}></div>
           )}
-          <div className="flex items-center z-10 my-[8px]">
+          <div className="flex items-center z-10 my-[14px]">
             <div
               className={`w-3 h-3 rounded-full border-[2.8px] flex flex-col transition-all duration-500 ease-in-out
                 ${currentStep >= step.id

@@ -1,5 +1,5 @@
 import { Filter, Check, X } from "lucide-react";
-import { TableRow } from "./tableRow";
+import { TableRow } from "../seller/components/tableRow";
 
 
 export const OngoingTrades = () => {

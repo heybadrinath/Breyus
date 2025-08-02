@@ -1,9 +1,9 @@
 import React from "react";
 import { SearchHeaderLight } from "../../components/Header"
-import { TradeTabs } from "../components/tradeTabs";
+import { TradeTabs } from "../../components/tradeTabs";
 import { PurchaseRequestStatus } from "../components/purchaseRequestStatus";
 import { PurchaseOrderStatus } from "../components/purchaseOrderStatus";
-import { OngoingTrades } from "../components/ongoingTrades";
+import { OngoingTrades } from "../../components/ongoingTrades";
 
 
 export const Trade = () => {
