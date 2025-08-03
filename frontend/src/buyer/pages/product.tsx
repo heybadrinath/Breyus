@@ -26,8 +26,6 @@ const ProductPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState('');
-  const [isAddingToCart, setIsAddingToCart] = useState(false);
-  const [addedToCart, setAddedToCart] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
 
@@ -336,7 +334,7 @@ const ProductPage: React.FC = () => {
       setNotification({ type: 'error', message: `Only ${product.stock} ${product.stockUnit} available in stock.` });
       return;
     }
-    // If valid, you can proceed with add to cart logic here
+    navigate(`/buyer/purchase-request?id=${product.id}&quantity=${quantity}&quantity_unit=${product.moqUnit}`);
   }
 
   return (
@@ -450,18 +448,18 @@ const ProductPage: React.FC = () => {
                     </div>
                   </div>
 
-               
+
 
                 </div>
 
                 {/* Action Buttons */}
                 <div className="space-y-3">
-                  
+
 
                   <button className="w-full py-3 px-6 border border-gray-300 bg-black text-white rounded-lg font-semibold transition"
-                  onClick={() => navigate(`/buyer/purchase-request?id=${product.id}`)}
+                    onClick={() => handleQuantityValidation()}
                   >
-                    <Repeat className="inline pr-2 py-auto" /> Send Purchase Request 
+                    <Repeat className="inline pr-2 py-auto" /> Send Purchase Request
                   </button>
 
 
@@ -614,7 +612,7 @@ const ProductPage: React.FC = () => {
             </div>
           )}
 
-         
+
 
           {/* Trade Terms Modal */}
           <TestReport onClose={() => setShowTestReport(false)} url={product.testReport} show={showTestReport} />
