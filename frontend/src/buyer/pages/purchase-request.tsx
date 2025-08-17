@@ -8,6 +8,7 @@ import { getProductById, Product } from "../../services/products.service";
 import { createTradeRequest, CreateTradeRequest, Address as AddressType, PaymentMethod, Incoterms } from "../../services/trade.service";
 import { useNavigate } from "react-router-dom";
 import { IncotermsState, defaultIncotermValues } from "../../types/Incoterms";
+import { getDeliveryAddresses, addDeliveryAddress, DeliveryAddress } from "../../services/company.service";
 
 // Define step data types
 interface Step1Data {
@@ -70,7 +71,7 @@ export const PurchaseRequest = () => {
         defaults: defaultIncotermValues
     });
 
-    // Lifted state for Address component
+    // Lifted state for Address component - now using company service
     const [addresses, setAddresses] = useState<AddressType[]>([]);
     const [selectedAddressIndex, setSelectedAddressIndex] = useState<number>(0);
     const [showAddAddressPopup, setShowAddAddressPopup] = useState(false);
@@ -85,6 +86,7 @@ export const PurchaseRequest = () => {
         country: 'India',
         additionalDetails: ''
     });
+    const [addressesLoading, setAddressesLoading] = useState(false);
 
     // Lifted state for TradeQueries component
     const [industryType, setIndustryType] = useState('');
@@ -132,7 +134,7 @@ export const PurchaseRequest = () => {
         }
     };
 
-    // Handle Address component state changes
+    // Handle Address component state changes - now using company service
     const handleAddressesChange = (newAddresses: AddressType[]) => {
         setAddresses(newAddresses);
         handleStepDataChange(2, {
@@ -161,34 +163,111 @@ export const PurchaseRequest = () => {
         setNewAddress(address);
     };
 
-    const handleAddNewAddress = () => {
+    const handleAddNewAddress = async () => {
         if (!newAddress.fullName || !newAddress.mobileNumber || !newAddress.pincode || 
             !newAddress.streetName || !newAddress.city || !newAddress.state) {
-            alert('Please fill in all required fields');
+            setNotification({ type: 'error', message: 'Please fill in all required fields' });
             return;
         }
 
-        const updatedAddresses = [...addresses, newAddress];
-        setAddresses(updatedAddresses);
-        
-        // Select the newly added address
-        const newIndex = updatedAddresses.length - 1;
-        setSelectedAddressIndex(newIndex);
-        
-        // Reset form
-        setNewAddress({
-            fullName: '',
-            mobileNumber: '',
-            pincode: '',
-            streetName: '',
-            landmark: '',
-            city: '',
-            state: '',
-            country: 'India',
-            additionalDetails: ''
-        });
-        
-        setShowAddAddressPopup(false);
+        setAddressesLoading(true);
+        try {
+            // Convert AddressType to DeliveryAddress for the API
+            const deliveryAddress: DeliveryAddress = {
+                fullName: newAddress.fullName,
+                mobileNumber: newAddress.mobileNumber,
+                pincode: newAddress.pincode,
+                streetName: newAddress.streetName,
+                landmark: newAddress.landmark,
+                city: newAddress.city,
+                state: newAddress.state,
+                country: newAddress.country,
+                additionalDetails: newAddress.additionalDetails
+            };
+
+            const updatedAddresses = await addDeliveryAddress(deliveryAddress);
+            
+            // Convert back to AddressType for the component
+            const convertedAddresses: AddressType[] = updatedAddresses.map(addr => ({
+                fullName: addr.fullName,
+                mobileNumber: addr.mobileNumber,
+                pincode: addr.pincode,
+                streetName: addr.streetName,
+                landmark: addr.landmark,
+                city: addr.city,
+                state: addr.state,
+                country: addr.country,
+                additionalDetails: addr.additionalDetails
+            }));
+
+            setAddresses(convertedAddresses);
+            
+            // Select the newly added address
+            const newIndex = convertedAddresses.length - 1;
+            setSelectedAddressIndex(newIndex);
+            
+            // Reset form
+            setNewAddress({
+                fullName: '',
+                mobileNumber: '',
+                pincode: '',
+                streetName: '',
+                landmark: '',
+                city: '',
+                state: '',
+                country: 'India',
+                additionalDetails: ''
+            });
+            
+            setShowAddAddressPopup(false);
+            
+            setNotification({ type: 'success', message: 'Address added successfully!' });
+        } catch (error) {
+            console.error('Error adding address:', error);
+            setNotification({ 
+                type: 'error', 
+                message: error instanceof Error ? error.message : 'Failed to add address' 
+            });
+        } finally {
+            setAddressesLoading(false);
+        }
+    };
+
+    // Fetch addresses from company service
+    const fetchAddresses = async () => {
+        setAddressesLoading(true);
+        try {
+            const deliveryAddresses = await getDeliveryAddresses();
+            
+            // Convert DeliveryAddress to AddressType for the component
+            const convertedAddresses: AddressType[] = deliveryAddresses.map(addr => ({
+                fullName: addr.fullName,
+                mobileNumber: addr.mobileNumber,
+                pincode: addr.pincode,
+                streetName: addr.streetName,
+                landmark: addr.landmark,
+                city: addr.city,
+                state: addr.state,
+                country: addr.country,
+                additionalDetails: addr.additionalDetails
+            }));
+
+            setAddresses(convertedAddresses);
+            
+            // Update step data
+            if (convertedAddresses.length > 0) {
+                handleStepDataChange(2, {
+                    addresses: convertedAddresses,
+                    selectedAddress: convertedAddresses[0],
+                    selectedAddressIndex: 0
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching addresses:', error);
+            // If no addresses found, that's okay - user can add new ones
+        } finally {
+            setAddressesLoading(false);
+        }
     };
 
     // Handle TradeQueries component state changes
@@ -291,7 +370,11 @@ export const PurchaseRequest = () => {
         }
     }, [negoatiatedIncotermsState]);
 
-    
+    // Fetch addresses when component mounts
+    useEffect(() => {
+        fetchAddresses();
+    }, []);
+
     const handleSubmitPurchaseRequest = async () => {
         if (!product) {
             setNotification({ type: 'error', message: 'Product not found' });
@@ -528,6 +611,7 @@ export const PurchaseRequest = () => {
                         onNewAddressChange={handleNewAddressChange}
                         onAddNewAddress={handleAddNewAddress}
                         onSelectedAddressIndexChange={handleSelectedAddressIndexChange}
+                        loading={addressesLoading}
                     />
                 );
             case 3:

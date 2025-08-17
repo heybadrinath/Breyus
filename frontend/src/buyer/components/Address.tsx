@@ -18,6 +18,7 @@ interface AddressProps {
     onNewAddressChange: (address: AddressType) => void;
     onAddNewAddress: () => void;
     onSelectedAddressIndexChange: (index: number) => void;
+    loading?: boolean;
 }
 
 export const Address: React.FC<AddressProps> = ({ 
@@ -33,7 +34,8 @@ export const Address: React.FC<AddressProps> = ({
     newAddress,
     onNewAddressChange,
     onAddNewAddress,
-    onSelectedAddressIndexChange
+    onSelectedAddressIndexChange,
+    loading = false
 }) => {
     const handleAddAddressClick = () => {
         onShowAddAddressPopupChange(true);
@@ -83,7 +85,12 @@ export const Address: React.FC<AddressProps> = ({
             <h1 className="text-3xl font-semibold text-black mb-3">Delivery Address</h1>
             <div className="flex flex-col w-full h-[90%] border-2 rounded-lg px-8 py-6 gap-y-4" >
                 <div className="flex flex-col h-full overflow-y-scroll border-2 rounded-lg py-8 px-8 gap-y-6">
-                    {(addresses && addresses.length > 0)? addresses.map((address, index) => (
+                    {loading ? (
+                        <div className="text-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                            <p className="text-gray-600">Loading addresses...</p>
+                        </div>
+                    ) : (addresses && addresses.length > 0) ? addresses.map((address, index) => (
                         <div key={index} className="flex w-full border p-6 rounded-lg">
                             <input
                                 type="radio"
@@ -108,7 +115,9 @@ export const Address: React.FC<AddressProps> = ({
                                 </div>
                             </div>
                         </div>
-                    )): <div className="text-center text-2xl font-semibold text-gray-500">Add Your Delivery address</div>}
+                    )) : (
+                        <div className="text-center text-2xl font-semibold text-gray-500">Add Your Delivery address</div>
+                    )}
                 </div>
 
                 <button 
@@ -298,9 +307,21 @@ export const Address: React.FC<AddressProps> = ({
 
                             <button 
                                 onClick={handleSaveAddress}
-                                className="bg-black text-white px-3 py-2 rounded-lg mt-4 ml-auto"
+                                disabled={loading}
+                                className={`px-3 py-2 rounded-lg mt-4 ml-auto ${
+                                    loading 
+                                        ? 'bg-gray-400 text-white cursor-not-allowed' 
+                                        : 'bg-black text-white hover:bg-gray-800'
+                                }`}
                             >
-                                Save Address
+                                {loading ? (
+                                    <div className="flex items-center">
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                        Saving...
+                                    </div>
+                                ) : (
+                                    'Save Address'
+                                )}
                             </button>
                         </motion.div>
                     </motion.div>

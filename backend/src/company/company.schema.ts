@@ -13,6 +13,18 @@ export enum TradeType {
     DOMESTIC = 'domestic',
 }
 
+// Address interface for delivery addresses
+export interface DeliveryAddress {
+    fullName: string;
+    mobileNumber: string;
+    pincode: string;
+    streetName: string;
+    landmark?: string;
+    city: string;
+    state: string;
+    country: string;
+    additionalDetails?: string;
+}
 
 @Schema({ timestamps: true })
 export class Company extends Document {
@@ -64,5 +76,8 @@ export class Company extends Document {
 
     @Prop({default: false, unique: false})
     isOnboardingCompleted: boolean;
+
+    @Prop({ type: [Object], default: [] })
+    deliveryAddresses: DeliveryAddress[];
 }
 export const CompanySchema = SchemaFactory.createForClass(Company)
