@@ -291,27 +291,7 @@ export const PurchaseRequest = () => {
         }
     }, [negoatiatedIncotermsState]);
 
-    // Initialize addresses with default when component mounts
-    useEffect(() => {
-        if (addresses.length === 0) {
-            const defaultAddresses: AddressType[] = [
-                {
-                    fullName: 'Noval',
-                    mobileNumber: '+91 9876543210',
-                    pincode: '586101',
-                    streetName: 'Ampc gate no 2, 2nd main ware-house-number 30',
-                    landmark: 'Vijayapur',
-                    city: 'Vijayapur',
-                    state: 'Karnataka',
-                    country: 'India',
-                    additionalDetails: ''
-                }
-            ];
-            setAddresses(defaultAddresses);
-            setSelectedAddressIndex(0);
-        }
-    }, []);
-
+    
     const handleSubmitPurchaseRequest = async () => {
         if (!product) {
             setNotification({ type: 'error', message: 'Product not found' });
@@ -387,8 +367,8 @@ export const PurchaseRequest = () => {
                 
                 // Redirect to trade requests page after 2 seconds
                 setTimeout(() => {
-                    navigate('/buyer/trade-requests');
-                }, 2000);
+                    navigate('/buyer/trade');
+                }, 1200);
             } else {
                 setNotification({ 
                     type: 'error', 
