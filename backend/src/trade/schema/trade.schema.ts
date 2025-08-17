@@ -1,7 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-
 // Define all possible Incoterms
 type IncotermType = 'EXW' | 'FCA' | 'FAS' | 'FOB' | 'CFR' | 'CIF' | 'CPT' | 'CIP' | 'DAP' | 'DPU' | 'DDP';
 
@@ -10,21 +9,46 @@ type IncotermRowData = Record<string, 'Buyer' | 'Seller'>;
 
 // Define the structure for Incoterms (selected and defaults)
 interface Incoterms {
+    selectedIncoterm?: IncotermType;
     selectedIncotermData?: IncotermRowData;  // Data for selected Incoterm
     defaults?: Record<IncotermType, IncotermRowData>;  // Default Incoterm values
 }
 
-// Product Schema definition
-@Schema()
-export class Product extends Document {
+// Address interface
+interface Address {
+    fullName: string;
+    mobileNumber: string;
+    pincode: string;
+    streetName: string;
+    landmark?: string;
+    city: string;
+    state: string;
+    country: string;
+    additionalDetails?: string;
+}
+
+// Payment method interface
+interface PaymentMethod {
+    type: 'advance' | 'credit' | 'openAccount';
+    method: 'RTGS' | 'LetterOfCredit';
+    percentage?: string;
+    days?: string;
+}
+
+// Trade Schema definition
+@Schema({ timestamps: true })
+export class Trade extends Document {
 
     @Prop({ type: Types.ObjectId, ref: 'Product', required: true })
     product: Types.ObjectId;
 
     @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-    Buyer: Types.ObjectId;
+    buyer: Types.ObjectId;
 
-    @Prop()
+    @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+    seller: Types.ObjectId;
+
+    @Prop({ default: 'pending' })
     tradeStatus: string;
 
     @Prop({ required: true })
@@ -33,45 +57,52 @@ export class Product extends Document {
     @Prop({ required: true })
     quantityUnit: string;
 
-    // Counter Offer (Buyer)
+    // Step 1: Negotiation (Optional/Skippable)
+    @Prop()
+    buyerOfferedPrice?: string;
+
+    @Prop({ type: Object })
+    buyerIncoterms?: Incoterms;
 
     @Prop()
-    buyerOfferedPrice: string;
+    buyerMessage?: string;
 
-    @Prop()
-    buyerIncoterms: Incoterms;
+    // Step 2: Address
+    @Prop({ type: [Object], required: true })
+    addresses: Address[];
 
-    @Prop()
-    buyerMessage: string;
+    @Prop({ type: Object, required: true })
+    selectedAddress: Address;
 
-    // Recountered by (seller)
+    // Step 3: Trade Queries
     @Prop()
-    sellerOfferedPrice: string;
-
-    @Prop()
-    sellerOfferedIncoterms: Incoterms;
-
-    // Trade Queries
-    @Prop()
-    buyerIndustryType: string;
+    buyerIndustryType?: string;
 
     @Prop({ required: true })
     buyerMarketYears: string;
 
     @Prop()
-    marketCapture: string;
+    marketCapture?: string;
 
     @Prop({ required: true })
     tradeYears: string;
 
     @Prop()
-    productUsage: string;
+    productUsage?: string;
 
-    // Payment Type
-    
+    // Step 4: Payment
+    @Prop({ type: Object, required: true })
+    paymentMethod: PaymentMethod;
 
+    // Seller Response (for future use)
+    @Prop()
+    sellerOfferedPrice?: string;
 
+    @Prop({ type: Object })
+    sellerOfferedIncoterms?: Incoterms;
 
+    @Prop()
+    sellerMessage?: string;
 
     // Timestamps
     @Prop({ default: Date.now })
@@ -81,5 +112,4 @@ export class Product extends Document {
     updatedAt: Date;
 }
 
-
-export const ProductSchema = SchemaFactory.createForClass(Product);
+export const TradeSchema = SchemaFactory.createForClass(Trade);

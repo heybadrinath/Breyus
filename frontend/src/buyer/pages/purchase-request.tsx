@@ -5,37 +5,162 @@ import { Address } from "../components/Address";
 import { TradeQueries } from "../components/TradeQueries";
 import { Payment } from "../components/Payment";
 import { getProductById, Product } from "../../services/products.service";
+import { createTradeRequest, CreateTradeRequest, Address as AddressType, PaymentMethod, Incoterms } from "../../services/trade.service";
+import { useNavigate } from "react-router-dom";
+
+// Define step data types
+interface Step1Data {
+    buyerOfferedPrice?: string;
+    buyerIncoterms?: Incoterms;
+    buyerMessage?: string;
+}
+
+interface Step2Data {
+    addresses?: AddressType[];
+    selectedAddress?: AddressType;
+    selectedAddressIndex?: number;
+}
+
+interface Step3Data {
+    buyerIndustryType?: string;
+    buyerMarketYears?: string;
+    marketCapture?: string;
+    tradeYears?: string;
+    productUsage?: string;
+}
+
+interface Step4Data {
+    paymentMethod?: PaymentMethod;
+}
+
+interface StepData {
+    step1: Step1Data;
+    step2: Step2Data;
+    step3: Step3Data;
+    step4: Step4Data;
+}
 
 export const PurchaseRequest = () => {
-
-    // types
-    type negotation = {
-        additionalMessage?: string;
-        counterPrice?: string;
-    }
+    const navigate = useNavigate();
 
     // States 
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-      const [notification, setNotification] = useState<{
+    const [notification, setNotification] = useState<{
         type: 'success' | 'error' | 'info';
         message: string;
     } | null>(null);
+    const [submitting, setSubmitting] = useState(false);
 
-    // negotation state
+    // Product and quantity state
     const [product, setProduct] = useState<Product | null>(null);
-    const [additionalMessage, setAdditionalMessage] = useState('');
-    const [counterPrice, setCounterPrice] = useState('');
+    const [quantity, setQuantity] = useState('');
 
-
-
+    // Step data state
+    const [stepData, setStepData] = useState<StepData>({
+        step1: {},
+        step2: {},
+        step3: {},
+        step4: {}
+    });
 
     const urlParams = new URLSearchParams(window.location.search);
-    const quantity = urlParams.get('quantity');
+    const quantityParam = urlParams.get('quantity');
 
-const handleStep = (step: number) => {
+    const handleStep = (step: number) => {
         setStep(step);
+    };
+
+    const handleStepDataChange = (stepNumber: number, data: any) => {
+        setStepData(prev => ({
+            ...prev,
+            [`step${stepNumber}`]: { ...prev[`step${stepNumber}` as keyof StepData], ...data }
+        }));
+    };
+
+    const handleSubmitPurchaseRequest = async () => {
+        if (!product) {
+            setNotification({ type: 'error', message: 'Product not found' });
+            return;
+        }
+
+        // Validate all required data
+        const step2Data = stepData.step2;
+        const step3Data = stepData.step3;
+        const step4Data = stepData.step4;
+
+        if (!step2Data.addresses || step2Data.addresses.length === 0) {
+            setNotification({ type: 'error', message: 'Please add at least one address' });
+            return;
+        }
+
+        if (!step2Data.selectedAddress) {
+            setNotification({ type: 'error', message: 'Please select a delivery address' });
+            return;
+        }
+
+        if (!step3Data.buyerMarketYears || !step3Data.tradeYears) {
+            setNotification({ type: 'error', message: 'Please fill in all required trade query fields' });
+            return;
+        }
+
+        if (!step4Data.paymentMethod) {
+            setNotification({ type: 'error', message: 'Please select a payment method' });
+            return;
+        }
+
+        setSubmitting(true);
+
+        try {
+            const tradeRequest: CreateTradeRequest = {
+                productId: product.id,
+                quantity: quantity,
+                quantityUnit: product.moqUnit,
+                // Step 1 data (optional)
+                buyerOfferedPrice: stepData.step1.buyerOfferedPrice,
+                buyerIncoterms: stepData.step1.buyerIncoterms,
+                buyerMessage: stepData.step1.buyerMessage,
+                // Step 2 data
+                addresses: step2Data.addresses,
+                selectedAddress: step2Data.selectedAddress,
+                // Step 3 data
+                buyerIndustryType: step3Data.buyerIndustryType,
+                buyerMarketYears: step3Data.buyerMarketYears,
+                marketCapture: step3Data.marketCapture,
+                tradeYears: step3Data.tradeYears,
+                productUsage: step3Data.productUsage,
+                // Step 4 data
+                paymentMethod: step4Data.paymentMethod
+            };
+
+            const response = await createTradeRequest(tradeRequest);
+
+            if (response.statusCode === 201) {
+                setNotification({ 
+                    type: 'success', 
+                    message: 'Purchase request sent successfully!' 
+                });
+                
+                // Redirect to trade requests page after 2 seconds
+                setTimeout(() => {
+                    navigate('/buyer/trade-requests');
+                }, 2000);
+            } else {
+                setNotification({ 
+                    type: 'error', 
+                    message: response.message || 'Failed to send purchase request' 
+                });
+            }
+        } catch (error) {
+            console.error('Error creating trade request:', error);
+            setNotification({ 
+                type: 'error', 
+                message: error instanceof Error ? error.message : 'Failed to send purchase request' 
+            });
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     useEffect(() => {
@@ -47,12 +172,19 @@ const handleStep = (step: number) => {
                 // Get product ID from URL parameters
                 const urlParams = new URLSearchParams(window.location.search);
                 const productId = urlParams.get('id');
+                const quantityParam = urlParams.get('quantity');
 
                 if (!productId) {
                     setError('Product ID not found in URL');
                     return;
                 }
 
+                if (!quantityParam) {
+                    setError('Quantity not found in URL');
+                    return;
+                }
+
+                setQuantity(quantityParam);
 
                 const response = await getProductById(productId);
 
@@ -104,10 +236,6 @@ const handleStep = (step: number) => {
                         defaults: response.data.defaults
                     };
 
-
-
-
-
                     setProduct(transformedProduct);
                 } else {
                     setError(response.message || 'Failed to load product');
@@ -123,20 +251,89 @@ const handleStep = (step: number) => {
         fetchProduct();
     }, []);
 
+    // Auto-hide notifications after 5 seconds
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => {
+                setNotification(null);
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
 
     const renderStep = () => {
         switch (step) {
             case 1:
-                return <Negoatation handlestep={handleStep} currentStep={step} product={product} quantity={quantity as string} />;
+                return (
+                    <Negoatation 
+                        handlestep={handleStep} 
+                        currentStep={step} 
+                        product={product} 
+                        quantity={quantity}
+                        onDataChange={(data) => handleStepDataChange(1, data)}
+                        stepData={stepData.step1}
+                    />
+                );
             case 2:
-                return <Address handlestep={handleStep} currentStep={step} />;
+                return (
+                    <Address 
+                        handlestep={handleStep} 
+                        currentStep={step}
+                        onDataChange={(data) => handleStepDataChange(2, data)}
+                        stepData={stepData.step2}
+                    />
+                );
             case 3:
-                return <TradeQueries handlestep={handleStep} currentStep={step} />;
+                return (
+                    <TradeQueries 
+                        handlestep={handleStep} 
+                        currentStep={step}
+                        onDataChange={(data) => handleStepDataChange(3, data)}
+                        stepData={stepData.step3}
+                    />
+                );
             case 4:
-                return <Payment handlestep={handleStep} currentStep={step} />;
+                return (
+                    <Payment 
+                        handlestep={handleStep} 
+                        currentStep={step}
+                        onDataChange={(data) => handleStepDataChange(4, data)}
+                        stepData={stepData.step4}
+                        onSubmit={handleSubmitPurchaseRequest}
+                    />
+                );
             default:
                 return null;
         }
+    }
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading product details...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="text-gray-400 text-6xl mb-4">❌</div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Product</h3>
+                    <p className="text-gray-600 mb-4">{error}</p>
+                    <button
+                        onClick={() => navigate('/buyer/homepage')}
+                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        Back to Homepage
+                    </button>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -144,6 +341,15 @@ const handleStep = (step: number) => {
             <PurchaseRequestProgress currentStep={step} />
             {renderStep()}
 
+            {/* Loading overlay for submission */}
+            {submitting && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p className="text-gray-600">Sending purchase request...</p>
+                    </div>
+                </div>
+            )}
 
             {/* Notifications */}
             {notification && (

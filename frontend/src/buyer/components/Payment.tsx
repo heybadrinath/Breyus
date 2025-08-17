@@ -1,12 +1,63 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Info } from "lucide-react";
+import { PaymentMethod } from "../../services/trade.service";
 
 interface PaymentProps {
     handlestep: (step: number) => void;
     currentStep: number;
+    onDataChange: (data: any) => void;
+    stepData: any;
+    onSubmit: () => void;
 }
 
-export const Payment: React.FC<PaymentProps> = ({ handlestep, currentStep }) => {
+export const Payment: React.FC<PaymentProps> = ({ handlestep, currentStep, onDataChange, stepData, onSubmit }) => {
+    const [selectedPaymentType, setSelectedPaymentType] = useState<'advance' | 'credit' | 'openAccount' | ''>('');
+    const [paymentDetails, setPaymentDetails] = useState({
+        percentage: '',
+        days: ''
+    });
+
+    // Update parent component when data changes
+    useEffect(() => {
+        if (selectedPaymentType) {
+            const paymentMethod: PaymentMethod = {
+                type: selectedPaymentType,
+                method: selectedPaymentType === 'credit' ? 'LetterOfCredit' : 'RTGS',
+                percentage: selectedPaymentType === 'advance' ? paymentDetails.percentage : undefined,
+                days: selectedPaymentType === 'credit' || selectedPaymentType === 'openAccount' ? paymentDetails.days : undefined
+            };
+
+            onDataChange({
+                paymentMethod: paymentMethod
+            });
+        }
+    }, [selectedPaymentType, paymentDetails, onDataChange]);
+
+    const handlePaymentTypeChange = (type: 'advance' | 'credit' | 'openAccount') => {
+        setSelectedPaymentType(type);
+        // Reset payment details when changing type
+        setPaymentDetails({ percentage: '', days: '' });
+    };
+
+    const handleSubmit = () => {
+        if (!selectedPaymentType) {
+            alert('Please select a payment method');
+            return;
+        }
+
+        if (selectedPaymentType === 'advance' && !paymentDetails.percentage) {
+            alert('Please enter the advance payment percentage');
+            return;
+        }
+
+        if ((selectedPaymentType === 'credit' || selectedPaymentType === 'openAccount') && !paymentDetails.days) {
+            alert('Please enter the credit period');
+            return;
+        }
+
+        onSubmit();
+    };
+
     return (
         <div className="flex flex-col my-auto mx-auto w-[50%]">
             <h1 className="text-3xl font-semibold text-black mb-3">Choose Mode of Payment</h1>
@@ -14,20 +65,26 @@ export const Payment: React.FC<PaymentProps> = ({ handlestep, currentStep }) => 
                 <div className="flex w-full">
                     <input
                         type="radio"
-                        id="fullPayment"
+                        id="advancePayment"
                         name="paymentOption"
                         className="form-radio h-5 w-5 text-black my-auto mr-3"
+                        checked={selectedPaymentType === 'advance'}
+                        onChange={() => handlePaymentTypeChange('advance')}
                     />
 
                     <div className="border p-4 rounded-lg w-full">
                         <div className="flex">
-                            <label className=" font-medium text-2xl inline">Advance payment via (RTGS)</label> <Info className="inline ml-auto cursor-pointer" />
+                            <label className="font-medium text-2xl inline">Advance payment via (RTGS)</label> 
+                            <Info className="inline ml-auto cursor-pointer" />
                         </div>
                         <input
                             type="text"
-                            name="industry"
+                            name="percentage"
                             className="border p-2 mt-2 w-fit rounded"
                             placeholder="45%"
+                            value={paymentDetails.percentage}
+                            onChange={(e) => setPaymentDetails({...paymentDetails, percentage: e.target.value})}
+                            disabled={selectedPaymentType !== 'advance'}
                         />
                     </div>
                 </div>
@@ -35,20 +92,26 @@ export const Payment: React.FC<PaymentProps> = ({ handlestep, currentStep }) => 
                 <div className="flex w-full">
                     <input
                         type="radio"
-                        id="fullPayment"
+                        id="creditPayment"
                         name="paymentOption"
                         className="form-radio h-5 w-5 text-black my-auto mr-3"
+                        checked={selectedPaymentType === 'credit'}
+                        onChange={() => handlePaymentTypeChange('credit')}
                     />
 
                     <div className="border p-4 rounded-lg w-full">
                         <div className="flex">
-                            <label className=" font-medium text-2xl inline">Credits Period via (Letter of Credit)</label> <Info className="inline ml-auto cursor-pointer" />
+                            <label className="font-medium text-2xl inline">Credits Period via (Letter of Credit)</label> 
+                            <Info className="inline ml-auto cursor-pointer" />
                         </div>
                         <input
                             type="text"
-                            name="industry"
+                            name="days"
                             className="border p-2 mt-2 w-fit rounded"
                             placeholder="10 Days"
+                            value={paymentDetails.days}
+                            onChange={(e) => setPaymentDetails({...paymentDetails, days: e.target.value})}
+                            disabled={selectedPaymentType !== 'credit'}
                         />
                     </div>
                 </div>
@@ -56,20 +119,26 @@ export const Payment: React.FC<PaymentProps> = ({ handlestep, currentStep }) => 
                 <div className="flex w-full">
                     <input
                         type="radio"
-                        id="fullPayment"
+                        id="openAccountPayment"
                         name="paymentOption"
                         className="form-radio h-5 w-5 text-black my-auto mr-3"
+                        checked={selectedPaymentType === 'openAccount'}
+                        onChange={() => handlePaymentTypeChange('openAccount')}
                     />
 
                     <div className="border p-4 rounded-lg w-full">
                         <div className="flex">
-                            <label className=" font-medium text-2xl inline">Open Account via (RTGS)</label> <Info className="inline ml-auto cursor-pointer" />
+                            <label className="font-medium text-2xl inline">Open Account via (RTGS)</label> 
+                            <Info className="inline ml-auto cursor-pointer" />
                         </div>
                         <input
                             type="text"
-                            name="industry"
+                            name="days"
                             className="border p-2 mt-2 w-fit rounded"
                             placeholder="20 Days"
+                            value={paymentDetails.days}
+                            onChange={(e) => setPaymentDetails({...paymentDetails, days: e.target.value})}
+                            disabled={selectedPaymentType !== 'openAccount'}
                         />
                     </div>
                 </div>
@@ -83,16 +152,14 @@ export const Payment: React.FC<PaymentProps> = ({ handlestep, currentStep }) => 
                         Previous
                     </button>
                     <button
-
+                        onClick={handleSubmit}
                         type="button"
                         className=" ml-auto bg-gradient-to-r from-[#5e5959] to-[black] text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out hover:from-gray-600 hover:to-gray-700 hover:shadow-lg hover:scale-105 active:scale-100 "
                     >
                         Send Purchase Request
                     </button>
                 </div>
-
             </div>
         </div>
     )
-
 }
