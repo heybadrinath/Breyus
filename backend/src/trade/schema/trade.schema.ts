@@ -68,8 +68,6 @@ export class Trade extends Document {
     buyerMessage?: string;
 
     // Step 2: Address
-    @Prop({ type: [Object], required: true })
-    addresses: Address[];
 
     @Prop({ type: Object, required: true })
     selectedAddress: Address;

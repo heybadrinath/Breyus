@@ -32,7 +32,6 @@ export interface CreateTradeRequest {
     buyerOfferedPrice?: string;
     buyerIncoterms?: Incoterms;
     buyerMessage?: string;
-    addresses: Address[];
     selectedAddress: Address;
     buyerIndustryType?: string;
     buyerMarketYears: string;
@@ -64,7 +63,6 @@ export interface Trade {
     buyerOfferedPrice?: string;
     buyerIncoterms?: Incoterms;
     buyerMessage?: string;
-    addresses: Address[];
     selectedAddress: Address;
     buyerIndustryType?: string;
     buyerMarketYears: string;

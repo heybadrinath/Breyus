@@ -42,7 +42,6 @@ export class TradeService {
                 buyerOfferedPrice: createTradeDto.buyerOfferedPrice,
                 buyerIncoterms: createTradeDto.buyerIncoterms,
                 buyerMessage: createTradeDto.buyerMessage,
-                addresses: createTradeDto.addresses,
                 selectedAddress: createTradeDto.selectedAddress,
                 buyerIndustryType: createTradeDto.buyerIndustryType,
                 buyerMarketYears: createTradeDto.buyerMarketYears,

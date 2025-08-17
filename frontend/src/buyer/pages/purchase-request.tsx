@@ -7,6 +7,7 @@ import { Payment } from "../components/Payment";
 import { getProductById, Product } from "../../services/products.service";
 import { createTradeRequest, CreateTradeRequest, Address as AddressType, PaymentMethod, Incoterms } from "../../services/trade.service";
 import { useNavigate } from "react-router-dom";
+import { IncotermsState, defaultIncotermValues } from "../../types/Incoterms";
 
 // Define step data types
 interface Step1Data {
@@ -57,6 +58,18 @@ export const PurchaseRequest = () => {
     const [product, setProduct] = useState<Product | null>(null);
     const [quantity, setQuantity] = useState('');
 
+    // Lifted incoterms state
+    const [sellerIncotermsState, setSellerIncotermsState] = useState<IncotermsState>({
+        selectedIncoterm: "",
+        selectedIncotermData: {},
+        defaults: defaultIncotermValues
+    });
+    const [negoatiatedIncotermsState, setNegoatiatedIncotermsState] = useState<IncotermsState>({
+        selectedIncoterm: "",
+        selectedIncotermData: {},
+        defaults: defaultIncotermValues
+    });
+
     // Step data state
     const [stepData, setStepData] = useState<StepData>({
         step1: {},
@@ -64,9 +77,6 @@ export const PurchaseRequest = () => {
         step3: {},
         step4: {}
     });
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const quantityParam = urlParams.get('quantity');
 
     const handleStep = (step: number) => {
         setStep(step);
@@ -78,6 +88,28 @@ export const PurchaseRequest = () => {
             [`step${stepNumber}`]: { ...prev[`step${stepNumber}` as keyof StepData], ...data }
         }));
     };
+
+    // Handle incoterms state changes
+    const handleSellerIncotermsChange = (state: IncotermsState) => {
+        setSellerIncotermsState(state);
+    };
+
+    const handleNegotiatedIncotermsChange = (state: IncotermsState | ((prevState: IncotermsState) => IncotermsState)) => {
+        if (typeof state === 'function') {
+            setNegoatiatedIncotermsState(state);
+        } else {
+            setNegoatiatedIncotermsState(state);
+        }
+    };
+
+    // Update step1 data when negotiated incoterms change
+    useEffect(() => {
+        if (negoatiatedIncotermsState.selectedIncoterm) {
+            handleStepDataChange(1, {
+                buyerIncoterms: negoatiatedIncotermsState
+            });
+        }
+    }, [negoatiatedIncotermsState]);
 
     const handleSubmitPurchaseRequest = async () => {
         if (!product) {
@@ -122,7 +154,6 @@ export const PurchaseRequest = () => {
                 buyerIncoterms: stepData.step1.buyerIncoterms,
                 buyerMessage: stepData.step1.buyerMessage,
                 // Step 2 data
-                addresses: step2Data.addresses,
                 selectedAddress: step2Data.selectedAddress,
                 // Step 3 data
                 buyerIndustryType: step3Data.buyerIndustryType,
@@ -251,6 +282,17 @@ export const PurchaseRequest = () => {
         fetchProduct();
     }, []);
 
+    // Initialize seller incoterms state when product is loaded
+    useEffect(() => {
+        if (product) {
+            setSellerIncotermsState({
+                selectedIncoterm: product.selectedIncoterm || "",
+                selectedIncotermData: product.selectedIncotermData || {},
+                defaults: product.defaults || defaultIncotermValues
+            });
+        }
+    }, [product]);
+
     // Auto-hide notifications after 5 seconds
     useEffect(() => {
         if (notification) {
@@ -272,6 +314,10 @@ export const PurchaseRequest = () => {
                         quantity={quantity}
                         onDataChange={(data) => handleStepDataChange(1, data)}
                         stepData={stepData.step1}
+                        onSellerIncotermsChange={handleSellerIncotermsChange}
+                        onNegotiatedIncotermsChange={handleNegotiatedIncotermsChange}
+                        sellerIncotermsState={sellerIncotermsState}
+                        negoatiatedIncotermsState={negoatiatedIncotermsState}
                     />
                 );
             case 2:

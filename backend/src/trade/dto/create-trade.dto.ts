@@ -106,11 +106,6 @@ export class CreateTradeDto {
     buyerMessage?: string;
 
     // Step 2: Address
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => AddressDto)
-    addresses: AddressDto[];
-
     @ValidateNested()
     @Type(() => AddressDto)
     selectedAddress: AddressDto;

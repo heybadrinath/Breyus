@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import TradeStatusProgress from "./tradeStatusProgress";
 import { Incoterms } from "../../components/incoterms";
 import { Edit, Timer, X, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Product } from "../../services/products.service";
-import { IncotermsState, defaultIncotermValues } from "../../types/Incoterms";
+import { IncotermsState } from "../../types/Incoterms";
 
 interface NegotationProps {
     handlestep: (step: number) => void;
@@ -13,6 +13,11 @@ interface NegotationProps {
     quantity: string;
     onDataChange: (data: any) => void;
     stepData: any;
+    // New props for lifted state
+    sellerIncotermsState: IncotermsState;
+    negoatiatedIncotermsState: IncotermsState;
+    onSellerIncotermsChange: (state: IncotermsState) => void;
+    onNegotiatedIncotermsChange: (state: IncotermsState | ((prevState: IncotermsState) => IncotermsState)) => void;
 }
 
 export const Negoatation: React.FC<NegotationProps> = ({ 
@@ -21,47 +26,40 @@ export const Negoatation: React.FC<NegotationProps> = ({
     product, 
     quantity, 
     onDataChange,
-    stepData 
+    stepData,
+    sellerIncotermsState,
+    negoatiatedIncotermsState,
+    onSellerIncotermsChange,
+    onNegotiatedIncotermsChange
 }) => {
-    const [sellerIncotermsState, setSellerIncotermsState] = useState<IncotermsState>({
-        selectedIncoterm: "",
-        selectedIncotermData: {},
-        defaults: defaultIncotermValues
-    });
-    const [negoatiatedIncotermsState, setNegoatiatedIncotermsState] = useState<IncotermsState>({
-        selectedIncoterm: "",
-        selectedIncotermData: {},
-        defaults: defaultIncotermValues
-    });
-
     const [showIncoterms, setShowIncoterms] = useState(false)
     const [showNegotiatedIncoterms, setShowNegotiatedIncoterms] = useState(false)
     const [incotermType, setIncotermType] = useState("SellerIncoterms")
 
-    // Form data state
+    // Form data state - these will be controlled by parent
     const [additionalMessage, setAdditionalMessage] = useState(stepData?.buyerMessage || '');
     const [counterPrice, setCounterPrice] = useState(stepData?.buyerOfferedPrice || '');
 
     const navigate = useNavigate();
 
-    useEffect(() => {
-        if (product) {
-            setSellerIncotermsState({
-                selectedIncoterm: product.selectedIncoterm || "",
-                selectedIncotermData: product.selectedIncotermData || {},
-                defaults: product.defaults || defaultIncotermValues
-            });
-        }
-    }, [product]);
-
-    // Update parent component when data changes
-    useEffect(() => {
+    // Handle form field changes and update parent
+    const handleAdditionalMessageChange = (value: string) => {
+        setAdditionalMessage(value);
         onDataChange({
-            buyerMessage: additionalMessage,
+            buyerMessage: value,
             buyerOfferedPrice: counterPrice,
             buyerIncoterms: negoatiatedIncotermsState.selectedIncoterm ? negoatiatedIncotermsState : undefined
         });
-    }, [additionalMessage, counterPrice, negoatiatedIncotermsState, onDataChange]);
+    };
+
+    const handleCounterPriceChange = (value: string) => {
+        setCounterPrice(value);
+        onDataChange({
+            buyerMessage: additionalMessage,
+            buyerOfferedPrice: value,
+            buyerIncoterms: negoatiatedIncotermsState.selectedIncoterm ? negoatiatedIncotermsState : undefined
+        });
+    };
 
     const handleNext = () => {
         handlestep(currentStep + 1);
@@ -69,6 +67,8 @@ export const Negoatation: React.FC<NegotationProps> = ({
 
     const handleSkip = () => {
         // Clear negotiation data when skipping
+        setAdditionalMessage('');
+        setCounterPrice('');
         onDataChange({
             buyerMessage: '',
             buyerOfferedPrice: '',
@@ -103,7 +103,7 @@ export const Negoatation: React.FC<NegotationProps> = ({
                             placeholder="Type your additional message" 
                             className="flex h-[18vh] border-2 outline-none p-2 rounded-lg"
                             value={additionalMessage}
-                            onChange={(e) => setAdditionalMessage(e.target.value)}
+                            onChange={(e) => handleAdditionalMessageChange(e.target.value)}
                         />
 
                         <div className="flex justify-between mt-6">
@@ -122,7 +122,7 @@ export const Negoatation: React.FC<NegotationProps> = ({
                                         placeholder={`type your price here`} 
                                         className="w-full !border-0 !rounded-r-none text-sm ring-0 outline-none py-1"
                                         value={counterPrice}
-                                        onChange={(e) => setCounterPrice(e.target.value)}
+                                        onChange={(e) => handleCounterPriceChange(e.target.value)}
                                         type="number"
                                     />
                                     <span className="my-auto mx-2 text-sm">{product?.currency}</span>
@@ -174,7 +174,8 @@ export const Negoatation: React.FC<NegotationProps> = ({
                 {/* Buttons */}
                 <div className="mt-8 mb-2 flex justify-between mx-8">
                     <button
-                        onClick={() => navigate(`/buyer/product-page?id=${product?.id}`)}
+                        // onClick={() => navigate(`/buyer/product-page?id=${product?.id}`)}
+                        onClick={() => {navigate(`/buyer/product-page?id=${product?.id}`)}}
                         type="button"
                         className=" bg-gradient-to-r from-[#e7e7e7] to-[#ffffff] border-2 text-black px-12 py-3 rounded-xl font-semibold transition-all duration-300 ease-in-out hover:from-[#e1e2e4] hover:to-[#f8fafc] hover:shadow-lg hover:scale-105 active:scale-100 "
                     >
@@ -220,7 +221,7 @@ export const Negoatation: React.FC<NegotationProps> = ({
                                 {incotermType === "SellerIncoterms" ? (
                                     // Render content for SellerIncoterms
                                     <Incoterms incoterms={sellerIncotermsState} setIncoterms={() => { }} />
-                                ) : <Incoterms incoterms={negoatiatedIncotermsState} setIncoterms={setNegoatiatedIncotermsState} />
+                                ) : <Incoterms incoterms={negoatiatedIncotermsState} setIncoterms={onNegotiatedIncotermsChange} />
                                 }
                             </div>
                         </div>
