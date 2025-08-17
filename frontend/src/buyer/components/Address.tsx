@@ -83,7 +83,7 @@ export const Address: React.FC<AddressProps> = ({
             <h1 className="text-3xl font-semibold text-black mb-3">Delivery Address</h1>
             <div className="flex flex-col w-full h-[90%] border-2 rounded-lg px-8 py-6 gap-y-4" >
                 <div className="flex flex-col h-full overflow-y-scroll border-2 rounded-lg py-8 px-8 gap-y-6">
-                    {addresses.map((address, index) => (
+                    {(addresses && addresses.length > 0)? addresses.map((address, index) => (
                         <div key={index} className="flex w-full border p-6 rounded-lg">
                             <input
                                 type="radio"
@@ -108,7 +108,7 @@ export const Address: React.FC<AddressProps> = ({
                                 </div>
                             </div>
                         </div>
-                    ))}
+                    )): <div className="text-center text-2xl font-semibold text-gray-500">Add Your Delivery address</div>}
                 </div>
 
                 <button 
