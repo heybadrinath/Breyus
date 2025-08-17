@@ -10,6 +10,7 @@ import ProgressBar from "../../components/PurchaseRequestProgress";
 import '../css/product.css';
 import { createProduct, CreateProductData } from '../../services/products.service';
 import { TryBreyusCoreHeader } from "../../components/Header";
+import { IncotermsState, defaultIncotermValues } from "../../types/Incoterms"
 
 
 export const AddProduct = () => {
@@ -80,102 +81,9 @@ export const AddProduct = () => {
 
 
 
-  // preferred inco terms
 
-  type Trader = 'Buyer' | 'Seller';
 
-  // Define all possible incoterms
-  type IncotermType = 'EXW' | 'FCA' | 'FAS' | 'FOB' | 'CFR' | 'CIF' | 'CPT' | 'CIP' | 'DAP' | 'DPU' | 'DDP';
 
-  // Define all possible row names
-  type RowName =
-    | 'Charges/Fees'
-    | 'Transfer of risk'
-    | 'Commercial Invoice'
-    | 'Packaging, Quality Control, Marking'
-    | 'Loading & Inland Delivery'
-    | 'Export Duty & Taxes'
-    | 'Origin Terminal Handling'
-    | 'Insurance'
-    | 'Carriage Charges'
-    | '*Destination Terminal Handling'
-    | 'Delivery to Destination'
-    | 'Unloading at Destination'
-    | 'Import Duty & Taxes';
-
-  // Define the structure for each incoterm row
-  interface IncotermRowData {
-    [key: string]: Trader;
-  }
-
-  // Main incoterms state interface
-  interface IncotermsState {
-    // The currently selected incoterm column
-    selectedIncoterm: IncotermType | '';
-
-    // Data for only the selected incoterm (not all incoterms)
-    selectedIncotermData: IncotermRowData;
-
-    // Default values for each incoterm (for reference)
-    defaults: Record<IncotermType, IncotermRowData>;
-  }
-
-  // Initialize the default values for each incoterm
-  const defaultIncotermValues: Record<IncotermType, IncotermRowData> = {
-    EXW: {
-
-      'Origin Terminal Handling': 'Buyer',
-      'Insurance': 'Buyer',
-      'Carriage Charges': 'Buyer',
-      'Unloading at Destination': 'Buyer',
-    },
-    FCA: {
-      'Loading & Inland Delivery': 'Seller',
-      'Insurance': 'Buyer',
-      'Carriage Charges': 'Buyer',
-      'Unloading at Destination': 'Buyer',
-    },
-    FAS: {
-      'Insurance': 'Buyer',
-      'Unloading at Destination': 'Buyer',
-    },
-    FOB: {
-      'Insurance': 'Buyer',
-      'Unloading at Destination': 'Buyer',
-    },
-    CFR: {
-      'Insurance': 'Buyer',
-      'Unloading at Destination': 'Buyer',
-    },
-    CIF: {
-      'Insurance': 'Seller',
-      'Unloading at Destination': 'Buyer',
-    },
-    CPT: {
-      '*Destination Terminal Handling': 'Buyer',
-      'Unloading at Destination': 'Buyer',
-    },
-    CIP: {
-      'Insurance': 'Buyer',
-      '*Destination Terminal Handling': 'Buyer',
-      'Unloading at Destination': 'Buyer',
-
-    },
-    DAP: {
-      'Insurance': 'Buyer',
-      '*Destination Terminal Handling': 'Seller',
-      'Unloading at Destination': 'Buyer',
-    },
-    DPU: {
-      'Insurance': 'Buyer',
-      '*Destination Terminal Handling': 'Seller',
-    },
-    DDP: {
-      'Insurance': 'Buyer',
-      '*Destination Terminal Handling': 'Seller',
-      'Unloading at Destination': 'Buyer',
-    },
-  };
 
   const [incotermsState, setIncotermsState] = useState<IncotermsState>({
     selectedIncoterm: '',
@@ -282,8 +190,8 @@ export const AddProduct = () => {
         setErrorMessage('');
         return true
 
-        case 5: // preferred Incoterms
-        if(!incotermsState.selectedIncoterm) {
+      case 5: // preferred Incoterms
+        if (!incotermsState.selectedIncoterm) {
           setErrorMessage("Select Your preferred incoterm.")
           return false;
         }
@@ -385,7 +293,7 @@ export const AddProduct = () => {
   return (
 
     <>
-    <TryBreyusCoreHeader />
+      <TryBreyusCoreHeader />
       <div className={`relative w-full ${(step < 4) ? 'my-16' : ''}`}>
         {step < 4 && <ProgressBar
           className="absolute left-1/2 -translate-y-1/2 -translate-x-1/2 top-0 z-20"

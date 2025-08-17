@@ -133,19 +133,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
     );
   };
 
- 
+
 
   const handlePurchaseRequest = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigate(`/buyer/purchase-request?id=${product.id}`);
-    
+    // e.stopPropagation();
+    // navigate(`/buyer/purchase-request?id=${product.id}&quantity_unit=${product.moqUnit}`);
+
   };
 
   const handleCardClick = () => {
     if (onClick) {
       onClick();
     } else {
-     navigate(`/buyer/product-page?id=${product.id}`);
+      navigate(`/buyer/product-page?id=${product.id}`);
     }
   };
 
@@ -225,12 +225,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
           </div>
         </div>
 
-        {/* Add to Cart Button */}
+        {/* Send Purchase Request*/}
         <button
           onClick={handlePurchaseRequest}
-          disabled={isAddingToCart}
-          className={`mt-3 w-full py-2 px-4 rounded-lg text-sm font-medium transition-all duration-300 bg-black text-white hover:bg-gray-800 hover:scale-[1.02]`}
-        >
+          className={`mt-3 w-full py-2 px-4 rounded-lg text-sm font-medium transition-all duration-300 bg-black text-white hover:bg-gray-800 hover:scale-[1.02]`}>
           Send Purchase Request
         </button>
       </div>
