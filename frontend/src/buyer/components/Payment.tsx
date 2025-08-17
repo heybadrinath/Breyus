@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Info } from "lucide-react";
 import { PaymentMethod } from "../../services/trade.service";
 
@@ -8,37 +8,27 @@ interface PaymentProps {
     onDataChange: (data: any) => void;
     stepData: any;
     onSubmit: () => void;
+    // Lifted state props
+    selectedPaymentType: 'advance' | 'credit' | 'openAccount' | '';
+    paymentDetails: {
+        percentage: string;
+        days: string;
+    };
+    onPaymentTypeChange: (type: 'advance' | 'credit' | 'openAccount') => void;
+    onPaymentDetailsChange: (details: { percentage: string; days: string }) => void;
 }
 
-export const Payment: React.FC<PaymentProps> = ({ handlestep, currentStep, onDataChange, stepData, onSubmit }) => {
-    const [selectedPaymentType, setSelectedPaymentType] = useState<'advance' | 'credit' | 'openAccount' | ''>('');
-    const [paymentDetails, setPaymentDetails] = useState({
-        percentage: '',
-        days: ''
-    });
-
-    // Update parent component when data changes
-    useEffect(() => {
-        if (selectedPaymentType) {
-            const paymentMethod: PaymentMethod = {
-                type: selectedPaymentType,
-                method: selectedPaymentType === 'credit' ? 'LetterOfCredit' : 'RTGS',
-                percentage: selectedPaymentType === 'advance' ? paymentDetails.percentage : undefined,
-                days: selectedPaymentType === 'credit' || selectedPaymentType === 'openAccount' ? paymentDetails.days : undefined
-            };
-
-            onDataChange({
-                paymentMethod: paymentMethod
-            });
-        }
-    }, [selectedPaymentType, paymentDetails, onDataChange]);
-
-    const handlePaymentTypeChange = (type: 'advance' | 'credit' | 'openAccount') => {
-        setSelectedPaymentType(type);
-        // Reset payment details when changing type
-        setPaymentDetails({ percentage: '', days: '' });
-    };
-
+export const Payment: React.FC<PaymentProps> = ({ 
+    handlestep, 
+    currentStep, 
+    onDataChange, 
+    stepData, 
+    onSubmit,
+    selectedPaymentType,
+    paymentDetails,
+    onPaymentTypeChange,
+    onPaymentDetailsChange
+}) => {
     const handleSubmit = () => {
         if (!selectedPaymentType) {
             alert('Please select a payment method');
@@ -69,7 +59,7 @@ export const Payment: React.FC<PaymentProps> = ({ handlestep, currentStep, onDat
                         name="paymentOption"
                         className="form-radio h-5 w-5 text-black my-auto mr-3"
                         checked={selectedPaymentType === 'advance'}
-                        onChange={() => handlePaymentTypeChange('advance')}
+                        onChange={() => onPaymentTypeChange('advance')}
                     />
 
                     <div className="border p-4 rounded-lg w-full">
@@ -83,7 +73,7 @@ export const Payment: React.FC<PaymentProps> = ({ handlestep, currentStep, onDat
                             className="border p-2 mt-2 w-fit rounded"
                             placeholder="45%"
                             value={paymentDetails.percentage}
-                            onChange={(e) => setPaymentDetails({...paymentDetails, percentage: e.target.value})}
+                            onChange={(e) => onPaymentDetailsChange({...paymentDetails, percentage: e.target.value})}
                             disabled={selectedPaymentType !== 'advance'}
                         />
                     </div>
@@ -96,7 +86,7 @@ export const Payment: React.FC<PaymentProps> = ({ handlestep, currentStep, onDat
                         name="paymentOption"
                         className="form-radio h-5 w-5 text-black my-auto mr-3"
                         checked={selectedPaymentType === 'credit'}
-                        onChange={() => handlePaymentTypeChange('credit')}
+                        onChange={() => onPaymentTypeChange('credit')}
                     />
 
                     <div className="border p-4 rounded-lg w-full">
@@ -110,7 +100,7 @@ export const Payment: React.FC<PaymentProps> = ({ handlestep, currentStep, onDat
                             className="border p-2 mt-2 w-fit rounded"
                             placeholder="10 Days"
                             value={paymentDetails.days}
-                            onChange={(e) => setPaymentDetails({...paymentDetails, days: e.target.value})}
+                            onChange={(e) => onPaymentDetailsChange({...paymentDetails, days: e.target.value})}
                             disabled={selectedPaymentType !== 'credit'}
                         />
                     </div>
@@ -123,7 +113,7 @@ export const Payment: React.FC<PaymentProps> = ({ handlestep, currentStep, onDat
                         name="paymentOption"
                         className="form-radio h-5 w-5 text-black my-auto mr-3"
                         checked={selectedPaymentType === 'openAccount'}
-                        onChange={() => handlePaymentTypeChange('openAccount')}
+                        onChange={() => onPaymentTypeChange('openAccount')}
                     />
 
                     <div className="border p-4 rounded-lg w-full">
@@ -137,7 +127,7 @@ export const Payment: React.FC<PaymentProps> = ({ handlestep, currentStep, onDat
                             className="border p-2 mt-2 w-fit rounded"
                             placeholder="20 Days"
                             value={paymentDetails.days}
-                            onChange={(e) => setPaymentDetails({...paymentDetails, days: e.target.value})}
+                            onChange={(e) => onPaymentDetailsChange({...paymentDetails, days: e.target.value})}
                             disabled={selectedPaymentType !== 'openAccount'}
                         />
                     </div>

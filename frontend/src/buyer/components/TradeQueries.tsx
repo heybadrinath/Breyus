@@ -1,31 +1,39 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 
 interface TradeQueriesProps {
     handlestep: (step: number) => void;
     currentStep: number;
     onDataChange: (data: any) => void;
     stepData: any;
+    // Lifted state props
+    industryType: string;
+    marketYears: string;
+    marketCapture: string;
+    tradeYears: string;
+    productUsage: string;
+    onIndustryTypeChange: (value: string) => void;
+    onMarketYearsChange: (value: string) => void;
+    onMarketCaptureChange: (value: string) => void;
+    onTradeYearsChange: (value: string) => void;
+    onProductUsageChange: (value: string) => void;
 }
 
-export const TradeQueries: React.FC<TradeQueriesProps> = ({ handlestep, currentStep, onDataChange, stepData }) => {
-    // Form data state
-    const [industryType, setIndustryType] = useState(stepData?.buyerIndustryType || '');
-    const [marketYears, setMarketYears] = useState(stepData?.buyerMarketYears || '');
-    const [marketCapture, setMarketCapture] = useState(stepData?.marketCapture || '');
-    const [tradeYears, setTradeYears] = useState(stepData?.tradeYears || '');
-    const [productUsage, setProductUsage] = useState(stepData?.productUsage || '');
-
-    // Update parent component when data changes
-    useEffect(() => {
-        onDataChange({
-            buyerIndustryType: industryType,
-            buyerMarketYears: marketYears,
-            marketCapture: marketCapture,
-            tradeYears: tradeYears,
-            productUsage: productUsage
-        });
-    }, [industryType, marketYears, marketCapture, tradeYears, productUsage, onDataChange]);
-
+export const TradeQueries: React.FC<TradeQueriesProps> = ({ 
+    handlestep, 
+    currentStep, 
+    onDataChange, 
+    stepData,
+    industryType,
+    marketYears,
+    marketCapture,
+    tradeYears,
+    productUsage,
+    onIndustryTypeChange,
+    onMarketYearsChange,
+    onMarketCaptureChange,
+    onTradeYearsChange,
+    onProductUsageChange
+}) => {
     const handleNext = () => {
         // Validate required fields
         if (!marketYears || !tradeYears) {
@@ -46,7 +54,7 @@ export const TradeQueries: React.FC<TradeQueriesProps> = ({ handlestep, currentS
                         name="industry"
                         className="border p-2 mt-2 w-full rounded"
                         value={industryType}
-                        onChange={(e) => setIndustryType(e.target.value)}
+                        onChange={(e) => onIndustryTypeChange(e.target.value)}
                         placeholder="e.g., Manufacturing, Agriculture, etc."
                     />
                 </div>
@@ -60,7 +68,7 @@ export const TradeQueries: React.FC<TradeQueriesProps> = ({ handlestep, currentS
                         name="marketYears"
                         className="border p-2 mt-2 w-full rounded"
                         value={marketYears}
-                        onChange={(e) => setMarketYears(e.target.value)}
+                        onChange={(e) => onMarketYearsChange(e.target.value)}
                         placeholder="Enter number of years"
                         required
                     />
@@ -76,7 +84,7 @@ export const TradeQueries: React.FC<TradeQueriesProps> = ({ handlestep, currentS
                         className="border p-2 mt-2 w-full rounded"
                         placeholder="  %"
                         value={marketCapture}
-                        onChange={(e) => setMarketCapture(e.target.value)}
+                        onChange={(e) => onMarketCaptureChange(e.target.value)}
                     />
                 </div>
 
@@ -89,7 +97,7 @@ export const TradeQueries: React.FC<TradeQueriesProps> = ({ handlestep, currentS
                         name="yearsTrade"
                         className="border p-2 mt-2 w-full rounded"
                         value={tradeYears}
-                        onChange={(e) => setTradeYears(e.target.value)}
+                        onChange={(e) => onTradeYearsChange(e.target.value)}
                         placeholder="Enter number of years"
                         required
                     />
@@ -104,7 +112,7 @@ export const TradeQueries: React.FC<TradeQueriesProps> = ({ handlestep, currentS
                         name="productUsage"
                         className="border p-2 mt-2 w-full rounded"
                         value={productUsage}
-                        onChange={(e) => setProductUsage(e.target.value)}
+                        onChange={(e) => onProductUsageChange(e.target.value)}
                         placeholder="Describe how you plan to use this product"
                     />
                 </div>

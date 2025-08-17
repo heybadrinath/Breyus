@@ -70,6 +70,36 @@ export const PurchaseRequest = () => {
         defaults: defaultIncotermValues
     });
 
+    // Lifted state for Address component
+    const [addresses, setAddresses] = useState<AddressType[]>([]);
+    const [selectedAddressIndex, setSelectedAddressIndex] = useState<number>(0);
+    const [showAddAddressPopup, setShowAddAddressPopup] = useState(false);
+    const [newAddress, setNewAddress] = useState<AddressType>({
+        fullName: '',
+        mobileNumber: '',
+        pincode: '',
+        streetName: '',
+        landmark: '',
+        city: '',
+        state: '',
+        country: 'India',
+        additionalDetails: ''
+    });
+
+    // Lifted state for TradeQueries component
+    const [industryType, setIndustryType] = useState('');
+    const [marketYears, setMarketYears] = useState('');
+    const [marketCapture, setMarketCapture] = useState('');
+    const [tradeYears, setTradeYears] = useState('');
+    const [productUsage, setProductUsage] = useState('');
+
+    // Lifted state for Payment component
+    const [selectedPaymentType, setSelectedPaymentType] = useState<'advance' | 'credit' | 'openAccount' | ''>('');
+    const [paymentDetails, setPaymentDetails] = useState({
+        percentage: '',
+        days: ''
+    });
+
     // Step data state
     const [stepData, setStepData] = useState<StepData>({
         step1: {},
@@ -102,6 +132,156 @@ export const PurchaseRequest = () => {
         }
     };
 
+    // Handle Address component state changes
+    const handleAddressesChange = (newAddresses: AddressType[]) => {
+        setAddresses(newAddresses);
+        handleStepDataChange(2, {
+            addresses: newAddresses,
+            selectedAddress: newAddresses[selectedAddressIndex] || newAddresses[0],
+            selectedAddressIndex: selectedAddressIndex
+        });
+    };
+
+    const handleSelectedAddressIndexChange = (index: number) => {
+        setSelectedAddressIndex(index);
+        if (addresses[index]) {
+            handleStepDataChange(2, {
+                addresses: addresses,
+                selectedAddress: addresses[index],
+                selectedAddressIndex: index
+            });
+        }
+    };
+
+    const handleShowAddAddressPopupChange = (show: boolean) => {
+        setShowAddAddressPopup(show);
+    };
+
+    const handleNewAddressChange = (address: AddressType) => {
+        setNewAddress(address);
+    };
+
+    const handleAddNewAddress = () => {
+        if (!newAddress.fullName || !newAddress.mobileNumber || !newAddress.pincode || 
+            !newAddress.streetName || !newAddress.city || !newAddress.state) {
+            alert('Please fill in all required fields');
+            return;
+        }
+
+        const updatedAddresses = [...addresses, newAddress];
+        setAddresses(updatedAddresses);
+        
+        // Select the newly added address
+        const newIndex = updatedAddresses.length - 1;
+        setSelectedAddressIndex(newIndex);
+        
+        // Reset form
+        setNewAddress({
+            fullName: '',
+            mobileNumber: '',
+            pincode: '',
+            streetName: '',
+            landmark: '',
+            city: '',
+            state: '',
+            country: 'India',
+            additionalDetails: ''
+        });
+        
+        setShowAddAddressPopup(false);
+    };
+
+    // Handle TradeQueries component state changes
+    const handleIndustryTypeChange = (value: string) => {
+        setIndustryType(value);
+        handleStepDataChange(3, {
+            buyerIndustryType: value,
+            buyerMarketYears: marketYears,
+            marketCapture: marketCapture,
+            tradeYears: tradeYears,
+            productUsage: productUsage
+        });
+    };
+
+    const handleMarketYearsChange = (value: string) => {
+        setMarketYears(value);
+        handleStepDataChange(3, {
+            buyerIndustryType: industryType,
+            buyerMarketYears: value,
+            marketCapture: marketCapture,
+            tradeYears: tradeYears,
+            productUsage: productUsage
+        });
+    };
+
+    const handleMarketCaptureChange = (value: string) => {
+        setMarketCapture(value);
+        handleStepDataChange(3, {
+            buyerIndustryType: industryType,
+            buyerMarketYears: marketYears,
+            marketCapture: value,
+            tradeYears: tradeYears,
+            productUsage: productUsage
+        });
+    };
+
+    const handleTradeYearsChange = (value: string) => {
+        setTradeYears(value);
+        handleStepDataChange(3, {
+            buyerIndustryType: industryType,
+            buyerMarketYears: marketYears,
+            marketCapture: marketCapture,
+            tradeYears: value,
+            productUsage: productUsage
+        });
+    };
+
+    const handleProductUsageChange = (value: string) => {
+        setProductUsage(value);
+        handleStepDataChange(3, {
+            buyerIndustryType: industryType,
+            buyerMarketYears: marketYears,
+            marketCapture: marketCapture,
+            tradeYears: tradeYears,
+            productUsage: value
+        });
+    };
+
+    // Handle Payment component state changes
+    const handlePaymentTypeChange = (type: 'advance' | 'credit' | 'openAccount') => {
+        setSelectedPaymentType(type);
+        // Reset payment details when changing type
+        setPaymentDetails({ percentage: '', days: '' });
+        
+        const paymentMethod: PaymentMethod = {
+            type: type,
+            method: type === 'credit' ? 'LetterOfCredit' : 'RTGS',
+            percentage: undefined,
+            days: undefined
+        };
+
+        handleStepDataChange(4, {
+            paymentMethod: paymentMethod
+        });
+    };
+
+    const handlePaymentDetailsChange = (details: { percentage: string; days: string }) => {
+        setPaymentDetails(details);
+        
+        if (selectedPaymentType) {
+            const paymentMethod: PaymentMethod = {
+                type: selectedPaymentType,
+                method: selectedPaymentType === 'credit' ? 'LetterOfCredit' : 'RTGS',
+                percentage: selectedPaymentType === 'advance' ? details.percentage : undefined,
+                days: selectedPaymentType === 'credit' || selectedPaymentType === 'openAccount' ? details.days : undefined
+            };
+
+            handleStepDataChange(4, {
+                paymentMethod: paymentMethod
+            });
+        }
+    };
+
     // Update step1 data when negotiated incoterms change
     useEffect(() => {
         if (negoatiatedIncotermsState.selectedIncoterm) {
@@ -111,6 +291,27 @@ export const PurchaseRequest = () => {
         }
     }, [negoatiatedIncotermsState]);
 
+    // Initialize addresses with default when component mounts
+    useEffect(() => {
+        if (addresses.length === 0) {
+            const defaultAddresses: AddressType[] = [
+                {
+                    fullName: 'Noval',
+                    mobileNumber: '+91 9876543210',
+                    pincode: '586101',
+                    streetName: 'Ampc gate no 2, 2nd main ware-house-number 30',
+                    landmark: 'Vijayapur',
+                    city: 'Vijayapur',
+                    state: 'Karnataka',
+                    country: 'India',
+                    additionalDetails: ''
+                }
+            ];
+            setAddresses(defaultAddresses);
+            setSelectedAddressIndex(0);
+        }
+    }, []);
+
     const handleSubmitPurchaseRequest = async () => {
         if (!product) {
             setNotification({ type: 'error', message: 'Product not found' });
@@ -118,27 +319,38 @@ export const PurchaseRequest = () => {
         }
 
         // Validate all required data
-        const step2Data = stepData.step2;
-        const step3Data = stepData.step3;
-        const step4Data = stepData.step4;
-
-        if (!step2Data.addresses || step2Data.addresses.length === 0) {
+        if (addresses.length === 0) {
             setNotification({ type: 'error', message: 'Please add at least one address' });
             return;
         }
 
-        if (!step2Data.selectedAddress) {
+        if (!addresses[selectedAddressIndex]) {
             setNotification({ type: 'error', message: 'Please select a delivery address' });
             return;
         }
 
-        if (!step3Data.buyerMarketYears || !step3Data.tradeYears) {
+        if (!marketYears || !tradeYears) {
             setNotification({ type: 'error', message: 'Please fill in all required trade query fields' });
             return;
         }
 
-        if (!step4Data.paymentMethod) {
+        if (!selectedPaymentType) {
             setNotification({ type: 'error', message: 'Please select a payment method' });
+            return;
+        }
+
+        if (!stepData.step4.paymentMethod) {
+            setNotification({ type: 'error', message: 'Payment method data is incomplete' });
+            return;
+        }
+
+        if (selectedPaymentType === 'advance' && !paymentDetails.percentage) {
+            setNotification({ type: 'error', message: 'Please enter the advance payment percentage' });
+            return;
+        }
+
+        if ((selectedPaymentType === 'credit' || selectedPaymentType === 'openAccount') && !paymentDetails.days) {
+            setNotification({ type: 'error', message: 'Please enter the credit period' });
             return;
         }
 
@@ -154,15 +366,15 @@ export const PurchaseRequest = () => {
                 buyerIncoterms: stepData.step1.buyerIncoterms,
                 buyerMessage: stepData.step1.buyerMessage,
                 // Step 2 data
-                selectedAddress: step2Data.selectedAddress,
+                selectedAddress: addresses[selectedAddressIndex],
                 // Step 3 data
-                buyerIndustryType: step3Data.buyerIndustryType,
-                buyerMarketYears: step3Data.buyerMarketYears,
-                marketCapture: step3Data.marketCapture,
-                tradeYears: step3Data.tradeYears,
-                productUsage: step3Data.productUsage,
+                buyerIndustryType: industryType,
+                buyerMarketYears: marketYears,
+                marketCapture: marketCapture,
+                tradeYears: tradeYears,
+                productUsage: productUsage,
                 // Step 4 data
-                paymentMethod: step4Data.paymentMethod
+                paymentMethod: stepData.step4.paymentMethod!
             };
 
             const response = await createTradeRequest(tradeRequest);
@@ -327,6 +539,15 @@ export const PurchaseRequest = () => {
                         currentStep={step}
                         onDataChange={(data) => handleStepDataChange(2, data)}
                         stepData={stepData.step2}
+                        addresses={addresses}
+                        selectedAddressIndex={selectedAddressIndex}
+                        onAddressesChange={handleAddressesChange}
+                        showAddAddressPopup={showAddAddressPopup}
+                        onShowAddAddressPopupChange={handleShowAddAddressPopupChange}
+                        newAddress={newAddress}
+                        onNewAddressChange={handleNewAddressChange}
+                        onAddNewAddress={handleAddNewAddress}
+                        onSelectedAddressIndexChange={handleSelectedAddressIndexChange}
                     />
                 );
             case 3:
@@ -336,6 +557,16 @@ export const PurchaseRequest = () => {
                         currentStep={step}
                         onDataChange={(data) => handleStepDataChange(3, data)}
                         stepData={stepData.step3}
+                        industryType={industryType}
+                        marketYears={marketYears}
+                        marketCapture={marketCapture}
+                        tradeYears={tradeYears}
+                        productUsage={productUsage}
+                        onIndustryTypeChange={handleIndustryTypeChange}
+                        onMarketYearsChange={handleMarketYearsChange}
+                        onMarketCaptureChange={handleMarketCaptureChange}
+                        onTradeYearsChange={handleTradeYearsChange}
+                        onProductUsageChange={handleProductUsageChange}
                     />
                 );
             case 4:
@@ -345,6 +576,10 @@ export const PurchaseRequest = () => {
                         currentStep={step}
                         onDataChange={(data) => handleStepDataChange(4, data)}
                         stepData={stepData.step4}
+                        selectedPaymentType={selectedPaymentType}
+                        paymentDetails={paymentDetails}
+                        onPaymentTypeChange={handlePaymentTypeChange}
+                        onPaymentDetailsChange={handlePaymentDetailsChange}
                         onSubmit={handleSubmitPurchaseRequest}
                     />
                 );

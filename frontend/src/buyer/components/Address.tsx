@@ -1,6 +1,6 @@
 import { X, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Address as AddressType } from "../../services/trade.service";
 
 interface AddressProps {
@@ -8,65 +8,41 @@ interface AddressProps {
     currentStep: number;
     onDataChange: (data: any) => void;
     stepData: any;
+    // Lifted state props
+    addresses: AddressType[];
+    selectedAddressIndex: number;
+    onAddressesChange: (addresses: AddressType[]) => void;
+    showAddAddressPopup: boolean;
+    onShowAddAddressPopupChange: (show: boolean) => void;
+    newAddress: AddressType;
+    onNewAddressChange: (address: AddressType) => void;
+    onAddNewAddress: () => void;
+    onSelectedAddressIndexChange: (index: number) => void;
 }
 
-export const Address: React.FC<AddressProps> = ({ handlestep, currentStep, onDataChange, stepData }) => {
-    const [showAddAddressPopup, setShowAddAddressPopup] = useState(false);
-    const [addresses, setAddresses] = useState<AddressType[]>(stepData?.addresses || []);
-    const [selectedAddressIndex, setSelectedAddressIndex] = useState<number>(stepData?.selectedAddressIndex || 0);
-
-    // New address form state
-    const [newAddress, setNewAddress] = useState<AddressType>({
-        fullName: '',
-        mobileNumber: '',
-        pincode: '',
-        streetName: '',
-        landmark: '',
-        city: '',
-        state: '',
-        country: 'India',
-        additionalDetails: ''
-    });
-
-    // Initialize with default addresses if none exist
-    useEffect(() => {
-        if (addresses.length === 0) {
-            const defaultAddresses: AddressType[] = [
-                {
-                    fullName: 'Noval',
-                    mobileNumber: '+91 9876543210',
-                    pincode: '586101',
-                    streetName: 'Ampc gate no 2, 2nd main ware-house-number 30',
-                    landmark: 'Vijayapur',
-                    city: 'Vijayapur',
-                    state: 'Karnataka',
-                    country: 'India',
-                    additionalDetails: ''
-                }
-            ];
-            setAddresses(defaultAddresses);
-        }
-    }, []);
-
-    // Update parent component when data changes
-    useEffect(() => {
-        if (addresses.length > 0 && selectedAddressIndex < addresses.length) {
-            onDataChange({
-                addresses: addresses,
-                selectedAddress: addresses[selectedAddressIndex],
-                selectedAddressIndex: selectedAddressIndex
-            });
-        }
-    }, [addresses, selectedAddressIndex, onDataChange]);
-
+export const Address: React.FC<AddressProps> = ({ 
+    handlestep, 
+    currentStep, 
+    onDataChange, 
+    stepData,
+    addresses,
+    selectedAddressIndex,
+    onAddressesChange,
+    showAddAddressPopup,
+    onShowAddAddressPopupChange,
+    newAddress,
+    onNewAddressChange,
+    onAddNewAddress,
+    onSelectedAddressIndexChange
+}) => {
     const handleAddAddressClick = () => {
-        setShowAddAddressPopup(true);
+        onShowAddAddressPopupChange(true);
     };
 
     const handleClosePopup = () => {
-        setShowAddAddressPopup(false);
+        onShowAddAddressPopupChange(false);
         // Reset form
-        setNewAddress({
+        onNewAddressChange({
             fullName: '',
             mobileNumber: '',
             pincode: '',
@@ -87,17 +63,11 @@ export const Address: React.FC<AddressProps> = ({ handlestep, currentStep, onDat
             return;
         }
 
-        const updatedAddresses = [...addresses, newAddress];
-        setAddresses(updatedAddresses);
-        
-        // Select the newly added address
-        setSelectedAddressIndex(updatedAddresses.length - 1);
-        
-        handleClosePopup();
+        onAddNewAddress();
     };
 
     const handleAddressSelection = (index: number) => {
-        setSelectedAddressIndex(index);
+        onSelectedAddressIndexChange(index);
     };
 
     const handleNext = () => {
@@ -191,7 +161,7 @@ export const Address: React.FC<AddressProps> = ({ handlestep, currentStep, onDat
                                         id="country" 
                                         className="w-full px-2 py-3 bg-white border-2 rounded-lg cursor-pointer"
                                         value={newAddress.country}
-                                        onChange={(e) => setNewAddress({...newAddress, country: e.target.value})}
+                                        onChange={(e) => onNewAddressChange({...newAddress, country: e.target.value})}
                                     >
                                         <option value="India">India</option>
                                         <option value="USA">USA</option>
@@ -242,7 +212,7 @@ export const Address: React.FC<AddressProps> = ({ handlestep, currentStep, onDat
                                         id="fullName" 
                                         className="w-full px-2 py-3 bg-white border-2 rounded-lg"
                                         value={newAddress.fullName}
-                                        onChange={(e) => setNewAddress({...newAddress, fullName: e.target.value})}
+                                        onChange={(e) => onNewAddressChange({...newAddress, fullName: e.target.value})}
                                     />
                                 </div>
 
@@ -253,7 +223,7 @@ export const Address: React.FC<AddressProps> = ({ handlestep, currentStep, onDat
                                         id="mobileNumber" 
                                         className="w-full px-2 py-3 bg-white border-2 rounded-lg"
                                         value={newAddress.mobileNumber}
-                                        onChange={(e) => setNewAddress({...newAddress, mobileNumber: e.target.value})}
+                                        onChange={(e) => onNewAddressChange({...newAddress, mobileNumber: e.target.value})}
                                     />
                                 </div>
 
@@ -265,7 +235,7 @@ export const Address: React.FC<AddressProps> = ({ handlestep, currentStep, onDat
                                         id="pinCode" 
                                         className="w-full px-2 py-3 bg-white border-2 rounded-lg"
                                         value={newAddress.pincode}
-                                        onChange={(e) => setNewAddress({...newAddress, pincode: e.target.value})}
+                                        onChange={(e) => onNewAddressChange({...newAddress, pincode: e.target.value})}
                                     />
                                 </div>
 
@@ -276,7 +246,7 @@ export const Address: React.FC<AddressProps> = ({ handlestep, currentStep, onDat
                                         id="StreetName" 
                                         className="w-full px-2 py-3 bg-white border-2 rounded-lg"
                                         value={newAddress.streetName}
-                                        onChange={(e) => setNewAddress({...newAddress, streetName: e.target.value})}
+                                        onChange={(e) => onNewAddressChange({...newAddress, streetName: e.target.value})}
                                     />
                                 </div>
 
@@ -287,7 +257,7 @@ export const Address: React.FC<AddressProps> = ({ handlestep, currentStep, onDat
                                         id="LandMark" 
                                         className="w-full px-2 py-3 bg-white border-2 rounded-lg"
                                         value={newAddress.landmark}
-                                        onChange={(e) => setNewAddress({...newAddress, landmark: e.target.value})}
+                                        onChange={(e) => onNewAddressChange({...newAddress, landmark: e.target.value})}
                                     />
                                 </div>
 
@@ -299,7 +269,7 @@ export const Address: React.FC<AddressProps> = ({ handlestep, currentStep, onDat
                                             id="City" 
                                             className="w-full px-2 py-3 bg-white border-2 rounded-lg"
                                             value={newAddress.city}
-                                            onChange={(e) => setNewAddress({...newAddress, city: e.target.value})}
+                                            onChange={(e) => onNewAddressChange({...newAddress, city: e.target.value})}
                                         />
                                     </div>
                                     <div className="flex flex-col w-full">
@@ -309,7 +279,7 @@ export const Address: React.FC<AddressProps> = ({ handlestep, currentStep, onDat
                                             id="state" 
                                             className="w-full px-2 py-3 bg-white border-2 rounded-lg"
                                             value={newAddress.state}
-                                            onChange={(e) => setNewAddress({...newAddress, state: e.target.value})}
+                                            onChange={(e) => onNewAddressChange({...newAddress, state: e.target.value})}
                                         />
                                     </div>
                                 </div>
@@ -321,7 +291,7 @@ export const Address: React.FC<AddressProps> = ({ handlestep, currentStep, onDat
                                         id="additionalAddressDetails" 
                                         className="w-full px-2 py-3 bg-white border-2 rounded-lg"
                                         value={newAddress.additionalDetails}
-                                        onChange={(e) => setNewAddress({...newAddress, additionalDetails: e.target.value})}
+                                        onChange={(e) => onNewAddressChange({...newAddress, additionalDetails: e.target.value})}
                                     />
                                 </div>
                             </div>
