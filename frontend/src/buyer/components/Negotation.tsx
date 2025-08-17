@@ -1,8 +1,11 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import TradeStatusProgress from "./tradeStatusProgress";
-import { Edit, Timer } from "lucide-react";
+import { Incoterms } from "../../components/incoterms";
+import { Edit, Timer, X, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Product } from "../../services/products.service";
+import { IncotermsState, defaultIncotermValues } from "../../types/Incoterms";
+
 
 interface NegotationProps {
     handlestep: (step: number) => void;
@@ -12,7 +15,36 @@ interface NegotationProps {
 }
 
 export const Negoatation: React.FC<NegotationProps> = ({ handlestep, currentStep, product, quantity }) => {
+
+
+    const [sellerIncotermsState, setSellerIncotermsState] = useState<IncotermsState>({
+        selectedIncoterm: "",
+        selectedIncotermData: {},
+        defaults: defaultIncotermValues
+    });
+    const [negoatiatedIncotermsState, setNegoatiatedIncotermsState] = useState<IncotermsState>({
+        selectedIncoterm: "",
+        selectedIncotermData: {},
+        defaults: defaultIncotermValues
+    });
+
+    const [showIncoterms, setShowIncoterms] = useState(false)
+    const [showNegotiatedIncoterms, setShowNegotiatedIncoterms] = useState(false)
+
+    const [incotermType, setIncotermType] = useState("SellerIncoterms")
+
+
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if (product) {
+            setSellerIncotermsState({
+                selectedIncoterm: product.selectedIncoterm || "",
+                selectedIncotermData: product.selectedIncotermData || {},
+                defaults: product.defaults || defaultIncotermValues
+            });
+        }
+    }, [product]);
     return (
         <div className="flex w-full h-[75%] my-auto px-8">
             {/* Left */}
@@ -30,10 +62,10 @@ export const Negoatation: React.FC<NegotationProps> = ({ handlestep, currentStep
                     {/* Right section -> Left Section */}
                     <div id="left" className="flex flex-col h-full py-8 px-12">
                         <h3 className="font-extrabold text-xl mb-2">Incoterms: </h3>
-                        <button className="flex border-2 px-8 py-2 w-fit rounded-lg transition-all delay-50 hover:border-gray-400 hover:scale-[1.02]"> <Edit className="inline mr-2 h-5 w-5 my-auto" /> Edit Incoterms</button>
+                        <button onClick={() => setShowIncoterms(true)} className="flex border-2 px-8 py-2 w-fit rounded-lg transition-all delay-50 hover:border-gray-400 hover:scale-[1.02]"> <Edit className="inline mr-2 h-5 w-5 my-auto" /> Edit Incoterms</button>
 
                         <h3 className="font-extrabold text-xl mb-2 mt-6">Negotiated Incoterms: </h3>
-                        <button className="flex border px-8 py-2 w-fit rounded-lg border-gray-400 transition-all delay-50 hover:border-gray-400 hover:scale-[1.02]"> <Edit className="inline mr-2 h-5 w-5 my-auto" /> Countered Terms</button>
+                        <button onClick={() => setShowNegotiatedIncoterms(true)} className="flex border px-8 py-2 w-fit rounded-lg border-gray-400 transition-all delay-50 hover:border-gray-400 hover:scale-[1.02]"> <Eye className="inline mr-2 h-5 w-5 my-auto" /> View Countered Terms</button>
 
                         <h3 className="font-extrabold text-xl mb-2 mt-6">Additional Message: </h3>
                         <textarea placeholder="Type your additional message" className="flex h-[18vh] border-2 outline-none p-2 rounded-lg" />
@@ -50,7 +82,7 @@ export const Negoatation: React.FC<NegotationProps> = ({ handlestep, currentStep
                             <div>
                                 <h3 className="font-extrabold text-xl mb-2">Make counter offer: </h3>
                                 <div className=" px-2 py-2 mb-6 flex flex-row border-2 rounded-lg">
-                                    <input placeholder={`type your price here`}  className="w-full !border-0 !rounded-r-none text-sm ring-0 outline-none py-1" /> 
+                                    <input placeholder={`type your price here`} className="w-full !border-0 !rounded-r-none text-sm ring-0 outline-none py-1" />
                                     <span className="my-auto mx-2 text-sm">{product?.currency}</span>
                                 </div>
                             </div>
@@ -122,7 +154,66 @@ export const Negoatation: React.FC<NegotationProps> = ({ handlestep, currentStep
                 </div>
             </div>
 
+            {/* Popups */}
+            {showIncoterms && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                    <div className="bg-white rounded-lg shadow-xl w-[98vw] h-[96vh] mx-auto  p-6 relative animate-fade-in flex flex-col">
+                        <button
+                            className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
+                            onClick={() => setShowIncoterms(false)}
+                            aria-label="Close"
+                        >
+                            <X size={22} />
+                        </button>
+                        <h2 className="text-xl font-bold mb-4 text-center">Preferred Inco Terms</h2>
+                        <div className="flex-1 overflow-y-auto">
+                            <div>
+                                <div className="flex mx-auto w-fit">
+                                    <input className="mr-1" name="Incoterms" id="SellerIncoterms" value={"SellerIncoterms"} type='radio' onChange={(e) => setIncotermType(e.target.value)} checked={incotermType === "SellerIncoterms"} />
+                                    <label htmlFor="SellerIncoterms"> SellerIncoterms </label>
+                                    <input className="ml-8 mr-1" name="Incoterms" id="EditIncoterms" value={"EditIncoterms"} type='radio' onChange={(e) => setIncotermType(e.target.value)} checked={incotermType === "EditIncoterms"} />
+                                    <label htmlFor="EditIncoterms"> EditIncoterms </label>
+                                </div>
+                                {incotermType === "SellerIncoterms" ? (
+                                    // Render content for SellerIncoterms
+                                    <Incoterms incoterms={sellerIncotermsState} setIncoterms={() => { }} />
+                                ) : <Incoterms incoterms={negoatiatedIncotermsState} setIncoterms={setNegoatiatedIncotermsState} />
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+
+            {showNegotiatedIncoterms && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                    <div className="bg-white rounded-lg shadow-xl w-[98vw] h-[96vh] mx-auto  p-6 relative animate-fade-in flex flex-col">
+                        <button
+                            className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
+                            onClick={() => setShowNegotiatedIncoterms(false)}
+                            aria-label="Close"
+                        >
+                            <X size={22} />
+                        </button>
+                        <h2 className="text-xl font-bold mb-4 text-center">Preferred Inco Terms</h2>
+                        <div className="flex-1 overflow-y-auto">
+                            <div>
+                                <div className="flex mx-auto w-fit">
+                                    <input className="mr-1" name="Incoterms" id="SellerIncoterms" value={"SellerIncoterms"} type='radio' onChange={(e) => setIncotermType(e.target.value)} checked={incotermType === "SellerIncoterms"} />
+                                    <label htmlFor="SellerIncoterms"> SellerIncoterms </label>
+                                    <input className="ml-8 mr-1" name="Incoterms" id="EditIncoterms" value={"EditIncoterms"} type='radio' onChange={(e) => setIncotermType(e.target.value)} checked={incotermType === "EditIncoterms"} />
+                                    <label htmlFor="EditIncoterms"> View Your Incoterms </label>
+                                </div>
+                                {incotermType === "SellerIncoterms" ? (
+                                    <Incoterms incoterms={sellerIncotermsState} setIncoterms={() => { }} />
+                                ) : <Incoterms incoterms={negoatiatedIncotermsState} setIncoterms={() => { }} />
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
-
