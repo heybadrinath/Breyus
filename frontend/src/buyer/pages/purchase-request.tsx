@@ -443,15 +443,7 @@ export const PurchaseRequest = () => {
             const response = await createTradeRequest(tradeRequest);
 
             if (response.statusCode === 201) {
-                setNotification({ 
-                    type: 'success', 
-                    message: 'Purchase request sent successfully!' 
-                });
-                
-                // Redirect to trade requests page after 2 seconds
-                setTimeout(() => {
-                    navigate('/buyer/trade');
-                }, 1200);
+                    navigate('/buyer/purchase-request-success');
             } else {
                 setNotification({ 
                     type: 'error', 

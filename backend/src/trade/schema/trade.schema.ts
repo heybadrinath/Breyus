@@ -49,7 +49,10 @@ export class Trade extends Document {
     seller: Types.ObjectId;
 
     @Prop({ default: 'pending' })
-    tradeStatus: string;
+    purchaseRequestStatus: string;
+
+     @Prop({ default: 'pending' })
+    purchaseOrderStatus: string;
 
     @Prop({ required: true })
     quantity: string;
