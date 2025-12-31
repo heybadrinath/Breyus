@@ -67,21 +67,8 @@ pipeline/errors/*.csv
 # RAW DATA
 # =============================================================================
 # Keep structure but ignore actual raw dataset files
-raw_data/large/*.csv
-raw_data/large/*.json
-raw_data/large/*.parquet
-raw_data/large/*.zip
-raw_data/medium/*.csv
-raw_data/medium/*.json
-raw_data/medium/*.parquet
-raw_data/medium/*.zip
-raw_data/small/*.csv
-raw_data/small/*.json
-raw_data/small/*.parquet
-raw_data/small/*.zip
-!raw_data/large/.gitkeep
-!raw_data/medium/.gitkeep
-!raw_data/small/.gitkeep
+raw_data/**
+!raw_data/**/.gitkeep
 
 # =============================================================================
 # LOGS
