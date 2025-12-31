@@ -1,39 +1,37 @@
 import React, { JSX, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import axios from 'axios';
+
+const Backend_URL = process.env.REACT_APP_BACKEND_URL;
+
 
 const BuyerProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthed, setIsAuthed] = useState(false);
 
-
-  useEffect(() => {
+ useEffect(() => {
     const checkAuthAndBackend = async () => {
       try {
-        await axios.get('https://breyus.com/backend/health');
+      await fetch(`${Backend_URL}/health`, { credentials: 'include' });
 
-        const token = localStorage.getItem('token');
-        if (!token) {
+      const res = await fetch(`${Backend_URL}/auth/validate-cookie`, {
+        credentials: 'include',
+      });
+
+      const data = await res.json();
+
+      if (data.valid) {
+        if(data.role === 'Seller') {
           setIsAuthed(false);
-          setLoading(false);
-          return;
-        }
-
-        const res = await axios.get('https://breyus.com/backend/auth/validate-token', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (res.data.valid) {
-          setIsAuthed(true);
         } else {
-          setIsAuthed(false);
+          setIsAuthed(true);
         }
-      } catch (err) {
+      } else {
         setIsAuthed(false);
+      }
+      } catch (err) {
+      setIsAuthed(false);
       } finally {
-        setLoading(false);
+      setLoading(false);
       }
     };
 
@@ -41,7 +39,7 @@ const BuyerProtectedRoute = ({ children }: { children: JSX.Element }) => {
   }, []);
 
   if (loading) return <div className='w-fit m-auto h-fit mt-[40vh]'>Loading.....</div>;
-  if (!isAuthed) return <Navigate to="/buyer/signin" />;
+  if (!isAuthed) return <Navigate to="/login" />;
   return children;
 };
 
@@ -55,30 +53,27 @@ const SellerProtectedRoute = ({ children }: { children: JSX.Element }) => {
   useEffect(() => {
     const checkAuthAndBackend = async () => {
       try {
-        await axios.get('https://breyus.com/backend/health');
+      await fetch(`${Backend_URL}/health`, { credentials: 'include' });
 
-        const token = localStorage.getItem('token');
-        if (!token) {
+      const res = await fetch(`${Backend_URL}/auth/validate-cookie`, {
+        credentials: 'include',
+      });
+
+      const data = await res.json();
+
+      if (data.valid) {
+        if(data.role === 'Buyer') {
           setIsAuthed(false);
-          setLoading(false);
-          return;
-        }
-
-        const res = await axios.get('https://breyus.com/backend/auth/validate-token', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (res.data.valid) {
-          setIsAuthed(true);
         } else {
-          setIsAuthed(false);
+          setIsAuthed(true);
         }
-      } catch (err) {
+      } else {
         setIsAuthed(false);
+      }
+    } catch (err) {
+      setIsAuthed(false);
       } finally {
-        setLoading(false);
+      setLoading(false);
       }
     };
 
@@ -86,7 +81,7 @@ const SellerProtectedRoute = ({ children }: { children: JSX.Element }) => {
   }, []);
 
   if (loading) return <div className='w-fit m-auto h-fit mt-[40vh]'>Loading.....</div>;
-  if (!isAuthed) return <Navigate to="/seller/signin" />;
+  if (!isAuthed) return <Navigate to="/login" />;
   return children;
 };
 

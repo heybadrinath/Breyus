@@ -1,856 +1,727 @@
 import React, { useState, useEffect } from "react";
-import CheckoutStepper from "../components/cart/CheckoutStepper";
-import cartService from "../../services/cart.service";
-import PurchaseRequestProgress from "../components/cart/PurchaseRequestProgress";
-import purchaseRequestValidationService from "../../services/purchaseRequestValidation.service";
+import { PurchaseRequestProgress } from "../components/purchaseRequestProgress";
+import { Negoatation } from "../components/Negotation";
+import { Address } from "../components/Address";
+import { TradeQueries } from "../components/TradeQueries";
+import { Payment } from "../components/Payment";
+import { getProductById, Product } from "../../services/products.service";
+import { createTradeRequest, CreateTradeRequest, Address as AddressType, PaymentMethod, Incoterms } from "../../services/trade.service";
+import { useNavigate } from "react-router-dom";
+import { IncotermsState, defaultIncotermValues } from "../../types/Incoterms";
+import { getDeliveryAddresses, addDeliveryAddress, DeliveryAddress } from "../../services/company.service";
 
-import Incoscreenshot from '../assets/incoterms-screenshot-temp.png';
-
-type StepProps = {
-    className?: string;
-    onNext: () => void;
-    onPrev?: () => void;
-    formData: any;
-    setFormData: (data: any) => void;
-    errors: string[];
-    onErrorUpdate?: (errors: string[]) => void;
-};
-
-// Form data interfaces
+// Define step data types
 interface Step1Data {
-    companyRevenueRange: string;
-    currency: string;
-    revenueUnit: string;
-    tradeDurationYears: string;
-    productUsage: string;
+    buyerOfferedPrice?: string;
+    buyerIncoterms?: Incoterms;
+    buyerMessage?: string;
 }
 
 interface Step2Data {
-    industry: string;
-    marketExperienceYears: string;
-    marketCapturePercentage: string;
+    addresses?: AddressType[];
+    selectedAddress?: AddressType;
+    selectedAddressIndex?: number;
 }
 
 interface Step3Data {
-    price: string;
-    onSale: boolean;
-    priceCurrency: string;
-    sku: string;
-    discount: string;
-    salePrice: string;
-    costOfGoods: string;
-    profit: string;
-    margin: string;
+    buyerIndustryType?: string;
+    buyerMarketYears?: string;
+    marketCapture?: string;
+    tradeYears?: string;
+    productUsage?: string;
 }
 
 interface Step4Data {
-    paymentMode: string;
-    advancePercentage: string;
-    creditTimelineDays: string;
-    paymentTimelineDays: string;
+    paymentMethod?: PaymentMethod;
 }
 
-interface FormData {
+interface StepData {
     step1: Step1Data;
     step2: Step2Data;
     step3: Step3Data;
     step4: Step4Data;
 }
 
-const steps = [
-    { label: "Trade Queries-1" },
-    { label: "Trade Queries-2" },
-    { label: "Inco-Terms" },
-    { label: "Mode of payment" },
-];
+export const PurchaseRequest = () => {
+    const navigate = useNavigate();
 
+    // States 
+    const [step, setStep] = useState(1);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [notification, setNotification] = useState<{
+        type: 'success' | 'error' | 'info';
+        message: string;
+    } | null>(null);
+    const [submitting, setSubmitting] = useState(false);
 
+    // Product and quantity state
+    const [product, setProduct] = useState<Product | null>(null);
+    const [quantity, setQuantity] = useState('');
 
-// Step 1
-const TradeQueries1: React.FC<StepProps> = ({ className, onNext, formData, setFormData, errors, onErrorUpdate }) => {
-    const step1Data = formData.step1;
-
-    const handleChange = (field: keyof Step1Data, value: string) => {
-        // Clear errors when user starts typing
-        if (onErrorUpdate) {
-            onErrorUpdate([]);
-        }
-
-        setFormData({
-            ...formData,
-            step1: {
-                ...step1Data,
-                [field]: value
-            }
-        });
-    }; const validateAndProceed = async () => {
-        // Remove validation - just proceed to next step
-        onNext();
-    };
-
-    const isFormValid = () => {
-        return step1Data.companyRevenueRange &&
-            step1Data.currency &&
-            step1Data.revenueUnit &&
-            step1Data.tradeDurationYears &&
-            step1Data.productUsage?.trim();
-    };
-
-    return (
-        <div className={className}>
-            <h2 className="text-2xl font-semibold mb-2">Trade Queries</h2>
-            <div className="mb-6">
-                <label className="block text-base font-medium mb-1">
-                    What's your company revenue range :<span className="text-red-500">*</span>
-                </label>
-                <div className="flex items-center gap-2 mb-2">
-                    <span className="text-gray-500">to</span>
-                    <input
-                        className="border rounded px-2 py-1 w-20"
-                        type="number"
-                        placeholder=""
-                        value={step1Data.companyRevenueRange}
-                        onChange={(e) => handleChange('companyRevenueRange', e.target.value)}
-                        required
-                    />
-                    <select
-                        className="border rounded px-2 py-1 w-20"
-                        value={step1Data.currency}
-                        onChange={(e) => handleChange('currency', e.target.value)}
-                        required
-                    >
-                        <option value="">Select</option>
-                        <option value="USD">USD</option>
-                        <option value="INR">INR</option>
-                    </select>
-                    <select
-                        className="border rounded px-2 py-1 w-20"
-                        value={step1Data.revenueUnit}
-                        onChange={(e) => handleChange('revenueUnit', e.target.value)}
-                        required
-                    >
-                        <option value="">Select</option>
-                        <option value="Crore">Crore</option>
-                        <option value="Million">Million</option>
-                    </select>
-                    <span className="text-gray-500">=</span>
-                    <select className="border rounded px-2 py-1 w-20">
-                        <option>Total</option>
-                    </select>
-                </div>
-            </div>
-            <div className="mb-6">
-                <label className="block text-base font-medium mb-1">
-                    How many potential years will this Noval trade be ?<span className="text-red-500">*</span>
-                </label>
-                <input
-                    className="border-b w-full outline-none py-2"
-                    type="number"
-                    placeholder=""
-                    value={step1Data.tradeDurationYears}
-                    onChange={(e) => handleChange('tradeDurationYears', e.target.value)}
-                    required
-                />
-            </div>
-            <div className="mb-8">
-                <label className="block text-base font-medium mb-1">
-                    How are you using this product ?<span className="text-red-500">*</span>
-                </label>
-                <input
-                    className="border-b w-full outline-none py-2"
-                    type="text"
-                    placeholder=""
-                    value={step1Data.productUsage}
-                    onChange={(e) => handleChange('productUsage', e.target.value)}
-                    required
-                />
-            </div>
-            {errors.length > 0 && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
-                    {errors.map((error, index) => (
-                        <p key={index} className="text-red-600 text-sm">{error}</p>
-                    ))}
-                </div>
-            )}
-            <div className="flex jusify-end">
-                <button
-                    className={`px-8 py-2 rounded shadow ml-auto ${isFormValid()
-                            ? 'bg-gradient-to-b from-black to-gray-700 text-white cursor-pointer'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        }`}
-                    onClick={validateAndProceed}
-                    disabled={!isFormValid()}
-                >
-                    Next
-                </button>
-            </div>
-        </div>
-    );
-};
-
-// Step 2
-const TradeQueries2: React.FC<StepProps> = ({ className, onNext, onPrev, formData, setFormData, errors, onErrorUpdate }) => {
-    const step2Data = formData.step2;
-
-    const handleChange = (field: keyof Step2Data, value: string) => {
-        // Clear errors when user starts typing
-        if (onErrorUpdate) {
-            onErrorUpdate([]);
-        }
-
-        setFormData({
-            ...formData,
-            step2: {
-                ...step2Data,
-                [field]: value
-            }
-        });
-    };
-
-    const validateAndProceed = async () => {
-        // Remove validation - just proceed to next step
-        onNext();
-    };
-
-    const isFormValid = () => {
-        return step2Data.industry?.trim() &&
-            step2Data.marketExperienceYears &&
-            step2Data.marketCapturePercentage;
-    };
-
-    return (
-        <div className={className}>
-            <h2 className="text-2xl font-semibold mb-2">Trade Queries</h2>
-            <div className="mb-6">
-                <label className="block text-base font-medium mb-1">
-                    Which industry uses your product?<span className="text-red-500">*</span>
-                </label>
-                <input
-                    className="border-b w-full outline-none py-2"
-                    type="text"
-                    value={step2Data.industry}
-                    onChange={(e) => handleChange('industry', e.target.value)}
-                    required
-                />
-            </div>
-            <div className="mb-6">
-                <label className="block text-base font-medium mb-1">
-                    How long have you been in the market?<span className="text-red-500">*</span>
-                </label>
-                <input
-                    className="border-b w-full outline-none py-2"
-                    type="number"
-                    placeholder="Years"
-                    value={step2Data.marketExperienceYears}
-                    onChange={(e) => handleChange('marketExperienceYears', e.target.value)}
-                    required
-                />
-            </div>
-            <div className="mb-8">
-                <label className="block text-base font-medium mb-1">
-                    Market Capture:<span className="text-red-500">*</span>
-                </label>
-                <input
-                    className="border-b w-full outline-none py-2"
-                    type="number"
-                    placeholder="%"
-                    value={step2Data.marketCapturePercentage}
-                    onChange={(e) => handleChange('marketCapturePercentage', e.target.value)}
-                    max="100"
-                    min="0"
-                    required
-                />
-            </div>
-            {errors.length > 0 && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
-                    {errors.map((error, index) => (
-                        <p key={index} className="text-red-600 text-sm">{error}</p>
-                    ))}
-                </div>
-            )}
-            <div className="flex w-full gap-2">
-                <button
-                    className="bg-gray-200 text-black px-8 py-2 rounded shadow mr-auto"
-                    onClick={onPrev}
-                >
-                    Prev
-                </button>
-                <button
-                    className="px-8 py-2 rounded shadow bg-gradient-to-b from-black to-gray-700 text-white cursor-pointer"
-                    onClick={validateAndProceed}
-                >
-                    Next
-                </button>
-            </div>
-        </div>
-    );
-};
-
-// Step 3
-const Pricing: React.FC<StepProps> = ({ className, onNext, onPrev, formData, setFormData, errors, onErrorUpdate }) => {
-    const step3Data = formData.step3;
-
-    const handleChange = (field: keyof Step3Data, value: string | boolean) => {
-        // Clear errors when user starts typing
-        if (onErrorUpdate) {
-            onErrorUpdate([]);
-        }
-
-        setFormData({
-            ...formData,
-            step3: {
-                ...step3Data,
-                [field]: value
-            }
-        });
-    };
-
-    const validateAndProceed = async () => {
-        // Remove validation - just proceed to next step
-        onNext();
-    };
-
-    const isFormValid = () => {
-        // return step3Data.price && step3Data.priceCurrency;
-        return true; // For now, we assume the form is always valid
-    };
-
-    return (
-        <div id="temp-remove-later" className={className}>
-
-            <img src={Incoscreenshot} alt="" />
-            <div className="flex justify-between mt-8">
-                <button
-                    className="bg-gray-200 text-black px-8 py-2 rounded shadow"
-                    onClick={onPrev}
-                >
-                    Prev
-                </button>
-                <button
-                    className={`px-8 py-2 rounded shadow ${isFormValid()
-                            ? 'bg-gradient-to-b from-black to-gray-700 text-white cursor-pointer'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        }`}
-                    onClick={validateAndProceed}
-                >
-                    Next
-                </button>
-            </div>
-        </div>
-        // <div className={className}>
-        //     <h2 className="text-2xl font-semibold mb-6">Pricing</h2>
-        //     <div className="grid grid-cols-3 gap-x-8 gap-y-6 mb-10">
-        //         {/* Price */}
-        //         <div>
-        //             <label className="block text-sm font-medium mb-1">Price<span className="text-red-500">*</span></label>
-        //             <input 
-        //                 className="border-b w-full outline-none py-2" 
-        //                 type="number" 
-        //                 placeholder="" 
-        //                 value={step3Data.price}
-        //                 onChange={(e) => handleChange('price', e.target.value)}
-        //                 required
-        //             />
-        //             <div className="flex items-center mt-4">
-        //                 <label className="relative inline-flex items-center cursor-pointer">
-        //                     <input 
-        //                         type="checkbox" 
-        //                         className="sr-only peer" 
-        //                         checked={step3Data.onSale}
-        //                         onChange={(e) => handleChange('onSale', e.target.checked)}
-        //                     />
-        //                     <div className="w-10 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 transition-all"></div>
-        //                     <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-all peer-checked:translate-x-4"></div>
-        //                 </label>
-        //                 <span className="ml-3 text-sm font-medium">On Sale</span>
-        //             </div>
-        //         </div>
-        //         {/* Currency */}
-        //         <div>
-        //             <label className="block text-sm font-medium mb-1">Currency<span className="text-red-500">*</span></label>
-        //             <select 
-        //                 className="border-b w-full outline-none py-2"
-        //                 value={step3Data.priceCurrency}
-        //                 onChange={(e) => handleChange('priceCurrency', e.target.value)}
-        //                 required
-        //             >
-        //                 <option value="">Select</option>
-        //                 <option value="USD">USD</option>
-        //                 <option value="INR">INR</option>
-        //                 <option value="EUR">EUR</option>
-        //             </select>
-        //         </div>
-        //         {/* SKU */}
-        //         <div>
-        //             <label className="block text-sm font-medium mb-1">SKU</label>
-        //             <input 
-        //                 className="border-b w-full outline-none py-2" 
-        //                 type="text" 
-        //                 placeholder="" 
-        //                 value={step3Data.sku}
-        //                 onChange={(e) => handleChange('sku', e.target.value)}
-        //             />
-        //         </div>
-        //         {/* Discount */}
-        //         <div>
-        //             <label className="block text-sm font-medium mb-1">Discount</label>
-        //             <input 
-        //                 className="border-b w-full outline-none py-2" 
-        //                 type="number" 
-        //                 placeholder="" 
-        //                 value={step3Data.discount}
-        //                 onChange={(e) => handleChange('discount', e.target.value)}
-        //                 max="100"
-        //                 min="0"
-        //             />
-        //         </div>
-        //         {/* Sale Price */}
-        //         <div>
-        //             <label className="block text-sm font-medium mb-1">Sale Price</label>
-        //             <input 
-        //                 className="border-b w-full outline-none py-2" 
-        //                 type="number" 
-        //                 placeholder="" 
-        //                 value={step3Data.salePrice}
-        //                 onChange={(e) => handleChange('salePrice', e.target.value)}
-        //                 min="0"
-        //             />
-        //         </div>
-        //         {/* Empty for grid alignment */}
-        //         <div></div>
-        //         {/* Cost of goods */}
-        //         <div>
-        //             <label className="block text-sm font-medium mb-1">Cost of goods</label>
-        //             <input 
-        //                 className="border-b w-full outline-none py-2" 
-        //                 type="number" 
-        //                 placeholder="" 
-        //                 value={step3Data.costOfGoods}
-        //                 onChange={(e) => handleChange('costOfGoods', e.target.value)}
-        //                 min="0"
-        //             />
-        //         </div>
-        //         {/* Profit and Margin */}
-        //         <div className="col-span-2 flex items-center gap-4">
-        //             <div className="flex-1">
-        //                 <label className="block text-sm font-medium mb-1">Profit</label>
-        //                 <input 
-        //                     className="border-b w-full outline-none py-2" 
-        //                     type="number" 
-        //                     placeholder="" 
-        //                     value={step3Data.profit}
-        //                     onChange={(e) => handleChange('profit', e.target.value)}
-        //                 />
-        //             </div>
-        //             <span className="text-2xl font-light">=</span>
-        //             <div className="flex-1">
-        //                 <label className="block text-sm font-medium mb-1">Margin</label>
-        //                 <div className="flex items-center">
-        //                     <input 
-        //                         className="border-b w-full outline-none py-2" 
-        //                         type="number" 
-        //                         placeholder="" 
-        //                         value={step3Data.margin}
-        //                         onChange={(e) => handleChange('margin', e.target.value)}
-        //                         max="100"
-        //                         min="0"
-        //                     />
-        //                     <span className="ml-2 text-gray-500">%</span>
-        //                 </div>
-        //             </div>
-        //         </div>
-        //     </div>
-        //     {errors.length > 0 && (
-        //         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
-        //             {errors.map((error, index) => (
-        //                 <p key={index} className="text-red-600 text-sm">{error}</p>
-        //             ))}
-        //         </div>
-        //     )}
-        //     <div className="flex justify-between mt-8">
-        //         <button
-        //             className="bg-gray-200 text-black px-8 py-2 rounded shadow"
-        //             onClick={onPrev}
-        //         >
-        //             Prev
-        //         </button>
-        //         <button
-        //             className={`px-8 py-2 rounded shadow ${
-        //                 isFormValid() 
-        //                     ? 'bg-gradient-to-b from-black to-gray-700 text-white cursor-pointer' 
-        //                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-        //             }`}
-        //             onClick={validateAndProceed}
-        //         >
-        //             Next
-        //         </button>
-        //     </div>
-        // </div>
-    );
-};
-
-// Step 4
-const Payment: React.FC<StepProps> = ({ className, onPrev, formData, setFormData, errors }) => {
-    const step4Data = formData.step4;
-    const [checkoutData, setCheckoutData] = useState<any>(null);
-    const [isProcessing, setIsProcessing] = useState(false);
-
-    useEffect(() => {
-        // Load checkout data from localStorage
-        const savedCheckoutData = localStorage.getItem('checkout_data');
-        if (savedCheckoutData) {
-            setCheckoutData(JSON.parse(savedCheckoutData));
-        }
-    }, []);
-
-    const handleChange = (field: keyof Step4Data, value: string) => {
-        setFormData({
-            ...formData,
-            step4: {
-                ...step4Data,
-                [field]: value
-            }
-        });
-    }; const handleSendPurchaseRequest = async () => {
-        // Remove validation - just proceed with the request
-        setIsProcessing(true);
-
-        try {
-            if (!checkoutData || !checkoutData.selectedItems) {
-                alert('No items selected for purchase request');
-                return;
-            }
-
-            // Convert selected cart items to trade requests
-            const selectedItemIds = checkoutData.selectedItems.map((item: any) => item.id);
-            const paymentTerms = getPaymentTermsMessage(step4Data.paymentMode);
-            
-            // Include all form data in the purchase request
-            const purchaseRequestFormData = {
-                step1: formData.step1,
-                step2: formData.step2,
-                step3: formData.step3,
-                step4: formData.step4
-            };
-            
-            const result = await cartService.convertCartToTradeRequests(
-                selectedItemIds,
-                `I would like to purchase these items. Please review and confirm availability and pricing.\n\nPayment Terms: ${paymentTerms}`,
-                purchaseRequestFormData
-            );
-
-            // Show results to user
-            if (result.successful.length > 0) {
-                let message = `Success! ${result.successful.length} trade request(s) sent to sellers:\n\n`;
-                result.successful.forEach((trade, index) => {
-                    message += `${index + 1}. ${trade.message}\n`;
-                });
-
-                if (result.failed.length > 0) {
-                    message += `\n${result.failed.length} request(s) failed:\n`;
-                    result.failed.forEach((trade, index) => {
-                        message += `${index + 1}. ${trade.message}\n`;
-                    });
-                }
-
-                // Clear checkout data
-                localStorage.removeItem('checkout_data');
-
-                // Redirect to success page
-                window.history.pushState({}, '', '/buyer/purchase-request-success');
-                const navEvent = new PopStateEvent('popstate');
-                window.dispatchEvent(navEvent);
-            } else {
-                alert(`Failed to send trade requests:\n${result.failed.map(f => f.message).join('\n')}`);
-            }
-        } catch (error) {
-            console.error('Error sending purchase requests:', error);
-            alert('Failed to send purchase requests. Please try again.');
-        } finally {
-            setIsProcessing(false);
-        }
-    };
-
-    const getPaymentTermsMessage = (paymentType: string): string => {
-        switch (paymentType) {
-            case 'advance':
-                return 'Advance payment via RTGS';
-            case 'credit':
-                return 'Credits Period via Letter of Credit';
-            case 'open':
-                return 'Open Account via RTGS';
-            default:
-                return 'Standard payment terms';
-        }
-    };
-
-    const isFormValid = () => {
-        if (!step4Data.paymentMode) return false;
-
-        if (step4Data.paymentMode === 'advance' && !step4Data.advancePercentage) return false;
-        if (step4Data.paymentMode === 'credit' && !step4Data.creditTimelineDays) return false;
-        if (step4Data.paymentMode === 'open' && !step4Data.paymentTimelineDays) return false;
-
-        return true;
-    };
-
-    return (
-        <div className={className}>
-            <h2 className="text-3xl font-bold mb-6">Choose Mode of Payment</h2>
-
-            {/* Show order summary */}
-            {checkoutData && (
-                <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                    <h3 className="text-lg font-semibold mb-2">Order Summary</h3>
-                    <div className="text-sm text-gray-600">
-                        <p>{checkoutData.selectedItems?.length} items selected</p>
-                        <p className="font-semibold">Total: ₹{checkoutData.summary?.totalAmount?.toLocaleString()}</p>
-                    </div>
-                </div>
-            )}
-
-            <div className="flex flex-col gap-10 mb-10">
-                {/* Advance payment */}
-                <label className="flex items-start gap-4 cursor-pointer">
-                    <input
-                        type="radio"
-                        name="payment"
-                        className="mt-1 accent-black"
-                        checked={step4Data.paymentMode === "advance"}
-                        onChange={() => handleChange('paymentMode', 'advance')}
-                    />
-                    <div className="flex flex-col flex-1">
-                        <span className="text-xl font-medium">Advance payment via (RTGS)</span>
-                        <div className="mt-2">
-                            <label className="block text-xs font-semibold mb-1">
-                                How much percent of Total amount in advance<span className="text-red-500">*</span>
-                            </label>
-                            <div className="relative w-64">
-                                <input
-                                    className="border rounded px-3 py-2 w-full pr-8 text-base"
-                                    type="number"
-                                    placeholder="45"
-                                    min={0}
-                                    max={100}
-                                    value={step4Data.advancePercentage}
-                                    onChange={(e) => handleChange('advancePercentage', e.target.value)}
-                                    disabled={step4Data.paymentMode !== "advance"}
-                                    required={step4Data.paymentMode === "advance"}
-                                />
-                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-base">%</span>
-                            </div>
-                        </div>
-                    </div>
-                </label>
-                {/* Credits Period */}
-                <label className="flex items-start gap-4 cursor-pointer">
-                    <input
-                        type="radio"
-                        name="payment"
-                        className="mt-1 accent-black"
-                        checked={step4Data.paymentMode === "credit"}
-                        onChange={() => handleChange('paymentMode', 'credit')}
-                    />
-                    <div className="flex flex-col flex-1">
-                        <span className="text-xl font-medium">Credits Period via (Letter of Credit)</span>
-                        <div className="mt-2">
-                            <label className="block text-xs font-semibold mb-1">
-                                Timeline for LOC<span className="text-red-500">*</span>
-                            </label>
-                            <div className="relative w-64">
-                                <input
-                                    className="border rounded px-3 py-2 w-full pr-12 text-base"
-                                    type="number"
-                                    placeholder="Days"
-                                    min={0}
-                                    value={step4Data.creditTimelineDays}
-                                    onChange={(e) => handleChange('creditTimelineDays', e.target.value)}
-                                    disabled={step4Data.paymentMode !== "credit"}
-                                    required={step4Data.paymentMode === "credit"}
-                                />
-                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-base">Days</span>
-                            </div>
-                        </div>
-                    </div>
-                </label>
-                {/* Open Account */}
-                <label className="flex items-start gap-4 cursor-pointer">
-                    <input
-                        type="radio"
-                        name="payment"
-                        className="mt-1 accent-black"
-                        checked={step4Data.paymentMode === "open"}
-                        onChange={() => handleChange('paymentMode', 'open')}
-                    />
-                    <div className="flex flex-col flex-1">
-                        <span className="text-xl font-medium">Open Account via (RTGS)</span>
-                        <div className="mt-2">
-                            <label className="block text-xs font-semibold mb-1">
-                                Timeline for payment<span className="text-red-500">*</span>
-                            </label>
-                            <div className="relative w-64">
-                                <input
-                                    className="border rounded px-3 py-2 w-full pr-12 text-base"
-                                    type="number"
-                                    placeholder="45"
-                                    min={0}
-                                    value={step4Data.paymentTimelineDays}
-                                    onChange={(e) => handleChange('paymentTimelineDays', e.target.value)}
-                                    disabled={step4Data.paymentMode !== "open"}
-                                    required={step4Data.paymentMode === "open"}
-                                />
-                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-base">Days</span>
-                            </div>
-                        </div>
-                    </div>
-                </label>
-            </div>
-            {errors.length > 0 && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
-                    {errors.map((error, index) => (
-                        <p key={index} className="text-red-600 text-sm">{error}</p>
-                    ))}
-                </div>
-            )}
-            <div className="flex justify-between mt-12">
-                <button
-                    className="bg-gray-200 text-black px-8 py-2 rounded shadow mr-auto"
-                    onClick={onPrev}
-                    disabled={isProcessing}
-                >
-                    Prev
-                </button>
-                <button
-                    className={`px-6 py-2 rounded shadow font-semibold ${!isProcessing
-                            ? 'bg-gradient-to-b from-black to-gray-700 text-white cursor-pointer'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        }`}
-                    disabled={isProcessing}
-                    onClick={handleSendPurchaseRequest}
-                >
-                    {isProcessing ? (
-                        <div className="flex items-center">
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-500 mr-2"></div>
-                            Sending Request...
-                        </div>
-                    ) : (
-                        'Send Purchase Request'
-                    )}
-                </button>
-            </div>
-        </div>
-    );
-};
-const PurchaseRequest: React.FC = () => {
-    const [step, setStep] = useState(0);
-    const [errors, setErrors] = useState<string[]>([]);
-    const [formData, setFormData] = useState<FormData>({
-        step1: {
-            companyRevenueRange: '',
-            currency: '',
-            revenueUnit: '',
-            tradeDurationYears: '',
-            productUsage: ''
-        },
-        step2: {
-            industry: '',
-            marketExperienceYears: '',
-            marketCapturePercentage: ''
-        },
-        step3: {
-            price: '',
-            onSale: false,
-            priceCurrency: '',
-            sku: '',
-            discount: '',
-            salePrice: '',
-            costOfGoods: '',
-            profit: '',
-            margin: ''
-        },
-        step4: {
-            paymentMode: '',
-            advancePercentage: '',
-            creditTimelineDays: '',
-            paymentTimelineDays: ''
-        }
+    // Lifted incoterms state
+    const [sellerIncotermsState, setSellerIncotermsState] = useState<IncotermsState>({
+        selectedIncoterm: "",
+        selectedIncotermData: {},
+        defaults: defaultIncotermValues
+    });
+    const [negoatiatedIncotermsState, setNegoatiatedIncotermsState] = useState<IncotermsState>({
+        selectedIncoterm: "",
+        selectedIncotermData: {},
+        defaults: defaultIncotermValues
     });
 
-    // Function to handle step navigation with error clearing
-    const handleNextStep = () => {
-        setErrors([]); // Clear errors when moving to next step
-        setStep((s: number) => Math.min(s + 1, stepComponents.length - 1));
+    // Lifted state for Address component - now using company service
+    const [addresses, setAddresses] = useState<AddressType[]>([]);
+    const [selectedAddressIndex, setSelectedAddressIndex] = useState<number>(0);
+    const [showAddAddressPopup, setShowAddAddressPopup] = useState(false);
+    const [newAddress, setNewAddress] = useState<AddressType>({
+        fullName: '',
+        mobileNumber: '',
+        pincode: '',
+        streetName: '',
+        landmark: '',
+        city: '',
+        state: '',
+        country: 'India',
+        additionalDetails: ''
+    });
+    const [addressesLoading, setAddressesLoading] = useState(false);
+
+    // Lifted state for TradeQueries component
+    const [industryType, setIndustryType] = useState('');
+    const [marketYears, setMarketYears] = useState('');
+    const [marketCapture, setMarketCapture] = useState('');
+    const [tradeYears, setTradeYears] = useState('');
+    const [productUsage, setProductUsage] = useState('');
+
+    // Lifted state for Payment component
+    const [selectedPaymentType, setSelectedPaymentType] = useState<'advance' | 'credit' | 'openAccount' | ''>('');
+    const [paymentDetails, setPaymentDetails] = useState({
+        percentage: '',
+        days: ''
+    });
+
+    // Step data state
+    const [stepData, setStepData] = useState<StepData>({
+        step1: {},
+        step2: {},
+        step3: {},
+        step4: {}
+    });
+
+    const handleStep = (step: number) => {
+        setStep(step);
     };
 
-    const handlePrevStep = () => {
-        setErrors([]); // Clear errors when going back
-        setStep((s: number) => Math.max(s - 1, 0));
+    const handleStepDataChange = (stepNumber: number, data: any) => {
+        setStepData(prev => ({
+            ...prev,
+            [`step${stepNumber}`]: { ...prev[`step${stepNumber}` as keyof StepData], ...data }
+        }));
     };
 
-    const handleErrorUpdate = (newErrors: string[]) => {
-        setErrors(newErrors);
+    // Handle incoterms state changes
+    const handleSellerIncotermsChange = (state: IncotermsState) => {
+        setSellerIncotermsState(state);
+    };
+
+    const handleNegotiatedIncotermsChange = (state: IncotermsState | ((prevState: IncotermsState) => IncotermsState)) => {
+        if (typeof state === 'function') {
+            setNegoatiatedIncotermsState(state);
+        } else {
+            setNegoatiatedIncotermsState(state);
+        }
+    };
+
+    // Handle Address component state changes - now using company service
+    const handleAddressesChange = (newAddresses: AddressType[]) => {
+        setAddresses(newAddresses);
+        handleStepDataChange(2, {
+            addresses: newAddresses,
+            selectedAddress: newAddresses[selectedAddressIndex] || newAddresses[0],
+            selectedAddressIndex: selectedAddressIndex
+        });
+    };
+
+    const handleSelectedAddressIndexChange = (index: number) => {
+        setSelectedAddressIndex(index);
+        if (addresses[index]) {
+            handleStepDataChange(2, {
+                addresses: addresses,
+                selectedAddress: addresses[index],
+                selectedAddressIndex: index
+            });
+        }
+    };
+
+    const handleShowAddAddressPopupChange = (show: boolean) => {
+        setShowAddAddressPopup(show);
+    };
+
+    const handleNewAddressChange = (address: AddressType) => {
+        setNewAddress(address);
+    };
+
+    const handleAddNewAddress = async () => {
+        if (!newAddress.fullName || !newAddress.mobileNumber || !newAddress.pincode || 
+            !newAddress.streetName || !newAddress.city || !newAddress.state) {
+            setNotification({ type: 'error', message: 'Please fill in all required fields' });
+            return;
+        }
+
+        setAddressesLoading(true);
+        try {
+            // Convert AddressType to DeliveryAddress for the API
+            const deliveryAddress: DeliveryAddress = {
+                fullName: newAddress.fullName,
+                mobileNumber: newAddress.mobileNumber,
+                pincode: newAddress.pincode,
+                streetName: newAddress.streetName,
+                landmark: newAddress.landmark,
+                city: newAddress.city,
+                state: newAddress.state,
+                country: newAddress.country,
+                additionalDetails: newAddress.additionalDetails
+            };
+
+            const updatedAddresses = await addDeliveryAddress(deliveryAddress);
+            
+            // Convert back to AddressType for the component
+            const convertedAddresses: AddressType[] = updatedAddresses.map(addr => ({
+                fullName: addr.fullName,
+                mobileNumber: addr.mobileNumber,
+                pincode: addr.pincode,
+                streetName: addr.streetName,
+                landmark: addr.landmark,
+                city: addr.city,
+                state: addr.state,
+                country: addr.country,
+                additionalDetails: addr.additionalDetails
+            }));
+
+            setAddresses(convertedAddresses);
+            
+            // Select the newly added address
+            const newIndex = convertedAddresses.length - 1;
+            setSelectedAddressIndex(newIndex);
+            
+            // Reset form
+            setNewAddress({
+                fullName: '',
+                mobileNumber: '',
+                pincode: '',
+                streetName: '',
+                landmark: '',
+                city: '',
+                state: '',
+                country: 'India',
+                additionalDetails: ''
+            });
+            
+            setShowAddAddressPopup(false);
+            
+            setNotification({ type: 'success', message: 'Address added successfully!' });
+        } catch (error) {
+            console.error('Error adding address:', error);
+            setNotification({ 
+                type: 'error', 
+                message: error instanceof Error ? error.message : 'Failed to add address' 
+            });
+        } finally {
+            setAddressesLoading(false);
+        }
+    };
+
+    // Fetch addresses from company service
+    const fetchAddresses = async () => {
+        setAddressesLoading(true);
+        try {
+            const deliveryAddresses = await getDeliveryAddresses();
+            
+            // Convert DeliveryAddress to AddressType for the component
+            const convertedAddresses: AddressType[] = deliveryAddresses.map(addr => ({
+                fullName: addr.fullName,
+                mobileNumber: addr.mobileNumber,
+                pincode: addr.pincode,
+                streetName: addr.streetName,
+                landmark: addr.landmark,
+                city: addr.city,
+                state: addr.state,
+                country: addr.country,
+                additionalDetails: addr.additionalDetails
+            }));
+
+            setAddresses(convertedAddresses);
+            
+            // Update step data
+            if (convertedAddresses.length > 0) {
+                handleStepDataChange(2, {
+                    addresses: convertedAddresses,
+                    selectedAddress: convertedAddresses[0],
+                    selectedAddressIndex: 0
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching addresses:', error);
+            // If no addresses found, that's okay - user can add new ones
+        } finally {
+            setAddressesLoading(false);
+        }
+    };
+
+    // Handle TradeQueries component state changes
+    const handleIndustryTypeChange = (value: string) => {
+        setIndustryType(value);
+        handleStepDataChange(3, {
+            buyerIndustryType: value,
+            buyerMarketYears: marketYears,
+            marketCapture: marketCapture,
+            tradeYears: tradeYears,
+            productUsage: productUsage
+        });
+    };
+
+    const handleMarketYearsChange = (value: string) => {
+        setMarketYears(value);
+        handleStepDataChange(3, {
+            buyerIndustryType: industryType,
+            buyerMarketYears: value,
+            marketCapture: marketCapture,
+            tradeYears: tradeYears,
+            productUsage: productUsage
+        });
+    };
+
+    const handleMarketCaptureChange = (value: string) => {
+        setMarketCapture(value);
+        handleStepDataChange(3, {
+            buyerIndustryType: industryType,
+            buyerMarketYears: marketYears,
+            marketCapture: value,
+            tradeYears: tradeYears,
+            productUsage: productUsage
+        });
+    };
+
+    const handleTradeYearsChange = (value: string) => {
+        setTradeYears(value);
+        handleStepDataChange(3, {
+            buyerIndustryType: industryType,
+            buyerMarketYears: marketYears,
+            marketCapture: marketCapture,
+            tradeYears: value,
+            productUsage: productUsage
+        });
+    };
+
+    const handleProductUsageChange = (value: string) => {
+        setProductUsage(value);
+        handleStepDataChange(3, {
+            buyerIndustryType: industryType,
+            buyerMarketYears: marketYears,
+            marketCapture: marketCapture,
+            tradeYears: tradeYears,
+            productUsage: value
+        });
+    };
+
+    // Handle Payment component state changes
+    const handlePaymentTypeChange = (type: 'advance' | 'credit' | 'openAccount') => {
+        setSelectedPaymentType(type);
+        // Reset payment details when changing type
+        setPaymentDetails({ percentage: '', days: '' });
+        
+        const paymentMethod: PaymentMethod = {
+            type: type,
+            method: type === 'credit' ? 'LetterOfCredit' : 'RTGS',
+            percentage: undefined,
+            days: undefined
+        };
+
+        handleStepDataChange(4, {
+            paymentMethod: paymentMethod
+        });
+    };
+
+    const handlePaymentDetailsChange = (details: { percentage: string; days: string }) => {
+        setPaymentDetails(details);
+        
+        if (selectedPaymentType) {
+            const paymentMethod: PaymentMethod = {
+                type: selectedPaymentType,
+                method: selectedPaymentType === 'credit' ? 'LetterOfCredit' : 'RTGS',
+                percentage: selectedPaymentType === 'advance' ? details.percentage : undefined,
+                days: selectedPaymentType === 'credit' || selectedPaymentType === 'openAccount' ? details.days : undefined
+            };
+
+            handleStepDataChange(4, {
+                paymentMethod: paymentMethod
+            });
+        }
+    };
+
+    // Update step1 data when negotiated incoterms change
+    useEffect(() => {
+        if (negoatiatedIncotermsState.selectedIncoterm) {
+            handleStepDataChange(1, {
+                buyerIncoterms: negoatiatedIncotermsState
+            });
+        }
+    }, [negoatiatedIncotermsState]);
+
+    // Fetch addresses when component mounts
+    useEffect(() => {
+        fetchAddresses();
+    }, []);
+
+    const handleSubmitPurchaseRequest = async () => {
+        if (!product) {
+            setNotification({ type: 'error', message: 'Product not found' });
+            return;
+        }
+
+        // Validate all required data
+        if (addresses.length === 0) {
+            setNotification({ type: 'error', message: 'Please add at least one address' });
+            return;
+        }
+
+        if (!addresses[selectedAddressIndex]) {
+            setNotification({ type: 'error', message: 'Please select a delivery address' });
+            return;
+        }
+
+        if (!marketYears || !tradeYears) {
+            setNotification({ type: 'error', message: 'Please fill in all required trade query fields' });
+            return;
+        }
+
+        if (!selectedPaymentType) {
+            setNotification({ type: 'error', message: 'Please select a payment method' });
+            return;
+        }
+
+        if (!stepData.step4.paymentMethod) {
+            setNotification({ type: 'error', message: 'Payment method data is incomplete' });
+            return;
+        }
+
+        if (selectedPaymentType === 'advance' && !paymentDetails.percentage) {
+            setNotification({ type: 'error', message: 'Please enter the advance payment percentage' });
+            return;
+        }
+
+        if ((selectedPaymentType === 'credit' || selectedPaymentType === 'openAccount') && !paymentDetails.days) {
+            setNotification({ type: 'error', message: 'Please enter the credit period' });
+            return;
+        }
+
+        setSubmitting(true);
+
+        try {
+            const tradeRequest: CreateTradeRequest = {
+                productId: product.id,
+                quantity: quantity,
+                quantityUnit: product.moqUnit,
+                // Step 1 data (optional)
+                buyerOfferedPrice: stepData.step1.buyerOfferedPrice,
+                buyerIncoterms: stepData.step1.buyerIncoterms,
+                buyerMessage: stepData.step1.buyerMessage,
+                // Step 2 data
+                selectedAddress: addresses[selectedAddressIndex],
+                // Step 3 data
+                buyerIndustryType: industryType,
+                buyerMarketYears: marketYears,
+                marketCapture: marketCapture,
+                tradeYears: tradeYears,
+                productUsage: productUsage,
+                // Step 4 data
+                paymentMethod: stepData.step4.paymentMethod!
+            };
+
+            const response = await createTradeRequest(tradeRequest);
+
+            if (response.statusCode === 201) {
+                    navigate('/buyer/purchase-request-success', {
+                        state: {
+                            productId: product?.id,
+                            sellerName: product?.sellerName || product?.companyName // Seller info for display
+                        }
+                    });
+            } else {
+                setNotification({ 
+                    type: 'error', 
+                    message: response.message || 'Failed to send purchase request' 
+                });
+            }
+        } catch (error) {
+            console.error('Error creating trade request:', error);
+            setNotification({ 
+                type: 'error', 
+                message: error instanceof Error ? error.message : 'Failed to send purchase request' 
+            });
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     useEffect(() => {
-        // Check if this is a resend operation
-        const urlParams = new URLSearchParams(window.location.search);
-        const isResend = urlParams.get('resend') === 'true';
-        const productId = urlParams.get('productId');
+        const fetchProduct = async () => {
+            setLoading(true);
+            setError(null);
 
-        if (isResend && productId) {
-            // Get resend data from sessionStorage
-            const resendData = sessionStorage.getItem('resendTradeData');
-            if (resendData) {
-                try {
-                    const tradeData = JSON.parse(resendData);
-                    console.log('Resending trade with data:', tradeData);
+            try {
+                // Get product ID from URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                const productId = urlParams.get('id');
+                const quantityParam = urlParams.get('quantity');
 
-                    // You can pre-fill form fields here based on tradeData
-                    // For now, we'll just show a notification
-                    alert(`Resending offer for ${tradeData.product?.name || 'product'}. Previous offer: ₹${tradeData.offeredPrice?.toLocaleString()}`);
-
-                    // Clear the resend data after use
-                    sessionStorage.removeItem('resendTradeData');
-                } catch (error) {
-                    console.error('Error parsing resend data:', error);
+                if (!productId) {
+                    setError('Product ID not found in URL');
+                    return;
                 }
+
+                if (!quantityParam) {
+                    setError('Quantity not found in URL');
+                    return;
+                }
+
+                setQuantity(quantityParam);
+
+                const response = await getProductById(productId);
+
+                if (response.statusCode === 200 && response.data) {
+                    // Transform backend data to match frontend Product interface
+                    const transformedProduct: Product = {
+                        id: response.data._id,
+                        name: response.data.name,
+                        description: response.data.description,
+                        detailedDescription: response.data.detailedDescription,
+                        category: response.data.category,
+                        hsnCode: response.data.hsnCode,
+                        price: parseFloat(response.data.price) || 0,
+                        currency: response.data.currency,
+                        sku: response.data.sku,
+                        onSale: response.data.onSale || false,
+                        discount: parseFloat(response.data.discount) || 0,
+                        salePrice: parseFloat(response.data.salePrice) || 0,
+                        costOfGoods: parseFloat(response.data.costOfGoods) || 0,
+                        profit: parseFloat(response.data.profit) || 0,
+                        margin: parseFloat(response.data.margin) || 0,
+                        tags: response.data.tags || [],
+                        stock: parseInt(response.data.stock) || 0,
+                        stockUnit: response.data.stockUnit,
+                        // Fix image URLs by adding backend URL prefix
+                        productImage: response.data.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${response.data.productImages[0]}` : '',
+                        images: response.data.productImages ? response.data.productImages.map((img: string) => `${process.env.REACT_APP_BACKEND_URL}/${img}`) : [],
+                        primaryImage: response.data.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${response.data.productImages[0]}` : '',
+                        testReport: response.data.testReports?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${response.data.testReports[0]}` : '',
+                        createdAt: new Date(response.data.createdAt),
+                        updatedAt: new Date(response.data.updatedAt),
+                        moq: response.data.moq,
+                        moqUnit: response.data.moqUnit,
+                        preciseDescription: response.data.description,
+                        sellerName: response.data.sellerName || 'Unknown Seller',
+                        companyName: response.data.companyName || 'Unknown Company',
+                        // trade terms
+                        revenueMin: response.data.revenueMin,
+                        revenueMax: response.data.revenueMax,
+                        currencyTrade: response.data.currencyTrade,
+                        unitTrade: response.data.unitTrade,
+                        yearsTrade: response.data.yearsTrade,
+                        industry: response.data.industry,
+                        marketYears: response.data.marketYears,
+                        sellerMarketYears: response.data.sellerMarketYears,
+                        marketcapture: response.data.marketcapture,
+                        selectedIncoterm: response.data.selectedIncoterm,
+                        selectedIncotermData: response.data.selectedIncotermData,
+                        defaults: response.data.defaults
+                    };
+
+                    setProduct(transformedProduct);
+                } else {
+                    setError(response.message || 'Failed to load product');
+                }
+            } catch (error) {
+                console.error('Error fetching product:', error);
+                setError('Failed to load product');
+            } finally {
+                setLoading(false);
             }
-        }
+        };
+
+        fetchProduct();
     }, []);
 
-    const stepComponents = [
-        TradeQueries1,
-        TradeQueries2,
-        Pricing,
-        Payment,
-    ];
+    // Initialize seller incoterms state when product is loaded
+    useEffect(() => {
+        if (product) {
+            setSellerIncotermsState({
+                selectedIncoterm: product.selectedIncoterm || "",
+                selectedIncotermData: product.selectedIncotermData || {},
+                defaults: product.defaults || defaultIncotermValues
+            });
+        }
+    }, [product]);
 
-    const StepComponent = stepComponents[step];
+    // Auto-hide notifications after 5 seconds
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => {
+                setNotification(null);
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
 
-    return (
-        <div>
-            <CheckoutStepper currentStep={2} />
-
-            <div className="w-full flex flex-col items-center min-h-screen bg-gray-50 py-12">
-                <div className="w-full max-w-4xl">
-                    {/* <ProgressBar className="" step={step} /> */}
-                    <PurchaseRequestProgress className="mx-auto my-6" step1="Trade Queries - 1" step2="Trade Queries - 2" step3="Incoterms" step4="Mode of Payment" currentStep={step} />
-
-                </div>                <div className="relative">
-                    <div className="w-fit rounded-xl shadow-xl p-10 mt-[-60px] w-max-[900px] z-10 relative">                        <StepComponent
-                        className="w-[900px] z-[100]"
-                        onNext={handleNextStep}
-                        onPrev={step > 0 ? handlePrevStep : undefined}
-                        formData={formData}
-                        setFormData={setFormData}
-                        errors={errors}
-                        onErrorUpdate={handleErrorUpdate}
+    const renderStep = () => {
+        switch (step) {
+            case 1:
+                return (
+                    <Negoatation 
+                        handlestep={handleStep} 
+                        currentStep={step} 
+                        product={product} 
+                        quantity={quantity}
+                        onDataChange={(data) => handleStepDataChange(1, data)}
+                        stepData={stepData.step1}
+                        onSellerIncotermsChange={handleSellerIncotermsChange}
+                        onNegotiatedIncotermsChange={handleNegotiatedIncotermsChange}
+                        sellerIncotermsState={sellerIncotermsState}
+                        negoatiatedIncotermsState={negoatiatedIncotermsState}
                     />
-                    </div>
+                );
+            case 2:
+                return (
+                    <Address 
+                        handlestep={handleStep} 
+                        currentStep={step}
+                        onDataChange={(data) => handleStepDataChange(2, data)}
+                        stepData={stepData.step2}
+                        addresses={addresses}
+                        selectedAddressIndex={selectedAddressIndex}
+                        onAddressesChange={handleAddressesChange}
+                        showAddAddressPopup={showAddAddressPopup}
+                        onShowAddAddressPopupChange={handleShowAddAddressPopupChange}
+                        newAddress={newAddress}
+                        onNewAddressChange={handleNewAddressChange}
+                        onAddNewAddress={handleAddNewAddress}
+                        onSelectedAddressIndexChange={handleSelectedAddressIndexChange}
+                        loading={addressesLoading}
+                    />
+                );
+            case 3:
+                return (
+                    <TradeQueries 
+                        handlestep={handleStep} 
+                        currentStep={step}
+                        onDataChange={(data) => handleStepDataChange(3, data)}
+                        stepData={stepData.step3}
+                        industryType={industryType}
+                        marketYears={marketYears}
+                        marketCapture={marketCapture}
+                        tradeYears={tradeYears}
+                        productUsage={productUsage}
+                        onIndustryTypeChange={handleIndustryTypeChange}
+                        onMarketYearsChange={handleMarketYearsChange}
+                        onMarketCaptureChange={handleMarketCaptureChange}
+                        onTradeYearsChange={handleTradeYearsChange}
+                        onProductUsageChange={handleProductUsageChange}
+                    />
+                );
+            case 4:
+                return (
+                    <Payment 
+                        handlestep={handleStep} 
+                        currentStep={step}
+                        onDataChange={(data) => handleStepDataChange(4, data)}
+                        stepData={stepData.step4}
+                        selectedPaymentType={selectedPaymentType}
+                        paymentDetails={paymentDetails}
+                        onPaymentTypeChange={handlePaymentTypeChange}
+                        onPaymentDetailsChange={handlePaymentDetailsChange}
+                        onSubmit={handleSubmitPurchaseRequest}
+                    />
+                );
+            default:
+                return null;
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading product details...</p>
                 </div>
             </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="text-gray-400 text-6xl mb-4">❌</div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Product</h3>
+                    <p className="text-gray-600 mb-4">{error}</p>
+                    <button
+                        onClick={() => navigate('/buyer/homepage')}
+                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        Back to Homepage
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex flex-col h-screen">
+            <PurchaseRequestProgress currentStep={step} />
+            {renderStep()}
+
+            {/* Loading overlay for submission */}
+            {submitting && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p className="text-gray-600">Sending purchase request...</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Notifications */}
+            {notification && (
+                <div className={`fixed bottom-4 right-4 max-w-md p-4 rounded-lg shadow-lg animate-bounce z-50 ${notification.type === 'success'
+                    ? 'bg-green-500 text-white'
+                    : notification.type === 'error'
+                        ? 'bg-red-500 text-white'
+                        : 'bg-blue-500 text-white'
+                    }`}>
+                    <div className="flex items-start">
+                        <div className="flex-shrink-0">
+                            {notification.type === 'success' && <span className="text-xl">✅</span>}
+                            {notification.type === 'error' && <span className="text-xl">❌</span>}
+                            {notification.type === 'info' && <span className="text-xl">ℹ️</span>}
+                        </div>
+                        <div className="ml-3">
+                            <p className="text-sm font-medium">{notification.message}</p>
+                            {notification.type === 'success' && (
+                                <p className="text-xs mt-1 opacity-90">Redirecting to trade requests...</p>
+                            )}
+                        </div>
+                        <button
+                            onClick={() => setNotification(null)}
+                            className="ml-auto -mx-1.5 -my-1.5 text-white hover:bg-black hover:bg-opacity-20 rounded-lg p-1.5"
+                        >
+                            <span className="text-sm">✕</span>
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
-};
-
-export default PurchaseRequest;
+}

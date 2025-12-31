@@ -1,61 +1,95 @@
-import axios from 'axios';
+const BACKEND_END_POINT = process.env.REACT_APP_BACKEND_URL + "/analytics";
 
-const API_URL = process.env.REACT_APP_BACKEND_URL || 'https://breyus.com/backend';
-
-export interface DailyStoreVisitData {
-  date: string; // "yyyy-MM-dd"
-  dayName: string; // "Mon", "Tue", etc.
-  visits: number;
+export interface BarGraphData {
+    date: string;
+    storeVisits: number;
 }
 
-export interface DailySaleData {
-  date: string; // "yyyy-MM-dd"
-  time: string; // "HH:mm:ss"
-  amount: number;
-  productName?: string;
+export interface ScatterGraphData {
+    x: number;
+    y: number;
 }
 
-export interface TaskStatusDistributionData {
-  status: string;
-  count: number;
-  percentage: number;
+export interface PieChartData {
+    category: string;
+    value: number;
 }
 
-export interface DashboardAnalyticsData {
-  dailyVisits: DailyStoreVisitData[];
-  dailySales: DailySaleData[];
-  tasksDistribution: TaskStatusDistributionData[];
+export interface CountrySalesData {
+    country: string;
+    flag: string;
+    sales: number;
+    value: string;
+    bounce: string;
 }
 
-// Helper function to get auth headers
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
+export interface MetricsData {
+    totalVisits: number;
+    totalSales: number;
+    totalRevenue: number;
+    totalCustomers: number;
+}
+
+const fetchWithAuth = async (endpoint: string) => {
+    const response = await fetch(`${BACKEND_END_POINT}${endpoint}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to fetch ${endpoint}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data;
 };
 
-export const getDashboardAnalytics = async (days: number = 30): Promise<DashboardAnalyticsData> => {
-  try {
-    const response = await axios.get<DashboardAnalyticsData>(`${API_URL}/analytics/dashboard`, {
-      params: { days },
-      headers: {
-        ...getAuthHeaders(),
-        'Content-Type': 'application/json',
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching dashboard analytics:', error);
-    
-    // Handle authentication errors specifically
-    if (axios.isAxiosError(error)) {
-      if (error.response?.status === 401) {
-        // Token might be expired or invalid
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        throw new Error('Authentication failed. Please log in again.');
-      }
-      throw new Error(error.response?.data?.message || 'Failed to fetch dashboard analytics');
-    }
-    throw new Error('Failed to fetch dashboard analytics due to an unexpected error.');
-  }
-}; 
+export const analyticsService = {
+    getBarGraphData: async (): Promise<BarGraphData[]> => {
+        try {
+            return await fetchWithAuth('/bar-data');
+        } catch (error) {
+            console.error('Error fetching bar graph data:', error);
+            return [];
+        }
+    },
+
+    getScatterGraphData: async (): Promise<ScatterGraphData[]> => {
+        try {
+            return await fetchWithAuth('/scatter-data');
+        } catch (error) {
+            console.error('Error fetching scatter graph data:', error);
+            return [];
+        }
+    },
+
+    getPieChartData: async (): Promise<PieChartData[]> => {
+        try {
+            return await fetchWithAuth('/pie-data');
+        } catch (error) {
+            console.error('Error fetching pie chart data:', error);
+            return [];
+        }
+    },
+
+    getCountrySalesData: async (): Promise<CountrySalesData[]> => {
+        try {
+            return await fetchWithAuth('/country-sales');
+        } catch (error) {
+            console.error('Error fetching country sales data:', error);
+            return [];
+        }
+    },
+
+    getMetricsData: async (): Promise<MetricsData | null> => {
+        try {
+            return await fetchWithAuth('/metrics');
+        } catch (error) {
+            console.error('Error fetching metrics data:', error);
+            return null;
+        }
+    },
+};

@@ -4,6 +4,35 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { BrowserRouter } from 'react-router-dom';
+import { NotificationProvider } from './contexts/NotificationContext';
+
+// --- ADD THESE CHART.JS IMPORTS ---
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler, // Required for area charts (fill: true)
+  RadialLinearScale, // Required for Radar charts
+} from 'chart.js';
+
+// --- ADD THIS CHART.JS REGISTRATION ---
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+  RadialLinearScale
+);
+// --- END CHART.JS REGISTRATION ---
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
@@ -11,10 +40,10 @@ const root = ReactDOM.createRoot(
 root.render(
   <React.StrictMode>
     <BrowserRouter>
-    <App />
+      <NotificationProvider>
+        <App />
+      </NotificationProvider>
     </BrowserRouter>
-   
-   
   </React.StrictMode>
 );
 

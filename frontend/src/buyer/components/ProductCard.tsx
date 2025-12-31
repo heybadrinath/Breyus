@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Star } from "lucide-react";
-import cartService from "../../services/cart.service";
-import wishlistService from "../../services/wishlist.service";
-import { Product } from "../../types/product";
+import { Heart } from "lucide-react";
+import { Product } from '../../services/products.service';
+import { addToWishlist, removeFromWishlist, getWishlist } from '../../services/wishlist.service';
+import { useNavigate } from 'react-router-dom';
+
 
 interface ProductCardProps {
   product?: Product;
@@ -10,11 +11,11 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
+  const navigate = useNavigate()
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [showAnimation, setShowAnimation] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
-  const [addedToCart, setAddedToCart] = useState(false);
-  const [imageError, setImageError] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
 
   // All hooks must be called before any conditional logic
   useEffect(() => {
@@ -27,26 +28,24 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
     return () => clearTimeout(timer);
   }, [showAnimation]);
 
-  // Check if product is in wishlist
   useEffect(() => {
-    if (product) {
-      setIsWishlisted(wishlistService.isInWishlist(product.id));
-    }
-  }, [product]);
-
-  // Listen for wishlist updates
-  useEffect(() => {
-    const handleWishlistUpdate = () => {
-      if (product) {
-        setIsWishlisted(wishlistService.isInWishlist(product.id));
+    let ignore = false;
+    const checkWishlist = async () => {
+      if (!product) return;
+      try {
+        const wishlist = await getWishlist();
+        if (ignore) return;
+        setIsWishlisted(wishlist.some((item: any) => item.id === product.id));
+      } catch (e) {
+        // ignore error
       }
     };
-
-    window.addEventListener('wishlist-updated', handleWishlistUpdate);
-    return () => {
-      window.removeEventListener('wishlist-updated', handleWishlistUpdate);
-    };
+    checkWishlist();
+    return () => { ignore = true; };
   }, [product]);
+
+
+
 
   // Handle case when no product is provided (placeholder)
   if (!product) {
@@ -62,41 +61,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
     );
   }
 
-  const toggleWishlist = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const success = wishlistService.toggleWishlist(product);
-    if (success && !isWishlisted) {
-      setShowAnimation(true);
-    }
-  };
 
-  const handleAddToCart = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsAddingToCart(true);
-    
-    try {
-      const success = await cartService.addToCart(product, 1);
-      if (success) {
-        setAddedToCart(true);
-        setTimeout(() => setAddedToCart(false), 2000);
-      }
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-    } finally {
-      setIsAddingToCart(false);
-    }
-  };
 
-  const handleCardClick = () => {
-    if (onClick) {
-      onClick();
-    } else {
-      window.location.href = `/buyer/product-page?id=${product.id}`;
-    }
-  };
+
 
   // Check if product is already in cart
-  const isInCart = cartService.isInCart(product.id);
 
   // Enhanced image component with loading state
   const ProductImage = () => {
@@ -107,15 +76,24 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
       if (currentImageError) {
         return '/placeholder-product.svg';
       }
-
-      // Try primary image first, then first image from array, then product image, then fallback
-      const imageUrl = product.primaryImage || 
-                       (product.images && product.images[0]) || 
-                       product.productImage || 
-                       '/placeholder-product.svg';
-      
-      return imageUrl;
+      // Prefer images, then productImages, then fallback
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
+      let img = '';
+      if (product.images && product.images.length > 0) {
+        img = product.images[0];
+      } else if ((product as any).productImages && (product as any).productImages.length > 0) {
+        img = (product as any).productImages[0];
+      } else if (product.primaryImage) {
+        img = product.primaryImage;
+      } else if (product.productImage) {
+        img = product.productImage;
+      }
+      if (img && !img.startsWith('http')) {
+        img = `${backendUrl}/${img}`;
+      }
+      return img || '/placeholder-product.svg';
     };
+
 
     const handleImageLoad = () => {
       setIsLoading(false);
@@ -136,9 +114,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
         <img
           src={getProductImage()}
           alt={product.name}
-          className={`w-full h-full object-cover rounded-lg transition-opacity duration-200 ${
-            isLoading ? 'opacity-0' : 'opacity-100'
-          }`}
+          className={`w-full h-full object-cover rounded-lg transition-opacity duration-200 ${isLoading ? 'opacity-0' : 'opacity-100'
+            }`}
           onLoad={handleImageLoad}
           onError={handleImageError}
           loading="lazy"
@@ -156,31 +133,60 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
     );
   };
 
-  const handleImageError = () => {
-    setImageError(true);
+
+
+  const handlePurchaseRequest = async (e: React.MouseEvent) => {
+    // e.stopPropagation();
+    // navigate(`/buyer/purchase-request?id=${product.id}&quantity_unit=${product.moqUnit}`);
+
+  };
+
+  const handleCardClick = () => {
+    if (onClick) {
+      onClick();
+    } else {
+      navigate(`/buyer/product-page?id=${product.id}`);
+    }
   };
 
   return (
-    <div 
-      onClick={handleCardClick} 
+    <div
+      onClick={handleCardClick}
       className="bg-white rounded-xl shadow-sm p-4 flex w-[240px] h-[320px] flex-col cursor-pointer hover:shadow-lg transition-shadow duration-300"
     >
       {/* Image Area */}
       <div className="relative">
         <ProductImage />
-        
+
         {/* Heart Icon */}
         <div className="absolute top-3 right-3">
-          <div 
-            className={`w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-100 cursor-pointer transition-colors ${
-              isWishlisted ? 'bg-red-50 border-red-200' : 'border-gray-300 bg-white/80'
-            }`}
-            onClick={toggleWishlist}
+          <div
+            className={`w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-100 cursor-pointer transition-colors ${isWishlisted ? 'bg-red-50 border-red-200' : 'border-gray-300 bg-white/80'
+              }`}
+            onClick={async (e) => {
+              e.stopPropagation();
+              if (!product || wishlistLoading) return;
+              setWishlistLoading(true);
+              try {
+                if (isWishlisted) {
+                  await removeFromWishlist(product.id);
+                  setIsWishlisted(false);
+                } else {
+                  await addToWishlist(product.id);
+                  setIsWishlisted(true);
+                  setShowAnimation(true);
+                }
+              } catch (err) {
+                // Optionally show error
+              } finally {
+                setWishlistLoading(false);
+              }
+            }}
             title={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
           >
-            <Heart 
-              size={16} 
-              className={isWishlisted ? 'text-red-500 fill-red-500' : 'text-gray-600'} 
+            <Heart
+              size={16}
+              className={isWishlisted ? 'text-red-500 fill-red-500' : 'text-gray-600'}
             />
           </div>
         </div>
@@ -192,12 +198,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
           </div>
         )}
 
-        {/* Cart Animation */}
-        {addedToCart && (
-          <div className="absolute bottom-3 left-3 bg-green-500 text-white text-xs px-2 py-1 rounded animate-bounce">
-            Added to Cart!
-          </div>
-        )}
       </div>
 
       {/* Product Info */}
@@ -206,53 +206,30 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
           <h3 className="text-sm font-medium text-gray-900 line-clamp-2 mb-1">
             {product.name}
           </h3>
-          
+
           <p className="text-xs text-gray-500 mb-2">
-            by {product.sellerName || 'Unknown Seller'}
+            by {product.companyName || product.sellerName || 'Unknown Company'}
           </p>
 
-          {/* Rating */}
-          {product.rating && (
-            <div className="flex items-center mb-2">
-              <div className="flex items-center">
-                <Star size={12} className="text-yellow-400 fill-yellow-400" />
-                <span className="text-xs text-gray-600 ml-1">
-                  {product.rating} ({product.reviewCount || 0})
-                </span>
-              </div>
-            </div>
-          )}
+
 
           {/* Price */}
-          <div className="flex items-center justify-between">
-            <p className="text-lg font-bold text-gray-900">
-              ₹{product.price.toLocaleString()}
-            </p>
+
+          <div className="flex items-baseline gap-3">
+            <span className="text-lg font-bold text-gray-900">{(product.salePrice) ? product.salePrice.toLocaleString() + ' ' + product.currency : product.price.toLocaleString() + ' ' + product.currency}</span>
+            {product.onSale && (
+              <>
+                <span className="text-sm text-gray-500 line-through">{product.price.toLocaleString() + ' ' + product.currency}</span>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Add to Cart Button */}
+        {/* Send Purchase Request*/}
         <button
-          onClick={handleAddToCart}
-          disabled={isAddingToCart}
-          className={`mt-3 w-full py-2 px-4 rounded-lg text-sm font-medium transition-all duration-300 ${
-            isInCart
-              ? 'bg-green-500 text-white cursor-default'
-              : isAddingToCart
-              ? 'bg-gray-400 text-white cursor-not-allowed'
-              : 'bg-black text-white hover:bg-gray-800 hover:scale-[1.02]'
-          }`}
-        >
-          {isAddingToCart ? (
-            <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Adding...
-            </div>
-          ) : isInCart ? (
-            'In Cart ✓'
-          ) : (
-            'Add to Cart'
-          )}
+          onClick={handlePurchaseRequest}
+          className={`mt-3 w-full py-2 px-4 rounded-lg text-sm font-medium transition-all duration-300 bg-black text-white hover:bg-gray-800 hover:scale-[1.02]`}>
+          Send Purchase Request
         </button>
       </div>
     </div>

@@ -1,678 +1,252 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Send, Search, Phone, Video, MoreVertical, ArrowLeft, Paperclip, Smile } from "lucide-react";
-import chatService, { ChatConversation, ChatMessage } from "../../services/chat.service";
-import authService from "../../services/auth.service";
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import InboxSidebar from '../../components/InboxSidebar';
+import InboxConversation from '../../components/InboxConversation';
+import { ConversationProps, Message } from '../../types/inboxTypes';
+import { SearchHeaderLight } from '../../components/Header';
+import { getConversation, getMessages, sendMessage, markMessagesAsRead, getCurrentCompanyId } from '../../services/inbox.service';
+import { useLocation } from 'react-router-dom';
+import { socketService } from '../../services/socket.service';
 
-const Inbox: React.FC = () => {
-    const [conversations, setConversations] = useState<ChatConversation[]>([]);
-    const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null);
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
-    const [newMessage, setNewMessage] = useState("");
-    const [loading, setLoading] = useState(true);
-    const [sendingMessage, setSendingMessage] = useState(false);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [unreadCount, setUnreadCount] = useState(0);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const currentUser = authService.getUser();
+const BuyerInbox = () => {
+    const [conversations, setConversations] = useState<ConversationProps[]>([]);
+    const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [unreadCount, setUnreadCount] = useState<number>(0);
+    const [selectedConversation, setSelectedConversation] = useState<ConversationProps | null>(null);
+    const [currentCompanyId, setCurrentCompanyId] = useState<string>('');
+    const location = useLocation();
+    
+    // Store latest state in refs for socket callbacks
+    const currentCompanyIdRef = useRef(currentCompanyId);
+    const selectedConversationIdRef = useRef(selectedConversationId);
 
     useEffect(() => {
-        loadConversations();
-        loadUnreadCount();
-        
-        // Set up event listeners
-        chatService.addEventListener('conversations-updated', handleConversationsUpdated);
-        chatService.addEventListener('messages-updated', handleMessagesUpdated);
-        chatService.addEventListener('message-sent', handleMessageSent);
-        chatService.addEventListener('unread-count-updated', handleUnreadCountUpdated);
+        currentCompanyIdRef.current = currentCompanyId;
+    }, [currentCompanyId]);
 
-        return () => {
-            chatService.removeEventListener('conversations-updated', handleConversationsUpdated);
-            chatService.removeEventListener('messages-updated', handleMessagesUpdated);
-            chatService.removeEventListener('message-sent', handleMessageSent);
-            chatService.removeEventListener('unread-count-updated', handleUnreadCountUpdated);
+    useEffect(() => {
+        selectedConversationIdRef.current = selectedConversationId;
+    }, [selectedConversationId]);
+
+    // Fetch conversations
+    const fetchConversations = useCallback(async () => {
+        try {
+            const response = await getConversation('');
+            if (response.status === 'success') {
+                const convs = response.data.map((conv: any, idx: number) => {
+                    let companyName = conv.companyName;
+                    if (conv.companyIds && conv.participantNames && currentCompanyId) {
+                        const idxOther = conv.companyIds.findIndex((id: string) => id !== currentCompanyId);
+                        if (idxOther !== -1) companyName = conv.participantNames[idxOther];
+                    }
+                    return {
+                        ...conv,
+                        id: conv._id || conv.id || idx.toString(),
+                        companyIds: conv.companyIds || [],
+                        companyName,
+                    };
+                });
+                setConversations(convs);
+                setUnreadCount(convs.reduce((acc: number, conv: any) => acc + (conv.unreadCount || 0), 0));
+            }
+        } catch (error) {
+            console.error('Error fetching conversations:', error);
+        }
+    }, [currentCompanyId]);
+
+    useEffect(() => {
+        if (currentCompanyId) {
+            fetchConversations();
+        }
+    }, [fetchConversations, currentCompanyId]);
+
+    useEffect(() => {
+        const fetchCompanyId = async () => {
+            const res = await getCurrentCompanyId();
+            if (res.status === 'success') {
+                setCurrentCompanyId(res.companyId);
+            }
         };
+        fetchCompanyId();
     }, []);
 
+    // Select conversation from URL if present
     useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
+        const params = new URLSearchParams(location.search);
+        const urlConversationId = params.get('conversationId');
+        if (urlConversationId && conversations.length > 0) {
+            const conv = conversations.find(c => c.id === urlConversationId);
+            if (conv) {
+                setSelectedConversation(conv);
+                setSelectedConversationId(conv.id);
+            }
+        }
+    }, [location.search, conversations]);
 
+    const getId = (val: any) => typeof val === 'string' ? val : val?._id;
+
+    // Socket setup
     useEffect(() => {
-        if (selectedConversation) {
-            loadMessages(selectedConversation.id);
-            markMessagesAsRead(selectedConversation.id);
+        // Connect to socket when company ID is available
+        if (currentCompanyId) {
+            socketService.connect();
         }
-    }, [selectedConversation]);
 
-    const loadConversations = async () => {
-        setLoading(true);
+        const handleMessageReceived = (data: { conversationId: string; message: Message }) => {
+            // If message belongs to current conversation
+            if (data.conversationId === selectedConversationIdRef.current) {
+                setMessages(prev => {
+                    // 1. Check if we already have this exact message (by REAL ID)
+                    if (prev.some(m => getId(m._id) === getId(data.message._id))) return prev;
+
+                    // 2. If it's from ME, check if we have a matching optimistic message
+                    //    (Same text, same sender, and ID looks temporary)
+                    if (getId(data.message.sender) === currentCompanyIdRef.current) {
+                        const optimisticMatchIndex = prev.findIndex(m => 
+                            m.text === data.message.text && 
+                            getId(m.sender) === currentCompanyIdRef.current &&
+                            m._id.includes('.') // Math.random() produces "0.xxxx"
+                        );
+
+                        if (optimisticMatchIndex !== -1) {
+                            // Replace optimistic message with real one
+                            const newMessages = [...prev];
+                            newMessages[optimisticMatchIndex] = {
+                                ...data.message,
+                                isSender: true
+                            };
+                            return newMessages;
+                        }
+                    }
+
+                    // 3. Otherwise/Standard case: Add new message
+                    return [...prev, {
+                        ...data.message,
+                        isSender: getId(data.message.sender) === currentCompanyIdRef.current
+                    }];
+                });
+
+                // Mark as read immediately if viewing
+                if (currentCompanyIdRef.current && getId(data.message.sender) !== currentCompanyIdRef.current) {
+                    socketService.markAsRead(data.conversationId, currentCompanyIdRef.current);
+                }
+            } else {
+                // If not viewing, refresh conversations to update unread count/snippet
+                fetchConversations();
+            }
+        };
+
+        socketService.onMessageReceived(handleMessageReceived);
+
+        return () => {
+            socketService.offMessageReceived(handleMessageReceived);
+            // Don't disconnect here as we might switch pages but keep socket? 
+            // Usually fine to keep connected, but cleaner to disconnect on unmount of app.
+            // For page component, maybe leave connected.
+        };
+    }, [currentCompanyId, fetchConversations]);
+
+    // Handle conversation selection & message fetching
+    useEffect(() => {
+        const fetchMsgs = async () => {
+            if (!selectedConversationId || !currentCompanyId) return;
+            
+            // Join the conversation room
+            socketService.joinConversation(selectedConversationId, currentCompanyId);
+
+            const response = await getMessages(selectedConversationId);
+            if (response.status === 'success') {
+                setMessages(response.data.map((msg: any) => ({
+                    ...msg,
+                    isSender: getId(msg.sender) === currentCompanyId,
+                })));
+                await markMessagesAsRead(selectedConversationId);
+            }
+        };
+
+        if (selectedConversationId && currentCompanyId) {
+            fetchMsgs();
+        }
+
+        return () => {
+            if (selectedConversationId) {
+                socketService.leaveConversation(selectedConversationId);
+            }
+        };
+    }, [selectedConversationId, currentCompanyId]);
+
+    const handleSearch = (query: string) => {
+        setSearchQuery(query);
+    };
+
+    const handleConversationSelect = (conversation: ConversationProps) => {
+        setSelectedConversation(conversation);
+        setSelectedConversationId(conversation.id);
+    };
+
+    const handleSendMessage = async (messageText: string) => {
+        if (!selectedConversationId || !selectedConversation || !currentCompanyId) return;
+        
+        const receiverId = selectedConversation.companyIds.find(id => id !== currentCompanyId) || '';
+        
+        // Optimistic UI update
+        const tempId = Math.random().toString();
+        const newMsg: Message = {
+            _id: tempId,
+            text: messageText,
+            sender: currentCompanyId,
+            receiver: receiverId,
+            createdAt: new Date().toISOString(),
+            readBy: [currentCompanyId],
+            isSender: true,
+        };
+        setMessages(prev => [...prev, newMsg]);
+
         try {
-            const convs = await chatService.getConversations();
-            setConversations(convs);
+            const response = await sendMessage(selectedConversationId, messageText);
+            if (response.status === 'success') {
+                // Update temp message with real one
+                // NOTE: If socket arrived first, 'tempId' might technically be gone/replaced in state logic above, 
+                // but since 'prev' here is fresh state in setter, we just need to ensure we don't duplicate.
+                // However, matching by ID is safest. If ID not found, do nothing (assumed socket handled it).
+                
+                const realMsg = response.data;
+                setMessages(prev => {
+                    return prev.map(m => m._id === tempId ? { ...realMsg, isSender: true } : m);
+                });
+                fetchConversations(); // Update last message in sidebar
+            } else {
+                // Error
+                setMessages(prev => prev.filter(m => m._id !== tempId));
+            }
         } catch (error) {
-            console.error('Error loading conversations:', error);
-        } finally {
-            setLoading(false);
+            setMessages(prev => prev.filter(m => m._id !== tempId));
         }
     };
-
-    const loadMessages = async (conversationId: string) => {
-        try {
-            const msgs = await chatService.getMessages(conversationId);
-            setMessages(msgs);
-        } catch (error) {
-            console.error('Error loading messages:', error);
-        }
-    };
-
-    const loadUnreadCount = async () => {
-        try {
-            const count = await chatService.getUnreadCount();
-            setUnreadCount(count);
-        } catch (error) {
-            console.error('Error loading unread count:', error);
-        }
-    };
-
-    const markMessagesAsRead = async (conversationId: string) => {
-        try {
-            await chatService.markMessagesAsRead(conversationId);
-        } catch (error) {
-            console.error('Error marking messages as read:', error);
-        }
-    };
-
-    const handleConversationsUpdated = (convs: ChatConversation[]) => {
-        setConversations(convs);
-    };
-
-    const handleMessagesUpdated = ({ conversationId, messages: msgs }: { conversationId: string; messages: ChatMessage[] }) => {
-        if (selectedConversation && selectedConversation.id === conversationId) {
-            setMessages(msgs);
-        }
-    };
-
-    const handleMessageSent = (message: ChatMessage) => {
-        if (selectedConversation && message.conversationId === selectedConversation.id) {
-            setMessages(prev => [...prev, message]);
-        }
-        loadConversations(); // Refresh conversations to update last message
-    };
-
-    const handleUnreadCountUpdated = (count: number) => {
-        setUnreadCount(count);
-    };
-
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
-
-    const handleSendMessage = async () => {
-        if (!newMessage.trim() || !selectedConversation || sendingMessage) return;
-
-        setSendingMessage(true);
-        try {
-            const otherUser = chatService.getOtherUser(selectedConversation);
-            await chatService.sendMessage({
-                conversationId: selectedConversation.id,
-                receiverId: otherUser.id,
-                content: newMessage.trim(),
-                messageType: 'text'
-            });
-            setNewMessage("");
-        } catch (error) {
-            console.error('Error sending message:', error);
-        } finally {
-            setSendingMessage(false);
-        }
-    };
-
-    const handleKeyPress = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSendMessage();
-        }
-    };
-
-    const filteredConversations = conversations.filter(conv => {
-        if (!searchQuery) return true;
-        const otherUser = chatService.getOtherUser(conv);
-        return otherUser.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-               otherUser.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-               conv.productName?.toLowerCase().includes(searchQuery.toLowerCase());
-    });
-
-    const formatMessageTime = (timestamp: string) => {
-        return chatService.formatMessageTime(timestamp);
-    };
-
-    if (loading) {
-        return (
-            <div style={{ 
-                display: "flex", 
-                alignItems: "center", 
-                justifyContent: "center", 
-                height: "100vh",
-                background: "#f8f9fa"
-            }}>
-                <div>Loading conversations...</div>
-            </div>
-        );
-    }
 
     return (
-        <div style={{ 
-            display: "flex", 
-            height: "100vh", 
-            background: "#f8f9fa",
-            fontFamily: "system-ui, -apple-system, sans-serif"
-        }}>
-            {/* Conversations Sidebar */}
-            <div style={{ 
-                width: "350px", 
-                background: "#fff", 
-                borderRight: "1px solid #e9ecef",
-                display: "flex",
-                flexDirection: "column"
-            }}>
-                {/* Header */}
-                <div style={{ 
-                    padding: "20px", 
-                    borderBottom: "1px solid #e9ecef",
-                    background: "#fff"
-                }}>
-                    <h2 style={{ 
-                        margin: 0, 
-                        fontSize: "24px", 
-                        fontWeight: 600,
-                        color: "#212529"
-                    }}>
-                        Messages
-                        {unreadCount > 0 && (
-                            <span style={{
-                                background: "#dc3545",
-                                color: "white",
-                                borderRadius: "12px",
-                                padding: "2px 8px",
-                                fontSize: "12px",
-                                marginLeft: "8px"
-                            }}>
-                                {unreadCount}
-                            </span>
-                        )}
-                    </h2>
-                    
-                    {/* Search */}
-                    <div style={{ 
-                        position: "relative", 
-                        marginTop: "15px" 
-                    }}>
-                        <Search 
-                            size={18} 
-                            style={{ 
-                                position: "absolute", 
-                                left: "12px", 
-                                top: "50%", 
-                                transform: "translateY(-50%)",
-                                color: "#6c757d"
-                            }} 
-                        />
-                        <input
-                            type="text"
-                            placeholder="Search conversations..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: "10px 12px 10px 40px",
-                                border: "1px solid #dee2e6",
-                                borderRadius: "20px",
-                                fontSize: "14px",
-                                outline: "none",
-                                background: "#f8f9fa"
-                            }}
-                        />
-                    </div>
-                </div>
-
-                {/* Conversations List */}
-                <div style={{ 
-                    flex: 1, 
-                    overflowY: "auto" 
-                }}>
-                    {filteredConversations.length === 0 ? (
-                        <div style={{ 
-                            padding: "40px 20px", 
-                            textAlign: "center", 
-                            color: "#6c757d" 
-                        }}>
-                            {searchQuery ? "No conversations found" : "No conversations yet"}
-                        </div>
-                    ) : (
-                        filteredConversations.map((conversation) => {
-                            const otherUser = chatService.getOtherUser(conversation);
-                            const isSelected = selectedConversation?.id === conversation.id;
-                            
-                            return (
-                                <div
-                                    key={conversation.id}
-                                    onClick={() => setSelectedConversation(conversation)}
-                                    style={{
-                                        padding: "15px 20px",
-                                        borderBottom: "1px solid #f1f3f4",
-                                        cursor: "pointer",
-                                        background: isSelected ? "#e3f2fd" : "transparent",
-                                        transition: "background-color 0.2s"
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!isSelected) {
-                                            e.currentTarget.style.background = "#f8f9fa";
-                                        }
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!isSelected) {
-                                            e.currentTarget.style.background = "transparent";
-                                        }
-                                    }}
-                                >
-                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                        {/* Avatar */}
-                                        <div style={{
-                                            width: "48px",
-                                            height: "48px",
-                                            borderRadius: "50%",
-                                            background: "#007bff",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            color: "white",
-                                            fontWeight: 600,
-                                            fontSize: "18px"
-                                        }}>
-                                            {otherUser.name.charAt(0).toUpperCase()}
-                                        </div>
-                                        
-                                        {/* Conversation Info */}
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ 
-                                                display: "flex", 
-                                                justifyContent: "space-between", 
-                                                alignItems: "center",
-                                                marginBottom: "4px"
-                                            }}>
-                                                <h4 style={{ 
-                                                    margin: 0, 
-                                                    fontSize: "16px", 
-                                                    fontWeight: 600,
-                                                    color: "#212529",
-                                                    overflow: "hidden",
-                                                    textOverflow: "ellipsis",
-                                                    whiteSpace: "nowrap"
-                                                }}>
-                                                    {otherUser.name}
-                                                </h4>
-                                                <span style={{ 
-                                                    fontSize: "12px", 
-                                                    color: "#6c757d" 
-                                                }}>
-                                                    {formatMessageTime(conversation.lastMessageAt)}
-                                                </span>
-                                            </div>
-                                            
-                                            {/* Product info if trade-related */}
-                                            {conversation.productName && (
-                                                <div style={{ 
-                                                    fontSize: "12px", 
-                                                    color: "#28a745",
-                                                    marginBottom: "2px"
-                                                }}>
-                                                    📦 {conversation.productName}
-                                                </div>
-                                            )}
-                                            
-                                            {/* Last message */}
-                                            <p style={{ 
-                                                margin: 0, 
-                                                fontSize: "14px", 
-                                                color: "#6c757d",
-                                                overflow: "hidden",
-                                                textOverflow: "ellipsis",
-                                                whiteSpace: "nowrap"
-                                            }}>
-                                                {conversation.lastMessageContent || "No messages yet"}
-                                            </p>
-                                        </div>
-                                        
-                                        {/* Unread indicator */}
-                                        {conversation.unreadCount && conversation.unreadCount > 0 && (
-                                            <div style={{
-                                                background: "#dc3545",
-                                                color: "white",
-                                                borderRadius: "50%",
-                                                width: "20px",
-                                                height: "20px",
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                fontSize: "12px",
-                                                fontWeight: 600
-                                            }}>
-                                                {conversation.unreadCount > 9 ? "9+" : conversation.unreadCount}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })
-                    )}
-                </div>
-            </div>
-
-            {/* Chat Area */}
-            <div style={{ 
-                flex: 1, 
-                display: "flex", 
-                flexDirection: "column",
-                background: "#fff"
-            }}>
-                {selectedConversation ? (
-                    <>
-                        {/* Chat Header */}
-                        <div style={{ 
-                            padding: "15px 20px", 
-                            borderBottom: "1px solid #e9ecef",
-                            background: "#fff",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between"
-                        }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                                <button
-                                    onClick={() => setSelectedConversation(null)}
-                                    style={{
-                                        background: "none",
-                                        border: "none",
-                                        cursor: "pointer",
-                                        padding: "8px",
-                                        borderRadius: "50%",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center"
-                                    }}
-                                    className="md:hidden"
-                                >
-                                    <ArrowLeft size={20} />
-                                </button>
-                                
-                                {(() => {
-                                    const otherUser = chatService.getOtherUser(selectedConversation);
-                                    return (
-                                        <>
-                                            <div style={{
-                                                width: "40px",
-                                                height: "40px",
-                                                borderRadius: "50%",
-                                                background: "#007bff",
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                color: "white",
-                                                fontWeight: 600
-                                            }}>
-                                                {otherUser.name.charAt(0).toUpperCase()}
-                                            </div>
-                                            <div>
-                                                <h3 style={{ 
-                                                    margin: 0, 
-                                                    fontSize: "18px", 
-                                                    fontWeight: 600,
-                                                    color: "#212529"
-                                                }}>
-                                                    {otherUser.name}
-                                                </h3>
-                                                {selectedConversation.productName && (
-                                                    <p style={{ 
-                                                        margin: 0, 
-                                                        fontSize: "12px", 
-                                                        color: "#28a745" 
-                                                    }}>
-                                                        Trade: {selectedConversation.productName}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </>
-                                    );
-                                })()}
-                            </div>
-                            
-                            <div style={{ display: "flex", gap: "8px" }}>
-                                <button style={{
-                                    background: "none",
-                                    border: "none",
-                                    cursor: "pointer",
-                                    padding: "8px",
-                                    borderRadius: "50%",
-                                    color: "#6c757d"
-                                }}>
-                                    <Phone size={20} />
-                                </button>
-                                <button style={{
-                                    background: "none",
-                                    border: "none",
-                                    cursor: "pointer",
-                                    padding: "8px",
-                                    borderRadius: "50%",
-                                    color: "#6c757d"
-                                }}>
-                                    <Video size={20} />
-                                </button>
-                                <button style={{
-                                    background: "none",
-                                    border: "none",
-                                    cursor: "pointer",
-                                    padding: "8px",
-                                    borderRadius: "50%",
-                                    color: "#6c757d"
-                                }}>
-                                    <MoreVertical size={20} />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Messages */}
-                        <div style={{ 
-                            flex: 1, 
-                            overflowY: "auto", 
-                            padding: "20px",
-                            background: "#f8f9fa"
-                        }}>
-                            {messages.length === 0 ? (
-                                <div style={{ 
-                                    textAlign: "center", 
-                                    color: "#6c757d",
-                                    marginTop: "50px"
-                                }}>
-                                    No messages yet. Start the conversation!
-                                </div>
-                            ) : (
-                                messages.map((message) => {
-                                    const isOwnMessage = message.senderId === currentUser?.id;
-                                    
-                                    return (
-                                        <div
-                                            key={message.id}
-                                            style={{
-                                                display: "flex",
-                                                justifyContent: isOwnMessage ? "flex-end" : "flex-start",
-                                                marginBottom: "15px"
-                                            }}
-                                        >
-                                            <div style={{
-                                                maxWidth: "70%",
-                                                padding: "12px 16px",
-                                                borderRadius: "18px",
-                                                background: isOwnMessage ? "#007bff" : "#fff",
-                                                color: isOwnMessage ? "white" : "#212529",
-                                                boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-                                                position: "relative"
-                                            }}>
-                                                {message.messageType === 'trade_update' && (
-                                                    <div style={{
-                                                        fontSize: "12px",
-                                                        opacity: 0.8,
-                                                        marginBottom: "4px",
-                                                        fontStyle: "italic"
-                                                    }}>
-                                                        🔄 Trade Update
-                                                    </div>
-                                                )}
-                                                
-                                                <div style={{ 
-                                                    fontSize: "15px", 
-                                                    lineHeight: 1.4,
-                                                    wordWrap: "break-word"
-                                                }}>
-                                                    {message.content}
-                                                </div>
-                                                
-                                                <div style={{
-                                                    fontSize: "11px",
-                                                    opacity: 0.7,
-                                                    marginTop: "4px",
-                                                    textAlign: "right"
-                                                }}>
-                                                    {formatMessageTime(message.createdAt)}
-                                                    {isOwnMessage && (
-                                                        <span style={{ marginLeft: "4px" }}>
-                                                            {message.isRead ? "✓✓" : "✓"}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            )}
-                            <div ref={messagesEndRef} />
-                        </div>
-
-                        {/* Message Input */}
-                        <div style={{ 
-                            padding: "15px 20px", 
-                            borderTop: "1px solid #e9ecef",
-                            background: "#fff"
-                        }}>
-                            <div style={{ 
-                                display: "flex", 
-                                alignItems: "flex-end", 
-                                gap: "12px" 
-                            }}>
-                                <button style={{
-                                    background: "none",
-                                    border: "none",
-                                    cursor: "pointer",
-                                    padding: "8px",
-                                    color: "#6c757d"
-                                }}>
-                                    <Paperclip size={20} />
-                                </button>
-                                
-                                <div style={{ 
-                                    flex: 1, 
-                                    position: "relative" 
-                                }}>
-                                    <textarea
-                                        value={newMessage}
-                                        onChange={(e) => setNewMessage(e.target.value)}
-                                        onKeyPress={handleKeyPress}
-                                        placeholder="Type a message..."
-                                        rows={1}
-                                        style={{
-                                            width: "100%",
-                                            padding: "12px 40px 12px 16px",
-                                            border: "1px solid #dee2e6",
-                                            borderRadius: "20px",
-                                            fontSize: "15px",
-                                            outline: "none",
-                                            resize: "none",
-                                            maxHeight: "120px",
-                                            minHeight: "44px"
-                                        }}
-                                    />
-                                    <button style={{
-                                        position: "absolute",
-                                        right: "8px",
-                                        top: "50%",
-                                        transform: "translateY(-50%)",
-                                        background: "none",
-                                        border: "none",
-                                        cursor: "pointer",
-                                        padding: "4px",
-                                        color: "#6c757d"
-                                    }}>
-                                        <Smile size={18} />
-                                    </button>
-                                </div>
-                                
-                                <button
-                                    onClick={handleSendMessage}
-                                    disabled={!newMessage.trim() || sendingMessage}
-                                    style={{
-                                        background: newMessage.trim() ? "#007bff" : "#dee2e6",
-                                        color: newMessage.trim() ? "white" : "#6c757d",
-                                        border: "none",
-                                        borderRadius: "50%",
-                                        width: "44px",
-                                        height: "44px",
-                                        cursor: newMessage.trim() ? "pointer" : "not-allowed",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        transition: "background-color 0.2s"
-                                    }}
-                                >
-                                    <Send size={18} />
-                                </button>
-                            </div>
-                        </div>
-                    </>
-                ) : (
-                    /* No conversation selected */
-                    <div style={{ 
-                        flex: 1, 
-                        display: "flex", 
-                        alignItems: "center", 
-                        justifyContent: "center",
-                        flexDirection: "column",
-                        color: "#6c757d",
-                        background: "#f8f9fa"
-                    }}>
-                        <div style={{ 
-                            fontSize: "48px", 
-                            marginBottom: "20px" 
-                        }}>
-                            💬
-                        </div>
-                        <h3 style={{ 
-                            fontSize: "24px", 
-                            fontWeight: 600,
-                            marginBottom: "8px",
-                            color: "#495057"
-                        }}>
-                            Select a conversation
-                        </h3>
-                        <p style={{ 
-                            fontSize: "16px",
-                            textAlign: "center",
-                            maxWidth: "300px"
-                        }}>
-                            Choose a conversation from the sidebar to start chatting with buyers and sellers.
-                        </p>
-                    </div>
+        <div className='h-screen flex flex-col'>
+            <SearchHeaderLight />
+            <div className="flex h-full bg-gray-50 font-sans">
+                <InboxSidebar
+                    conversations={conversations}
+                    unreadCount={unreadCount}
+                    searchQuery={searchQuery}
+                    handleSearch={handleSearch}
+                    onConversationSelect={handleConversationSelect}
+                />
+                {selectedConversation && (
+                    <InboxConversation
+                        name={selectedConversation.companyName}
+                        productName={selectedConversation.productName}
+                        messages={messages}
+                        onSendMessage={handleSendMessage}
+                    />
                 )}
             </div>
         </div>
     );
 };
 
-export default Inbox; 
+export default BuyerInbox;

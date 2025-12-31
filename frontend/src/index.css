@@ -2,11 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global image loading improvements */
-img {
-  max-width: 100%;
-  height: auto;
-}
+/*
+ * NOTE: Removed global img { height: auto } rule as it was overriding
+ * explicit Tailwind height classes like h-[200px] causing layout shifts.
+ * Images that need responsive sizing should use the utility classes below.
+ */
 
 /* Ensure images maintain aspect ratio and don't overflow */
 .product-image {
@@ -14,6 +14,23 @@ img {
   object-position: center;
   width: 100%;
   height: 100%;
+}
+
+
+@layer base {
+  input[type="checkbox"],
+  input[type="radio"],
+  select {
+    accent-color: #000000e8;
+  }
+  option:checked,
+  option:focus,
+  option:hover {
+     appearance: none;
+    background-color: #000000e8;
+   
+  }
+  
 }
 
 /* Loading animation for images */

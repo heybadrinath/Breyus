@@ -1,15 +1,23 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
-import { StoreVisit } from './entities/store-visit.entity';
-import { AnalyticsSale } from './entities/sale.entity';
-import { Task } from './entities/task.entity';
+import { Trade, TradeSchema } from '../trade/schema/trade.schema';
+import { Product, ProductSchema } from '../products/schema/products.schema';
+import { Company, CompanySchema } from '../company/company.schema';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([StoreVisit, AnalyticsSale, Task])],
+    imports: [
+        MongooseModule.forFeature([
+            { name: Trade.name, schema: TradeSchema },
+            { name: Product.name, schema: ProductSchema },
+            { name: Company.name, schema: CompanySchema },
+        ]),
+        AuthModule,
+    ],
     controllers: [AnalyticsController],
     providers: [AnalyticsService],
-    exports: [AnalyticsService]
+    exports: [AnalyticsService],
 })
-export class AnalyticsModule {} 
+export class AnalyticsModule {}

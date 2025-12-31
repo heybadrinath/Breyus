@@ -1,72 +1,154 @@
-import React, { useState, useEffect } from 'react';
-import Sidebar from '../components/Sidebar';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import Banner from '../components/Banner';
-import Navbar from '../components/navbar';
-import productService from '../../services/product.service';
-import { Product } from '../../types/product';
+import { SearchHeader } from '../../components/Header';
+import { getProductsWithPagination, PaginationParams, Product } from '../../services/products.service';
+import { Search } from 'lucide-react';
+
 
 const Homepage: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([]);
+
+  const navigate = useNavigate();
+
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(true);
+  const [totalProducts, setTotalProducts] = useState(0);
   const [filters, setFilters] = useState({
     category: '',
     minPrice: 0,
     maxPrice: 0
   });
 
-  // Fetch products on component mount
+  const observer = useRef<IntersectionObserver | null>(null);
+  const lastProductRef = useRef<HTMLDivElement>(null);
+
+  const loadProducts = useCallback(async (page: number, isInitial: boolean = false) => {
+    try {
+      if (isInitial) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const params: PaginationParams = {
+        page,
+        limit: 30,
+        search: searchTerm || undefined,
+        category: filters.category || undefined,
+        minPrice: filters.minPrice > 0 ? filters.minPrice : undefined,
+        maxPrice: filters.maxPrice > 0 ? filters.maxPrice : undefined
+      };
+
+      const response = await getProductsWithPagination(params);
+
+      // Transform backend data to match frontend Product interface
+      const transformedProducts: Product[] = response.data.map((item: any) => ({
+        id: item._id,
+        name: item.name,
+        description: item.description,
+        detailedDescription: item.detailedDescription,
+        category: item.category,
+        hsnCode: item.hsnCode,
+        price: parseFloat(item.price) || 0,
+        currency: item.currency,
+        sku: item.sku,
+        onSale: item.onSale || false,
+        discount: parseFloat(item.discount) || 0,
+        salePrice: parseFloat(item.salePrice) || 0,
+        costOfGoods: parseFloat(item.costOfGoods) || 0,
+        profit: parseFloat(item.profit) || 0,
+        margin: parseFloat(item.margin) || 0,
+        tags: item.tags || [],
+        stock: parseInt(item.stock) || 0,
+        stockUnit: item.stockUnit,
+        // Fix image URLs by adding backend URL prefix
+        productImage: item.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${item.productImages[0]}` : '',
+        images: item.productImages ? item.productImages.map((img: string) => `${process.env.REACT_APP_BACKEND_URL}/${img}`) : [],
+        primaryImage: item.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${item.productImages[0]}` : '',
+        testReport: item.testReport ? `${process.env.REACT_APP_BACKEND_URL}/${item.testReport}` : '',
+        createdAt: new Date(item.createdAt),
+        updatedAt: new Date(item.updatedAt),
+        moq: item.moq,
+        moqUnit: item.moqUnit,
+        preciseDescription: item.description,
+        sellerName: item.sellerName || 'Unknown Seller',
+        companyName: item.companyName || 'Unknown Company',
+
+        // product terms
+        revenueMin: item.revenueMin,
+        revenueMax: item.revenueMax,
+        currencyTrade: item.currencyTrade,
+        unitTrade: item.unitTrade,
+        yearsTrade: item.yearsTrade,
+        industry: item.industry,
+        marketYears: item.marketYears,
+        sellerMarketYears: item.sellerMarketYears,
+        marketcapture: item.marketcapture,
+
+        // intco terms
+        selectedIncoterm: item.selectedIncoterm,
+        selectedIncotermData: item.selectedIncotermData,
+        defaults: item.defaults
+      }));
+
+
+
+      if (isInitial) {
+        setProducts(transformedProducts);
+      } else {
+        setProducts(prev => [...prev, ...transformedProducts]);
+      }
+
+      setCurrentPage(response.pagination.currentPage);
+      setHasNextPage(response.pagination.hasNextPage);
+      setTotalProducts(response.pagination.totalProducts);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load products');
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [searchTerm, filters]);
+
+  // Load initial products
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    setCurrentPage(1);
+    setProducts([]);
+    loadProducts(1, true);
+  }, [searchTerm, filters]);
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      console.log('Fetching products for marketplace...');
-      const response = await productService.getAllProducts();
-      
-      if (response.success) {
-        setProducts(response.products);
-        console.log('Products loaded successfully:', response.products.length);
-      } else {
-        setError(response.message || 'Failed to load products');
-        console.error('Failed to fetch products:', response.message);
+  // Intersection Observer for infinite scrolling
+  useEffect(() => {
+    if (loading || loadingMore) return;
+
+    if (observer.current) observer.current.disconnect();
+
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasNextPage && !loadingMore) {
+        loadProducts(currentPage + 1);
       }
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      setError('Failed to load products. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    });
 
-  const handleSearch = async (term: string) => {
-    if (!term.trim()) {
-      fetchProducts();
-      return;
+    if (lastProductRef.current) {
+      observer.current.observe(lastProductRef.current);
     }
 
-    setLoading(true);
+    return () => {
+      if (observer.current) {
+        observer.current.disconnect();
+      }
+    };
+  }, [loading, loadingMore, hasNextPage, currentPage, loadProducts]);
+
+  const handleSearch = (term: string) => {
     setSearchTerm(term);
-    
-    try {
-      const response = await productService.searchProducts(term, filters);
-      if (response.success) {
-        setProducts(response.products);
-      } else {
-        setError(response.message || 'Search failed');
-      }
-    } catch (error) {
-      console.error('Search error:', error);
-      setError('Search failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const renderProducts = () => {
@@ -88,7 +170,7 @@ const Homepage: React.FC = () => {
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Failed to Load Products</h3>
             <p className="text-gray-600 mb-4">{error}</p>
             <button
-              onClick={fetchProducts}
+              onClick={() => loadProducts(1, true)}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
               Try Again
@@ -109,10 +191,7 @@ const Homepage: React.FC = () => {
             </p>
             {searchTerm && (
               <button
-                onClick={() => {
-                  setSearchTerm('');
-                  fetchProducts();
-                }}
+                onClick={() => setSearchTerm('')}
                 className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Clear Search
@@ -124,54 +203,66 @@ const Homepage: React.FC = () => {
     }
 
     return (
-      <div className="flex flex-wrap gap-8">
-        {products.map((product) => (
-          <ProductCard 
-            key={product.id} 
-            product={product}
-            onClick={() => window.location.href = `/buyer/product-page?id=${product.id}`}
-          />
-        ))}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 3xl:grid-cols-6 mx-auto w-fit">
+        {products.map((product, index) => {
+          if (products.length === index + 1) {
+            return (
+              <div key={product.id} ref={lastProductRef}>
+                <ProductCard
+                  product={product}
+                  onClick={() => navigate(`/buyer/product-page?id=${product.id}`)}
+                />
+              </div>
+            );
+          } else {
+            return (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onClick={() => navigate(`/buyer/product-page?id=${product.id}`)}
+              />
+            );
+          }
+        })}
+        {loadingMore && (
+          <div className="w-full flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        )}
       </div>
     );
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Fixed Sidebar */}
-      <div className="fixed left-0 top-0 h-screen">
-        <Sidebar />
+
+    <div className="">
+      {/* Fixed Header */}
+      <div className="fixed top-0 right-0 left-64 z-10 p-6">
+        <SearchHeader onSearch={handleSearch} />
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 ml-64 overflow-y-auto">
-        {/* Fixed Navbar */}
-        <div className="fixed top-0 right-0 left-64 z-10 p-6">
-          <Navbar onSearch={handleSearch} />
+      {/* Scrollable Content */}
+      <div className='pt-24 px-6'>
+        <div className="mt-6">
+          <Banner />
         </div>
 
-        {/* Scrollable Content */}
-        <div className="p-6 mt-28">
-          <div className="mt-6">
-            <Banner />
-          </div>
-          
-          {/* Products Section */}
-          <div className="mt-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {searchTerm ? `Search Results for "${searchTerm}"` : 'Available Products'}
-              </h2>
-              <div className="text-sm text-gray-600">
-                {!loading && `${products.length} products found`}
-              </div>
+        {/* Products Section */}
+        <div className="mt-8 mx-auto !w-full">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">
+              {searchTerm ? `Search Results for "${searchTerm}"` : 'Available Products'}
+            </h2>
+            <div className="text-sm text-gray-600">
+              {!loading && `${totalProducts} products found`}
             </div>
-            
-            {renderProducts()}
           </div>
+
+          {renderProducts()}
         </div>
       </div>
     </div>
+
   );
 };
 

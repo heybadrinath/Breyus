@@ -1,0 +1,167 @@
+{
+  "source": "context/Mainstream VS Niche commodity .pdf",
+  "classification_rules": {
+    "priority": [
+      "niche_overrides",
+      "mainstream",
+      "default_niche"
+    ],
+    "default": "niche"
+  },
+  "mainstream": {
+    "agricultural": {
+      "food_grains": [
+        "Wheat",
+        "Barley",
+        "Oats",
+        "Sorghum"
+      ],
+      "oilseeds_oils": [
+        "Soybeans",
+        "Soybean Oil",
+        "Soybean Meal",
+        "Mustard Seed",
+        "Rapeseed",
+        "Sunflower Seed",
+        "Palm Oil",
+        "Cottonseed Oil"
+      ],
+      "other": [
+        "Cocoa",
+        "Cotton",
+        "Tea",
+        "Tobacco",
+        "Turmeric",
+        "Black Pepper",
+        "Coriander",
+        "Chilli"
+      ]
+    },
+    "livestock_animal_products": [
+      "Live Cattle",
+      "Feeder Cattle"
+    ],
+    "energy": {
+      "crude_refined_products": [
+        "Crude Oil",
+        "Naphtha",
+        "LPG",
+        "Propane",
+        "Butane",
+        "Natural Gas"
+      ],
+      "coal_alternatives": [
+        "Thermal Coal"
+      ]
+    },
+    "metals": {
+      "base_metals": [
+        "Aluminium",
+        "Copper",
+        "Zinc",
+        "Lead",
+        "Nickel",
+        "Tin"
+      ],
+      "precious_metals": [
+        "Gold",
+        "Silver",
+        "Platinum",
+        "Palladium",
+        "Rhodium"
+      ],
+      "ferrous": [
+        "Iron Ore",
+        "Stainless Steel",
+        "Pig Iron",
+        "Sponge Iron"
+      ]
+    },
+    "construction_industrial": [
+      "Cement",
+      "Clinker",
+      "Limestone",
+      "Gypsum",
+      "Bitumen",
+      "Asphalt"
+    ],
+    "non_metallic_minerals": [
+      "Silica Sand",
+      "Bentonite Clay",
+      "Kaolin",
+      "Bauxite",
+      "Phosphate Rock",
+      "Potash",
+      "Sulphur",
+      "Talc",
+      "Feldspar"
+    ],
+    "energy_transition_strategic": [
+      "Lithium",
+      "Cobalt",
+      "Graphite",
+      "Uranium",
+      "Thorium"
+    ],
+    "environmental_carbon": [
+      "Organic Compost",
+      "Biochar",
+      "Bagasse",
+      "Molasses",
+      "Wood Pellets",
+      "Sawdust Briquettes"
+    ]
+  },
+  "niche_overrides": [
+    "Activated Carbon",
+    "Bagasse Ash",
+    "Biochar",
+    "Bottom Ash",
+    "Fly Ash",
+    "Industrial By-Products",
+    "Lithium",
+    "Organic Compost",
+    "Rare Earth Elements",
+    "Salt",
+    "Silicates",
+    "Soda Ash",
+    "Zeolites",
+    "Zeolites from Fly Ash"
+  ],
+  "added_for_coverage": {
+    "mainstream": [
+      "Aluminum",
+      "Canola",
+      "Canola Oil",
+      "Coffee",
+      "Corn",
+      "Coking Coal",
+      "Diesel",
+      "Fuel Oil",
+      "Gasoline",
+      "Ginger",
+      "Groundnut",
+      "Jet Fuel",
+      "LNG",
+      "Live Hogs",
+      "Maize",
+      "Peanut",
+      "Poultry",
+      "Rice",
+      "Sesame Seed",
+      "Steel",
+      "Sugar",
+      "Sugarcane",
+      "Sulfur"
+    ],
+    "niche": [
+      "Bagasse Ash",
+      "Industrial By-Products",
+      "Rare Earth Elements"
+    ]
+  },
+  "notes": [
+    "Items labeled as niche examples in the PDF are kept in niche_overrides even if they also appear in broader lists.",
+    "Any commodity not in mainstream is treated as niche by default."
+  ]
+}

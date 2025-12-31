@@ -1,111 +1,156 @@
-import { Controller, Get, Logger, HttpException, HttpStatus, Query, ParseIntPipe, DefaultValuePipe, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Res, HttpStatus } from '@nestjs/common';
+import { Response } from 'express';
 import { AnalyticsService } from './analytics.service';
-import { DailySaleDto, DailyStoreVisitDto, DashboardAnalyticsDto, TaskStatusDistributionDto } from './dto/analytics.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AuthService } from '../auth/auth.service';
 
 @Controller('analytics')
 export class AnalyticsController {
-    private readonly logger = new Logger(AnalyticsController.name);
+    constructor(
+        private readonly analyticsService: AnalyticsService,
+        private readonly authService: AuthService,
+    ) {}
 
-    constructor(private readonly analyticsService: AnalyticsService) {}
-
-    @UseGuards(JwtAuthGuard)
-    @Get('debug/user')
-    async getDebugUserInfo(@Request() req): Promise<any> {
-        this.logger.log(`Debug: User info from JWT token: ${JSON.stringify(req.user)}`);
-        return {
-            user: req.user,
-            sellerId: req.user.id,
-            message: 'Current authenticated user information'
-        };
+    private getCompanyIdFromToken(response: Response): string | null {
+        const accountToken = response.req.signedCookies['account'];
+        if (!accountToken) {
+            return null;
+        }
+        const decoded = this.authService.validateAccountToken(accountToken);
+        return (decoded as any)?.companyId || null;
     }
 
-    @UseGuards(JwtAuthGuard)
-    @Get('dashboard')
-    async getDashboardAnalytics(
-        @Request() req,
-        @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number
-    ): Promise<DashboardAnalyticsDto> {
+    @Get('metrics')
+    async getMetrics(@Res() response: Response): Promise<void> {
         try {
-            const seller_id = req.user.id;
-            
-            if (!seller_id) {
-                throw new HttpException('Seller ID not found in token', HttpStatus.UNAUTHORIZED);
+            const companyId = this.getCompanyIdFromToken(response);
+            if (!companyId) {
+                response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'No valid cookie found',
+                });
+                return;
             }
-            this.logger.log(`GET /analytics/dashboard?days=${days} request received for seller ${seller_id}`);
-            return await this.analyticsService.getDashboardAnalytics(seller_id, days);
+
+            const data = await this.analyticsService.getMetricsData(companyId);
+            response.status(HttpStatus.OK).send({
+                statusCode: HttpStatus.OK,
+                message: 'Metrics retrieved successfully',
+                data,
+            });
         } catch (error) {
-            this.logger.error(`Error in getDashboardAnalytics for ${days} days`, error.stack);
-            throw new HttpException(
-                'Failed to fetch dashboard analytics data',
-                HttpStatus.INTERNAL_SERVER_ERROR
-            );
+            response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: 'Failed to get metrics',
+                error: error.message || 'Internal Server Error',
+            });
         }
     }
 
-    @UseGuards(JwtAuthGuard)
-    @Get('daily-visits')
-    async getDailyStoreVisits(
-        @Request() req,
-        @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number
-    ): Promise<DailyStoreVisitDto[]> {
+    @Get('bar-data')
+    async getBarGraphData(@Res() response: Response): Promise<void> {
         try {
-            const seller_id = req.user.id;
-            
-            if (!seller_id) {
-                throw new HttpException('Seller ID not found in token', HttpStatus.UNAUTHORIZED);
+            const companyId = this.getCompanyIdFromToken(response);
+            if (!companyId) {
+                response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'No valid cookie found',
+                });
+                return;
             }
-            this.logger.log(`GET /analytics/daily-visits?days=${days} request received for seller ${seller_id}`);
-            return await this.analyticsService.getDailyStoreVisits(seller_id, days);
+
+            const data = await this.analyticsService.getBarGraphData(companyId);
+            response.status(HttpStatus.OK).send({
+                statusCode: HttpStatus.OK,
+                message: 'Bar graph data retrieved successfully',
+                data,
+            });
         } catch (error) {
-            this.logger.error(`Error in getDailyStoreVisits for ${days} days`, error.stack);
-            throw new HttpException(
-                'Failed to fetch daily store visits data',
-                HttpStatus.INTERNAL_SERVER_ERROR
-            );
+            response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: 'Failed to get bar graph data',
+                error: error.message || 'Internal Server Error',
+            });
         }
     }
 
-    @UseGuards(JwtAuthGuard)
-    @Get('daily-sales')
-    async getDailySales(
-        @Request() req,
-        @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number
-    ): Promise<DailySaleDto[]> {
+    @Get('scatter-data')
+    async getScatterGraphData(@Res() response: Response): Promise<void> {
         try {
-            const seller_id = req.user.id;
-            
-            if (!seller_id) {
-                throw new HttpException('Seller ID not found in token', HttpStatus.UNAUTHORIZED);
+            const companyId = this.getCompanyIdFromToken(response);
+            if (!companyId) {
+                response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'No valid cookie found',
+                });
+                return;
             }
-            this.logger.log(`GET /analytics/daily-sales?days=${days} request received for seller ${seller_id}`);
-            return await this.analyticsService.getDailySales(seller_id, days);
+
+            const data = await this.analyticsService.getScatterGraphData(companyId);
+            response.status(HttpStatus.OK).send({
+                statusCode: HttpStatus.OK,
+                message: 'Scatter graph data retrieved successfully',
+                data,
+            });
         } catch (error) {
-            this.logger.error(`Error in getDailySales for ${days} days`, error.stack);
-            throw new HttpException(
-                'Failed to fetch daily sales data',
-                HttpStatus.INTERNAL_SERVER_ERROR
-            );
+            response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: 'Failed to get scatter graph data',
+                error: error.message || 'Internal Server Error',
+            });
         }
     }
 
-    @UseGuards(JwtAuthGuard)
-    @Get('tasks-distribution')
-    async getTasksStatusDistribution(@Request() req): Promise<TaskStatusDistributionDto[]> {
+    @Get('pie-data')
+    async getPieChartData(@Res() response: Response): Promise<void> {
         try {
-            const seller_id = req.user.id;
-            
-            if (!seller_id) {
-                throw new HttpException('Seller ID not found in token', HttpStatus.UNAUTHORIZED);
+            const companyId = this.getCompanyIdFromToken(response);
+            if (!companyId) {
+                response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'No valid cookie found',
+                });
+                return;
             }
-            this.logger.log(`GET /analytics/tasks-distribution request received for seller ${seller_id}`);
-            return await this.analyticsService.getTasksStatusDistribution(seller_id);
+
+            const data = await this.analyticsService.getPieChartData(companyId);
+            response.status(HttpStatus.OK).send({
+                statusCode: HttpStatus.OK,
+                message: 'Pie chart data retrieved successfully',
+                data,
+            });
         } catch (error) {
-            this.logger.error('Error in getTasksStatusDistribution', error.stack);
-            throw new HttpException(
-                'Failed to fetch tasks status distribution data',
-                HttpStatus.INTERNAL_SERVER_ERROR
-            );
+            response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: 'Failed to get pie chart data',
+                error: error.message || 'Internal Server Error',
+            });
         }
     }
-} 
+
+    @Get('country-sales')
+    async getCountrySalesData(@Res() response: Response): Promise<void> {
+        try {
+            const companyId = this.getCompanyIdFromToken(response);
+            if (!companyId) {
+                response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'No valid cookie found',
+                });
+                return;
+            }
+
+            const data = await this.analyticsService.getCountrySalesData(companyId);
+            response.status(HttpStatus.OK).send({
+                statusCode: HttpStatus.OK,
+                message: 'Country sales data retrieved successfully',
+                data,
+            });
+        } catch (error) {
+            response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: 'Failed to get country sales data',
+                error: error.message || 'Internal Server Error',
+            });
+        }
+    }
+}

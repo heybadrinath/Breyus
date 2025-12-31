@@ -16,15 +16,6 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false,
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
-    "paths": {
-      "*": ["node_modules/*", "src/*"]
-    },
-    "typeRoots": ["node_modules/@types"]
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+    "noFallthroughCasesInSwitch": false
+  }
 }

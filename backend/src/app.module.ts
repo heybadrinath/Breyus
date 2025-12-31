@@ -1,31 +1,28 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthModule } from './auth/auth.module';
-import { MailModule } from './mail/mail.module';
-import { UsersModule } from './users/users.module';
-import { User } from './users/entities/user.entity';
-import { AnalyticsModule } from './analytics/analytics.module';
-import { StoreVisit } from './analytics/entities/store-visit.entity';
-import { AnalyticsSale } from './analytics/entities/sale.entity';
-import { Task } from './analytics/entities/task.entity';
-import { UserDetails } from './users/entities/user-details.entity';
-import { ProductsModule } from './products/products.module';
-import { SalesModule } from './sales/sales.module';
-import { SecurityModule } from './security/security.module';
-import { Product } from './products/entities/product.entity';
-import { Sale } from './sales/entities/sale.entity';
+import { Module, Logger } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { MessagesModule } from './messages/messages.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { AuthModule } from './auth/auth.module';
+import { MongooseModule } from '@nestjs/mongoose';
+import { UsersModule } from './users/users.module';
+import { CompanyModule } from './company/company.module';
+import { MailModule } from './mail/mail.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
+import { LoginModule } from './login/login.module';
+import { ProductsModule } from './products/products.module';
+import { WishlistModule } from './wishlist/wishlist.module';
+import { InboxModule } from './inbox/inbox.module';
+import { TradeModule } from './trade/trade.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { FeedbackModule } from './feedback/feedback.module';
-import { TradesModule } from './trades/trades.module';
-import { Trade } from './trades/entities/trade.entity';
-import { SellerGraphModule } from './seller-graph/seller-graph.module';
-import { BarGraph } from './seller-graph/entities/bar-graph.entity';
-import { ScatterGraph } from './seller-graph/entities/scatter-graph.entity';
-import { PieChart } from './seller-graph/entities/pie-chart.entity';
-import { CountrySales } from './seller-graph/entities/country-sales.entity';
+import { NotificationModule } from './notification/notification.module';
+import { StorageModule } from './common/storage';
+import { DocsModule } from './docs/docs.module';
+import { MongoMemoryServer } from 'mongodb-memory-server';
+import mongoose from 'mongoose';
+
+let mongoMemoryServer: MongoMemoryServer | null = null;
+const logger = new Logger('MongoDB');
 
 @Module({
   imports: [
@@ -33,48 +30,59 @@ import { CountrySales } from './seller-graph/entities/country-sales.entity';
       isGlobal: true,
       envFilePath: '.env',
     }),
-    TypeOrmModule.forRootAsync({
+    MongooseModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => {
-        const nodeEnv = configService.get('NODE_ENV', 'development');
-        const isProduction = nodeEnv === 'production';
-        
-        return {
-          type: 'sqlite',
-          database: configService.get('DB_PATH', 'breyus.sqlite'),
-          entities: [
-            User, 
-            UserDetails, 
-            Product, 
-            Sale,
-            StoreVisit,
-            AnalyticsSale,
-            Task,
-            Trade,
-            BarGraph,
-            ScatterGraph,
-            PieChart,
-            CountrySales
-          ],
-          synchronize: !isProduction,
-          logging: !isProduction,
-        };
+      useFactory: async (configService: ConfigService) => {
+        const nodeEnv = configService.get<string>('NODE_ENV');
+
+        // Set up connection event listeners
+        mongoose.connection.on('connected', () => {
+          logger.log('MongoDB connected successfully');
+        });
+        mongoose.connection.on('error', (err) => {
+          logger.error(`MongoDB connection error: ${err.message}`);
+        });
+        mongoose.connection.on('disconnected', () => {
+          logger.warn('MongoDB disconnected');
+        });
+
+        if (nodeEnv === 'production') {
+          return {
+            uri: configService.get<string>('MONGODB_URI_PROD'),
+          };
+        }
+
+        const devUri = configService.get<string>('MONGODB_URI_DEV');
+
+        if (configService.get<string>('USE_MEMORY_DB') === 'true') {
+          logger.log('Starting in-memory MongoDB...');
+          mongoMemoryServer = await MongoMemoryServer.create();
+          const uri = mongoMemoryServer.getUri();
+          return { uri };
+        }
+
+        return { uri: devUri };
       },
       inject: [ConfigService],
     }),
     AuthModule,
-    MailModule,
     UsersModule,
-    AnalyticsModule,
+    CompanyModule,
+    MailModule,
+    OnboardingModule,
+    LoginModule,
     ProductsModule,
-    SalesModule,
-    SecurityModule,
-    MessagesModule,
+    WishlistModule,
+    InboxModule,
+    TradeModule,
+    AnalyticsModule,
     FeedbackModule,
-    TradesModule,
-    SellerGraphModule
+    NotificationModule,
+    StorageModule,
+    DocsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+
+export class AppModule { }

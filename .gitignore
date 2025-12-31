@@ -14,8 +14,10 @@
 #tauri src folder for desktop application
 /src-tauri
 
+
 # misc
 .DS_Store
+.env 
 .env.local
 .env.development.local
 .env.test.local
@@ -24,3 +26,8 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+#local dev
+.claude
+AGENTS.md
+CLAUDE.md

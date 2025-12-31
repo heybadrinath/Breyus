@@ -1,95 +1,210 @@
-import { 
-  Controller, Get, Post, Body, Param, 
-  UseGuards, Request, Logger, BadRequestException 
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  Res,
+  HttpStatus,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { FeedbackService } from './feedback.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { CreateFeedbackDto } from './dto/create-feedback.dto';
+import { FeedbackType } from './feedback.schema';
 
 @Controller('feedback')
 export class FeedbackController {
-  private readonly logger = new Logger(FeedbackController.name);
-  
   constructor(private readonly feedbackService: FeedbackService) {}
-  
-  @UseGuards(JwtAuthGuard)
-  @Get('products/:productId')
-  async getProductFeedback(@Param('productId') productId: string) {
-    this.logger.log(`Getting feedback for product ${productId}`);
-    return this.feedbackService.getProductFeedback(productId);
-  }
-  
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('seller')
-  @Get('seller/products')
-  async getSellerProductsFeedback(@Request() req) {
-    const sellerId = req.user.id;
-    this.logger.log(`Getting feedback for all products of seller ${sellerId}`);
-    return this.feedbackService.getSellerProductsFeedback(sellerId);
-  }
-  
-  @UseGuards(JwtAuthGuard)
-  @Post('products/:productId/review')
-  async addReview(
-    @Param('productId') productId: string,
-    @Body() reviewData: { rating: number; content: string; images?: string[] },
-    @Request() req
+
+  @Post()
+  async createFeedback(
+    @Body() createFeedbackDto: CreateFeedbackDto,
+    @Res() response: Response,
   ) {
-    const { rating, content, images = [] } = reviewData;
-    const userId = req.user.id;
-    const userName = req.user.name || 'Anonymous';
-    const userAvatar = req.user.avatar;
-    
-    this.logger.log(`Adding review for product ${productId} by user ${userId}`);
-    
-    return this.feedbackService.addReview(
-      productId, 
-      userId, 
-      userName, 
-      userAvatar, 
-      rating, 
-      content, 
-      images
-    );
-  }
-  
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('seller')
-  @Post('reviews/:reviewId/reply')
-  async replyToReview(
-    @Param('reviewId') reviewId: string,
-    @Body() replyData: { reply: string },
-    @Request() req
-  ) {
-    const { reply } = replyData;
-    const sellerId = req.user.id;
-    
-    if (!reply) {
-      throw new BadRequestException('Reply content is required');
+    try {
+      const accountToken = response.req.signedCookies['account'];
+
+      if (!accountToken) {
+        return response.status(401).json({
+          statusCode: 401,
+          message: 'No valid cookie found',
+        });
+      }
+
+      const feedback = await this.feedbackService.createFeedback(
+        accountToken,
+        createFeedbackDto,
+      );
+
+      return response.status(HttpStatus.CREATED).json({
+        statusCode: HttpStatus.CREATED,
+        message: 'Feedback submitted successfully',
+        data: feedback,
+      });
+    } catch (error) {
+      return response.status(error.status || 500).json({
+        statusCode: error.status || 500,
+        message: error.message || 'Internal server error',
+      });
     }
-    
-    this.logger.log(`Adding reply to review ${reviewId} by seller ${sellerId}`);
-    
-    return this.feedbackService.replyToReview(reviewId, sellerId, reply);
   }
-  
-  @UseGuards(JwtAuthGuard)
-  @Post('reviews/:reviewId/vote')
-  async voteOnReview(
-    @Param('reviewId') reviewId: string,
-    @Body() voteData: { voteType: 'helpful' | 'not_helpful' },
-    @Request() req
+
+  @Get('trade/:tradeId')
+  async getFeedbackByTrade(
+    @Param('tradeId') tradeId: string,
+    @Res() response: Response,
   ) {
-    const { voteType } = voteData;
-    const userId = req.user.id;
-    
-    if (!voteType || !['helpful', 'not_helpful'].includes(voteType)) {
-      throw new BadRequestException('Valid vote type (helpful or not_helpful) is required');
+    try {
+      const accountToken = response.req.signedCookies['account'];
+
+      if (!accountToken) {
+        return response.status(401).json({
+          statusCode: 401,
+          message: 'No valid cookie found',
+        });
+      }
+
+      const feedbacks = await this.feedbackService.getFeedbackByTrade(tradeId);
+
+      return response.status(HttpStatus.OK).json({
+        statusCode: HttpStatus.OK,
+        message: 'Feedback retrieved successfully',
+        data: feedbacks,
+      });
+    } catch (error) {
+      return response.status(error.status || 500).json({
+        statusCode: error.status || 500,
+        message: error.message || 'Internal server error',
+      });
     }
-    
-    this.logger.log(`Voting on review ${reviewId} by user ${userId} as ${voteType}`);
-    
-    return this.feedbackService.voteOnReview(reviewId, userId, voteType);
   }
-} 
+
+  @Get('user/:userId')
+  async getFeedbackForUser(
+    @Param('userId') userId: string,
+    @Res() response: Response,
+  ) {
+    try {
+      const accountToken = response.req.signedCookies['account'];
+
+      if (!accountToken) {
+        return response.status(401).json({
+          statusCode: 401,
+          message: 'No valid cookie found',
+        });
+      }
+
+      const result = await this.feedbackService.getFeedbackForUser(userId);
+
+      return response.status(HttpStatus.OK).json({
+        statusCode: HttpStatus.OK,
+        message: 'User feedback retrieved successfully',
+        data: result,
+      });
+    } catch (error) {
+      return response.status(error.status || 500).json({
+        statusCode: error.status || 500,
+        message: error.message || 'Internal server error',
+      });
+    }
+  }
+
+  @Get('user/:userId/type/:feedbackType')
+  async getFeedbackByType(
+    @Param('userId') userId: string,
+    @Param('feedbackType') feedbackType: FeedbackType,
+    @Res() response: Response,
+  ) {
+    try {
+      const accountToken = response.req.signedCookies['account'];
+
+      if (!accountToken) {
+        return response.status(401).json({
+          statusCode: 401,
+          message: 'No valid cookie found',
+        });
+      }
+
+      const feedbacks = await this.feedbackService.getFeedbackByType(
+        userId,
+        feedbackType,
+      );
+
+      return response.status(HttpStatus.OK).json({
+        statusCode: HttpStatus.OK,
+        message: 'Feedback by type retrieved successfully',
+        data: feedbacks,
+      });
+    } catch (error) {
+      return response.status(error.status || 500).json({
+        statusCode: error.status || 500,
+        message: error.message || 'Internal server error',
+      });
+    }
+  }
+
+  @Get('user/:userId/rating')
+  async getAverageRating(
+    @Param('userId') userId: string,
+    @Res() response: Response,
+  ) {
+    try {
+      const accountToken = response.req.signedCookies['account'];
+
+      if (!accountToken) {
+        return response.status(401).json({
+          statusCode: 401,
+          message: 'No valid cookie found',
+        });
+      }
+
+      const result = await this.feedbackService.getAverageRatingForUser(userId);
+
+      return response.status(HttpStatus.OK).json({
+        statusCode: HttpStatus.OK,
+        message: 'Average rating retrieved successfully',
+        data: result,
+      });
+    } catch (error) {
+      return response.status(error.status || 500).json({
+        statusCode: error.status || 500,
+        message: error.message || 'Internal server error',
+      });
+    }
+  }
+
+  @Get('check/:tradeId/:feedbackType')
+  async hasUserLeftFeedback(
+    @Param('tradeId') tradeId: string,
+    @Param('feedbackType') feedbackType: FeedbackType,
+    @Res() response: Response,
+  ) {
+    try {
+      const accountToken = response.req.signedCookies['account'];
+
+      if (!accountToken) {
+        return response.status(401).json({
+          statusCode: 401,
+          message: 'No valid cookie found',
+        });
+      }
+
+      const hasLeft = await this.feedbackService.hasUserLeftFeedback(
+        accountToken,
+        tradeId,
+        feedbackType,
+      );
+
+      return response.status(HttpStatus.OK).json({
+        statusCode: HttpStatus.OK,
+        message: 'Feedback check completed',
+        data: { hasLeftFeedback: hasLeft },
+      });
+    } catch (error) {
+      return response.status(error.status || 500).json({
+        statusCode: error.status || 500,
+        message: error.message || 'Internal server error',
+      });
+    }
+  }
+}

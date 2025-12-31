@@ -1,175 +1,223 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, Headers, UseGuards, Request, HttpException, Put } from '@nestjs/common';
+import { Controller, Post, Get, Res, HttpStatus, Body, Inject, forwardRef } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { ForgotPasswordDto, ResetPasswordDto, RegistrationDto } from './dto';
-import { Logger } from '@nestjs/common';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { UsersService } from '../users/users.service';
+import { Response } from 'express';
+import { InjectModel } from '@nestjs/mongoose';
+import { User } from 'src/users/user.schema';
+import { Model } from 'mongoose';
+import { MailService } from 'src/mail/mail.service';
+import { UsersService } from 'src/users/users.service';
+import { ForgotPasswordDto, ResetPasswordDto, ChangePasswordDto } from './dto/password-reset.dto';
+
 
 @Controller('auth')
 export class AuthController {
-  private readonly logger = new Logger(AuthController.name);
+    constructor(
+        private readonly authService: AuthService,
+        private readonly mailService: MailService,
+        @Inject(forwardRef(() => UsersService)) private readonly usersService: UsersService,
+        @InjectModel(User.name) private readonly userSchema: Model<User>
+    ) { }
 
-  constructor(
-    private readonly authService: AuthService,
-    private readonly usersService: UsersService
-  ) {}
+    @Get('validate-cookie')
+    async validateCookie(@Res() response: Response): Promise<any> {
+        const accountToken = response.req.signedCookies['account'];
 
-  @Post('login')
-  @HttpCode(HttpStatus.OK)
-  async login(@Body() body: { email: string; password: string; role?: string }) {
-    try {
-      // First generate and send OTP
-      await this.authService.generateOtpAndSend(body.email, body.password, body.role);
-      
-      // Simulate immediate OTP verification for development
-      // In production, this would be a separate request from the client after user enters OTP
-      const storedData = this.authService['otpStore'].get(body.email);
-      if (storedData) {
-        return await this.authService.verifyOtp(body.email, storedData.otp);
-      }
-      
-      return { message: 'OTP sent successfully', success: true };
-    } catch (error) {
-      this.logger.error(`Login error: ${error.message}`);
-      throw error;
-    }
-  }
-
-  @Post('send-otp')
-  async sendOTP(@Body() body: { email: string; password: string; role?: string }) {
-    return await this.authService.generateOtpAndSend(body.email, body.password, body.role);
-  }
-
-  @Post('verify-otp')
-  async verifyOTP(@Body() body: { email: string; otp: string }) {
-    return await this.authService.verifyOtp(body.email, body.otp);
-  }
-
-  @Get('validate-token')
-@HttpCode(HttpStatus.OK)
-async validateToken(@Headers('authorization') authHeader: string) {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new HttpException('No token provided', HttpStatus.UNAUTHORIZED);
-  }
-
-  const token = authHeader.replace('Bearer ', '');
-  const result = await this.authService.validateToken(token);
-
-  if (!result.valid) {
-    throw new HttpException(result.message || 'Unauthorized access', HttpStatus.UNAUTHORIZED);
-  }
-
-  return result; // includes user info
-}
-  @Post('forgot-password')
-  @HttpCode(HttpStatus.OK)
-  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
-    return await this.authService.forgotPassword(
-      forgotPasswordDto.email,
-      forgotPasswordDto.role
-    );
-  }
-
-  @Post('reset-password')
-  @HttpCode(HttpStatus.OK)
-  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    return await this.authService.resetPassword(
-      resetPasswordDto.email,
-      resetPasswordDto.otp,
-      resetPasswordDto.newPassword,
-      resetPasswordDto.role
-    );
-  }
-
-  @Post('register')
-  @HttpCode(HttpStatus.CREATED)
-  async register(@Body() registrationDto: RegistrationDto) {
-    try {
-      return await this.authService.register(
-        registrationDto.email,
-        registrationDto.password,
-        registrationDto.firstName,
-        registrationDto.lastName,
-        registrationDto.role,
-      );
-    } catch (error) {
-      this.logger.error(`Registration error: ${error.message}`, error.stack);
-      
-      if (error.status === 401 && error.message.includes('already registered')) {
-        throw new HttpException(
-          'Email already registered',
-          HttpStatus.CONFLICT,
-        );
-      }
-      
-      throw new HttpException(
-        'Registration failed. Please try again later.',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  @Post('verify-registration-otp')
-  @HttpCode(HttpStatus.OK)
-  async verifyRegistrationOtp(@Body() body: { email: string; otp: string }) {
-    try {
-      return await this.authService.verifyRegistrationOtp(
-        body.email,
-        body.otp,
-      );
-    } catch (error) {
-      this.logger.error(`OTP verification error: ${error.message}`, error.stack);
-      throw new HttpException(
-        'OTP verification failed. Please try again.',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  @Put('/profile')
-  @UseGuards(JwtAuthGuard)
-  async updateProfile(
-    @Request() req,
-    @Body() updateProfileDto: { firstName: string; lastName: string; profileImage?: string }
-  ) {
-    try {
-      this.logger.log(`User ${req.user.id} updating profile`);
-      
-      // The req.user has been populated by the JwtAuthGuard
-      const userId = req.user.id;
-      
-      // Prepare the data to update
-      const updateData: any = {
-        firstName: updateProfileDto.firstName,
-        lastName: updateProfileDto.lastName
-      };
-
-      // Only include profileImage if it's provided
-      if (updateProfileDto.profileImage !== undefined) {
-        updateData.profileImage = updateProfileDto.profileImage;
-      }
-      
-      // Update the user fields
-      const updatedUser = await this.usersService.update(userId, updateData);
-      
-      return {
-        success: true,
-        message: 'Profile updated successfully',
-        user: {
-          id: updatedUser.id,
-          email: updatedUser.email,
-          firstName: updatedUser.firstName,
-          lastName: updatedUser.lastName,
-          role: updatedUser.role,
-          profileImage: updatedUser.profileImage
+        if (!accountToken) {
+            return response.status(401).send('No valid cookie found');
         }
-      };
-    } catch (error) {
-      this.logger.error(`Failed to update profile: ${error.message}`);
-      throw new HttpException(
-        'Failed to update profile information',
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
+
+        try {
+            const decodeToken = this.authService.validateAccountToken(accountToken);
+            if (!decodeToken) {
+                return response.status(401).send('Invalid or expired cookie');
+            }
+            const userId = (decodeToken as any).userId;
+            if (!userId) {
+                return response.status(401).send('Invalid or expired cookie');
+            }
+            const user = await this.userSchema.findById(userId).populate('company', 'role').lean();
+            if (!user) {
+                return response.status(401).send('User not found');
+            }
+            // Ensure company is populated and has a role property
+            const company = user.company as { role?: string };
+            return response.status(200).json({ valid: true, role: company?.role });
+        } catch (error) {
+            return response.status(401).send('Invalid or expired cookie');
+        }
     }
-  }
+
+    @Get('me')
+    async getMe(@Res() response: Response): Promise<any> {
+        const accountToken = response.req.signedCookies['account'];
+        if (!accountToken) {
+            return response.status(401).send({ message: 'No valid cookie found' });
+        }
+        try {
+            const decodeToken = this.authService.validateAccountToken(accountToken);
+            if (!decodeToken) {
+                return response.status(401).send({ message: 'Invalid or expired cookie' });
+            }
+            const userId = (decodeToken as any).userId;
+            const companyId = (decodeToken as any).companyId;
+            if (!userId || !companyId) {
+                return response.status(401).send({ message: 'Invalid token structure' });
+            }
+            // Return BOTH userId and companyId for WebSocket and other uses
+            return response.status(200).json({ userId, companyId });
+        } catch (error) {
+            return response.status(401).send({ message: 'Invalid or expired cookie' });
+        }
+    }
+
+    @Post('logout')
+    async logout(@Res() response: Response): Promise<any> {
+        try {
+            // Clear the account cookie with the same settings it was set with
+            response.clearCookie('account', {
+                httpOnly: true,
+                signed: true,
+                secure: process.env.NODE_ENV === 'production' || true,
+                sameSite: (process.env.NODE_ENV === 'production') ? 'strict' : 'none'
+            });
+            return response.status(HttpStatus.OK).json({ message: 'Logged out successfully' });
+        } catch (error) {
+            return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ message: 'Logout failed' });
+        }
+    }
+
+    @Post('forgot-password')
+    async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto, @Res() response: Response): Promise<any> {
+        try {
+            const { email } = forgotPasswordDto;
+
+            // Find user by email
+            const user = await this.usersService.findByEmail(email);
+            if (!user) {
+                return response.status(HttpStatus.BAD_REQUEST).json({
+                    message: 'No account found with this email address.'
+                });
+            }
+
+            // Generate OTP and store it
+            const otp = this.mailService.generateOtp();
+            await this.mailService.storeOtp(email, otp);
+
+            // Set password reset token expiry (10 minutes)
+            const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+            await this.usersService.setPasswordResetToken((user as any)._id.toString(), otp, expiresAt);
+
+            // Send password reset email
+            await this.mailService.sendPasswordResetEmail(email, otp);
+
+            return response.status(HttpStatus.OK).json({
+                message: 'Password reset OTP has been sent to your email.'
+            });
+        } catch (error) {
+            console.error('Forgot password error:', error);
+            return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+                message: 'An error occurred while processing your request.'
+            });
+        }
+    }
+
+    @Post('reset-password')
+    async resetPassword(@Body() resetPasswordDto: ResetPasswordDto, @Res() response: Response): Promise<any> {
+        try {
+            const { email, otp, newPassword } = resetPasswordDto;
+
+            // Validate OTP
+            const isValidOtp = await this.mailService.validateOtp(email, otp);
+            if (!isValidOtp) {
+                return response.status(HttpStatus.BAD_REQUEST).json({
+                    message: 'Invalid or expired OTP. Please check your code and try again.'
+                });
+            }
+
+            // Find user by email
+            const user = await this.usersService.findByEmail(email);
+            if (!user) {
+                return response.status(HttpStatus.BAD_REQUEST).json({
+                    message: 'Invalid request.'
+                });
+            }
+
+            // Check if password reset token is still valid
+            if (user.passwordResetExpires && new Date() > user.passwordResetExpires) {
+                return response.status(HttpStatus.BAD_REQUEST).json({
+                    message: 'OTP has expired. Please request a new one.'
+                });
+            }
+
+            // Update password
+            await this.usersService.updatePassword((user as any)._id.toString(), newPassword);
+
+            return response.status(HttpStatus.OK).json({
+                success: true,
+                message: 'Password reset successfully.'
+            });
+        } catch (error) {
+            console.error('Reset password error:', error);
+            return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+                message: 'An error occurred while resetting your password.'
+            });
+        }
+    }
+
+    @Post('change-password')
+    async changePassword(@Body() changePasswordDto: ChangePasswordDto, @Res() response: Response): Promise<any> {
+        try {
+            const accountToken = response.req.signedCookies['account'];
+            if (!accountToken) {
+                return response.status(HttpStatus.UNAUTHORIZED).json({
+                    message: 'Authentication required.'
+                });
+            }
+
+            const decodeToken = this.authService.validateAccountToken(accountToken);
+            if (!decodeToken) {
+                return response.status(HttpStatus.UNAUTHORIZED).json({
+                    message: 'Invalid or expired session.'
+                });
+            }
+
+            const userId = (decodeToken as any).userId;
+            if (!userId) {
+                return response.status(HttpStatus.UNAUTHORIZED).json({
+                    message: 'Invalid session.'
+                });
+            }
+
+            const { currentPassword, newPassword } = changePasswordDto;
+
+            // Verify current password
+            const isValidPassword = await this.usersService.verifyPassword(userId, currentPassword);
+            if (!isValidPassword) {
+                return response.status(HttpStatus.BAD_REQUEST).json({
+                    message: 'Incorrect current password. Please try again.'
+                });
+            }
+
+            // Check if new password is same as current
+            const isSamePassword = await this.usersService.verifyPassword(userId, newPassword);
+            if (isSamePassword) {
+                return response.status(HttpStatus.BAD_REQUEST).json({
+                    message: 'New password must be different from current password.'
+                });
+            }
+
+            // Update password
+            await this.usersService.updatePassword(userId, newPassword);
+
+            return response.status(HttpStatus.OK).json({
+                success: true,
+                message: 'Password changed successfully.'
+            });
+        } catch (error) {
+            console.error('Change password error:', error);
+            return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+                message: 'An error occurred while changing your password.'
+            });
+        }
+    }
 }

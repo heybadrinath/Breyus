@@ -1,30 +1,24 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
+import { UsersModule } from 'src/users/users.module';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { UsersModule } from '../users/users.module';
-import { PassportModule } from '@nestjs/passport';
-import { JwtModule } from '@nestjs/jwt';
-import { JwtStrategy } from './jwt/jwt.strategy';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { MailModule } from '../mail/mail.module';
-import { JwtService } from './jwt/jwt.service';
+import { User, UserSchema } from 'src/users/user.schema';
+import { MongooseModule } from '@nestjs/mongoose/dist/mongoose.module';
+import { MailModule } from 'src/mail/mail.module';
 
 @Module({
   imports: [
-    UsersModule,
-    PassportModule,
-    MailModule,
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET') || 'defaultSecret',
-        signOptions: { expiresIn: '7d' },
-      }),
-      inject: [ConfigService],
+    JwtModule.register({
+      secret: process.env.JWT_SECRET_KEY || '',
+      signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '86400' },
     }),
+    forwardRef(() => UsersModule),
+    MailModule,
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema}]),
   ],
+  providers: [AuthService],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtService],
-  exports: [AuthService, JwtService],
+  exports: [AuthService],
 })
 export class AuthModule {}

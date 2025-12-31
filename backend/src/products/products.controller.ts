@@ -1,177 +1,248 @@
-import { Controller, Get, Post, Body, Param, Put, Delete, Request, Logger, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Query, Get, Res, Post, Body, HttpStatus, UseInterceptors, UploadedFiles, Param } from '@nestjs/common';
+import { HSN } from './schema/hsn.schema';
 import { ProductsService } from './products.service';
-import { Product } from './entities/product.entity';
-import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Response } from 'express';
+import { CreateProductDto } from './create-product.dto';
+import { FileUploadInterceptor } from './file-upload.interceptor';
+import { AuthService } from '../auth/auth.service';
+
 
 @Controller('products')
 export class ProductsController {
-  private readonly logger = new Logger(ProductsController.name);
-  private defaultSellerId = '1'; // Default seller ID for development
+    constructor(
+        private readonly productsService: ProductsService,
+        private readonly authService: AuthService
+    ) { }
 
-  constructor(private readonly productsService: ProductsService) {}
+    @Get('hsn')
+    async search(@Query('q') query: string, @Res() response: Response): Promise<HSN[]> {
+        const accountToken = response.req.signedCookies['account'];
+        if (!accountToken) {
+            response.status(401).send('No valid cookie found');
+        }
 
-  // Public endpoint - no authentication required
-  @Get()
-  async findAll(@Request() req): Promise<Product[]> {
-    try {
-      this.logger.log('GET /products request received');
-      
-      // For marketplace requests, return all products with seller information
-      // Don't filter by seller ID - we want to show all products
-      return await this.productsService.findAll();
-    } catch (error) {
-      this.logger.error('Error in findAll', error);
-      throw new HttpException(
-        'Failed to fetch products',
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
+        if (!query) {
+            response.status(400).json({ error: 'Query parameter "q" is required' });
+            return [];
+        }
+        const results = await this.productsService.search(query);
+        response.json(results);
+        return results;
     }
-  }
 
-  // Authenticated endpoint to get current seller's products
-  @Get('seller/me')
-  @UseGuards(JwtAuthGuard)
-  async findCurrentSellerProducts(@Request() req): Promise<Product[]> {
-    try {
-      this.logger.log('GET /products/seller/me request received');
-      const sellerId = req.user?.id;
-      
-      if (!sellerId) {
-        this.logger.warn('No seller ID found in JWT token');
-        throw new HttpException(
-          'Authentication required',
-          HttpStatus.UNAUTHORIZED
-        );
-      }
-      
-      this.logger.log(`Fetching products for seller ID: ${sellerId}`);
-      const products = await this.productsService.findAll(sellerId);
-      this.logger.log(`Found ${products.length} products for seller ID: ${sellerId}`);
-      
-      return products;
-    } catch (error) {
-      this.logger.error(`Error in findCurrentSellerProducts: ${error.message}`, error.stack);
-      if (error instanceof HttpException) {
-        throw error;
-      }
-      throw new HttpException(
-        'Failed to fetch seller products',
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
-  }
+    @Post('add-product')
+    @UseInterceptors(FileUploadInterceptor)
+    async createProduct(
+        @Res() response: Response,
+        @Body() body: any,
+        @UploadedFiles() files?: Express.Multer.File[]
+    ) {
+        try {
+            // Extract the account token from the signed cookies
+            const accountToken = response.req.signedCookies['account'];
 
-  // Public endpoint - no authentication required
-  @Get(':id')
-  async findOne(@Param('id') id: string, @Request() req): Promise<Product> {
-    try {
-      this.logger.log(`GET /products/${id} request received`);
-      const product = await this.productsService.findOne(id);
-      return product;
-    } catch (error) {
-      this.logger.error(`Error in findOne(${id})`, error);
-      if (error instanceof HttpException) {
-        throw error;
-      }
-      throw new HttpException(
-        'Failed to fetch product',
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
-  }
+            // If accountToken is not present, return 401 Unauthorized
+            if (!accountToken) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'No valid cookie found',
+                });
+            }
 
-  // Requires authentication
-  @Post()
-  @UseGuards(JwtAuthGuard)
-  async create(@Body() createProductDto: CreateProductDto, @Request() req): Promise<Product> {
-    try {
-      this.logger.log('POST /products request received');
-      // Use authenticated user's ID as seller ID
-      const sellerId = req.user?.id;
-      
-      if (!sellerId) {
-        throw new HttpException(
-          'Authentication required',
-          HttpStatus.UNAUTHORIZED
-        );
-      }
-      
-      return await this.productsService.create(createProductDto, sellerId);
-    } catch (error) {
-      this.logger.error('Error in create', error);
-      if (error instanceof HttpException) {
-        throw error;
-      }
-      throw new HttpException(
-        'Failed to create product',
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
-  }
+            // Verify JWT token and extract user ID
+            let userId: string;
+            try {
+                const decoded = this.authService.validateAccountToken(accountToken);
+                userId = (decoded as any).userId;
+            } catch (error) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'Invalid token',
+                });
+            }
 
-  // Requires authentication
-  @Put(':id')
-  @UseGuards(JwtAuthGuard)
-  async update(
-    @Param('id') id: string, 
-    @Body() updateProductDto: UpdateProductDto,
-    @Request() req
-  ): Promise<Product> {
-    try {
-      this.logger.log(`PUT /products/${id} request received`);
-      // First, check if user is authorized to update this product
-      const product = await this.productsService.findOne(id);
-      const userId = req.user?.id;
-      
-      if (product.sellerId && product.sellerId !== userId) {
-        throw new HttpException(
-          'You are not authorized to update this product',
-          HttpStatus.FORBIDDEN
-        );
-      }
-      
-      return await this.productsService.update(id, updateProductDto);
-    } catch (error) {
-      this.logger.error(`Error in update(${id})`, error);
-      if (error instanceof HttpException) {
-        throw error;
-      }
-      throw new HttpException(
-        'Failed to update product',
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
-  }
+            // Parse product data from form data
+            let createProductDto: CreateProductDto;
+            try {
+                createProductDto = JSON.parse(body.productData);
+            } catch (error) {
+                return response.status(HttpStatus.BAD_REQUEST).send({
+                    statusCode: HttpStatus.BAD_REQUEST,
+                    message: 'Invalid product data format',
+                });
+            }
 
-  // Requires authentication
-  @Delete(':id')
-  @UseGuards(JwtAuthGuard)
-  async remove(@Param('id') id: string, @Request() req): Promise<{ message: string }> {
-    try {
-      this.logger.log(`DELETE /products/${id} request received`);
-      // First, check if user is authorized to delete this product
-      const product = await this.productsService.findOne(id);
-      const userId = req.user?.id;
-      
-      if (product.sellerId && product.sellerId !== userId) {
-        throw new HttpException(
-          'You are not authorized to delete this product',
-          HttpStatus.FORBIDDEN
-        );
-      }
-      
-      await this.productsService.remove(id);
-      return { message: 'Product deleted successfully' };
-    } catch (error) {
-      this.logger.error(`Error in remove(${id})`, error);
-      if (error instanceof HttpException) {
-        throw error;
-      }
-      throw new HttpException(
-        'Failed to delete product',
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
+            // Handle file uploads if files are provided
+            if (files && files.length > 0) {
+                const { productImages, testReports } = await this.productsService.uploadFiles(files);
+                createProductDto.productImages = productImages;
+                createProductDto.testReports = testReports;
+            }
+
+            // Call the service to create the product
+            const result = await this.productsService.createProduct(createProductDto, userId);
+
+            // Send the success response with the created product
+            return response.status(HttpStatus.CREATED).send({
+                statusCode: HttpStatus.CREATED,
+                message: 'Product created successfully',
+                data: result,
+            });
+        } catch (error) {
+            return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: 'Failed to create product',
+                error: error.message || 'Internal Server Error',
+            });
+        }
     }
-  }
-} 
+
+    @Get('user-products')
+    async getUserProducts(@Res() response: Response) {
+        try {
+            const accountToken = response.req.signedCookies['account'];
+
+            if (!accountToken) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'No valid cookie found',
+                });
+            }
+
+            let userId: string;
+            try {
+                const decoded = this.authService.validateAccountToken(accountToken);
+                userId = (decoded as any).userId;
+            } catch (error) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'Invalid token',
+                });
+            }
+
+            const products = await this.productsService.getProductsByUser(userId);
+
+            return response.status(HttpStatus.OK).send({
+                statusCode: HttpStatus.OK,
+                message: 'Products retrieved successfully',
+                data: products,
+            });
+        } catch (error) {
+            return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: 'Failed to retrieve products',
+                error: error.message || 'Internal Server Error',
+            });
+        }
+    }
+
+    @Get('list')
+    async getProducts(
+        @Query('page') page: string = '1',
+        @Query('limit') limit: string = '30',
+        @Query('search') search: string = '',
+        @Query('category') category: string = '',
+        @Query('minPrice') minPrice: string = '',
+        @Query('maxPrice') maxPrice: string = '',
+        @Res() response: Response
+    ) {
+        try {
+            const accountToken = response.req.signedCookies['account'];
+
+            if (!accountToken) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'No valid cookie found',
+                });
+            }
+
+            let userId: string;
+            try {
+                const decoded = this.authService.validateAccountToken(accountToken);
+                userId = (decoded as any).userId;
+            } catch (error) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'Invalid token',
+                });
+            }
+
+            const pageNum = parseInt(page, 10);
+            const limitNum = parseInt(limit, 10);
+
+            const result = await this.productsService.getProductsWithPagination({
+                page: pageNum,
+                limit: limitNum,
+                search,
+                category,
+                minPrice: minPrice ? parseFloat(minPrice) : undefined,
+                maxPrice: maxPrice ? parseFloat(maxPrice) : undefined
+            });
+
+            return response.status(HttpStatus.OK).send({
+                statusCode: HttpStatus.OK,
+                message: 'Products retrieved successfully',
+                data: result.products,
+                pagination: {
+                    currentPage: result.currentPage,
+                    totalPages: result.totalPages,
+                    totalProducts: result.totalProducts,
+                    hasNextPage: result.hasNextPage,
+                    hasPrevPage: result.hasPrevPage
+                }
+            });
+        } catch (error) {
+            return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: 'Failed to retrieve products',
+                error: error.message || 'Internal Server Error',
+            });
+        }
+    }
+
+    @Get(':id')
+    async getProductById(@Param('id') id: string, @Res() response: Response) {
+        try {
+            const accountToken = response.req.signedCookies['account'];
+
+            if (!accountToken) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'No valid cookie found',
+                });
+            }
+
+            try {
+                const decoded = this.authService.validateAccountToken(accountToken);
+                // We don't need userId for this endpoint as buyers should see all products
+            } catch (error) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'Invalid token',
+                });
+            }
+
+            const product = await this.productsService.getProductByIdWithCompany(id);
+
+            if (!product) {
+                return response.status(HttpStatus.NOT_FOUND).send({
+                    statusCode: HttpStatus.NOT_FOUND,
+                    message: 'Product not found',
+                });
+            }
+
+            return response.status(HttpStatus.OK).send({
+                statusCode: HttpStatus.OK,
+                message: 'Product retrieved successfully',
+                data: product,
+            });
+        } catch (error) {
+            return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: 'Failed to retrieve product',
+                error: error.message || 'Internal Server Error',
+            });
+        }
+    }
+
+}
