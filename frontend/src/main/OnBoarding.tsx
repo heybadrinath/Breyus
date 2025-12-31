@@ -155,7 +155,8 @@ const OnBoarding: React.FC = () => {
                     setIsMailverified(true);
                 } catch (error: any) {
                     setOtpStatus('error');
-                    setErrorMessage(error?.message || 'Failed to verify OTP. Please try again.');
+                    const errorMsg = error?.message || error?.response?.data?.message;
+                    setErrorMessage(errorMsg || 'Invalid or expired OTP. Please check your code and try again.');
                     setSuccessMessage('');
                 }
 
@@ -267,8 +268,9 @@ const OnBoarding: React.FC = () => {
             setErrorMessage('');
             setIsPasswordSubmitted(true);
             setAccountToken(response.data)
-        } catch (e) {
-            setErrorMessage("Error, failed onboarding please try again");
+        } catch (e: any) {
+            const errorMsg = e?.message || e?.response?.data?.message;
+            setErrorMessage(errorMsg || "Failed to create account. Please try again.");
             setSuccessMessage('');
         }
     }
@@ -291,8 +293,9 @@ const OnBoarding: React.FC = () => {
             setAccountToken(json.data)
             await fetchOnboardingDetails(json.data);
             return true;
-        } catch (e) {
-            setErrorMessage("Error, failed to verify password please try again");
+        } catch (e: any) {
+            const errorMsg = e?.message || e?.response?.data?.message;
+            setErrorMessage(errorMsg || "Incorrect password. Please try again.");
             return false;
         }
     }
@@ -543,7 +546,7 @@ const OnBoarding: React.FC = () => {
 
                                     <p className="mt-1 text-xs text-gray-500">
                                         Check your inbox for a verification code to continue setting up your Breyus account. Didn't get it?{" "}
-                                        <a href="#" onClick={() => handleResendEmailOtp} className={`text-blue-600 hover:underline ${(ismailverified) ? 'cursor-not-allowed' : 'cursor-auto'}`}>
+                                        <a href="#" onClick={() => handleResendEmailOtp()} className={`text-blue-600 hover:underline ${(ismailverified) ? 'cursor-not-allowed' : 'cursor-auto'}`}>
                                             Resend Code
                                         </a>
                                     </p>

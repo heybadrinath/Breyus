@@ -10,12 +10,14 @@ const inboxSidebar: React.FC<InboxSidebarProps> = ({
     onConversationSelect
 }) => {
     // Filter conversations by search query
-    const filteredConversations = searchQuery
-        ? conversations.filter(c =>
-            c.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            c.productName.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-        : conversations;
+    const filteredConversations = React.useMemo(() => {
+        return searchQuery
+            ? conversations.filter(c =>
+                c.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                c.productName.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+            : conversations;
+    }, [conversations, searchQuery]);
 
     return (
         <div className="w-96 bg-white border-r border-gray-200 flex flex-col">
@@ -68,4 +70,4 @@ const inboxSidebar: React.FC<InboxSidebarProps> = ({
     )
 };
 
-export default inboxSidebar;
+export default React.memo(inboxSidebar);

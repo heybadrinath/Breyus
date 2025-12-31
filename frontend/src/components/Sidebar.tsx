@@ -1,9 +1,10 @@
-import { Store, Inbox, ShoppingCart, Repeat, Heart, HelpCircle, Settings, ChevronDown, LayoutDashboard, Tag, CircleUser } from "lucide-react";
+import { Store, Inbox, ShoppingCart, Repeat, Heart, HelpCircle, Settings, ChevronDown, LayoutDashboard, Tag, CircleUser, LogOut } from "lucide-react";
 import BreyusLogo from "../assets/Logos/full-logo.svg"
 import { useState } from "react";
 import React from "react";
 import { useNavigate, Link } from 'react-router-dom';
 import { usernameService } from "../services/users.service";
+import { logout } from "../services/auth.service";
 
 
 interface UserProfileProps {
@@ -26,7 +27,27 @@ const UserProfile: React.FC<UserProfileProps> = ({ name, className = '' }) => {
   );
 };
 
-const SidebarBottom: React.FC = () => {
+interface SidebarBottomProps {
+  settingsPath?: string;
+}
+
+const SidebarBottom: React.FC<SidebarBottomProps> = ({ settingsPath = '/seller/settings' }) => {
+  const navigate = useNavigate();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      navigate('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
   return (
     <div className="px-6 mb-8 space-y-6 mx-auto">
       <div className="flex items-center space-x-4 cursor-pointer hover:text-gray-700 transition-colors">
@@ -34,9 +55,20 @@ const SidebarBottom: React.FC = () => {
         <span className="text-md font-medium">Help & Support</span>
       </div>
 
-      <div className="flex items-center space-x-4 cursor-pointer hover:text-gray-700 transition-colors">
+      <div
+        className="flex items-center space-x-4 cursor-pointer hover:text-gray-700 transition-colors"
+        onClick={() => navigate(settingsPath)}
+      >
         <Settings size={22} />
         <span className="text-md font-medium">Settings</span>
+      </div>
+
+      <div
+        className="flex items-center space-x-4 cursor-pointer hover:text-red-600 transition-colors"
+        onClick={handleLogout}
+      >
+        <LogOut size={22} />
+        <span className="text-md font-medium">{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
       </div>
     </div>
   );
@@ -204,7 +236,7 @@ const Sidebar: React.FC<SideBarProp> = ({ Buyer = false, Seller = false }) => {
       </div>
 
       {/* Bottom Section */}
-      <SidebarBottom />
+      <SidebarBottom settingsPath={Buyer ? '/buyer/settings' : '/seller/settings'} />
     </aside>
   );
 };

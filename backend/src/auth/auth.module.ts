@@ -1,19 +1,21 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { UsersModule } from 'src/users/users.module';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { User, UserSchema } from 'src/users/user.schema';
 import { MongooseModule } from '@nestjs/mongoose/dist/mongoose.module';
+import { MailModule } from 'src/mail/mail.module';
 
 @Module({
   imports: [
     JwtModule.register({
       secret: process.env.JWT_SECRET_KEY || '',
-      signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '3600' },
+      signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '86400' },
     }),
-    UsersModule,
-     MongooseModule.forFeature([{ name: User.name, schema: UserSchema}]),
+    forwardRef(() => UsersModule),
+    MailModule,
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema}]),
   ],
   providers: [AuthService],
   controllers: [AuthController],

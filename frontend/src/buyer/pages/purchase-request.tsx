@@ -443,7 +443,12 @@ export const PurchaseRequest = () => {
             const response = await createTradeRequest(tradeRequest);
 
             if (response.statusCode === 201) {
-                    navigate('/buyer/purchase-request-success');
+                    navigate('/buyer/purchase-request-success', {
+                        state: {
+                            productId: product?.id,
+                            sellerName: product?.sellerName || product?.companyName // Seller info for display
+                        }
+                    });
             } else {
                 setNotification({ 
                     type: 'error', 

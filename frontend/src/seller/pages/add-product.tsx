@@ -6,7 +6,7 @@ import Price from "../components/price";
 import Tags from "../components/tags";
 import { Incoterms } from '../../components/incoterms';
 import AddProductTerms from '../components/product-terms';
-import ProgressBar from "../../components/PurchaseRequestProgress";
+import AddProductProgress from "../../components/AddProductProgress";
 import '../css/product.css';
 import { createProduct, CreateProductData } from '../../services/products.service';
 import { TryBreyusCoreHeader } from "../../components/Header";
@@ -30,7 +30,10 @@ export const AddProduct = () => {
     description: '',
     detailedDescription: '',
     category: '',
-    hsnCode: ''
+    hsnCode: '',
+    application: '',
+    environmentalImpact: '',
+    qualityAssurance: ''
   });
 
   // media state
@@ -97,6 +100,14 @@ export const AddProduct = () => {
       case 0: // Product Information
         if (!productInformation.name) {
           setErrorMessage("Name is required.");
+          return false;
+        }
+        if (!productInformation.stock) {
+          setErrorMessage("Stock is required.");
+          return false;
+        }
+        if (!productInformation.stockUnit) {
+          setErrorMessage("Stock Unit is required.");
           return false;
         }
         if (!productInformation.moq) {
@@ -291,55 +302,62 @@ export const AddProduct = () => {
   }
 
   return (
-
     <>
       <TryBreyusCoreHeader />
-      <div className={`relative w-full ${(step < 4) ? 'my-16' : ''}`}>
-        {step < 4 && <ProgressBar
-          className="absolute left-1/2 -translate-y-1/2 -translate-x-1/2 top-0 z-20"
-          step1="Product Info"
-          step2="Media"
-          step3="Pricing"
-          step4="Tags"
-          currentStep={step}
-        />}
-        <div className={`${(step < 5) ? 'w-[60%] mx-auto translate-y-6 border border-gray-300 rounded-lg px-6 pt-16 pb-6' : 'mx-8 mb-8'}`}>
-          {renderStepContent()}
+      <div className="min-h-screen bg-gray-50 py-8 px-4">
+        <div className="max-w-4xl mx-auto">
+          {/* Progress Header - Show for first 4 steps */}
+          {step < 4 && (
+            <div className="mb-6">
+              <AddProductProgress currentStep={step} totalSteps={6} />
+            </div>
+          )}
 
-          {/* Render errors for each step */}
-          <div className="text-md text-red-600 "> {errorMessage} </div>
+          {/* Form Container */}
+          <div className={`${step < 4 ? 'bg-white rounded-xl border border-gray-200 shadow-sm p-8' : step === 4 ? 'bg-white rounded-xl border border-gray-200 shadow-sm p-8 max-w-4xl mx-auto' : ''}`}>
+            {renderStepContent()}
 
-          <div className="mt-8 flex justify-between">
-            {!(step === 0) && <button
-              onClick={() => setStep((prev) => Math.max(prev - 1, 0))}
-              type="button"
-              className="product-btn !bg-[black]"
-              disabled={isSubmitting}
-            >
-              Prev
-            </button>}
-            <button
-              onClick={() => {
-                if (step < 5) {
-                  if (validateStep()) {
-                    setStep((prev) => Math.min(prev + 1, 5));
+            {/* Error Message */}
+            {errorMessage && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                {errorMessage}
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="mt-8 flex justify-between items-center">
+              {step > 0 ? (
+                <button
+                  onClick={() => setStep((prev) => Math.max(prev - 1, 0))}
+                  type="button"
+                  className="px-6 py-2.5 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+                  disabled={isSubmitting}
+                >
+                  Prev
+                </button>
+              ) : (
+                <div />
+              )}
+              <button
+                onClick={() => {
+                  if (step < 5) {
+                    if (validateStep()) {
+                      setStep((prev) => Math.min(prev + 1, 5));
+                    }
+                  } else {
+                    handleSubmit();
                   }
-                } else {
-                  handleSubmit();
-                }
-              }}
-              type="button"
-              className="product-btn ml-auto"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Processing...' : (step < 5) ? "Next" : "Publish Product"}
-            </button>
+                }}
+                type="button"
+                className="px-6 py-2.5 bg-[#C4A962] text-white rounded-lg font-medium hover:bg-[#B39952] transition-colors disabled:opacity-50"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Processing...' : step === 4 ? 'Proceed to INCO-TERMS' : step < 5 ? 'Next' : 'Publish Product'}
+              </button>
+            </div>
           </div>
         </div>
-
       </div>
-
     </>
-
   );
 };

@@ -46,8 +46,8 @@ export class OnboardingService {
         const { email, otp } = verifyEmailOtpDto;
 
 
-        if (!this.mailService.validateOtp(email as string, otp as string)) {
-            throw new HttpException('Invalid OTP', HttpStatus.BAD_REQUEST);
+        if (!(await this.mailService.validateOtp(email as string, otp as string))) {
+            throw new HttpException('Invalid or expired OTP. Please check your code and try again.', HttpStatus.BAD_REQUEST);
         }
 
 
@@ -60,7 +60,7 @@ export class OnboardingService {
 
         if (user.company && typeof user.company === 'object' && 'isOnboardingCompleted' in user.company) {
             const companyOnboardingStatus = (user.company as any).isOnboardingCompleted;
-            const onboardingToken = this.authService.generateOnboardingToken({ userId: user._id as string });
+            const onboardingToken = this.authService.generateOnboardingToken({ userId: user._id.toString() });
             return { token: onboardingToken, onboardingStatus: companyOnboardingStatus };
         }
 
@@ -166,14 +166,18 @@ export class OnboardingService {
             const isPasswordValid = await bcrypt.compare(password, user.password);
 
             if (!isPasswordValid) {
-                throw new HttpException("Invalid Password", HttpStatus.BAD_REQUEST);
+                throw new HttpException("Incorrect password. Please try again.", HttpStatus.BAD_REQUEST);
             }
 
             const JwtToken = this.authService.generateAccountToken(userId as string, user.company._id as unknown as string);
             return JwtToken;
 
         } catch (e) {
-            throw new HttpException(e, HttpStatus.BAD_REQUEST);
+            // Re-throw HttpException as-is, otherwise wrap the error
+            if (e instanceof HttpException) {
+                throw e;
+            }
+            throw new HttpException(e.message || 'Failed to continue onboarding.', HttpStatus.BAD_REQUEST);
         }
     }
 

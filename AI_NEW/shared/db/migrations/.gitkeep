@@ -1,0 +1,14 @@
+# Database Migrations
+
+Place versioned migration files here:
+- 001_initial_schema.sql
+- 002_add_indexes.sql
+- etc.
+
+Migration naming convention:
+{sequence}_{description}.sql
+
+Example:
+001_initial_schema.sql
+002_add_embedding_indexes.sql
+003_add_trade_links_table.sql

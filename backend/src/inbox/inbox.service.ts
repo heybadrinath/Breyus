@@ -48,73 +48,109 @@ export class InboxService {
     }
     const participants = [senderId, receiverId];
 
-    const conversation = (await this.conversationModel.create({...createConversationDto, participants}));
+    const conversation = (await this.conversationModel.create({ ...createConversationDto, participants }));
     return conversation._id as string;
   }
 
   async getConversationsByCompanyId(companyId: string): Promise<any[]> {
-  const conversations = await this.conversationModel
-    .find({ participants: companyId })
-    .populate('product', 'name')
-    .populate({
-      path: 'participants',
-      select: 'companyName',
-    })
-    .populate({
-      path: 'messages',
-      options: { sort: { createdAt: -1 } }, // get all messages, sorted
-    })
-    .exec();
+    const conversations = await this.conversationModel.aggregate([
+      // 1. Match conversations where the company is a participant
+      { $match: { participants: new Types.ObjectId(companyId) } },
 
-  return conversations.map(conversation => {
-    // Map participants to array of { id, companyName }
-    const participants = Array.isArray(conversation.participants)
-      ? conversation.participants.map((p: any) => ({
-          id: p._id ? p._id.toString() : p.toString(),
-          companyName: p.companyName || '',
-        }))
-      : [];
+      // 2. Lookup Product details
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'product',
+          foreignField: '_id',
+          as: 'product'
+        }
+      },
+      { $unwind: { path: '$product', preserveNullAndEmptyArrays: true } },
 
-    // Find the other participant's name (not the current user)
-    const otherParticipant = participants.find(p => p.id !== companyId);
-    const companyName = otherParticipant ? otherParticipant.companyName : '';
+      // 3. Lookup Participants details
+      {
+        $lookup: {
+          from: 'companies',
+          localField: 'participants',
+          foreignField: '_id',
+          as: 'participants'
+        }
+      },
 
-    // Get product name
-    const productName =
-      conversation.product && typeof conversation.product === 'object' && 'name' in conversation.product
-        ? conversation.product.name
-        : null;
+      // 4. Lookup Unread Count (Count messages where readBy does NOT include companyId)
+      {
+        $lookup: {
+          from: 'messages',
+          let: { msgIds: '$messages' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $in: ['$_id', '$$msgIds'] },
+                readBy: { $ne: new Types.ObjectId(companyId) }
+              }
+            },
+            { $count: 'count' }
+          ],
+          as: 'unreadCountArr'
+        }
+      },
 
-    // Calculate unread count (assuming messages have a readBy array of company IDs)
-    const unreadCount = Array.isArray(conversation.messages)
-      ? conversation.messages.filter(
-          (msg: any) => !msg.readBy || !msg.readBy.includes(companyId)
-        ).length
-      : 0;
+      // 5. Lookup Last Message (Get the single most recent message)
+      {
+        $lookup: {
+          from: 'messages',
+          let: { msgIds: '$messages' },
+          pipeline: [
+            { $match: { $expr: { $in: ['$_id', '$$msgIds'] } } },
+            { $sort: { createdAt: -1 } },
+            { $limit: 1 }
+          ],
+          as: 'lastMessageArr'
+        }
+      },
 
-    // Safely get last message time and text
-    let lastMessageTime: string | null = null;
-    let lastMessage: string | null = null;
-    if (Array.isArray(conversation.messages) && conversation.messages.length > 0) {
-      const firstMsg = conversation.messages[0];
-      if (firstMsg && typeof firstMsg === 'object') {
-        lastMessageTime = (firstMsg as any).createdAt ? String((firstMsg as any).createdAt) : null;
-        lastMessage = (firstMsg as any).text ? String((firstMsg as any).text) : null;
+      // 6. Project/Format the result
+      {
+        $project: {
+          _id: 1,
+          productName: '$product.name',
+          participants: {
+            $map: {
+              input: '$participants',
+              as: 'p',
+              in: {
+                id: { $toString: '$$p._id' },
+                companyName: '$$p.companyName' // Assuming 'companyName' field exists on Company
+              }
+            }
+          },
+          unreadCount: {
+            $ifNull: [{ $arrayElemAt: ['$unreadCountArr.count', 0] }, 0]
+          },
+          lastMessageData: { $arrayElemAt: ['$lastMessageArr', 0] }
+        }
       }
-    }
+    ]).exec();
 
-    return {
-      productName,
-      companyName,
-      unreadCount,
-      lastMessageTime,
-      lastMessage,
-      id: conversation._id,
-      companyIds: participants.map(p => p.id),
-      participantNames: participants.map(p => p.companyName),
-    };
-  });
-}
+
+    return conversations.map(conv => {
+      // Find the other participant's name
+      const otherParticipant = conv.participants.find((p: any) => p.id !== companyId);
+      const companyName = otherParticipant ? otherParticipant.companyName : '';
+
+      return {
+        id: conv._id.toString(),
+        productName: conv.productName || '',
+        companyName,
+        participantNames: conv.participants.map((p: any) => p.companyName),
+        companyIds: conv.participants.map((p: any) => p.id),
+        unreadCount: conv.unreadCount,
+        lastMessage: conv.lastMessageData ? conv.lastMessageData.text : null,
+        lastMessageTime: conv.lastMessageData ? conv.lastMessageData.createdAt : null,
+      };
+    });
+  }
 
   async getMessages(conversationId: string, companyId: string): Promise<any[]> {
     const conversation = await this.conversationModel.findById(conversationId)
@@ -184,5 +220,9 @@ export class InboxService {
       { _id: { $in: conversation.messages }, readBy: { $ne: companyId } },
       { $addToSet: { readBy: companyId } }
     ).exec();
+  }
+
+  async getUsersByCompany(companyId: string): Promise<User[]> {
+    return this.userModel.find({ company: companyId }).exec();
   }
 }

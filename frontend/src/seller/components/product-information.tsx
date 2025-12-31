@@ -1,6 +1,5 @@
-import { Search } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { SearchableInputHSN } from "./searchable_input_hsn";
+import { ChevronDown } from "lucide-react";
 
 interface ProductInformationProps {
   productInformation: {
@@ -13,6 +12,9 @@ interface ProductInformationProps {
     detailedDescription: string;
     category: string;
     hsnCode: string;
+    application: string;
+    environmentalImpact: string;
+    qualityAssurance: string;
   };
   setProductInformation: React.Dispatch<React.SetStateAction<{
     name: string;
@@ -24,32 +26,58 @@ interface ProductInformationProps {
     detailedDescription: string;
     category: string;
     hsnCode: string;
+    application: string;
+    environmentalImpact: string;
+    qualityAssurance: string;
   }>>;
 }
 
-// Product Information Component
-const ProductInformation: React.FC<ProductInformationProps> = ({ productInformation, setProductInformation }) => {
+interface HSNRESULTS {
+  _id: string;
+  hsn_code: string;
+  description: string;
+  category: string;
+}
 
+const UNIT_OPTIONS = [
+  { value: "", label: "Unit" },
+  { value: "kg", label: "KG" },
+  { value: "pieces", label: "Pieces" },
+  { value: "boxes", label: "Boxes" },
+  { value: "cartons", label: "Cartons" },
+  { value: "grams", label: "Grams" },
+  { value: "liters", label: "Liters" },
+  { value: "tons", label: "Tons" },
+  { value: "meters", label: "Meters" },
+  { value: "sets", label: "Sets" },
+  { value: "dozens", label: "Dozens" },
+  { value: "pallets", label: "Pallets" },
+];
 
-  interface HSNRESULTS {
-    _id: string;
-    hsn_code: string;
-    description: string;
-    category: string;
-  }
-  const [hsnQuery, setHsnQuery] = useState<string>(''); // Search query state
-  const [hsnResults, setHsnResults] = useState<HSNRESULTS[]>([]); // Results state
-  const [hsnLoading, setHsnLoading] = useState<boolean>(false); // Loading state
-  const [isHsnSelected, setIsHsnSelected] = useState<boolean>(false); // Selection state
+const CATEGORY_OPTIONS = [
+  { value: "", label: "Select Category" },
+  { value: "oils", label: "Oils" },
+  { value: "chemicals", label: "Chemicals" },
+  { value: "metals", label: "Metals" },
+  { value: "agriculture", label: "Agriculture" },
+  { value: "textiles", label: "Textiles" },
+  { value: "electronics", label: "Electronics" },
+  { value: "machinery", label: "Machinery" },
+  { value: "food", label: "Food Products" },
+  { value: "pharmaceuticals", label: "Pharmaceuticals" },
+  { value: "plastics", label: "Plastics" },
+  { value: "other", label: "Other" },
+];
 
-
-  const [hsnDetails, setHsnDetails] = React.useState<null | {
-    hsn_code: string;
-    description: string;
-    gst_rate: string;
-    category: string;
-    remarks: string;
-  }>(null);
+const ProductInformation: React.FC<ProductInformationProps> = ({
+  productInformation,
+  setProductInformation
+}) => {
+  const [hsnQuery, setHsnQuery] = useState<string>(productInformation.hsnCode || '');
+  const [hsnResults, setHsnResults] = useState<HSNRESULTS[]>([]);
+  const [hsnLoading, setHsnLoading] = useState<boolean>(false);
+  const [isHsnSelected, setIsHsnSelected] = useState<boolean>(!!productInformation.hsnCode);
+  const [showHsnDropdown, setShowHsnDropdown] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -57,272 +85,283 @@ const ProductInformation: React.FC<ProductInformationProps> = ({ productInformat
       ...prev,
       [name]: value
     }));
-
-
   };
 
-
-  // Debounced search (effect hook)
+  // Debounced HSN search
   useEffect(() => {
-    if (!hsnQuery) {
+    if (!hsnQuery || isHsnSelected) {
       setHsnResults([]);
-      return;
-    }
-
-    if (isHsnSelected) {
-      setHsnResults([]);
-      setIsHsnSelected(false);
       return;
     }
 
     const timer = setTimeout(async () => {
       setHsnLoading(true);
       try {
-        const host = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+        const host = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
         const response = await fetch(`${host}/products/hsn?q=${hsnQuery}`, { credentials: 'include' });
-        if (!response.ok) {
-          throw new Error('Failed to fetch data');
-        }
+        if (!response.ok) throw new Error('Failed to fetch data');
         const data: HSNRESULTS[] = await response.json();
         setHsnResults(data);
+        setShowHsnDropdown(true);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error fetching HSN data:', error);
       } finally {
         setHsnLoading(false);
       }
-    }, 1600); // Debounce delay in ms
+    }, 500);
 
-    return () => clearTimeout(timer); // Clean up timer on component unmount
-  }, [hsnQuery]);
+    return () => clearTimeout(timer);
+  }, [hsnQuery, isHsnSelected]);
 
   const handleHsnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setHsnQuery(value);
-    // Store the search query in productInformation to persist it
+    setIsHsnSelected(false);
+    setShowHsnDropdown(true);
+  };
+
+  const handleHsnSelect = (item: HSNRESULTS) => {
+    setHsnQuery(item.hsn_code);
+    setHsnResults([]);
+    setIsHsnSelected(true);
+    setShowHsnDropdown(false);
     setProductInformation(prev => ({
       ...prev,
-      hsnSearchQuery: value
+      hsnCode: item.hsn_code,
+      category: item.category,
+      description: prev.description || item.description
     }));
   };
 
-  const handleSelect = (item: HSNRESULTS) => {
-    // Handle item selection
-    setHsnQuery(item.hsn_code); // Optionally update input with selected HSN code
-    setHsnResults([]);
-    setIsHsnSelected(true);
-    setProductInformation({
-      ...productInformation,
-      hsnCode: item.hsn_code,
-      category: item.category,
-      description: productInformation.description || item.description
-    });
-
-  };
-
-
-
   return (
-    <div>
-      <div className="flex flex-col h-full">
-        <h1 className="section-title font-bold mb-6 text-2xl"> Product Information</h1>
+    <div className="space-y-6">
+      {/* Title */}
+      <h1 className="text-2xl font-bold text-gray-900">Product Information</h1>
 
-
-        {/* up section  */}
-        <div className="grid grid-cols-3 gap-6 mb-6">
-          <div className="form-field">
-            <input
-              placeholder="Product Name"
-              className="w-full"
-              type="text"
-              name="name"
-              value={productInformation.name}
-              onChange={handleChange}
-            />
-          </div>
-
-        {/*  stock  */}
-          <div className="form-field flex flex-row border-2 rounded-lg">
-            <input
-              type="text"
-              placeholder="Stock"
-              className="w-full !border-0 !rounded-r-none"
-              value={productInformation.stock}
-              name="stock"
-              onChange={handleChange}
-            />
-            <select
-              className="!w-fit bg-transparent !rounded-l-none !px-2 !border-0"
-              name="stockUnit"
-              value={productInformation.stockUnit}
-              onChange={handleChange}
-            >
-              <option disabled value={""}>Unit</option>
-              <option value="pieces">Pieces</option>
-              <option value="boxes">Boxes</option>
-              <option value="cartons">Cartons</option>
-              <option value="kg">Kilograms (kg)</option>
-              <option value="grams">Grams (g)</option>
-              <option value="liters">Liters (L)</option>
-              <option value="milliliters">Milliliters (mL)</option>
-              <option value="meters">Meters (m)</option>
-              <option value="centimeters">Centimeters (cm)</option>
-              <option value="inches">Inches (in)</option>
-              <option value="yards">Yards (yd)</option>
-              <option value="sets">Sets</option>
-              <option value="dozens">Dozens</option>
-              <option value="pallets">Pallets</option>
-              <option value="square_meters">Square Meters (m²)</option>
-              <option value="square_feet">Square Feet (ft²)</option>
-              <option value="cubic_meters">Cubic Meters (m³)</option>
-              <option value="cubic_feet">Cubic Feet (ft³)</option>
-              <option value="tons">Tons</option>
-              <option value="gallons">Gallons</option>
-              <option value="pounds">Pounds (lbs)</option>
-              <option value="cubic_inches">Cubic Inches (in³)</option>
-              <option value="bottles">Bottles</option>
-              <option value="packs">Packs</option>
-              <option value="bags">Bags</option>
-              <option value="sheets">Sheets</option>
-              <option value="rolls">Rolls</option>
-              <option value="spools">Spools</option>
-              <option value="pairs">Pairs</option>
-              <option value="containers">Containers</option>
-              <option value="pieces_per_box">Pieces per Box</option>
-              <option value="feet">Feet (ft)</option>
-              <option value="cubic_yards">Cubic Yards (yd³)</option>
-            </select>
-          </div>
-
-          {/* moq */}
-          <div className="form-field flex flex-row border-2 rounded-lg">
-            <input
-              type="text"
-              placeholder="Minimum Order Quantity"
-              className="w-full !border-0 !rounded-r-none"
-              value={productInformation.moq}
-              name="moq"
-              onChange={handleChange}
-            />
-            <select
-              className="!w-fit bg-transparent !rounded-l-none !px-2 !border-0"
-              name="moqUnit"
-              value={productInformation.moqUnit}
-              onChange={handleChange}
-            >
-              <option disabled value={""}>Unit</option>
-              <option value="pieces">Pieces</option>
-              <option value="boxes">Boxes</option>
-              <option value="cartons">Cartons</option>
-              <option value="kg">Kilograms (kg)</option>
-              <option value="grams">Grams (g)</option>
-              <option value="liters">Liters (L)</option>
-              <option value="milliliters">Milliliters (mL)</option>
-              <option value="meters">Meters (m)</option>
-              <option value="centimeters">Centimeters (cm)</option>
-              <option value="inches">Inches (in)</option>
-              <option value="yards">Yards (yd)</option>
-              <option value="sets">Sets</option>
-              <option value="dozens">Dozens</option>
-              <option value="pallets">Pallets</option>
-              <option value="square_meters">Square Meters (m²)</option>
-              <option value="square_feet">Square Feet (ft²)</option>
-              <option value="cubic_meters">Cubic Meters (m³)</option>
-              <option value="cubic_feet">Cubic Feet (ft³)</option>
-              <option value="tons">Tons</option>
-              <option value="gallons">Gallons</option>
-              <option value="pounds">Pounds (lbs)</option>
-              <option value="cubic_inches">Cubic Inches (in³)</option>
-              <option value="bottles">Bottles</option>
-              <option value="packs">Packs</option>
-              <option value="bags">Bags</option>
-              <option value="sheets">Sheets</option>
-              <option value="rolls">Rolls</option>
-              <option value="spools">Spools</option>
-              <option value="pairs">Pairs</option>
-              <option value="containers">Containers</option>
-              <option value="pieces_per_box">Pieces per Box</option>
-              <option value="feet">Feet (ft)</option>
-              <option value="cubic_yards">Cubic Yards (yd³)</option>
-            </select>
-          </div>
+      {/* Row 1: Name, Stock, and MOQ */}
+      <div className="grid grid-cols-3 gap-6">
+        {/* Name */}
+        <div>
+          <input
+            type="text"
+            name="name"
+            placeholder="Name"
+            value={productInformation.name}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C4A962] focus:border-transparent outline-none transition-all"
+          />
         </div>
 
+        {/* Stock with Unit */}
+        <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+          <input
+            type="text"
+            name="stock"
+            placeholder="Stock"
+            value={productInformation.stock}
+            onChange={handleChange}
+            className="flex-1 px-4 py-3 border-0 focus:ring-2 focus:ring-[#C4A962] outline-none"
+          />
+          <select
+            name="stockUnit"
+            value={productInformation.stockUnit}
+            onChange={handleChange}
+            className="px-3 py-3 bg-gray-50 border-l border-gray-300 text-gray-600 focus:outline-none cursor-pointer"
+          >
+            {UNIT_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value} disabled={opt.value === ""}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
+        {/* MOQ with Unit */}
+        <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+          <input
+            type="text"
+            name="moq"
+            placeholder="MOQ"
+            value={productInformation.moq}
+            onChange={handleChange}
+            className="flex-1 px-4 py-3 border-0 focus:ring-2 focus:ring-[#C4A962] outline-none"
+          />
+          <select
+            name="moqUnit"
+            value={productInformation.moqUnit}
+            onChange={handleChange}
+            className="px-3 py-3 bg-gray-50 border-l border-gray-300 text-gray-600 focus:outline-none cursor-pointer"
+          >
+            {UNIT_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value} disabled={opt.value === ""}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
-
-
-
-
-
-        {/* down secition  */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-          <div className="product-card flex flex-col">
-            <h2 className="text-lg font-semibold mb-3">Product Details</h2>
-
-            <div className="form-field">
-              {/* Searchable HSN Input */}
-              <>
-                <input
-                  type="text"
-                  value={hsnQuery}
-                  onChange={handleHsnChange}
-                  placeholder="Search your HSN CODE by HSN or description or name"
-                />
-                {hsnLoading && <p>Loading...</p>}
-                {hsnResults.length > 0 && !isHsnSelected && (
-                  <ul className="w-fit bg-white border border-gray-300 rounded-md px-4 h-[300px] overflow-y-scroll">
-                    {hsnResults.map((item) => (
-                      <li
-                        key={item._id}
-                        onClick={() => handleSelect(item)}
-                        className="py-2 px-4 my-3 hover:bg-gray-100 cursor-pointer"
-                      >
-                        <strong>{item.hsn_code}</strong> - {item.description} - ({item.category})
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </>
-              <p className="text-[10px] text-gray-500 mt-1">(HSN) Harmonized System Nomenclature code for product classification</p>
-            </div>
-
-            <div className="form-field mt-4">
-
-              <div className={`w-full ${isHsnSelected ? "text-gray-400" : "text-black"}`}>
-                {productInformation.category || "category"}
-              </div>
-            </div>
-
-
-          </div>
-
-
-          <div className="product-card">
-            <h2 className="text-lg font-semibold mb-3">Description</h2>
-            <div className="mb-4">
+      {/* Row 2: Description (left) and HSN/Category (right) */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Description Section */}
+        <div className="space-y-0">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+          <div className="border border-gray-300 rounded-lg overflow-hidden">
+            {/* Precise Description */}
+            <div className="relative">
               <input
-                placeholder="Product summary (short description)"
-                className="w-full border border-gray-200 rounded-t-lg px-3 py-2"
                 type="text"
                 name="description"
+                placeholder="Precise Description"
                 value={productInformation.description}
                 onChange={handleChange}
+                maxLength={30}
+                className="w-full px-4 py-3 border-0 border-b border-gray-200 focus:ring-2 focus:ring-[#C4A962] outline-none"
               />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                {productInformation.description.length}/30
+              </span>
             </div>
-            <textarea
-              placeholder="Detailed Description - Include product specifications, features, and benefits"
-              className="w-full h-[180px] border border-gray-200 rounded-b-lg px-3 py-2"
-              name="detailedDescription"
-              value={productInformation.detailedDescription}
-              onChange={handleChange}
-            />
+            {/* Detailed Description */}
+            <div className="relative">
+              <textarea
+                name="detailedDescription"
+                placeholder="Detailed Description"
+                value={productInformation.detailedDescription}
+                onChange={handleChange}
+                maxLength={500}
+                rows={4}
+                className="w-full px-4 py-3 border-0 focus:ring-2 focus:ring-[#C4A962] outline-none resize-none"
+              />
+              <span className="absolute right-3 bottom-3 text-xs text-gray-400">
+                {productInformation.detailedDescription.length}/500
+              </span>
+            </div>
           </div>
-
-
         </div>
 
+        {/* HSN Code and Category */}
+        <div className="space-y-4">
+          {/* HSN Code */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">HSN Code:</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={hsnQuery}
+                onChange={handleHsnChange}
+                onFocus={() => !isHsnSelected && setShowHsnDropdown(true)}
+                placeholder="Search HSN code..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C4A962] focus:border-transparent outline-none pr-10"
+              />
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
 
+              {/* HSN Dropdown */}
+              {showHsnDropdown && hsnResults.length > 0 && (
+                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {hsnLoading ? (
+                    <div className="px-4 py-3 text-gray-500">Loading...</div>
+                  ) : (
+                    hsnResults.map((item) => (
+                      <div
+                        key={item._id}
+                        onClick={() => handleHsnSelect(item)}
+                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0"
+                      >
+                        <span className="font-medium text-gray-900">{item.hsn_code}</span>
+                        <span className="text-gray-500 text-sm ml-2">- {item.description}</span>
+                        <span className="text-gray-400 text-xs ml-2">({item.category})</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Category */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+            <div className="relative">
+              <select
+                name="category"
+                value={productInformation.category}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C4A962] focus:border-transparent outline-none appearance-none cursor-pointer bg-white"
+              >
+                {CATEGORY_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value} disabled={opt.value === ""}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 3: Application and Environmental Impact */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Application */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Application</label>
+          <div className="relative">
+            <input
+              type="text"
+              name="application"
+              placeholder="Practical application value"
+              value={productInformation.application}
+              onChange={handleChange}
+              maxLength={30}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C4A962] focus:border-transparent outline-none"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+              {productInformation.application.length}/30
+            </span>
+          </div>
+        </div>
+
+        {/* Environmental Impact */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Environmental Impact</label>
+          <div className="relative">
+            <input
+              type="text"
+              name="environmentalImpact"
+              placeholder="Effective Impact"
+              value={productInformation.environmentalImpact}
+              onChange={handleChange}
+              maxLength={30}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C4A962] focus:border-transparent outline-none"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+              {productInformation.environmentalImpact.length}/30
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 4: Quality Assurance */}
+      <div className="grid grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Quality Assurance</label>
+          <div className="relative">
+            <input
+              type="text"
+              name="qualityAssurance"
+              placeholder="Effective Quality"
+              value={productInformation.qualityAssurance}
+              onChange={handleChange}
+              maxLength={30}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C4A962] focus:border-transparent outline-none"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+              {productInformation.qualityAssurance.length}/30
+            </span>
+          </div>
+        </div>
+        <div /> {/* Empty column for balance */}
       </div>
     </div>
   );

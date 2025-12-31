@@ -1,7 +1,7 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Company, DeliveryAddress } from './company.schema';
+import { Company, DeliveryAddress, BankInfo, TradeDetails } from './company.schema';
 
 @Injectable()
 export class CompanyService {
@@ -88,6 +88,94 @@ export class CompanyService {
                 throw error;
             }
             throw new HttpException('Failed to delete delivery address', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async getProfile(companyId: string): Promise<Partial<Company>> {
+        try {
+            const company = await this.companyModel.findById(companyId);
+            if (!company) {
+                throw new HttpException('Company not found', HttpStatus.NOT_FOUND);
+            }
+
+            return {
+                companyName: company.companyName,
+                companyAddress: company.companyAddress,
+                companyMobile: company.companyMobile,
+                taxId: company.taxId,
+                founderName: company.founderName,
+                websiteUrl: company.websiteUrl,
+                role: company.role,
+                tradeType: company.tradeType,
+                mainLineBusiness: company.mainLineBusiness,
+                // New fields
+                bankInfo: company.bankInfo || {},
+                tradeDetails: company.tradeDetails || {},
+                whatsappContact: company.whatsappContact,
+                primaryEmail: company.primaryEmail,
+                alternativeSalesEmail: company.alternativeSalesEmail,
+            };
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException('Failed to get company profile', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async updateProfile(companyId: string, profileData: Partial<Company>): Promise<Partial<Company>> {
+        try {
+            const company = await this.companyModel.findById(companyId);
+            if (!company) {
+                throw new HttpException('Company not found', HttpStatus.NOT_FOUND);
+            }
+
+            // Only allow updating specific fields
+            const allowedFields = [
+                'companyName',
+                'companyAddress',
+                'companyMobile',
+                'taxId',
+                'founderName',
+                'websiteUrl',
+                // New fields
+                'bankInfo',
+                'tradeDetails',
+                'whatsappContact',
+                'primaryEmail',
+                'alternativeSalesEmail',
+            ];
+
+            for (const field of allowedFields) {
+                if (profileData[field] !== undefined) {
+                    company[field] = profileData[field];
+                }
+            }
+
+            await company.save();
+
+            return {
+                companyName: company.companyName,
+                companyAddress: company.companyAddress,
+                companyMobile: company.companyMobile,
+                taxId: company.taxId,
+                founderName: company.founderName,
+                websiteUrl: company.websiteUrl,
+                role: company.role,
+                tradeType: company.tradeType,
+                mainLineBusiness: company.mainLineBusiness,
+                // New fields
+                bankInfo: company.bankInfo || {},
+                tradeDetails: company.tradeDetails || {},
+                whatsappContact: company.whatsappContact,
+                primaryEmail: company.primaryEmail,
+                alternativeSalesEmail: company.alternativeSalesEmail,
+            };
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException('Failed to update company profile', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 } 

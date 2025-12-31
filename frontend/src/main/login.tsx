@@ -70,7 +70,9 @@ const Login: React.FC = () => {
       setIsOtpSent(true);
       setResendTimer(300);
     } catch (e: any) {
-      setError(e?.response?.data?.message || "Login failed. Please try again.");
+      // Use backend error message if available, otherwise show specific fallback
+      const errorMessage = e?.message || e?.response?.data?.message;
+      setError(errorMessage || "Unable to send OTP. Please check your credentials and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -89,10 +91,10 @@ const Login: React.FC = () => {
       } else {
         navigate('/select-role');
       }
-      // navigate('/');
-      // console.log("OTP Validation Response: ", response.role);
     } catch (e: any) {
-      setError(e?.response?.data?.message || "Login failed. Please try again. ");
+      // Use backend error message if available, otherwise show specific fallback
+      const errorMessage = e?.message || e?.response?.data?.message;
+      setError(errorMessage || "Invalid or expired OTP. Please check your code and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -150,7 +152,7 @@ const Login: React.FC = () => {
               {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
 
               <div className="text-right text-sm mt-2">
-                <Link to="/buyer/forgot-password" className="text-gray-500 hover:underline">
+                <Link to="/forgot-password" className="text-gray-500 hover:underline">
                   Forgot Password?
                 </Link>
               </div>
@@ -201,7 +203,7 @@ const Login: React.FC = () => {
                 className={`mt-4 w-full bg-gray-600 text-white py-3 rounded-full text-lg font-semibold transition-all duration-300 hover:bg-gray-700 shadow-md ${resendTimer > 0 ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                 disabled={resendTimer > 0}
-              // onClick={handleSendOtp}
+                onClick={handlelogin}
               >
                 {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : "Resend OTP"}
               </button>

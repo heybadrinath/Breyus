@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import InboxSidebar from '../../components/InboxSidebar';
 import InboxConversation from '../../components/InboxConversation';
 import { ConversationProps, Message } from '../../types/inboxTypes';
 import { SearchHeaderLight } from '../../components/Header';
 import { getConversation, getMessages, sendMessage, markMessagesAsRead, getCurrentCompanyId } from '../../services/inbox.service';
+import socketService from '../../services/socket.service';
 
 const SellerInbox = () => {
     const [conversations, setConversations] = useState<ConversationProps[]>([]);
@@ -13,6 +14,9 @@ const SellerInbox = () => {
     const [unreadCount, setUnreadCount] = useState<number>(0);
     const [currentCompanyId, setCurrentCompanyId] = useState<string>('');
     const [selectedConversation, setSelectedConversation] = useState<ConversationProps | null>(null);
+    const [isTyping, setIsTyping] = useState<boolean>(false);
+    const [typingCompanyId, setTypingCompanyId] = useState<string | null>(null);
+    const previousConversationId = useRef<string | null>(null);
 
     // Fetch conversations
     const fetchConversations = useCallback(async () => {
@@ -41,7 +45,7 @@ const SellerInbox = () => {
     }, [fetchConversations]);
 
     useEffect(() => {
-        // Fetch the current user's companyId on mount
+        // Fetch the current user's companyId on mount and connect socket
         const fetchCompanyId = async () => {
             const res = await getCurrentCompanyId();
             if (res.status === 'success') {
@@ -49,16 +53,75 @@ const SellerInbox = () => {
             }
         };
         fetchCompanyId();
+
+        // Connect to WebSocket
+        socketService.connect();
+
+        return () => {
+            // Cleanup on unmount
+            socketService.disconnect();
+        };
     }, []);
 
-    // Fetch messages for selected conversation
+    // Setup WebSocket event listeners
     useEffect(() => {
-        let interval: NodeJS.Timeout | null = null;
+        if (!currentCompanyId) return;
+
+        // Handle incoming messages
+        const handleMessageReceived = (data: { conversationId: string; message: any }) => {
+            if (data.conversationId === selectedConversationId) {
+                setMessages(prev => {
+                    // Check if message already exists
+                    const exists = prev.some(m => m._id === data.message._id);
+                    if (exists) return prev;
+                    return [...prev, {
+                        ...data.message,
+                        isSender: getId(data.message.sender) === currentCompanyId,
+                    }];
+                });
+            }
+            // Update conversation list
+            fetchConversations();
+        };
+
+        // Handle read receipts
+        const handleMessagesRead = (data: { conversationId: string; companyId: string }) => {
+            if (data.conversationId === selectedConversationId && data.companyId !== currentCompanyId) {
+                setMessages(prev => prev.map(msg => ({
+                    ...msg,
+                    readBy: [...(msg.readBy || []), data.companyId],
+                })));
+            }
+            fetchConversations();
+        };
+
+        // Handle typing indicator
+        const handleTyping = (data: { conversationId: string; companyId: string; isTyping: boolean }) => {
+            if (data.conversationId === selectedConversationId && data.companyId !== currentCompanyId) {
+                setIsTyping(data.isTyping);
+                setTypingCompanyId(data.isTyping ? data.companyId : null);
+            }
+        };
+
+        socketService.onMessageReceived(handleMessageReceived);
+        socketService.onMessagesRead(handleMessagesRead);
+        socketService.onTyping(handleTyping);
+
+        return () => {
+            socketService.offMessageReceived(handleMessageReceived);
+            socketService.offMessagesRead(handleMessagesRead);
+            socketService.offTyping(handleTyping);
+        };
+    }, [currentCompanyId, selectedConversationId, fetchConversations]);
+
+    // Fetch messages for selected conversation and join/leave rooms
+    useEffect(() => {
         const fetchMsgs = async () => {
             if (!selectedConversationId || !currentCompanyId) return;
             const response = await getMessages(selectedConversationId);
             if (response.status === 'success') {
                 await markMessagesAsRead(selectedConversationId);
+                socketService.markAsRead(selectedConversationId, currentCompanyId);
                 setMessages(response.data.map((msg: any) => ({
                     ...msg,
                     isSender: getId(msg.sender) === currentCompanyId,
@@ -66,13 +129,23 @@ const SellerInbox = () => {
                 fetchConversations();
             }
         };
-        if (selectedConversationId && currentCompanyId) {
-            fetchMsgs();
-            interval = setInterval(fetchMsgs, 4000);
+
+        // Leave previous conversation room
+        if (previousConversationId.current && previousConversationId.current !== selectedConversationId) {
+            socketService.leaveConversation(previousConversationId.current);
         }
-        return () => {
-            if (interval) clearInterval(interval);
-        };
+
+        // Join new conversation room
+        if (selectedConversationId && currentCompanyId) {
+            socketService.joinConversation(selectedConversationId, currentCompanyId);
+            fetchMsgs();
+        }
+
+        previousConversationId.current = selectedConversationId;
+
+        // Reset typing indicator when changing conversations
+        setIsTyping(false);
+        setTypingCompanyId(null);
     }, [selectedConversationId, currentCompanyId]);
 
     // Handle search input
@@ -89,24 +162,24 @@ const SellerInbox = () => {
     // Handle sending a message in the selected conversation
     const handleSendMessage = async (messageText: string) => {
         if (!selectedConversationId || !selectedConversation || !currentCompanyId) return;
-        // Find the other participant as receiver
-        const receiverId = selectedConversation.companyIds.find(id => id !== currentCompanyId) || '';
-        const newMsg: Message = {
-            _id: Math.random().toString(),
-            text: messageText,
-            sender: currentCompanyId,
-            receiver: receiverId,
-            createdAt: new Date().toISOString(),
-            readBy: [currentCompanyId],
-            isSender: true,
-        };
-        setMessages(prev => [...prev, newMsg]);
+
+        // Stop typing indicator when sending
+        socketService.emitTyping(selectedConversationId, currentCompanyId, false);
+
+        // Send via WebSocket (real-time)
+        socketService.sendMessage(selectedConversationId, currentCompanyId, messageText);
+
+        // Also send via HTTP as fallback/backup
         const response = await sendMessage(selectedConversationId, messageText);
-        if (response.status === 'success') {
-            setMessages(prev => prev.map(m => m._id === newMsg._id ? { ...response.data, isSender: true } : m));
-            fetchConversations();
-        } else {
-            setMessages(prev => prev.filter(m => m._id !== newMsg._id));
+        if (response.status !== 'success') {
+            console.error('Failed to send message via HTTP');
+        }
+    };
+
+    // Handle typing indicator
+    const handleTyping = (isCurrentlyTyping: boolean) => {
+        if (selectedConversationId && currentCompanyId) {
+            socketService.emitTyping(selectedConversationId, currentCompanyId, isCurrentlyTyping);
         }
     };
 
@@ -130,6 +203,8 @@ const SellerInbox = () => {
                         productName={selectedConversation.productName}
                         messages={messages}
                         onSendMessage={handleSendMessage}
+                        isTyping={isTyping}
+                        onTyping={handleTyping}
                     />
                 )}
             </div>

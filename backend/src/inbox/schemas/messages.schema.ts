@@ -6,17 +6,17 @@ export class Message extends Document {
   @Prop({ required: true })
   text: string;  // Text content of the message
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', required: true, index: true })
   sender: MongooseSchema.Types.ObjectId;  // Reference to Company
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Company', required: true, index: true })
   receiver: MongooseSchema.Types.ObjectId;  // Reference to Company
 
-  @Prop({ type: [MongooseSchema.Types.ObjectId], ref: 'Company', default: [] })
+  @Prop({ type: [MongooseSchema.Types.ObjectId], ref: 'Company', default: [], index: true })
   readBy: MongooseSchema.Types.ObjectId[]; // Companies who have read this message
 
   @Prop({ type: [Object], default: [] })
-  attachments: { 
+  attachments: {
     filePath: string;  // Path to the stored file
     fileName: string;  // Original file name
     mimeType: string;  // MIME type of the file

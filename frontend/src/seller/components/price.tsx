@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import Switch from 'react-switch';
+import { ChevronDown } from "lucide-react";
 
 interface PriceProps {
   priceData: {
@@ -26,10 +26,16 @@ interface PriceProps {
     pricing: string;
     margin: string;
   }>>;
-  moq:string;
+  moq: string;
 }
 
-// Price Component
+const CURRENCY_OPTIONS = [
+  { value: "INR", label: "INR" },
+  { value: "USD", label: "USD" },
+  { value: "EUR", label: "EUR" },
+  { value: "GBP", label: "GBP" },
+];
+
 const Price: React.FC<PriceProps> = ({ priceData, setPriceData, moq }) => {
 
   const toggleSale = () => {
@@ -39,8 +45,7 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData, moq }) => {
     }));
   };
 
-
-  const handleChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
 
@@ -50,191 +55,216 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData, moq }) => {
     }));
   };
 
+  // Calculate pricing (actual price considering sale)
   useEffect(() => {
-    const newPricing = priceData.onSale ? priceData.salePrice : priceData.price;
+    const newPricing = priceData.onSale && priceData.salePrice ? priceData.salePrice : priceData.price;
     setPriceData(prev => ({
       ...prev,
       pricing: newPricing
     }));
   }, [priceData.onSale, priceData.price, priceData.salePrice]);
 
+  // Calculate sale price from discount
   useEffect(() => {
-    const salePrice = Number(priceData.price) - (Number(priceData.discount.replace('%', '')) / 100) * Number(priceData.price);
-    setPriceData(prev => ({
-      ...prev,
-      salePrice: (priceData.onSale) ? String(salePrice) : ''
-    }))
-  }, [priceData.price, priceData.salePrice, priceData.discount]);
+    if (priceData.onSale && priceData.price && priceData.discount) {
+      const discountValue = Number(priceData.discount.replace('%', ''));
+      const salePrice = Number(priceData.price) - (discountValue / 100) * Number(priceData.price);
+      setPriceData(prev => ({
+        ...prev,
+        salePrice: String(salePrice.toFixed(2))
+      }));
+    } else if (!priceData.onSale) {
+      setPriceData(prev => ({
+        ...prev,
+        salePrice: ''
+      }));
+    }
+  }, [priceData.price, priceData.discount, priceData.onSale]);
 
+  // Calculate profit
   useEffect(() => {
     if (priceData.pricing && priceData.costOfGoods) {
       const profit = Number(priceData.pricing) - Number(priceData.costOfGoods);
       setPriceData(prev => ({
         ...prev,
-        profit: String(profit),
-      }))
+        profit: String(profit.toFixed(2)),
+      }));
     }
+  }, [priceData.pricing, priceData.costOfGoods]);
 
-  }, [priceData.pricing, priceData.costOfGoods, priceData.profit]);
-
+  // Calculate margin
   useEffect(() => {
-    if (priceData.pricing && priceData.profit) {
+    if (priceData.pricing && priceData.profit && Number(priceData.pricing) > 0) {
       const margin = (Number(priceData.profit) / Number(priceData.pricing)) * 100;
       setPriceData(prev => ({
         ...prev,
-        margin: String(margin) + '%',
-      }))
+        margin: margin.toFixed(1) + '%',
+      }));
     }
-
-  }, [priceData.pricing, priceData.margin, priceData.profit]);
-
-
-
-
+  }, [priceData.pricing, priceData.profit]);
 
   return (
-    <div>
-      <div className="flex flex-col h-full">
-        <h1 className="section-title font-bold mb-6 text-2xl">Pricing {" for " + moq}</h1>
+    <div className="space-y-6">
+      {/* Title */}
+      <h1 className="text-2xl font-bold text-gray-900">Pricing</h1>
 
-        <div className="product-card animate-slide-in shadow-none">
-          {/* Section-1 */}
-          <div className="price-container grid-cols-3">
-            <div className="form-field">
-              <input
-                placeholder="Price"
-                type="text"
-                name="price"
-                value={priceData.price}
-                onChange={handleChange}
-                className="w-full"
-              />
-            </div>
-            <div className="form-field">
+      {/* Row 1: Price/Unit with Currency dropdown + SKU */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Price with Currency */}
+        <div>
+          <label className="block text-sm text-gray-500 mb-2">
+            Price/ Unit (Unit = Chosen unit in MOQ )
+          </label>
+          <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+            <input
+              type="text"
+              name="price"
+              placeholder="Enter price"
+              value={priceData.price}
+              onChange={handleChange}
+              className="flex-1 px-4 py-3 border-0 focus:ring-2 focus:ring-[#C4A962] outline-none"
+            />
+            <div className="relative">
               <select
-                className="w-full"
                 name="currency"
                 value={priceData.currency}
                 onChange={handleChange}
-              > <option value="INR">INR</option>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
+                className="h-full px-4 py-3 bg-gray-50 border-l border-gray-300 text-gray-600 focus:outline-none cursor-pointer appearance-none pr-8"
+              >
+                {CURRENCY_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
               </select>
-            </div>
-            <div className="form-field">
-              <input
-                placeholder="SKU"
-                type="text"
-                name="sku"
-                value={priceData.sku}
-                onChange={handleChange}
-                className="w-full"
-              />
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
             </div>
           </div>
+        </div>
 
-          {/* Section -2  */}
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="text-lg font-semibold">Discounts</h2>
-            <div className="flex items-center my-2">
-              <span className="mr-2 text-sm text-gray-700 ml-2 my-auto">On Sale</span>
-              <Switch
-                onChange={toggleSale}
-                checked={priceData.onSale}
-                offColor="#8b8b8b"
-                onColor="#8b8b8b"
-                offHandleColor="#fff"
-                onHandleColor="#000"
-                uncheckedIcon={false}
-                checkedIcon={false}
-                className="focus:!outline-none"
-              />
-
-            </div>
-          </div>
-
-          <div className="price-container grid-cols-2">
-            <div className="form-field">
-              <input
-                placeholder="Discount %"
-                type="text"
-                name="discount"
-                value={priceData.discount}
-                onChange={handleChange}
-                disabled={!priceData.onSale}
-                className={`w-full ${!priceData.onSale ? 'opacity-50' : ''}`}
-                onBlur={() => {
-                  if (!priceData.discount.endsWith('%')) {
-
-                    setPriceData(prev => ({
-                      ...prev,
-                      discount: priceData.discount + '%',
-                    }))
-                  }
-                }}
-              />
-            </div>
-            <div className="form-field">
-              <input
-                placeholder="Sale Price"
-                type="text"
-                name="salePrice"
-                value={priceData.salePrice}
-                onChange={handleChange}
-                disabled={!priceData.onSale}
-                readOnly
-                className={`w-full ${!priceData.onSale ? 'opacity-50' : ''}`}
-              />
-            </div>
-          </div>
-
-          {/* Section -3 */}
-          <h2 className="text-lg font-semibold mb-2">Inventory & Profit</h2>
-          <div className="flex flex-row w-full">
-
-
-            {/* <div className="flex w-16 bg-gray-500 h-1 my-auto rounded-full"></div> */}
-
-            <div className="form-field w-full mx-3">
-              <input
-                placeholder="Cost of Goods"
-                type="text"
-                name="costOfGoods"
-                value={priceData.costOfGoods}
-                onChange={handleChange}
-                className="w-full"
-              />
-            </div>
-
-            {/* <div className="flex w-16  h-3 border-b-[3px] border-t-[3px] border-gray-500 my-auto rounded-sm "></div> */}
-
-            <div className="form-field w-full mx-3">
-              <input
-                placeholder="Profit"
-                type="text"
-                name="profit"
-                value={priceData.profit}
-                readOnly
-                className="w-full bg-gray-50"
-              />
-            </div>
-
-            <div className="form-field w-full mx-3">
-              <input
-                placeholder="margin"
-                type="text"
-                name="margin"
-                value={priceData.margin}
-                readOnly
-                className="w-full mx-auto bg-gray-50"
-              />
-            </div>
-
-          </div>
-
-
+        {/* SKU */}
+        <div>
+          <label className="block text-sm text-gray-500 mb-2">SKU</label>
+          <input
+            type="text"
+            name="sku"
+            placeholder="Enter SKU"
+            value={priceData.sku}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C4A962] focus:border-transparent outline-none"
+          />
         </div>
       </div>
+
+      {/* On Sale Toggle */}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={toggleSale}
+          className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${
+            priceData.onSale ? 'bg-[#C4A962]' : 'bg-gray-300'
+          }`}
+        >
+          <span
+            className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${
+              priceData.onSale ? 'translate-x-7' : 'translate-x-1'
+            }`}
+          />
+        </button>
+        <span className="text-sm font-medium text-gray-700">On Sale</span>
+      </div>
+
+      {/* Row 2: Discount and Sale Price */}
+      <div className="grid grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm text-gray-500 mb-2">Discount</label>
+          <input
+            type="text"
+            name="discount"
+            placeholder="Enter discount %"
+            value={priceData.discount}
+            onChange={handleChange}
+            disabled={!priceData.onSale}
+            onBlur={() => {
+              if (priceData.discount && !priceData.discount.endsWith('%')) {
+                setPriceData(prev => ({
+                  ...prev,
+                  discount: priceData.discount + '%',
+                }));
+              }
+            }}
+            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C4A962] focus:border-transparent outline-none ${
+              !priceData.onSale ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
+            }`}
+          />
+        </div>
+        <div>
+          <label className="block text-sm text-gray-500 mb-2">Sale Price</label>
+          <input
+            type="text"
+            name="salePrice"
+            placeholder="Calculated sale price"
+            value={priceData.salePrice}
+            readOnly
+            disabled={!priceData.onSale}
+            className={`w-full px-4 py-3 border border-gray-300 rounded-lg outline-none ${
+              !priceData.onSale ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-50'
+            }`}
+          />
+        </div>
+      </div>
+
+      {/* Row 3: Pricing - Cost of goods = Profit */}
+      <div className="flex items-end gap-4">
+        <div className="flex-1">
+          <label className="block text-sm text-gray-500 mb-2">Pricing</label>
+          <input
+            type="text"
+            name="pricing"
+            placeholder="Effective price"
+            value={priceData.pricing}
+            readOnly
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none bg-gray-50"
+          />
+        </div>
+
+        <div className="flex items-center justify-center pb-3">
+          <span className="text-2xl text-gray-400 font-light">−</span>
+        </div>
+
+        <div className="flex-1">
+          <label className="block text-sm text-gray-500 mb-2">Cost of goods</label>
+          <input
+            type="text"
+            name="costOfGoods"
+            placeholder="Enter cost"
+            value={priceData.costOfGoods}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C4A962] focus:border-transparent outline-none"
+          />
+        </div>
+
+        <div className="flex items-center justify-center pb-3">
+          <span className="text-2xl text-gray-400 font-light">=</span>
+        </div>
+
+        <div className="flex-1">
+          <label className="block text-sm text-gray-500 mb-2">Profit</label>
+          <input
+            type="text"
+            name="profit"
+            placeholder="Profit"
+            value={priceData.profit}
+            readOnly
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none bg-gray-50"
+          />
+        </div>
+      </div>
+
+      {/* Margin display (optional - not in Figma but useful) */}
+      {priceData.margin && (
+        <div className="text-sm text-gray-500">
+          Profit Margin: <span className="font-medium text-gray-700">{priceData.margin}</span>
+        </div>
+      )}
     </div>
   );
 };

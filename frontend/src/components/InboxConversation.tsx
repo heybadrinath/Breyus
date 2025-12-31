@@ -1,12 +1,34 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Paperclip, Send } from 'lucide-react';
 import { InboxConversationProps } from "../types/inboxTypes";
 
-const InboxConversation: React.FC<InboxConversationProps> = ({ name, productName, messages, onSendMessage }) => {
+const InboxConversation: React.FC<InboxConversationProps> = ({ name, productName, messages, onSendMessage, isTyping, onTyping }) => {
     const [message, setMessage] = useState<string>("");
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    // Auto-scroll to bottom when new messages arrive
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
 
     const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setMessage(e.target.value);
+
+        // Emit typing indicator
+        if (onTyping) {
+            onTyping(true);
+
+            // Clear previous timeout
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+            }
+
+            // Stop typing indicator after 2 seconds of no input
+            typingTimeoutRef.current = setTimeout(() => {
+                onTyping(false);
+            }, 2000);
+        }
     };
 
     const handleSendMessage = () => {
@@ -50,6 +72,18 @@ const InboxConversation: React.FC<InboxConversationProps> = ({ name, productName
                         </div>
                     </div>
                 ))}
+                {/* Typing indicator */}
+                {isTyping && (
+                    <div className="flex mb-4 justify-start">
+                        <div className="bg-white text-gray-600 px-4 py-2 rounded-2xl shadow-sm flex items-center gap-1">
+                            <span className="animate-bounce">.</span>
+                            <span className="animate-bounce" style={{ animationDelay: '0.1s' }}>.</span>
+                            <span className="animate-bounce" style={{ animationDelay: '0.2s' }}>.</span>
+                            <span className="ml-2 text-sm text-gray-500">{name} is typing</span>
+                        </div>
+                    </div>
+                )}
+                <div ref={messagesEndRef} />
             </div>
             {/* Message Input */}
             <div className="p-4 border-t border-gray-200 bg-white">

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, } from "react-router-dom";
 import { Bell, Search } from 'lucide-react'
+import { NotificationBell } from './NotificationBell';
 
 
 export const SortHeader = () => {
@@ -20,7 +21,7 @@ export const SortHeader = () => {
                 </div>
 
                 <div className="flex ml-auto mr-8">
-                    <Bell className="my-auto mr-4 cursor-pointer " color="white" size={22} />
+                    <NotificationBell className="my-auto mr-4" color="white" size={22} />
                     <button className="border-[#bca86b] border shadow-[#bca86b] text-white font-semibold px-6 py-3 rounded-full shadow-sm hover:scale-105 transition-transform"
                         onClick={() => navigate('/buyer/ai')}>
                         <svg className='inline mr-3' width="17" height="18" viewBox="0 0 17 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -48,7 +49,7 @@ export const TryBreyusCoreHeader = () => {
             <header className="w-[full] border-b-2 flex py-3">
 
                 <div className="flex ml-auto mr-8">
-                    <Bell className="my-auto mr-6 cursor-pointer " size={22} />
+                    <NotificationBell className="my-auto mr-6" size={22} />
                     <button className="border-[#bca86b] border-2 shadow-[#bca86b] bg-black text-white font-semibold px-6 py-3 rounded-full shadow-sm hover:scale-105 transition-transform"
                         onClick={() => navigate('/buyer/ai')}>
                         <svg className='inline mr-3' width="17" height="18" viewBox="0 0 17 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -106,7 +107,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({ onSearch }) => {
 
             {/* Right Icons */}
             <div className="flex items-center gap-6 ml-4">
-                <Bell className="text-[#CCCCCC] w-6 h-6 cursor-pointer" />
+                <NotificationBell className="text-[#CCCCCC]" color="#CCCCCC" size={24} />
 
                 <button className="border-[#bca86b] border shadow-[#bca86b] text-white font-semibold px-6 py-3 rounded-full shadow-sm hover:scale-105 transition-transform"
                     onClick={() => navigate('/buyer/ai')}>
@@ -157,7 +158,7 @@ export const SearchHeaderLight: React.FC<SearchHeaderProps> = ({ onSearch }) => 
 
             {/* Right Icons */}
             <div className="flex items-center gap-6 ml-4">
-                <Bell className=" w-6 h-6 cursor-pointer" />
+                <NotificationBell size={24} />
 
                 <button className="border-[#bca86b] border bg-black shadow-[#bca86b] text-white font-semibold px-6 py-3 rounded-full shadow-sm hover:scale-105 transition-transform"
                     onClick={() => navigate('/buyer/ai')}>

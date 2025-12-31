@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import axios from "axios";
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+
 const ForgotPassword: React.FC = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -33,22 +35,18 @@ const ForgotPassword: React.FC = () => {
     setIsLoading(true);
 
     try {
-      console.log("Sending forgot password request for buyer:", email);
-      const response = await axios.post("https://breyus.com/backend/auth/forgot-password", {
-        email,
-        role: "buyer"
+      const response = await axios.post(`${BACKEND_URL}/auth/forgot-password`, {
+        email
       });
 
-      console.log("Forgot password response:", response.data);
-      if (response.data.message === "Password reset instructions sent to your email") {
+      // If request succeeded (status 200), show OTP input
+      if (response.status === 200) {
         setIsOtpSent(true);
         setResendTimer(300);
-      } else {
-        setError(response.data.message || "Failed to send reset instructions.");
       }
     } catch (err: any) {
-      console.error("Forgot password error:", err.response?.data || err.message);
-      setError(err.response?.data?.message || "Error sending reset instructions.");
+      const errorMessage = err.response?.data?.message || err.message;
+      setError(errorMessage || "Unable to send OTP. Please check your email and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -57,36 +55,38 @@ const ForgotPassword: React.FC = () => {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIsLoading(true);
 
     if (newPassword !== confirmPassword) {
       setError("Passwords do not match");
+      setIsLoading(false);
       return;
     }
 
     if (newPassword.length < 8) {
       setError("Password must be at least 8 characters long");
+      setIsLoading(false);
       return;
     }
 
     try {
-      console.log("Sending reset password request with OTP:", otp);
-      const response = await axios.post("https://breyus.com/backend/auth/reset-password", {
+      const response = await axios.post(`${BACKEND_URL}/auth/reset-password`, {
         email,
         otp,
-        newPassword,
-        role: "buyer"
+        newPassword
       });
 
-      console.log("Reset password response:", response.data);
-      if (response.data.success) {
+      if (response.data.success || response.status === 200) {
         setIsPasswordReset(true);
-        setTimeout(() => navigate("/buyer/signin"), 3000);
+        setTimeout(() => navigate("/login"), 3000);
       } else {
         setError(response.data.message || "Failed to reset password.");
       }
     } catch (err: any) {
-      console.error("Reset password error:", err.response?.data || err.message);
-      setError(err.response?.data?.message || "Error resetting password.");
+      const errorMessage = err.response?.data?.message || err.message;
+      setError(errorMessage || "Invalid or expired OTP. Please check your code and try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -115,7 +115,7 @@ const ForgotPassword: React.FC = () => {
               <p className="text-gray-600 mb-6">
                 {isOtpSent
                   ? "Enter the OTP sent to your email and create a new password."
-                  : "Enter your email to receive password reset instructions."}
+                  : "Enter your email to receive a password reset OTP."}
               </p>
 
               {!isOtpSent ? (
@@ -139,7 +139,7 @@ const ForgotPassword: React.FC = () => {
                     }`}
                     disabled={isLoading}
                   >
-                    {isLoading ? "Sending..." : "Send Reset Instructions"}
+                    {isLoading ? "Sending..." : "Send OTP"}
                   </button>
                 </form>
               ) : (
@@ -224,7 +224,7 @@ const ForgotPassword: React.FC = () => {
               )}
 
               <div className="text-center mt-6">
-                <Link to="/buyer/signin" className="text-blue-500 hover:underline">
+                <Link to="/login" className="text-blue-500 hover:underline">
                   Back to Login
                 </Link>
               </div>

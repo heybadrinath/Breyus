@@ -26,6 +26,22 @@ export interface DeliveryAddress {
     additionalDetails?: string;
 }
 
+// Bank Information interface
+export interface BankInfo {
+    ifscCode?: string;
+    accountNumber?: string;
+    accountHolderName?: string;
+    bankAddress?: string;
+    bankBranch?: string;
+}
+
+// Trade Details interface
+export interface TradeDetails {
+    emergingInterest?: string;
+    agreedToTerms?: boolean;
+    cisDocument?: string; // URL to uploaded CIS file
+}
+
 @Schema({ timestamps: true })
 export class Company extends Document {
 
@@ -79,5 +95,23 @@ export class Company extends Document {
 
     @Prop({ type: [Object], default: [] })
     deliveryAddresses: DeliveryAddress[];
+
+    // Bank Information
+    @Prop({ type: Object, default: {} })
+    bankInfo: BankInfo;
+
+    // Trade Details
+    @Prop({ type: Object, default: {} })
+    tradeDetails: TradeDetails;
+
+    // Contact Information
+    @Prop()
+    whatsappContact: string;
+
+    @Prop()
+    primaryEmail: string;
+
+    @Prop()
+    alternativeSalesEmail: string;
 }
 export const CompanySchema = SchemaFactory.createForClass(Company)

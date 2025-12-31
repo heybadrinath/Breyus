@@ -37,4 +37,6 @@ export interface InboxConversationProps {
   messages: Message[];     // List of messages in the conversation
   onSendMessage: (messageText: string) => void; // Function to send a message
   onAttachFile?: () => void; // Optional function to handle file attachments
+  isTyping?: boolean;      // Whether the other user is typing
+  onTyping?: (isTyping: boolean) => void; // Function to emit typing indicator
 }

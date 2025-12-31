@@ -59,7 +59,7 @@ export class AuthService {
     if(!secretKey){
       throw new Error("JWT_SECRET_KEY is not defined in the environment variables");
     }
-    const token = jwt.sign({ userId, companyId }, secretKey, { expiresIn: process.env.JWT_LOGIN_EXPIRES_IN || '3600s' }); 
+    const token = jwt.sign({ userId, companyId }, secretKey, { expiresIn: process.env.JWT_LOGIN_EXPIRES_IN || '24h' }); 
     return token;
   }
 

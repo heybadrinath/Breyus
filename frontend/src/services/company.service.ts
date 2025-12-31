@@ -100,4 +100,106 @@ export const deleteDeliveryAddress = async (index: number): Promise<DeliveryAddr
         console.error('Error deleting delivery address:', error);
         throw error;
     }
+};
+
+// Bank Information interface
+export interface BankInfo {
+    ifscCode?: string;
+    accountNumber?: string;
+    accountHolderName?: string;
+    bankAddress?: string;
+    bankBranch?: string;
+}
+
+// Trade Details interface
+export interface TradeDetails {
+    emergingInterest?: string;
+    agreedToTerms?: boolean;
+    cisDocument?: string;
+}
+
+export interface CompanyProfile {
+    companyName?: string;
+    companyAddress?: string;
+    companyMobile?: string;
+    taxId?: string;
+    founderName?: string;
+    websiteUrl?: string;
+    role?: string;
+    tradeType?: string;
+    mainLineBusiness?: string[];
+    // New fields
+    bankInfo?: BankInfo;
+    tradeDetails?: TradeDetails;
+    whatsappContact?: string;
+    primaryEmail?: string;
+    alternativeSalesEmail?: string;
+}
+
+export const getCompanyProfile = async (): Promise<CompanyProfile> => {
+    try {
+        const response = await fetch(`${BACKEND_END_POINT}/profile`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch company profile: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.data || {};
+    } catch (error) {
+        console.error('Error fetching company profile:', error);
+        throw error;
+    }
+};
+
+export const updateCompanyProfile = async (profileData: Partial<CompanyProfile>): Promise<CompanyProfile> => {
+    try {
+        const response = await fetch(`${BACKEND_END_POINT}/profile`, {
+            method: 'PUT',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(profileData),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to update company profile: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.data || {};
+    } catch (error) {
+        console.error('Error updating company profile:', error);
+        throw error;
+    }
+};
+
+export const uploadCisDocument = async (file: File): Promise<{ cisDocument: string; profile: CompanyProfile }> => {
+    try {
+        const formData = new FormData();
+        formData.append('files', file);
+
+        const response = await fetch(`${BACKEND_END_POINT}/upload-cis`, {
+            method: 'POST',
+            credentials: 'include',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to upload CIS document: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.data;
+    } catch (error) {
+        console.error('Error uploading CIS document:', error);
+        throw error;
+    }
 }; 

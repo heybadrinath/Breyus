@@ -4,11 +4,13 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { CompanyService } from './company.service';
 import { CompanyController } from './company.controller';
 import { AuthModule } from '../auth/auth.module';
+import { StorageModule } from '../common/storage/storage.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Company.name, schema: CompanySchema }]),
-    AuthModule
+    AuthModule,
+    StorageModule
   ],
   providers: [CompanyService],
   controllers: [CompanyController],

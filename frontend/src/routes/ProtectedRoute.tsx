@@ -1,6 +1,5 @@
 import React, { JSX, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import axios from 'axios';
 
 const Backend_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -21,13 +20,12 @@ const BuyerProtectedRoute = ({ children }: { children: JSX.Element }) => {
       const data = await res.json();
 
       if (data.valid) {
-        setIsAuthed(true);
+        if(data.role === 'Seller') {
+          setIsAuthed(false);
+        } else {
+          setIsAuthed(true);
+        }
       } else {
-        setIsAuthed(false);
-      }
-
-      if(data.role === 'Seller') {
-        alert('You are not authorized to access this page');
         setIsAuthed(false);
       }
       } catch (err) {
@@ -38,7 +36,7 @@ const BuyerProtectedRoute = ({ children }: { children: JSX.Element }) => {
     };
 
     checkAuthAndBackend();
-  })
+  }, []);
 
   if (loading) return <div className='w-fit m-auto h-fit mt-[40vh]'>Loading.....</div>;
   if (!isAuthed) return <Navigate to="/login" />;
@@ -64,12 +62,12 @@ const SellerProtectedRoute = ({ children }: { children: JSX.Element }) => {
       const data = await res.json();
 
       if (data.valid) {
-        setIsAuthed(true);
+        if(data.role === 'Buyer') {
+          setIsAuthed(false);
+        } else {
+          setIsAuthed(true);
+        }
       } else {
-        setIsAuthed(false);
-      }
-      if(data.role === 'Buyer') {
-        alert('You are not authorized to access this page');
         setIsAuthed(false);
       }
     } catch (err) {
@@ -80,7 +78,7 @@ const SellerProtectedRoute = ({ children }: { children: JSX.Element }) => {
     };
 
     checkAuthAndBackend();
-  })
+  }, []);
 
   if (loading) return <div className='w-fit m-auto h-fit mt-[40vh]'>Loading.....</div>;
   if (!isAuthed) return <Navigate to="/login" />;

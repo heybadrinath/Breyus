@@ -1,4 +1,5 @@
 import React from "react";
+import { X, Sparkles } from "lucide-react";
 
 interface TagsProps {
   tagsData: {
@@ -46,64 +47,82 @@ const Tags: React.FC<TagsProps> = ({ tagsData, setTagsData }) => {
   };
 
   return (
-    <div>
-      <div className="flex flex-col h-full">
-        <h1 className="section-title font-bold mb-6 text-2xl">Tags</h1>
+    <div className="space-y-6">
+      {/* Title */}
+      <h1 className="text-2xl font-bold text-gray-900">Tags</h1>
 
-        <div className="product-card">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Product Tags <span className="text-sm text-gray-500">({tagsData.tags.length}/5)</span></h2>
-            <button
-              onClick={() => {
-                // Auto-generate tags functionality can be implemented here
-                console.log('Auto-generate tags clicked');
-              }}
-
-              className={`flex items-center text-sm px-3 py-1.5 rounded-md ${'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                }`}
-            >
-              <span>Auto-Generate Tags</span>
-            </button>
+      <div className="space-y-6">
+        {/* Header with Auto-generate button */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Product Tags</h2>
+            <p className="text-sm text-gray-500">{tagsData.tags.length} of 5 tags added</p>
           </div>
+          <button
+            onClick={() => {
+              // Auto-generate tags functionality
+              console.log('Auto-generate tags clicked');
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-[#C4A962] text-white rounded-lg hover:bg-[#B39952] transition-colors text-sm font-medium"
+          >
+            <Sparkles className="w-4 h-4" />
+            Auto-Generate Tags
+          </button>
+        </div>
 
-          <div className="border border-gray-200 rounded-xl p-4 mb-4">
-            <input
-              type="text"
-              placeholder={tagsData.tags.length >= 5 ? "Maximum 5 tags reached" : "Add your tag (press Enter or comma)"}
-              className="outline-none px-3 py-2 mb-4 bg-transparent border-b border-gray-200 w-full focus:border-gray-400 transition-all"
-              value={tagsData.input}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              disabled={tagsData.tags.length >= 5}
-            />
+        {/* Tag Input Area */}
+        <div className="border border-gray-300 rounded-xl p-6">
+          <input
+            type="text"
+            placeholder={tagsData.tags.length >= 5 ? "Maximum 5 tags reached" : "Type a tag and press Enter or comma..."}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C4A962] focus:border-transparent outline-none mb-4"
+            value={tagsData.input}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            disabled={tagsData.tags.length >= 5}
+          />
 
-            <div className="flex flex-wrap gap-2 mt-2">
-              {tagsData.tags.map((tag, idx) => (
+          {/* Tags Display */}
+          <div className="flex flex-wrap gap-2 min-h-[40px]">
+            {tagsData.tags.length === 0 ? (
+              <p className="text-sm text-gray-400">No tags added yet</p>
+            ) : (
+              tagsData.tags.map((tag, idx) => (
                 <div
                   key={`${tag}-${idx}`}
-                  className="flex items-center bg-gradient-to-r from-black to-[#353535] text-white rounded-full px-3 py-1.5 transition-all hover:shadow-md"
+                  className="flex items-center bg-gray-900 text-white rounded-full px-4 py-2 gap-2 transition-all hover:bg-gray-800"
                 >
-                  <span className="mr-1 text-sm">{tag}</span>
+                  <span className="text-sm">{tag}</span>
                   <button
-                    className="ml-1 text-white hover:text-gray-200 focus:outline-none text-sm transition-colors"
+                    className="text-gray-400 hover:text-white focus:outline-none transition-colors"
                     onClick={() => removeTag(idx)}
                     aria-label={`Remove tag ${tag}`}
                   >
-                    ×
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
-              ))}
-            </div>
+              ))
+            )}
           </div>
+        </div>
 
-          <div className="text-sm text-gray-600">
-            <p>Tags help buyers find your products. Choose descriptive words related to your product.</p>
-            <ul className="list-disc ml-5 mt-2">
-              <li>Use specific keywords relevant to your product</li>
-              <li>Include material, usage, and key features</li>
-              <li>Avoid generic terms or irrelevant words</li>
-            </ul>
-          </div>
+        {/* Help Text */}
+        <div className="bg-gray-50 rounded-lg p-4">
+          <p className="text-sm font-medium text-gray-700 mb-2">Tips for effective tags:</p>
+          <ul className="text-sm text-gray-600 space-y-1">
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full"></span>
+              Use specific keywords relevant to your product
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full"></span>
+              Include material, usage, and key features
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full"></span>
+              Avoid generic terms or irrelevant words
+            </li>
+          </ul>
         </div>
       </div>
     </div>

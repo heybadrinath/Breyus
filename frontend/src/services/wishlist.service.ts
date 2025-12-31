@@ -1,6 +1,37 @@
 const BACKEND_END_POINT = process.env.REACT_APP_BACKEND_URL + "/wishlist";
 
-export const getWishlist = async (): Promise<any[]> => {
+export interface WishlistProduct {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  currency: string;
+  productImage?: string;
+  primaryImage?: string;
+  category?: string;
+}
+
+export interface WishlistItem {
+  _id: string;
+  productId: WishlistProduct;
+  addedAt: string;
+}
+
+export interface WishlistResponse {
+  statusCode: number;
+  message: string;
+  data: WishlistItem[];
+}
+
+export interface WishlistActionResponse {
+  statusCode: number;
+  message: string;
+  data?: {
+    productId: string;
+  };
+}
+
+export const getWishlist = async (): Promise<WishlistItem[]> => {
   const response = await fetch(`${BACKEND_END_POINT}`, {
     method: 'GET',
     credentials: 'include',
@@ -8,10 +39,12 @@ export const getWishlist = async (): Promise<any[]> => {
   if (!response.ok) {
     throw new Error('Failed to fetch wishlist');
   }
-  return await response.json();
+  const result = await response.json();
+  // Handle both wrapped response and direct array formats
+  return result.data || result;
 };
 
-export const addToWishlist = async (productId: string): Promise<any> => {
+export const addToWishlist = async (productId: string): Promise<WishlistActionResponse> => {
   const response = await fetch(`${BACKEND_END_POINT}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -25,7 +58,7 @@ export const addToWishlist = async (productId: string): Promise<any> => {
   return await response.json();
 };
 
-export const removeFromWishlist = async (productId: string): Promise<any> => {
+export const removeFromWishlist = async (productId: string): Promise<WishlistActionResponse> => {
   const response = await fetch(`${BACKEND_END_POINT}`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },

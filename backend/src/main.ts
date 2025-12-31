@@ -29,10 +29,8 @@ async function bootstrap() {
   
   // Serve static files from uploads directory
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-    prefix: '/backend/uploads/',
+    prefix: '/uploads/',
   });
-  
-  await app.setGlobalPrefix('backend')
 
   await app.listen(process.env.PORT || 5000); 
   const appName = process.env.APP_NAME;

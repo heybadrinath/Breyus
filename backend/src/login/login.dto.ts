@@ -1,5 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, Matches, Length } from 'class-validator';
-import { } from 'class-transformer'
+import { IsEmail, IsNotEmpty, IsString, Length } from 'class-validator';
 
 export class loginDto {
     @IsEmail({}, { message: "Invalid Email address" })
@@ -7,10 +6,6 @@ export class loginDto {
     mail: String;
 
     @IsString({ message: "Password must be a String!" })
-    @MinLength(8, { message: "Password must be atleast 8 characters long!" })
-    @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).+$/, {
-        message: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
-    })
     @IsNotEmpty({ message: "Password is required!" })
     password: string;
 }

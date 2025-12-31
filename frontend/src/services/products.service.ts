@@ -129,6 +129,18 @@ export interface PaginationResponse {
   };
 }
 
+export interface HsnCode {
+  code: string;
+  description: string;
+  category?: string;
+}
+
+export interface HsnSearchResponse {
+  statusCode: number;
+  message: string;
+  data: HsnCode[];
+}
+
 export const getProductsWithPagination = async (params: PaginationParams): Promise<PaginationResponse> => {
   try {
     const queryParams = new URLSearchParams();
@@ -230,6 +242,27 @@ export const getProductById = async (productId: string): Promise<ProductResponse
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || 'Failed to fetch product');
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+  }
+};
+
+export const searchHsnCodes = async (query: string): Promise<HsnSearchResponse> => {
+  try {
+    const response = await fetch(`${BACKEND_END_POINT}/hsn?q=${encodeURIComponent(query)}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to search HSN codes');
     }
 
     return await response.json();

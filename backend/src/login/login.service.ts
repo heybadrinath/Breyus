@@ -24,13 +24,13 @@ export class LoginService {
 
         const user = await this.userSchema.findOne({ mail });
         if (!user) {
-            throw new HttpException('User not found, signup before login', HttpStatus.BAD_REQUEST);
+            throw new HttpException('No account found with this email. Please sign up first.', HttpStatus.BAD_REQUEST);
         }
 
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            throw new HttpException('Invalid password', HttpStatus.BAD_REQUEST);
+            throw new HttpException('Incorrect password. Please try again.', HttpStatus.BAD_REQUEST);
         }
 
         try {
@@ -51,18 +51,18 @@ export class LoginService {
 
         const user = await this.userSchema.findOne({ mail }).populate<{ company: Company }>('company', 'role');
         if(!user){
-            throw new HttpException('User not found, signup before login', HttpStatus.BAD_REQUEST);
+            throw new HttpException('No account found with this email. Please sign up first.', HttpStatus.BAD_REQUEST);
         }
 
         const isotpValid = await this.mailService.validateOtp(mail as string,otp as string);
         if(!isotpValid){
             throw new HttpException(
-                'Invalid Otp',
+                'Invalid or expired OTP. Please check your code and try again.',
                 HttpStatus.BAD_REQUEST
             )
         }
 
-        const AccountToken = this.authService.generateAccountToken(user._id as string, user.company._id as string);
+        const AccountToken = this.authService.generateAccountToken(user._id.toString(), (user.company as any)._id.toString());
 
         return { AccountToken, role: user.company.role };
 

@@ -17,7 +17,11 @@ export class LoginController {
             return true;
 
         } catch (e) {
-            throw new HttpException('Internal server error', HttpStatus.INTERNAL_SERVER_ERROR);
+            // Re-throw HttpException with original message, otherwise throw generic error
+            if (e instanceof HttpException) {
+                throw e;
+            }
+            throw new HttpException('An unexpected error occurred. Please try again.', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -28,16 +32,20 @@ export class LoginController {
             const result = await this.loginService.ValidateOtp(otpDto);
             response.cookie('account', result.AccountToken, {
                 httpOnly: true,
-                maxAge:  Number(process.env.COOKIE_EXPIRY_LOGIN) || 1000 * 60 * 60 * 1, // 1 hour in ms
+                maxAge:  Number(process.env.COOKIE_EXPIRY_LOGIN) || 1000 * 60 * 60 * 24, // 24 hours in ms
                 signed: true,
                 secure: process.env.NODE_ENV === 'production' || true,
                 sameSite: (process.env.NODE_ENV === 'production')? 'strict': 'none'
             })
-            
+
             response.status(HttpStatus.OK).json(result);
 
         } catch (e) {
-            throw new HttpException('Internal server error', HttpStatus.INTERNAL_SERVER_ERROR);
+            // Re-throw HttpException with original message, otherwise throw generic error
+            if (e instanceof HttpException) {
+                throw e;
+            }
+            throw new HttpException('An unexpected error occurred. Please try again.', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

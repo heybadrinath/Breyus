@@ -26,6 +26,9 @@ import { Inventory } from "../seller/pages/inventory";
 import { Feedback } from "../seller/pages/feedback";
 import Inbox from "../seller/pages/inbox";
 import { Trade } from "../seller/pages/trade";
+import SellerNegotiation from "../seller/pages/negotiation";
+import SellerSettings from "../seller/pages/settings";
+import SCOUpload from "../seller/pages/sco-upload";
 
 
 
@@ -40,6 +43,10 @@ import BuyerInbox from "../buyer/pages/Inbox";
 import { Trade as BuyerTrade } from "../buyer/pages/trade";
 import Wishlist from "../buyer/pages/Wishlist";
 import ThankYou from "../buyer/pages/purchase-request-success";
+import BuyerNegotiation from "../buyer/pages/negotiation";
+import TradeComplete from "../components/TradeComplete";
+import BuyerSettings from "../buyer/pages/settings";
+import ICPOUpload from "../buyer/pages/icpo-upload";
 
 
 
@@ -51,6 +58,7 @@ import BuyerAiResult from "../buyer/pages/ai-result";
 import SellerSearchOption from "../seller/pages/SellerSearchOption";
 import SellerSearchInput from "../seller/pages/SellerSearchInput";
 import SellerSearchResult from "../seller/pages/SellerSearchResult";
+import Notifications from "../pages/Notifications";
 
 
 
@@ -122,6 +130,11 @@ const AppRoutes = () => {
         <Route path="/buyer/inbox" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<BuyerInbox />} />} /></BuyerProtectedRoute>} />
         <Route path="/buyer/wishlist" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<Wishlist />} />} /></BuyerProtectedRoute>} />
         <Route path="/buyer/trade" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<BuyerTrade />} />} /></BuyerProtectedRoute>} />
+        <Route path="/buyer/negotiation/:tradeId" element={<BuyerProtectedRoute><Animate page={<BuyerNegotiation />} /></BuyerProtectedRoute>} />
+        <Route path="/buyer/trade-complete" element={<BuyerProtectedRoute><Animate page={<TradeComplete isSeller={false} />} /></BuyerProtectedRoute>} />
+        <Route path="/buyer/settings" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<BuyerSettings />} />} /></BuyerProtectedRoute>} />
+        <Route path="/buyer/icpo-upload" element={<BuyerProtectedRoute><Animate page={<ICPOUpload />} /></BuyerProtectedRoute>} />
+        <Route path="/buyer/notifications" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<Notifications />} />} /></BuyerProtectedRoute>} />
 
 
 
@@ -137,6 +150,11 @@ const AppRoutes = () => {
         <Route path="/seller/Product-Feedback" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<Feedback />} />} /></SellerProtectedRoute>} />
         <Route path="/seller/Inbox" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<Inbox />} />} /></SellerProtectedRoute>} />
         <Route path="/seller/trade" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<Trade />} />} /></SellerProtectedRoute>} />
+        <Route path="/seller/negotiation/:tradeId" element={<SellerProtectedRoute><Animate page={<SellerNegotiation />} /></SellerProtectedRoute>} />
+        <Route path="/seller/trade-complete" element={<SellerProtectedRoute><Animate page={<TradeComplete isSeller={true} />} /></SellerProtectedRoute>} />
+        <Route path="/seller/settings" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<SellerSettings />} />} /></SellerProtectedRoute>} />
+        <Route path="/seller/sco-upload" element={<SellerProtectedRoute><Animate page={<SCOUpload />} /></SellerProtectedRoute>} />
+        <Route path="/seller/notifications" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<Notifications />} />} /></SellerProtectedRoute>} />
 
 
 

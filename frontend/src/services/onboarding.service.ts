@@ -16,7 +16,8 @@ export const sendOtpService = async (mail: string) => {
     });
 
     if (!response.ok) {
-        throw Error("Network error")
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to send OTP. Please try again.");
     }
 
 }
@@ -34,7 +35,8 @@ export const verifyOtpService = async (email: string, otp: string) => {
 
     // Check if the response was successful (status code 2xx)
     if (!response.ok) {
-        throw new Error(`Failed to verify OTP: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Invalid or expired OTP. Please check your code and try again.");
     }
 
 
@@ -105,7 +107,8 @@ export const continueOnboardingService = async (token: string, password: string)
     });
 
     if (!response.ok) {
-        throw new Error("Your Session Expired please Refresh this page and try again! access!");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Incorrect password. Please try again.");
     }
 
     return response;

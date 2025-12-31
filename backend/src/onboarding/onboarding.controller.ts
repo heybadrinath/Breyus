@@ -21,7 +21,10 @@ export class OnboardingController {
             const response = await this.onboardingService.sendMailOtp(sendEmailOtpDto);
             return response as string;
         } catch (error) {
-            throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(error.message || 'Failed to send OTP. Please try again.', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -32,7 +35,10 @@ export class OnboardingController {
             const token = await this.onboardingService.ValidateMailOtp(verifyEmailOtpDto);
             return token;  // return the onboarding token
         } catch (error) {
-            throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(error.message || 'Invalid or expired OTP.', HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -58,7 +64,10 @@ export class OnboardingController {
             await response.status(HttpStatus.OK).json({ message: 'Onboarding continued successfully', data: result });
 
         } catch (error) {
-            throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(error.message || 'Failed to set password.', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -83,10 +92,13 @@ export class OnboardingController {
     ): Promise<void> {
         try {
             const result = await this.onboardingService.continueOnboarding(continueOnboardingDto, onBoardingToken);
-            
+
             await response.status(HttpStatus.OK).json({ message: 'Onboarding continued successfully', data: result });
         } catch (error) {
-            throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(error.message || 'Failed to verify password.', HttpStatus.BAD_REQUEST);
         }
     }
 

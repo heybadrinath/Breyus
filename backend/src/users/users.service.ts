@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { User } from './user.schema';
+import { User, NotificationPreferences, defaultNotificationPreferences } from './user.schema';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
@@ -26,6 +27,85 @@ export class UsersService {
             return await this.userSchema.findById(userId).exec();
         } catch (error) {
             throw new Error('Error fetching user');
+        }
+    }
+
+    async findByEmail(email: string): Promise<User | null> {
+        try {
+            return await this.userSchema.findOne({ mail: email }).exec();
+        } catch (error) {
+            throw new Error('Error fetching user by email');
+        }
+    }
+
+    async updatePassword(userId: string, newPassword: string): Promise<void> {
+        try {
+            const saltRounds = 10;
+            const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+            await this.userSchema.findByIdAndUpdate(userId, {
+                password: hashedPassword,
+                passwordResetToken: null,
+                passwordResetExpires: null
+            });
+        } catch (error) {
+            throw new Error('Error updating password');
+        }
+    }
+
+    async setPasswordResetToken(userId: string, token: string, expires: Date): Promise<void> {
+        try {
+            await this.userSchema.findByIdAndUpdate(userId, {
+                passwordResetToken: token,
+                passwordResetExpires: expires
+            });
+        } catch (error) {
+            throw new Error('Error setting password reset token');
+        }
+    }
+
+    async verifyPassword(userId: string, currentPassword: string): Promise<boolean> {
+        try {
+            const user = await this.userSchema.findById(userId).select('+password').exec();
+            if (!user || !user.password) {
+                return false;
+            }
+            return await bcrypt.compare(currentPassword, user.password);
+        } catch (error) {
+            throw new Error('Error verifying password');
+        }
+    }
+
+    async getNotificationPreferences(userId: string): Promise<NotificationPreferences> {
+        try {
+            const user = await this.userSchema.findById(userId).exec();
+            if (!user) {
+                throw new Error('User not found');
+            }
+            // Return existing preferences or defaults if not set
+            return user.notificationPreferences || defaultNotificationPreferences;
+        } catch (error) {
+            throw new Error('Error fetching notification preferences');
+        }
+    }
+
+    async updateNotificationPreferences(
+        userId: string,
+        preferences: NotificationPreferences
+    ): Promise<NotificationPreferences> {
+        try {
+            const user = await this.userSchema.findByIdAndUpdate(
+                userId,
+                { notificationPreferences: preferences },
+                { new: true }
+            ).exec();
+
+            if (!user) {
+                throw new Error('User not found');
+            }
+
+            return user.notificationPreferences;
+        } catch (error) {
+            throw new Error('Error updating notification preferences');
         }
     }
 }
