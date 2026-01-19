@@ -1,5 +1,6 @@
 // buyer/pages/country-step.tsx
 import React, { useState } from 'react';
+import SelectField from '../../components/SelectField';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const CountryStep: React.FC = () => {
@@ -54,16 +55,16 @@ const CountryStep: React.FC = () => {
       <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
         <h2 className="text-2xl font-bold mb-6 text-gray-800">Enter Country or Continent</h2>
         <label className="block mb-2 text-gray-700 font-semibold">Select Continent (optional):</label>
-        <select
-          className="w-full p-3 border rounded mb-4"
+        <SelectField
           value={selectedContinent}
           onChange={handleContinentChange}
+          wrapperClassName="w-full mb-4"
         >
           <option value="">-- Select Continent --</option>
-          {Object.keys(continentPortMap).map(continent => (
+          {Object.keys(continentPortMap).map((continent) => (
             <option key={continent} value={continent}>{continent}</option>
           ))}
-        </select>
+        </SelectField>
         <label className="block mb-2 text-gray-700 font-semibold">Or type country:</label>
         <input
           type="text"

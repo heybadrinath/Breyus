@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Package, Loader2, Eye, ArrowRight, Clock } from 'lucide-react';
 import { getUserTrades, getSellerTrades, Trade, TradePhase } from '../services/trade.service';
 import TrackTrade from './TrackTrade';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
 interface TrackTradeListProps {
     isSeller: boolean;
+    initialTradeId?: string | null;
 }
 
 const PHASE_LABELS: Record<TradePhase, string> = {
@@ -19,11 +21,22 @@ const PHASE_LABELS: Record<TradePhase, string> = {
     'COMPLETED': 'Completed'
 };
 
-const TrackTradeList: React.FC<TrackTradeListProps> = ({ isSeller }) => {
+const TrackTradeList: React.FC<TrackTradeListProps> = ({ isSeller, initialTradeId }) => {
+    const [searchParams, setSearchParams] = useSearchParams();
     const [trades, setTrades] = useState<Trade[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [selectedTradeId, setSelectedTradeId] = useState<string | null>(null);
+
+    // Get tradeId from URL or prop
+    const urlTradeId = searchParams.get('tradeId');
+    const [selectedTradeId, setSelectedTradeId] = useState<string | null>(initialTradeId || urlTradeId || null);
+
+    // Update selectedTradeId when URL changes
+    useEffect(() => {
+        if (urlTradeId && urlTradeId !== selectedTradeId) {
+            setSelectedTradeId(urlTradeId);
+        }
+    }, [urlTradeId]);
 
     useEffect(() => {
         fetchTrades();
@@ -79,12 +92,28 @@ const TrackTradeList: React.FC<TrackTradeListProps> = ({ isSeller }) => {
         );
     }
 
+    const handleBackToList = () => {
+        setSelectedTradeId(null);
+        // Clear tradeId from URL
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('tradeId');
+        setSearchParams(newParams, { replace: true });
+    };
+
+    const handleSelectTrade = (tradeId: string) => {
+        setSelectedTradeId(tradeId);
+        // Update URL with tradeId
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set('tradeId', tradeId);
+        setSearchParams(newParams, { replace: true });
+    };
+
     // If a trade is selected, show the full tracking view
     if (selectedTradeId) {
         return (
             <div>
                 <button
-                    onClick={() => setSelectedTradeId(null)}
+                    onClick={handleBackToList}
                     className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-800"
                 >
                     <ArrowRight className="w-4 h-4 rotate-180" />
@@ -121,7 +150,7 @@ const TrackTradeList: React.FC<TrackTradeListProps> = ({ isSeller }) => {
                             <div
                                 key={trade._id}
                                 className="flex items-center gap-4 p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-                                onClick={() => setSelectedTradeId(trade._id)}
+                                onClick={() => handleSelectTrade(trade._id)}
                             >
                                 {/* Product Image */}
                                 <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">

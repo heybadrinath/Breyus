@@ -1,0 +1,338 @@
+# Breyus Platform - Production-Like Docker Compose
+# This setup mirrors production environment with all services containerized
+#
+# Build (with BuildKit for faster builds):
+#   DOCKER_BUILDKIT=1 docker-compose build
+#
+# Run: docker-compose up -d
+# Build + Run: DOCKER_BUILDKIT=1 docker-compose up -d --build
+# View logs: docker-compose logs -f
+# Stop: docker-compose down
+# Stop + remove volumes: docker-compose down -v
+
+services:
+  # ============================================================================
+  # NGINX GATEWAY
+  # Routes traffic to frontend, admin portal, and backend API
+  # ============================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: breyus_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+      admin-portal:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - breyus_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # ============================================================================
+  # DATABASES
+  # ============================================================================
+
+  # MongoDB - Main Application Database
+  mongo:
+    image: mongo:7
+    container_name: breyus_mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-breyus}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-breyus_secret}
+      MONGO_INITDB_DATABASE: breyus
+    volumes:
+      - mongo_data:/data/db
+      - ./docker/mongo/init-mongo.js:/docker-entrypoint-initdb.d/01-init-mongo.js:ro
+      - ./docker/mongo/seed-admin.js:/docker-entrypoint-initdb.d/02-seed-admin.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "-u", "${MONGO_ROOT_USERNAME:-breyus}", "-p", "${MONGO_ROOT_PASSWORD:-breyus_secret}", "--authenticationDatabase", "admin", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 20s
+      retries: 5
+      start_period: 60s
+    networks:
+      - breyus_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 3G
+
+  # PostgreSQL with pgvector - AI Database
+  postgres:
+    build:
+      context: ./AI_NEW
+      dockerfile: postgres.Dockerfile
+    image: breyus_postgres
+    container_name: breyus_postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: breyus_ai
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./AI_NEW/shared/db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    # Shared memory for PostgreSQL (required for VACUUM ANALYZE on large tables)
+    shm_size: '1g'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d breyus_ai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - breyus_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 3G
+
+  # Redis - Caching and Sessions
+  redis:
+    image: redis:7-alpine
+    container_name: breyus_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - breyus_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+
+  # ============================================================================
+  # BACKEND SERVICES
+  # ============================================================================
+
+  # NestJS Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: breyus_backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      # Database connections (local containers)
+      - MONGODB_URI_PROD=mongodb://${MONGO_ROOT_USERNAME:-breyus}:${MONGO_ROOT_PASSWORD:-breyus_secret}@mongo:27017/breyus?authSource=admin
+      - REDIS_URL=redis://redis:6379
+      # AI Service connection (must match AI_SERVER_URL in ai-http.service.ts)
+      - AI_SERVER_URL=http://ai-service:8000
+      - AI_API_KEY=${AI_API_KEY:-dev-secret-key-change-in-production}
+      # Security
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-jwt-secret-key-change-in-production}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-3600}
+      - COOKIE_SECRET=${COOKIE_SECRET:-your-cookie-secret-change-in-production}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost}
+      # Email (SMTP)
+      - SMTP_HOST=${SMTP_HOST:-smtp.example.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - EMAIL_FROM=${EMAIL_FROM:-noreply@breyus.com}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-Breyus}
+      # Admin Portal
+      - ADMIN_PORTAL_URL=${ADMIN_PORTAL_URL:-http://localhost/admin}
+      - ADMIN_SESSION_EXPIRY=${ADMIN_SESSION_EXPIRY:-86400000}
+      # Alpha Vantage API (Commodity Prices)
+      - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY:-YDDR5CNYARHIGYOE}
+      # Storage Configuration (S3-Compatible / Vultr Object Storage)
+      # Set STORAGE_PROVIDER=s3 to use Vultr Object Storage, or 'local' for filesystem
+      - STORAGE_PROVIDER=${STORAGE_PROVIDER:-local}
+      - S3_ENDPOINT=${S3_ENDPOINT:-}
+      - S3_REGION=${S3_REGION:-sgp1}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-}
+      - S3_BUCKET=${S3_BUCKET:-breyus-uploads}
+    volumes:
+      # Mount Docker socket for container monitoring (System Health)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Mount backup volume for database backups
+      - backup_data:/data/backups
+      # Mount log archive volume
+      - log_data:/data/logs
+      # Mount scripts for backup/rotation operations
+      - ./scripts:/opt/breyus/scripts:ro
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - breyus_network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+
+  # FastAPI AI Service
+  ai-service:
+    build:
+      context: ./AI_NEW
+      dockerfile: Dockerfile
+    container_name: breyus_ai_service
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=${DEBUG:-false}
+      - AI_SERVER_PORT=8000
+      # Database connections (local containers)
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=breyus_ai
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - REDIS_URL=redis://redis:6379
+      # AI Configuration
+      - AI_API_KEY=${AI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-flash-latest}
+      - AI_PROVIDER=${AI_PROVIDER:-gemini}
+      - LLM_MODEL=${LLM_MODEL:-claude-3-sonnet-20240229}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      - CACHE_ENABLED=${CACHE_ENABLED:-true}
+      - HF_HUB_DOWNLOAD_TIMEOUT=600
+      - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-false}
+      - PIPELINE_DEV_NAME=${PIPELINE_DEV_NAME}
+      # Storage Configuration (S3-Compatible / Vultr Object Storage)
+      - S3_ENDPOINT=${S3_ENDPOINT:-}
+      - S3_REGION=${S3_REGION:-sgp1}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-}
+      - S3_BUCKET_AI_DATA=${S3_BUCKET_AI_DATA:-breyus-ai-data}
+    volumes:
+      - ./AI_NEW/pipeline:/app/pipeline
+      - ./AI_NEW/raw_data:/app/raw_data
+      - ./AI_NEW/server:/app/server
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 120s
+    networks:
+      - breyus_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 3G
+
+  # ============================================================================
+  # FRONTEND SERVICES
+  # ============================================================================
+
+  # React Frontend (Main App)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_BACKEND_URL=/api
+    container_name: breyus_frontend
+    restart: unless-stopped
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - breyus_network
+
+  # Admin Portal (Vite React)
+  admin-portal:
+    build:
+      context: ./admin-portal
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=/api
+    container_name: breyus_admin_portal
+    restart: unless-stopped
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - breyus_network
+
+# ============================================================================
+# VOLUMES
+# ============================================================================
+volumes:
+  mongo_data:
+    name: breyus_mongo_data
+  postgres_data:
+    name: breyus_postgres_data
+  redis_data:
+    name: breyus_redis_data
+  backup_data:
+    name: breyus_backup_data
+    # NOTE: For production with Vultr Object Storage, backups are stored in S3 bucket
+    # (breyus-backups). This local volume is only used for temporary backup staging.
+    # The backup script uploads to S3 after creating the dump.
+  log_data:
+    name: breyus_log_data
+
+# ============================================================================
+# NETWORKS
+# ============================================================================
+networks:
+  breyus_network:
+    name: breyus_network
+    driver: bridge

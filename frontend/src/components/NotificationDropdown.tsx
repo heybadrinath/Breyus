@@ -54,9 +54,10 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onCl
   };
 
   return (
-    <div 
+    <div
       ref={dropdownRef}
       className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden"
+      style={{ maxHeight: 'calc(100vh - 100px)' }}
     >
       <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
         <h3 className="font-semibold text-gray-800">Notifications</h3>

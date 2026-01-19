@@ -7,20 +7,78 @@ import { DocumentType } from './dto/upload-document.dto';
 import { TradePaginationDto, TradePaginationResult } from './dto/trade-pagination.dto';
 import { AuthService } from '../auth/auth.service';
 import { Product } from '../products/schema/products.schema';
+import { User } from '../users/user.schema';
 import { StorageService } from '../common/storage';
 import { TradeNotificationService } from './trade-notification.service';
 import { AuditService } from './audit.service';
+
+// Constants for trade phase ordering (Issue #18 - DRY principle)
+const TRADE_PHASE_ORDER: TradePhase[] = ['PR', 'SCO', 'ICPO', 'SPA', 'PAYMENT', 'BOL', 'COMPLETED'];
+
+// Issue #4 - Negotiation state machine constants
+// Closed states where no further negotiation actions are allowed
+const CLOSED_NEGOTIATION_STATUSES = ['accepted', 'rejected', 'cancelled', 'completed'];
+
+// Valid state transitions for negotiation
+// Key: Current state, Value: Array of [action, allowedParties, nextState]
+type NegotiationAction = 'counter' | 'respond' | 'accept' | 'reject';
+type Party = 'seller' | 'buyer' | 'both';
+const NEGOTIATION_TRANSITIONS: Record<string, { action: NegotiationAction; allowedBy: Party; nextState: string }[]> = {
+    'pending': [
+        { action: 'counter', allowedBy: 'seller', nextState: 'countered' },
+        { action: 'accept', allowedBy: 'seller', nextState: 'accepted' },  // Seller accepts buyer's initial offer
+        { action: 'reject', allowedBy: 'both', nextState: 'rejected' }
+    ],
+    'countered': [
+        { action: 'respond', allowedBy: 'buyer', nextState: 'buyer_responded' },
+        { action: 'accept', allowedBy: 'buyer', nextState: 'accepted' },  // Buyer accepts seller's counter
+        { action: 'reject', allowedBy: 'both', nextState: 'rejected' }
+    ],
+    'buyer_responded': [
+        { action: 'counter', allowedBy: 'seller', nextState: 'countered' },
+        { action: 'accept', allowedBy: 'seller', nextState: 'accepted' },  // Seller accepts buyer's response
+        { action: 'reject', allowedBy: 'both', nextState: 'rejected' }
+    ]
+};
 
 @Injectable()
 export class TradeService {
     constructor(
         @InjectModel(Trade.name) private readonly tradeModel: Model<Trade>,
         @InjectModel(Product.name) private readonly productModel: Model<Product>,
+        @InjectModel(User.name) private readonly userModel: Model<User>,
         private readonly authService: AuthService,
         private readonly storageService: StorageService,
         private readonly notificationService: TradeNotificationService,
         private readonly auditService: AuditService,
     ) { }
+
+    /**
+     * Get user information from account token
+     * Returns userId and email for dispute creation
+     */
+    async getUserFromToken(accountToken: string): Promise<{ userId: Types.ObjectId; email: string } | null> {
+        try {
+            const decodedToken = this.authService.validateAccountToken(accountToken);
+            const userId = (decodedToken as any).userId;
+
+            if (!userId) {
+                return null;
+            }
+
+            const user = await this.userModel.findById(userId).select('mail').lean();
+            if (!user) {
+                return null;
+            }
+
+            return {
+                userId: new Types.ObjectId(userId),
+                email: user.mail
+            };
+        } catch (error) {
+            return null;
+        }
+    }
 
     async createTrade(createTradeDto: CreateTradeDto, accountToken: string) {
         try {
@@ -41,8 +99,8 @@ export class TradeService {
             // ==========================================
             // STOCK RESERVATION LOGIC (Feature E.11)
             // ==========================================
-            const currentStock = parseFloat(product.stock);
-            const requestedQty = parseFloat(createTradeDto.quantity);
+            const currentStock = typeof product.stock === 'number' ? product.stock : parseFloat(String(product.stock));
+            const requestedQty = typeof createTradeDto.quantity === 'number' ? createTradeDto.quantity : parseFloat(String(createTradeDto.quantity));
 
             if (isNaN(currentStock)) {
                 // If stock is not a valid number, we proceed with caution or block?
@@ -125,6 +183,9 @@ export class TradeService {
                         .catch(err => console.error('Failed to send trade created notification:', err));
                 }
 
+                // Set unread flag for seller when buyer creates a new trade (PR)
+                await this.setUnreadForOtherParty((savedTrade._id as any).toString(), buyerId);
+
                 return {
                     statusCode: 201,
                     message: 'Trade request created successfully',
@@ -137,7 +198,7 @@ export class TradeService {
                     // We must fetch latest product to safely restore (simple increment) - avoiding full OCC loop for rollback for now
                     const latestProduct = await this.productModel.findById(product._id);
                     if (latestProduct) {
-                        const stockToRestore = parseFloat(latestProduct.stock);
+                        const stockToRestore = typeof latestProduct.stock === 'number' ? latestProduct.stock : parseFloat(String(latestProduct.stock));
                         if (!isNaN(stockToRestore)) {
                             await this.productModel.findByIdAndUpdate(product._id, {
                                 stock: (stockToRestore + requestedQty).toString()
@@ -278,14 +339,15 @@ export class TradeService {
             }
 
             // Verify user is the seller
-            if (trade.seller.toString() !== userId) {
+            const isSeller = trade.seller.toString() === userId;
+            const isBuyer = trade.buyer.toString() === userId;
+
+            if (!isSeller) {
                 throw new HttpException('Only the seller can submit counter-offers', HttpStatus.FORBIDDEN);
             }
 
-            // Check if trade is in a state that allows counter-offers
-            if (trade.negotiationStatus === 'accepted' || trade.negotiationStatus === 'rejected') {
-                throw new HttpException('Cannot submit counter-offer on a closed trade', HttpStatus.BAD_REQUEST);
-            }
+            // Issue #4 - Use state machine validation
+            this.validateNegotiationTransition(trade.negotiationStatus, 'counter', isSeller, isBuyer);
 
             // Update trade with seller's counter-offer
             const newRound = (trade.currentNegotiationRound || 0) + 1;
@@ -306,6 +368,9 @@ export class TradeService {
             trade.negotiationHistory.push(historyEntry);
 
             const updatedTrade = await trade.save();
+
+            // Issue #10 - Set unread flag for buyer (other party)
+            await this.setUnreadForOtherParty(tradeId, userId);
 
             // Log audit event (non-blocking)
             const previousOffer = {
@@ -370,14 +435,15 @@ export class TradeService {
             }
 
             // Verify user is the buyer
-            if (trade.buyer.toString() !== userId) {
+            const isSeller = trade.seller.toString() === userId;
+            const isBuyer = trade.buyer.toString() === userId;
+
+            if (!isBuyer) {
                 throw new HttpException('Only the buyer can respond to counter-offers', HttpStatus.FORBIDDEN);
             }
 
-            // Check if trade is in a state that allows responses
-            if (trade.negotiationStatus !== 'countered') {
-                throw new HttpException('Cannot respond - no counter-offer to respond to', HttpStatus.BAD_REQUEST);
-            }
+            // Issue #4 - Use state machine validation
+            this.validateNegotiationTransition(trade.negotiationStatus, 'respond', isSeller, isBuyer);
 
             const newRound = (trade.currentNegotiationRound || 0) + 1;
             const historyEntry = {
@@ -395,7 +461,7 @@ export class TradeService {
                 sellerIncoterms: trade.sellerOfferedIncoterms
             };
 
-            trade.buyerOfferedPrice = responseData.offeredPrice;
+            trade.buyerOfferedPrice = responseData.offeredPrice ? parseFloat(responseData.offeredPrice) : undefined;
             trade.buyerIncoterms = responseData.offeredIncoterms;
             trade.buyerMessage = responseData.message;
             trade.negotiationStatus = 'buyer_responded';
@@ -403,6 +469,9 @@ export class TradeService {
             trade.negotiationHistory.push(historyEntry);
 
             const updatedTrade = await trade.save();
+
+            // Issue #10 - Set unread flag for seller (other party)
+            await this.setUnreadForOtherParty(tradeId, userId);
 
             // Log audit event (non-blocking)
             this.auditService.logBuyerResponse(
@@ -466,9 +535,25 @@ export class TradeService {
                 throw new HttpException('Access denied', HttpStatus.FORBIDDEN);
             }
 
-            // Check if trade can be accepted
-            if (trade.negotiationStatus === 'accepted' || trade.negotiationStatus === 'rejected') {
-                throw new HttpException('Trade is already closed', HttpStatus.BAD_REQUEST);
+            // Issue #4 - Use state machine validation
+            // This validates both that the trade can be accepted AND that this party can accept at this stage
+            this.validateNegotiationTransition(trade.negotiationStatus, 'accept', isSeller, isBuyer);
+
+            // SECURITY FIX: Defense in depth - explicitly prevent self-acceptance (Audit Bug - Seller Self-Acceptance)
+            // A party cannot accept their own offer/counter-offer/response
+            if (trade.negotiationStatus === 'countered' && isSeller) {
+                // Seller made the counter-offer, so seller cannot accept it
+                throw new HttpException(
+                    'Seller cannot accept their own counter-offer. Wait for buyer response.',
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+            if (trade.negotiationStatus === 'buyer_responded' && isBuyer) {
+                // Buyer submitted the response, so buyer cannot accept it
+                throw new HttpException(
+                    'Buyer cannot accept their own response. Wait for seller decision.',
+                    HttpStatus.BAD_REQUEST
+                );
             }
 
             // Add acceptance to history
@@ -510,6 +595,9 @@ export class TradeService {
                 ).catch(err => console.error('Failed to send trade accepted notification:', err));
             }
 
+            // Set unread flag for other party when trade is accepted
+            await this.setUnreadForOtherParty(tradeId, userId);
+
             return {
                 statusCode: 200,
                 message: 'Trade accepted successfully',
@@ -545,10 +633,8 @@ export class TradeService {
                 throw new HttpException('Access denied', HttpStatus.FORBIDDEN);
             }
 
-            // Check if trade can be rejected
-            if (trade.negotiationStatus === 'accepted' || trade.negotiationStatus === 'rejected') {
-                throw new HttpException('Trade is already closed', HttpStatus.BAD_REQUEST);
-            }
+            // Issue #4 - Use state machine validation
+            this.validateNegotiationTransition(trade.negotiationStatus, 'reject', isSeller, isBuyer);
 
             // Add rejection to history
             const historyEntry = {
@@ -589,6 +675,9 @@ export class TradeService {
                     reason
                 ).catch(err => console.error('Failed to send trade rejected notification:', err));
             }
+
+            // Set unread flag for other party when trade is rejected
+            await this.setUnreadForOtherParty(tradeId, userId);
 
             return {
                 statusCode: 200,
@@ -693,12 +782,50 @@ export class TradeService {
             // Validate permissions based on document type
             this.validateDocumentPermissions(documentType, isSeller, isBuyer, trade);
 
-            // Upload file to storage
-            const folder = `trade-documents/${tradeId}/${documentType}`;
-            const filePath = await this.storageService.upload(file.buffer, file.originalname, folder);
+            // Validate prior documents are approved (block upload if any prior doc is rejected)
+            this.validatePriorDocumentsApproved(trade, documentType);
 
-            // Get existing document to handle versioning
-            const existingDoc = this.getExistingDocument(trade, documentType);
+            // Get existing document to check if this is a first-time upload
+            const documentFieldMap: Record<string, string> = {
+                'sco': 'scoDocument',
+                'icpo': 'icpoDocument',
+                'spa': 'spaDocument',
+                'payment-proof': 'paymentProof',
+                'bol': 'bolDocument'
+            };
+            const fieldName = documentFieldMap[documentType];
+            const isFirstUpload = !(trade as any)[fieldName];
+
+            // Bug #5 Fix: For first-time uploads, acquire atomic lock to prevent race conditions
+            // This ensures only one concurrent upload can proceed for the same document type
+            if (isFirstUpload) {
+                const lockAcquired = await this.tradeModel.findOneAndUpdate(
+                    {
+                        _id: tradeId,
+                        documentUploadInProgress: { $ne: true },
+                        [`${fieldName}`]: { $exists: false }  // Double-check no document exists
+                    },
+                    { $set: { documentUploadInProgress: true } },
+                    { new: true }
+                );
+
+                if (!lockAcquired) {
+                    throw new HttpException(
+                        'Another document upload is in progress. Please wait and try again.',
+                        HttpStatus.CONFLICT
+                    );
+                }
+            }
+
+            // Wrap the rest in try-finally to ensure lock is released
+            let uploadResult: any;
+            try {
+                // Upload file to storage
+                const folder = `trade-documents/${tradeId}/${documentType}`;
+                const filePath = await this.storageService.upload(file.buffer, file.originalname, folder);
+
+                // Get existing document to handle versioning
+                const existingDoc = this.getExistingDocument(trade, documentType);
             const currentVersion = existingDoc?.version || 1;
             const newVersion = existingDoc ? currentVersion + 1 : 1;
 
@@ -820,11 +947,29 @@ export class TradeService {
                 updateData.tradePhase = newPhase;
             }
 
-            const updatedTrade = await this.tradeModel.findByIdAndUpdate(
-                tradeId,
+            // Issue #3 - Use Optimistic Concurrency Control (OCC) to prevent race conditions
+            // Note: fieldName is already defined earlier in this method
+
+            // If replacing an existing document, verify the version matches what we read
+            const queryCondition: any = { _id: tradeId };
+            if (existingDoc && existingDoc.version) {
+                // OCC: Only update if the version is still what we expect
+                queryCondition[`${fieldName}.version`] = currentVersion;
+            }
+
+            const updatedTrade = await this.tradeModel.findOneAndUpdate(
+                queryCondition,
                 { $set: updateData },
                 { new: true }
             );
+
+            // Issue #3 - If no document was updated, it means another request modified it first
+            if (!updatedTrade && existingDoc) {
+                throw new HttpException(
+                    'Document was modified by another request. Please refresh and try again.',
+                    HttpStatus.CONFLICT
+                );
+            }
 
             // Log audit event (non-blocking)
             this.auditService.logDocumentUploaded(
@@ -867,13 +1012,16 @@ export class TradeService {
                 }
             }
 
+            // Issue #10 - Set unread flag for other party after document upload
+            await this.setUnreadForOtherParty(tradeId, userId);
+
             // Build response message
             let responseMessage = `${documentType.toUpperCase()} document uploaded successfully`;
             if (invalidatedDocuments.length > 0) {
                 responseMessage += `. The following documents have been invalidated and need to be re-submitted: ${invalidatedDocuments.join(', ')}`;
             }
 
-            return {
+            uploadResult = {
                 statusCode: 200,
                 message: responseMessage,
                 data: {
@@ -882,6 +1030,32 @@ export class TradeService {
                     invalidatedDocuments: invalidatedDocuments.length > 0 ? invalidatedDocuments : undefined
                 }
             };
+            } finally {
+                // Bug #5 Fix: Always release the lock after first-time upload attempt
+                // SECURITY FIX: Wrap lock release in try-catch to prevent stuck locks (Audit Bug #3.1)
+                if (isFirstUpload) {
+                    try {
+                        await this.tradeModel.findByIdAndUpdate(
+                            tradeId,
+                            { $set: { documentUploadInProgress: false } }
+                        );
+                    } catch (lockReleaseError) {
+                        // Log error but don't mask the original exception
+                        console.error(`CRITICAL: Failed to release document upload lock for trade ${tradeId}:`, lockReleaseError);
+                        // Attempt a second release using unset as fallback
+                        try {
+                            await this.tradeModel.findByIdAndUpdate(
+                                tradeId,
+                                { $unset: { documentUploadInProgress: '' } }
+                            );
+                        } catch {
+                            console.error(`CRITICAL: Fallback lock release also failed for trade ${tradeId}`);
+                        }
+                    }
+                }
+            }
+
+            return uploadResult;
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
@@ -982,6 +1156,13 @@ export class TradeService {
                 throw new HttpException('Trade not found or access denied', HttpStatus.NOT_FOUND);
             }
 
+            // Determine user role
+            const isSeller = trade.seller.toString() === userId;
+            const isBuyer = trade.buyer.toString() === userId;
+
+            // SECURITY FIX: Validate document access based on trade phase (Audit Bug - Document Authorization)
+            this.validateDocumentAccess(documentType, trade, isSeller, isBuyer);
+
             // Map document type to schema field
             const documentFieldMap: Record<string, keyof Trade> = {
                 'sco': 'scoDocument',
@@ -1052,6 +1233,9 @@ export class TradeService {
                     HttpStatus.BAD_REQUEST
                 );
             }
+
+            // Issue #9 - Validate required documents exist for each phase transition
+            this.validatePhaseTransitionDocuments(trade, newPhase);
 
             const previousPhase = trade.tradePhase;
             trade.tradePhase = newPhase;
@@ -1142,9 +1326,29 @@ export class TradeService {
                 );
             }
 
+            // Issue #11 - Additional validation for trade completion
+            // Verify payment proof exists and is verified
+            if (!trade.paymentProof) {
+                throw new HttpException(
+                    'Payment proof must be uploaded before completing the trade',
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+
+            // Verify SPA is signed by both parties
+            if (!trade.spaDocument?.sellerSignatureDataUrl || !trade.spaDocument?.buyerSignatureDataUrl) {
+                throw new HttpException(
+                    'SPA must be signed by both parties before completing the trade',
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+
+            // Issue #1 - Synchronize all status fields on completion
             trade.tradePhase = 'COMPLETED';
             trade.completedAt = new Date();
             trade.purchaseOrderStatus = 'completed';
+            // Note: negotiationStatus stays as 'accepted' - it's already in terminal state
+            trade.purchaseRequestStatus = 'completed';  // Sync purchase request status
 
             const updatedTrade = await trade.save();
 
@@ -1226,9 +1430,10 @@ export class TradeService {
             }
 
             // Validate verification permissions based on document type
-            // SCO → Buyer verifies, ICPO → Seller verifies, SPA → Either party
+            // SCO → Buyer verifies, ICPO → Seller verifies
             // Payment Proof → Seller verifies, BoL → Buyer verifies
-            this.validateVerificationPermissions(documentType, isSeller, isBuyer);
+            // SPA → Either party can reject (approval via dual signatures only)
+            this.validateVerificationPermissions(documentType, isSeller, isBuyer, status);
 
             // Get the document field name
             const documentFieldMap: Record<DocumentType, keyof Trade> = {
@@ -1255,12 +1460,20 @@ export class TradeService {
                 (document as DocumentInfo).notes = notes;
             }
 
+            // Special handling for SPA rejection - clear signatures
+            if (documentType === 'spa' && status === 'rejected') {
+                (document as any).sellerSignatureDataUrl = null;
+                (document as any).buyerSignatureDataUrl = null;
+            }
+
+            trade.markModified(fieldName);
+
             // If document is approved, advance to the next phase
             let phaseAdvanced = false;
             if (status === 'approved') {
                 const phaseAdvanceMap: Record<string, TradePhase> = {
-                    'icpo': 'SPA',      // ICPO approved → SPA phase (ready for SPA upload)
-                    'spa': 'PAYMENT',   // SPA approved → Payment phase
+                    'sco': 'ICPO',          // SCO approved → ICPO phase
+                    'icpo': 'SPA',          // ICPO approved → SPA phase (ready for SPA upload)
                     'payment-proof': 'BOL', // Payment approved → BoL phase
                 };
 
@@ -1297,6 +1510,9 @@ export class TradeService {
                     ).catch(err => console.error('Failed to send phase advanced notification:', err));
                 }
             }
+
+            // Set unread flag for the document uploader when their document is verified
+            await this.setUnreadForOtherParty(tradeId, userId);
 
             return {
                 statusCode: 200,
@@ -1371,45 +1587,59 @@ export class TradeService {
 
             // Handle SPA specially - requires BOTH signatures
             if (documentType === 'spa') {
+                // Issue #2 - Create new object reference to ensure Mongoose detects changes
+                // Spreading creates a new object, forcing Mongoose to recognize it as modified
+                let updatedDoc = { ...document };
+
                 if (isSeller) {
                     // Check if seller already signed
                     if (document.sellerSignatureDataUrl) {
                         throw new HttpException('Seller has already signed the SPA', HttpStatus.BAD_REQUEST);
                     }
-                    document.sellerSignatureDataUrl = signatureDataUrl;
-                    document.sellerSignedAt = new Date();
-                    document.sellerSignedBy = new Types.ObjectId(userId);
+                    updatedDoc = {
+                        ...updatedDoc,
+                        sellerSignatureDataUrl: signatureDataUrl,
+                        sellerSignedAt: new Date(),
+                        sellerSignedBy: new Types.ObjectId(userId)
+                    };
                     trade.spaSellerSignedAt = new Date();
                 } else if (isBuyer) {
                     // Check if buyer already signed
                     if (document.buyerSignatureDataUrl) {
                         throw new HttpException('Buyer has already signed the SPA', HttpStatus.BAD_REQUEST);
                     }
-                    document.buyerSignatureDataUrl = signatureDataUrl;
-                    document.buyerSignedAt = new Date();
-                    document.buyerSignedBy = new Types.ObjectId(userId);
+                    updatedDoc = {
+                        ...updatedDoc,
+                        buyerSignatureDataUrl: signatureDataUrl,
+                        buyerSignedAt: new Date(),
+                        buyerSignedBy: new Types.ObjectId(userId)
+                    };
                     trade.spaBuyerSignedAt = new Date();
                 }
 
                 // Check if BOTH have now signed - advance to PAYMENT phase
-                if (document.sellerSignatureDataUrl && document.buyerSignatureDataUrl) {
-                    document.status = 'approved';
+                if (updatedDoc.sellerSignatureDataUrl && updatedDoc.buyerSignatureDataUrl) {
+                    updatedDoc = { ...updatedDoc, status: 'approved' };
                     trade.tradePhase = 'PAYMENT';
                 }
 
-                // Explicitly set the updated document back to the trade
-                trade.spaDocument = document;
+                // Issue #2 - Assign new object reference to ensure Mongoose detects the change
+                trade.spaDocument = updatedDoc;
             } else {
                 // For other documents, single signature
-                document.signatureDataUrl = signatureDataUrl;
-                document.signedAt = new Date();
-                document.signedBy = new Types.ObjectId(userId);
+                // Issue #2 - Create new object reference
+                const updatedDoc = {
+                    ...document,
+                    signatureDataUrl: signatureDataUrl,
+                    signedAt: new Date(),
+                    signedBy: new Types.ObjectId(userId)
+                };
 
-                // Explicitly set back based on document type
+                // Assign new object reference based on document type
                 switch (documentType) {
-                    case 'sco': trade.scoDocument = document; break;
-                    case 'icpo': trade.icpoDocument = document; break;
-                    case 'bol': trade.bolDocument = document; break;
+                    case 'sco': trade.scoDocument = updatedDoc; break;
+                    case 'icpo': trade.icpoDocument = updatedDoc; break;
+                    case 'bol': trade.bolDocument = updatedDoc; break;
                 }
             }
 
@@ -1452,8 +1682,9 @@ export class TradeService {
 
             // Determine message based on SPA signature status
             let message = `${documentType.toUpperCase()} document signed successfully`;
-            if (documentType === 'spa') {
-                const bothSigned = document.sellerSignatureDataUrl && document.buyerSignatureDataUrl;
+            const savedDoc = updatedTrade[fieldName] as any;
+            if (documentType === 'spa' && savedDoc) {
+                const bothSigned = savedDoc.sellerSignatureDataUrl && savedDoc.buyerSignatureDataUrl;
                 message = bothSigned
                     ? 'SPA fully signed by both parties - advancing to Payment phase'
                     : `SPA signed by ${isSeller ? 'seller' : 'buyer'} - waiting for ${isSeller ? 'buyer' : 'seller'} signature`;
@@ -1464,11 +1695,11 @@ export class TradeService {
                 message,
                 data: {
                     trade: updatedTrade,
-                    document: updatedTrade[fieldName],
-                    spaStatus: documentType === 'spa' ? {
-                        sellerSigned: !!document.sellerSignatureDataUrl,
-                        buyerSigned: !!document.buyerSignatureDataUrl,
-                        fullySigned: !!(document.sellerSignatureDataUrl && document.buyerSignatureDataUrl)
+                    document: savedDoc,
+                    spaStatus: documentType === 'spa' && savedDoc ? {
+                        sellerSigned: !!savedDoc.sellerSignatureDataUrl,
+                        buyerSigned: !!savedDoc.buyerSignatureDataUrl,
+                        fullySigned: !!(savedDoc.sellerSignatureDataUrl && savedDoc.buyerSignatureDataUrl)
                     } : undefined
                 }
             };
@@ -1485,14 +1716,67 @@ export class TradeService {
     // ========================
 
     /**
+     * Issue #4 - Validate negotiation state transition
+     * Ensures the action is allowed from the current state by the given party
+     */
+    private validateNegotiationTransition(
+        currentStatus: string,
+        action: NegotiationAction,
+        isSeller: boolean,
+        isBuyer: boolean
+    ): void {
+        // Check if trade is in a closed state
+        if (CLOSED_NEGOTIATION_STATUSES.includes(currentStatus)) {
+            throw new HttpException(
+                `Cannot perform ${action} action on a ${currentStatus} trade`,
+                HttpStatus.BAD_REQUEST
+            );
+        }
+
+        // Get valid transitions for current state
+        const validTransitions = NEGOTIATION_TRANSITIONS[currentStatus];
+        if (!validTransitions) {
+            throw new HttpException(
+                `Invalid negotiation status: ${currentStatus}`,
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+
+        // Find the transition for this action
+        const transition = validTransitions.find(t => t.action === action);
+        if (!transition) {
+            throw new HttpException(
+                `Cannot ${action} from ${currentStatus} status`,
+                HttpStatus.BAD_REQUEST
+            );
+        }
+
+        // Check if the party is allowed to perform this action
+        const party: Party = isSeller ? 'seller' : (isBuyer ? 'buyer' : 'both');
+        const isAllowed = transition.allowedBy === 'both' ||
+            transition.allowedBy === party;
+
+        if (!isAllowed) {
+            const allowedPartyName = transition.allowedBy === 'both'
+                ? 'either party'
+                : `the ${transition.allowedBy}`;
+            throw new HttpException(
+                `Only ${allowedPartyName} can ${action} at this stage`,
+                HttpStatus.FORBIDDEN
+            );
+        }
+    }
+
+    /**
      * Validate verification permissions based on user role
-     * SCO → Buyer verifies, ICPO → Seller verifies, SPA → Either
+     * SCO → Buyer verifies, ICPO → Seller verifies
      * Payment Proof → Seller verifies, BoL → Buyer verifies
      */
     private validateVerificationPermissions(
         documentType: DocumentType,
         isSeller: boolean,
-        isBuyer: boolean
+        isBuyer: boolean,
+        status: 'approved' | 'rejected' = 'approved'
     ): void {
         switch (documentType) {
             case 'sco':
@@ -1506,7 +1790,15 @@ export class TradeService {
                 }
                 break;
             case 'spa':
-                // Either party can verify SPA
+                // SPA cannot be manually approved (requires both signatures)
+                // But either party can reject the SPA
+                if (status === 'approved') {
+                    throw new HttpException(
+                        'SPA cannot be manually approved - requires both signatures',
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
+                // Allow rejection by either party - no role restriction
                 break;
             case 'payment-proof':
                 if (!isSeller) {
@@ -1518,6 +1810,57 @@ export class TradeService {
                     throw new HttpException('Only buyers can verify BoL', HttpStatus.FORBIDDEN);
                 }
                 break;
+        }
+    }
+
+    /**
+     * SECURITY FIX: Validate document access based on trade phase (Audit Bug - Document Authorization)
+     * Ensures documents can only be accessed at or after the appropriate trade phase
+     * This provides defense-in-depth beyond just buyer/seller role checks
+     */
+    private validateDocumentAccess(
+        documentType: DocumentType,
+        trade: Trade,
+        isSeller: boolean,
+        isBuyer: boolean
+    ): void {
+        // Define minimum phase required to access each document type
+        const phaseOrder: Record<TradePhase, number> = {
+            'PR': 0,
+            'SCO': 1,
+            'ICPO': 2,
+            'SPA': 3,
+            'PAYMENT': 4,
+            'BOL': 5,
+            'COMPLETED': 6,
+            'CANCELLED': 7
+        };
+
+        // Define which phase each document becomes accessible
+        const documentPhaseRequirement: Record<DocumentType, TradePhase> = {
+            'sco': 'SCO',           // SCO accessible from SCO phase onwards
+            'icpo': 'ICPO',         // ICPO accessible from ICPO phase onwards
+            'spa': 'SPA',           // SPA accessible from SPA phase onwards
+            'payment-proof': 'PAYMENT', // Payment proof accessible from PAYMENT phase onwards
+            'bol': 'BOL'            // BoL accessible from BOL phase onwards
+        };
+
+        const currentPhaseOrder = phaseOrder[trade.tradePhase] ?? 0;
+        const requiredPhaseOrder = phaseOrder[documentPhaseRequirement[documentType]] ?? 0;
+
+        // Allow access to documents from the phase they were created onwards
+        // Also allow access in CANCELLED state for audit purposes (documents remain accessible)
+        if (trade.tradePhase !== 'CANCELLED' && currentPhaseOrder < requiredPhaseOrder) {
+            throw new HttpException(
+                `${documentType.toUpperCase()} document is not available at this stage of the trade`,
+                HttpStatus.FORBIDDEN
+            );
+        }
+
+        // Both buyer and seller can access all documents in their trade
+        // This is standard B2B trade behavior - full transparency between parties
+        if (!isBuyer && !isSeller) {
+            throw new HttpException('Access denied', HttpStatus.FORBIDDEN);
         }
     }
 
@@ -1736,6 +2079,13 @@ export class TradeService {
                 if (!trade.spaDocument) {
                     throw new HttpException('SPA must be uploaded before payment proof', HttpStatus.BAD_REQUEST);
                 }
+                // Issue #8 - Validate SPA is signed by BOTH parties before payment
+                if (!trade.spaDocument.sellerSignatureDataUrl || !trade.spaDocument.buyerSignatureDataUrl) {
+                    throw new HttpException(
+                        'SPA must be signed by both parties before uploading payment proof',
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
                 break;
             case 'bol':
                 if (!isSeller) {
@@ -1749,12 +2099,42 @@ export class TradeService {
     }
 
     /**
+     * Validate that all prior documents are approved before allowing upload
+     * This prevents trade progression when a prior document has been rejected
+     */
+    private validatePriorDocumentsApproved(trade: Trade, documentType: DocumentType): void {
+        const documentOrder: DocumentType[] = ['sco', 'icpo', 'spa', 'payment-proof', 'bol'];
+        const currentIndex = documentOrder.indexOf(documentType);
+
+        // No prior documents to check for SCO
+        if (currentIndex <= 0) return;
+
+        const priorDocs: { type: DocumentType; doc: DocumentInfo | undefined; label: string }[] = [
+            { type: 'sco', doc: trade.scoDocument, label: 'SCO' },
+            { type: 'icpo', doc: trade.icpoDocument, label: 'ICPO' },
+            { type: 'spa', doc: trade.spaDocument, label: 'SPA' },
+            { type: 'payment-proof', doc: trade.paymentProof, label: 'Payment Proof' },
+        ];
+
+        // Check all prior documents (up to but not including current)
+        for (let i = 0; i < currentIndex && i < priorDocs.length; i++) {
+            const prior = priorDocs[i];
+            if (prior.doc && prior.doc.status === 'rejected') {
+                throw new HttpException(
+                    `Cannot upload ${documentType.toUpperCase()} - ${prior.label} was rejected and needs to be re-uploaded first`,
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+        }
+    }
+
+    /**
      * Check if phase should be advanced based on document upload
      */
     private shouldAdvancePhase(currentPhase: TradePhase, newPhase: TradePhase): boolean {
-        const phaseOrder: TradePhase[] = ['PR', 'SCO', 'ICPO', 'SPA', 'PAYMENT', 'BOL', 'COMPLETED'];
-        const currentIndex = phaseOrder.indexOf(currentPhase);
-        const newIndex = phaseOrder.indexOf(newPhase);
+        // Issue #18 - Use constant instead of hardcoded array
+        const currentIndex = TRADE_PHASE_ORDER.indexOf(currentPhase);
+        const newIndex = TRADE_PHASE_ORDER.indexOf(newPhase);
         return newIndex > currentIndex;
     }
 
@@ -1762,12 +2142,80 @@ export class TradeService {
      * Validate if a phase transition is valid
      */
     private isValidPhaseTransition(currentPhase: TradePhase, newPhase: TradePhase): boolean {
-        const phaseOrder: TradePhase[] = ['PR', 'SCO', 'ICPO', 'SPA', 'PAYMENT', 'BOL', 'COMPLETED'];
-        const currentIndex = phaseOrder.indexOf(currentPhase);
-        const newIndex = phaseOrder.indexOf(newPhase);
+        // Issue #18 - Use constant instead of hardcoded array
+        const currentIndex = TRADE_PHASE_ORDER.indexOf(currentPhase);
+        const newIndex = TRADE_PHASE_ORDER.indexOf(newPhase);
 
         // Can only advance to the next phase or stay at current
         return newIndex === currentIndex + 1;
+    }
+
+    /**
+     * Issue #9 - Validate required documents exist for phase transition
+     */
+    private validatePhaseTransitionDocuments(trade: Trade, targetPhase: TradePhase): void {
+        switch (targetPhase) {
+            case 'SCO':
+                // Moving to SCO requires negotiation to be accepted
+                if (trade.negotiationStatus !== 'accepted') {
+                    throw new HttpException(
+                        'Negotiation must be accepted before advancing to SCO phase',
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
+                break;
+            case 'ICPO':
+                // Moving to ICPO requires SCO document
+                if (!trade.scoDocument?.filePath) {
+                    throw new HttpException(
+                        'SCO document must be uploaded before advancing to ICPO phase',
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
+                break;
+            case 'SPA':
+                // Moving to SPA requires ICPO document
+                if (!trade.icpoDocument?.filePath) {
+                    throw new HttpException(
+                        'ICPO document must be uploaded before advancing to SPA phase',
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
+                break;
+            case 'PAYMENT':
+                // Moving to PAYMENT requires SPA document signed by both parties
+                if (!trade.spaDocument?.filePath) {
+                    throw new HttpException(
+                        'SPA document must be uploaded before advancing to Payment phase',
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
+                if (!trade.spaDocument?.sellerSignatureDataUrl || !trade.spaDocument?.buyerSignatureDataUrl) {
+                    throw new HttpException(
+                        'SPA must be signed by both parties before advancing to Payment phase',
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
+                break;
+            case 'BOL':
+                // Moving to BOL requires payment proof
+                if (!trade.paymentProof?.filePath) {
+                    throw new HttpException(
+                        'Payment proof must be uploaded before advancing to BoL phase',
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
+                break;
+            case 'COMPLETED':
+                // Moving to COMPLETED requires BoL document
+                if (!trade.bolDocument?.filePath) {
+                    throw new HttpException(
+                        'Bill of Lading must be uploaded before completing the trade',
+                        HttpStatus.BAD_REQUEST
+                    );
+                }
+                break;
+        }
     }
 
     // ========================
@@ -1888,15 +2336,84 @@ export class TradeService {
     }
 
     /**
-     * Restore stock when a trade is cancelled or rejected
-     */
-    /**
-     * Restore stock when a trade is cancelled or rejected
-     * Uses Optimistic Concurrency Control (OCC) with retries to handle race conditions
+     * Issue #5 - Restore stock when a trade is cancelled or rejected
+     * Uses MongoDB's $inc operator for atomic stock restoration
+     * This is simpler and more reliable than OCC for additive operations
      */
     private async restoreStock(trade: Trade) {
         if (!trade.product || !trade.quantity) return;
 
+        // SECURITY FIX: Check stockRestored flag to prevent double-restoration (Audit Bug #8)
+        // This flag ensures stock is only restored once per trade, preventing exploitation
+        if (trade.stockRestored) {
+            console.warn(`Stock already restored for trade ${trade._id}, skipping restoration`);
+            return;
+        }
+
+        // Type guard: quantity is now a number in schema, but handle both cases for migration safety
+        const tradeQty = typeof trade.quantity === 'number' ? trade.quantity : parseFloat(trade.quantity as any);
+        if (isNaN(tradeQty) || tradeQty <= 0) {
+            console.warn(`Invalid quantity for trade ${trade._id}: ${trade.quantity}`);
+            return;
+        }
+
+        try {
+            // SECURITY FIX: Atomically mark stock as restored FIRST using findOneAndUpdate
+            // This prevents race conditions where two concurrent requests both pass the stockRestored check
+            const markResult = await this.tradeModel.findOneAndUpdate(
+                {
+                    _id: trade._id,
+                    stockRestored: { $ne: true }  // Only update if NOT already restored
+                },
+                { $set: { stockRestored: true } },
+                { new: true }
+            );
+
+            if (!markResult) {
+                // Another request already marked it as restored
+                console.warn(`Stock restoration already in progress or completed for trade ${trade._id}`);
+                return;
+            }
+
+            // Issue #5 - Use $inc for atomic stock restoration
+            // This is more reliable than OCC because:
+            // 1. $inc is natively atomic in MongoDB
+            // 2. We don't need to read-then-write, eliminating race conditions
+            // 3. Multiple concurrent restorations will all succeed correctly
+            const result = await this.productModel.findByIdAndUpdate(
+                trade.product,
+                {
+                    $inc: {
+                        stock: tradeQty
+                    }
+                },
+                { new: true }
+            );
+
+            if (!result) {
+                console.warn(`Product ${trade.product} not found during stock restoration for trade ${trade._id}`);
+                // Log this for manual review - the product may have been deleted
+                return;
+            }
+
+            console.log(`Successfully restored ${tradeQty} stock for product ${trade.product}. New stock: ${result.stock}`);
+
+        } catch (error) {
+            // If $inc fails (e.g., because stock is not a numeric string), fall back to OCC approach
+            if (error.message?.includes('Cannot apply $inc')) {
+                console.log('$inc failed, falling back to OCC approach for stock restoration');
+                await this.restoreStockWithOCC(trade, tradeQty);
+            } else {
+                console.error(`Failed to restore stock for trade ${trade._id}:`, error);
+                throw error; // Propagate unexpected errors
+            }
+        }
+    }
+
+    /**
+     * Issue #5 - Fallback stock restoration using OCC for non-numeric stock values
+     */
+    private async restoreStockWithOCC(trade: Trade, tradeQty: number) {
         const maxRetries = 3;
         let attempt = 0;
 
@@ -1904,52 +2421,41 @@ export class TradeService {
             try {
                 attempt++;
 
-                // 1. Fetch current product state
                 const product = await this.productModel.findById(trade.product);
                 if (!product) {
-                    console.warn(`Product ${trade.product} not found during stock restoration for trade ${trade._id}`);
+                    console.warn(`Product ${trade.product} not found during OCC stock restoration`);
                     return;
                 }
 
-                const currentStock = parseFloat(product.stock || '0');
-                const tradeQty = parseFloat(trade.quantity);
-
-                if (isNaN(currentStock) || isNaN(tradeQty)) {
-                    console.warn(`Invalid stock/quantity for product ${product._id} during restoration: Stock=${product.stock}, Qty=${trade.quantity}`);
+                const currentStock = typeof product.stock === 'number' ? product.stock : parseFloat(String(product.stock ?? '0'));
+                if (isNaN(currentStock)) {
+                    console.warn(`Invalid stock format for product ${product._id}: ${product.stock}`);
                     return;
                 }
 
                 const newStock = (currentStock + tradeQty).toString();
 
-                // 2. Attempt atomic update using OCC
-                // We match BOTH the ID and the stock value we just read
+                // Atomic update with OCC condition
                 const updatedProduct = await this.productModel.findOneAndUpdate(
-                    {
-                        _id: product._id,
-                        stock: product.stock
-                    },
+                    { _id: product._id, stock: product.stock },
                     { stock: newStock },
                     { new: true }
                 );
 
-                // 3. Check if update was successful
                 if (updatedProduct) {
-                    console.log(`Successfully restored ${tradeQty} stock for product ${product._id}. New stock: ${newStock}`);
-                    return; // Success!
+                    console.log(`Successfully restored ${tradeQty} stock via OCC for product ${product._id}`);
+                    return;
                 }
 
-                // If updatedProduct is null, it means stock changed between read and write
-                console.log(`Concurrency conflict during stock restoration for product ${product._id} (Attempt ${attempt}/${maxRetries}). Retrying...`);
-
-                // Small delay before retry to reduce contention
-                await new Promise(resolve => setTimeout(resolve, 100));
+                console.log(`OCC conflict (Attempt ${attempt}/${maxRetries}). Retrying...`);
+                await new Promise(resolve => setTimeout(resolve, 100 * attempt));
 
             } catch (error) {
-                console.error(`Error attempting to restore stock (Attempt ${attempt}/${maxRetries}):`, error);
+                console.error(`OCC stock restoration error (Attempt ${attempt}/${maxRetries}):`, error);
             }
         }
 
-        console.error(`Failed to restore stock for trade ${trade._id} after ${maxRetries} attempts due to concurrency or errors.`);
+        console.error(`Failed to restore stock for trade ${trade._id} after ${maxRetries} OCC attempts`);
     }
 
 
@@ -1973,6 +2479,7 @@ export class TradeService {
 
             const userObjectId = new Types.ObjectId(userId);
 
+            // Issue #12 - Fixed aggregation to properly categorize trades including history tab
             // Get counts for buyer role
             const buyerCounts = await this.tradeModel.aggregate([
                 {
@@ -1985,25 +2492,43 @@ export class TradeService {
                     $group: {
                         _id: {
                             $cond: [
-                                { $in: ['$negotiationStatus', ['pending', 'countered', 'buyer_responded']] },
-                                'pr',
+                                // Completed/rejected/cancelled trades go to history
+                                { $in: ['$negotiationStatus', ['completed', 'rejected', 'cancelled']] },
+                                'history',
                                 {
                                     $cond: [
-                                        { $eq: ['$negotiationStatus', 'accepted'] },
+                                        // Trades in COMPLETED phase go to history
+                                        { $eq: ['$tradePhase', 'COMPLETED'] },
+                                        'history',
                                         {
                                             $cond: [
-                                                { $in: ['$tradePhase', ['SCO', 'ICPO']] },
-                                                'po',
+                                                // PR tab: pending negotiations
+                                                { $in: ['$negotiationStatus', ['pending', 'countered', 'buyer_responded']] },
+                                                'pr',
                                                 {
                                                     $cond: [
-                                                        { $eq: ['$tradePhase', 'SPA'] },
-                                                        'spa',
-                                                        'ongoing'
+                                                        { $eq: ['$negotiationStatus', 'accepted'] },
+                                                        {
+                                                            $cond: [
+                                                                // PO tab: SCO/ICPO phases
+                                                                { $in: ['$tradePhase', ['SCO', 'ICPO']] },
+                                                                'po',
+                                                                {
+                                                                    $cond: [
+                                                                        // SPA tab: SPA phase
+                                                                        { $eq: ['$tradePhase', 'SPA'] },
+                                                                        'spa',
+                                                                        // Ongoing: PAYMENT, BOL phases
+                                                                        'ongoing'
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        },
+                                                        'history'  // Fallback for any other status
                                                     ]
                                                 }
                                             ]
-                                        },
-                                        'other'
+                                        }
                                     ]
                                 }
                             ]
@@ -2025,25 +2550,43 @@ export class TradeService {
                     $group: {
                         _id: {
                             $cond: [
-                                { $in: ['$negotiationStatus', ['pending', 'countered', 'buyer_responded']] },
-                                'pr',
+                                // Completed/rejected/cancelled trades go to history
+                                { $in: ['$negotiationStatus', ['completed', 'rejected', 'cancelled']] },
+                                'history',
                                 {
                                     $cond: [
-                                        { $eq: ['$negotiationStatus', 'accepted'] },
+                                        // Trades in COMPLETED phase go to history
+                                        { $eq: ['$tradePhase', 'COMPLETED'] },
+                                        'history',
                                         {
                                             $cond: [
-                                                { $in: ['$tradePhase', ['SCO', 'ICPO']] },
-                                                'po',
+                                                // PR tab: pending negotiations
+                                                { $in: ['$negotiationStatus', ['pending', 'countered', 'buyer_responded']] },
+                                                'pr',
                                                 {
                                                     $cond: [
-                                                        { $eq: ['$tradePhase', 'SPA'] },
-                                                        'spa',
-                                                        'ongoing'
+                                                        { $eq: ['$negotiationStatus', 'accepted'] },
+                                                        {
+                                                            $cond: [
+                                                                // PO tab: SCO/ICPO phases
+                                                                { $in: ['$tradePhase', ['SCO', 'ICPO']] },
+                                                                'po',
+                                                                {
+                                                                    $cond: [
+                                                                        // SPA tab: SPA phase
+                                                                        { $eq: ['$tradePhase', 'SPA'] },
+                                                                        'spa',
+                                                                        // Ongoing: PAYMENT, BOL phases
+                                                                        'ongoing'
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        },
+                                                        'history'  // Fallback for any other status
                                                     ]
                                                 }
                                             ]
-                                        },
-                                        'other'
+                                        }
                                     ]
                                 }
                             ]
@@ -2053,12 +2596,13 @@ export class TradeService {
                 }
             ]);
 
-            // Combine counts
+            // Combine counts - including history tab
             const counts = {
                 pr: 0,
                 po: 0,
                 spa: 0,
-                ongoing: 0
+                ongoing: 0,
+                history: 0
             };
 
             [...buyerCounts, ...sellerCounts].forEach(item => {
@@ -2083,7 +2627,7 @@ export class TradeService {
     /**
      * Mark trades as read for a specific tab type
      */
-    async markTradesAsRead(accountToken: string, tabType: 'pr' | 'po' | 'spa' | 'ongoing') {
+    async markTradesAsRead(accountToken: string, tabType: 'pr' | 'po' | 'spa' | 'ongoing' | 'history') {
         try {
             const decodedToken = this.authService.validateAccountToken(accountToken);
             const userId = (decodedToken as any).userId;
@@ -2117,6 +2661,15 @@ export class TradeService {
                     statusFilter = {
                         negotiationStatus: 'accepted',
                         tradePhase: { $in: ['PAYMENT', 'BOL'] }
+                    };
+                    break;
+                case 'history':
+                    // Trade history includes completed, rejected, and cancelled trades
+                    statusFilter = {
+                        $or: [
+                            { tradePhase: 'COMPLETED' },
+                            { negotiationStatus: { $in: ['rejected', 'completed', 'cancelled'] } }
+                        ]
                     };
                     break;
             }

@@ -84,11 +84,27 @@ export class NotificationService {
     /**
      * Get total unread count for user (for badge)
      */
-    async getUnreadCount(userId: string): Promise<number> {
-        return this.notificationModel.countDocuments({
+    async getUnreadCount(
+        userId: string,
+        type?: string,
+        category?: string
+    ): Promise<number> {
+        const filter: any = {
             userId: new Types.ObjectId(userId),
             read: false,
-        });
+        };
+
+        if (type) {
+            filter.type = type;
+        }
+
+        if (category === 'trade') {
+            filter.tradeId = { $exists: true };
+        } else if (category === 'message') {
+            filter.conversationId = { $exists: true };
+        }
+
+        return this.notificationModel.countDocuments(filter);
     }
 
     /**
@@ -117,6 +133,18 @@ export class NotificationService {
     async markAllAsRead(userId: string): Promise<void> {
         await this.notificationModel.updateMany(
             { userId: new Types.ObjectId(userId), read: false },
+            { $set: { read: true } }
+        );
+    }
+
+    async markConversationNotificationsRead(userIds: string[], conversationId: string): Promise<void> {
+        if (!userIds.length) return;
+        await this.notificationModel.updateMany(
+            {
+                userId: { $in: userIds.map(id => new Types.ObjectId(id)) },
+                conversationId: new Types.ObjectId(conversationId),
+                read: false,
+            },
             { $set: { read: true } }
         );
     }

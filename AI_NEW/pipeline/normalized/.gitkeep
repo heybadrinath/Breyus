@@ -1,2 +1,2 @@
-# Stage 2: Normalized CSV files
-# This directory holds schema-ready CSV files after normalization
+# Stage 2:   CSV files
+# This directory holds CSV files converted from raw Excel data

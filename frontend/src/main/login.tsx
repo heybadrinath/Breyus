@@ -66,7 +66,21 @@ const Login: React.FC = () => {
     setIsLoading(true);
     setError("");
     try {
-      await login(formData.email, formData.password);
+      const response = await login(formData.email, formData.password);
+
+      // TESTING BYPASS: If backend returns bypassOtp, navigate directly
+      if (response.bypassOtp && response.role) {
+        if (response.role === "Buyer") {
+          navigate('/buyer/homepage');
+        } else if (response.role === "Seller") {
+          navigate('/seller/dashboard');
+        } else {
+          navigate('/select-role');
+        }
+        return;
+      }
+
+      // Normal flow: show OTP form
       setIsOtpSent(true);
       setResendTimer(300);
     } catch (e: any) {

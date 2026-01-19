@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Filter, Check, X, Loader2, Eye, FileUp, FileText, Search, Calendar, CheckCircle, Clock } from "lucide-react";
-import { getSellerTrades, verifyDocument, Trade, DocumentInfo } from "../../services/trade.service";
+import { getSellerTrades, verifyDocument, uploadSCO, Trade, DocumentInfo } from "../../services/trade.service";
 import TradeDetailsModal from "../../components/TradeDetailsModal";
 import ViewDocumentModal from "../../components/ViewDocumentModal";
+import DocumentUploadModal from "../../components/DocumentUploadModal";
+import SelectField from "../../components/SelectField";
+import { useNotifications } from "../../contexts/NotificationContext";
 
 type POStatusFilter = 'all' | 'received' | 'pending' | 'cancelled';
 
@@ -30,6 +33,7 @@ interface TradeWithProduct extends Omit<Trade, 'purchaseOrderStatus' | 'purchase
 
 export const PurchaseOrderStatus = () => {
     const navigate = useNavigate();
+    const { showToast } = useNotifications();
     const [trades, setTrades] = useState<TradeWithProduct[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -50,6 +54,10 @@ export const PurchaseOrderStatus = () => {
     const [startDate, setStartDate] = useState<string>('');
     const [endDate, setEndDate] = useState<string>('');
     const [filteredTrades, setFilteredTrades] = useState<TradeWithProduct[]>([]);
+
+    // SCO Upload Modal state
+    const [scoUploadModalOpen, setScoUploadModalOpen] = useState(false);
+    const [scoUploadTradeId, setScoUploadTradeId] = useState<string | null>(null);
 
     const handleNavigateToNegotiation = (tradeId: string) => {
         navigate(`/seller/negotiation/${tradeId}`);
@@ -72,6 +80,28 @@ export const PurchaseOrderStatus = () => {
     const handleUploadSPA = (tradeId: string) => {
         // Navigate to trade page with SPA Status tab active
         navigate('/seller/trade', { state: { activeTab: 2, uploadSPA: tradeId } });
+    };
+
+    // Handle opening SCO upload modal
+    const handleOpenSCOUpload = (tradeId: string) => {
+        setScoUploadTradeId(tradeId);
+        setScoUploadModalOpen(true);
+    };
+
+    // Handle SCO file upload
+    const handleSCOUpload = async (file: File, notes?: string) => {
+        if (!scoUploadTradeId) return;
+
+        try {
+            await uploadSCO(scoUploadTradeId, file, notes);
+            showToast('SCO uploaded successfully! The buyer will review it.', 'success');
+            setScoUploadModalOpen(false);
+            setScoUploadTradeId(null);
+            await fetchTrades(false);
+        } catch (err: any) {
+            showToast(err.message || 'Failed to upload SCO', 'error');
+            throw err;
+        }
     };
 
     const applyFilters = useCallback(() => {
@@ -135,9 +165,12 @@ export const PurchaseOrderStatus = () => {
                 setLoading(true);
             }
             const response = await getSellerTrades();
-            // Filter for accepted trades (PO phase)
-            const poTrades = (response.data as TradeWithProduct[]).filter(
+            const acceptedTrades = (response.data as TradeWithProduct[]).filter(
                 trade => trade.purchaseRequestStatus === 'accepted' || trade.negotiationStatus === 'accepted'
+            );
+            // Strict phase filtering: PO tab shows only SCO and ICPO phases
+            const poTrades = acceptedTrades.filter(trade =>
+                trade.tradePhase === 'SCO' || trade.tradePhase === 'ICPO'
             );
             setTrades(poTrades);
         } catch (err) {
@@ -162,9 +195,10 @@ export const PurchaseOrderStatus = () => {
             setProcessingId(tradeId);
             await verifyDocument(tradeId, 'icpo', 'approved');
             await fetchTrades(false); // Don't show loading spinner on refresh
+            showToast('ICPO approved successfully', 'success');
         } catch (err) {
             console.error('Failed to approve ICPO:', err);
-            alert('Failed to approve ICPO. Please try again.');
+            showToast('Failed to approve ICPO. Please try again.', 'error');
         } finally {
             setProcessingId(null);
         }
@@ -178,11 +212,31 @@ export const PurchaseOrderStatus = () => {
             setProcessingId(tradeId);
             await verifyDocument(tradeId, 'icpo', 'rejected', reason || undefined);
             await fetchTrades(false); // Don't show loading spinner on refresh
+            showToast('ICPO rejected', 'info');
         } catch (err) {
             console.error('Failed to reject ICPO:', err);
-            alert('Failed to reject ICPO. Please try again.');
+            showToast('Failed to reject ICPO. Please try again.', 'error');
         } finally {
             setProcessingId(null);
+        }
+    };
+
+    // Handler for ICPO verification from modal view (matches ViewDocumentModal's onVerify signature)
+    const handleVerifyICPOFromModal = async (status: 'approved' | 'rejected', notes?: string) => {
+        if (!viewDocTrade) return;
+
+        try {
+            await verifyDocument(viewDocTrade._id, 'icpo', status, notes);
+            showToast(
+                status === 'approved'
+                    ? 'ICPO approved successfully! Trade will advance to SPA phase.'
+                    : 'ICPO rejected. The buyer will be notified.',
+                status === 'approved' ? 'success' : 'info'
+            );
+            await fetchTrades(false);
+        } catch (err: any) {
+            showToast(err.message || 'Failed to verify ICPO', 'error');
+            throw err;
         }
     };
 
@@ -296,11 +350,11 @@ export const PurchaseOrderStatus = () => {
                 )}
 
                 <div className="flex mt-4 items-center">
-                    <select
+                    <SelectField
                         id="entries"
-                        className="w-fit bg-white border-2 rounded-lg px-2 py-1"
                         value={entriesPerPage}
-                        onChange={(e) => setEntriesPerPage(Number(e.target.value))}
+                        className="select-field--sm w-fit"
+                        onValueChange={(value) => setEntriesPerPage(Number(value))}
                     >
                         <option value="5">5</option>
                         <option value="10">10</option>
@@ -308,7 +362,7 @@ export const PurchaseOrderStatus = () => {
                         <option value="20">20</option>
                         <option value="25">25</option>
                         <option value="30">30</option>
-                    </select>
+                    </SelectField>
                     <label className="ml-2 text-gray-500" htmlFor="entries">entries per page</label>
                     <span className="ml-auto text-gray-600">
                         {filteredTrades.length} of {trades.length} order{trades.length !== 1 ? 's' : ''}
@@ -382,16 +436,51 @@ export const PurchaseOrderStatus = () => {
                                     <td className="py-4 text-center">
                                         {hasSCO ? (
                                             <div className="flex flex-col items-center gap-1">
-                                                <div className="flex items-center gap-1 text-green-600">
-                                                    <CheckCircle size={14} />
-                                                    <span className="text-sm font-medium">SCO Sent</span>
-                                                </div>
-                                                <button
-                                                    onClick={() => handleViewSCO(trade)}
-                                                    className="text-blue-600 hover:underline text-xs flex items-center gap-1"
-                                                >
-                                                    <Eye size={12} /> View
-                                                </button>
+                                                {trade.scoDocument?.status === 'rejected' ? (
+                                                    <>
+                                                        <div className="flex items-center gap-1 text-red-600">
+                                                            <X size={14} />
+                                                            <span className="text-sm font-medium">SCO Rejected</span>
+                                                        </div>
+                                                        {trade.scoDocument?.verificationNotes && (
+                                                            <span className="text-xs text-red-500 max-w-[120px] truncate" title={trade.scoDocument.verificationNotes}>
+                                                                "{trade.scoDocument.verificationNotes}"
+                                                            </span>
+                                                        )}
+                                                        <button
+                                                            onClick={() => handleOpenSCOUpload(trade._id)}
+                                                            className="mt-1 px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 flex items-center gap-1"
+                                                        >
+                                                            <FileUp size={12} /> Re-upload SCO
+                                                        </button>
+                                                    </>
+                                                ) : trade.scoDocument?.status === 'approved' ? (
+                                                    <>
+                                                        <div className="flex items-center gap-1 text-green-600">
+                                                            <CheckCircle size={14} />
+                                                            <span className="text-sm font-medium">SCO Approved</span>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleViewSCO(trade)}
+                                                            className="text-blue-600 hover:underline text-xs flex items-center gap-1"
+                                                        >
+                                                            <Eye size={12} /> View
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div className="flex items-center gap-1 text-blue-600">
+                                                            <Clock size={14} />
+                                                            <span className="text-sm font-medium">Pending Review</span>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleViewSCO(trade)}
+                                                            className="text-blue-600 hover:underline text-xs flex items-center gap-1"
+                                                        >
+                                                            <Eye size={12} /> View
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         ) : (
                                             <div className="flex items-center justify-center gap-1 text-yellow-600">
@@ -470,13 +559,19 @@ export const PurchaseOrderStatus = () => {
                                             </div>
                                         ) : isCancelled ? (
                                             <span className="text-red-500 text-xs">Rejected</span>
-                                        ) : !hasSCO ? (
+                                        ) : !hasSCO || trade.scoDocument?.status === 'rejected' ? (
                                             <button
-                                                onClick={() => navigate(`/seller/sco-upload?tradeId=${trade._id}`)}
-                                                className="px-3 py-1.5 bg-black text-white text-xs rounded hover:bg-gray-800 flex items-center gap-1 mx-auto"
+                                                onClick={() => handleOpenSCOUpload(trade._id)}
+                                                className={`px-3 py-1.5 text-xs rounded flex items-center gap-1 mx-auto ${
+                                                    trade.scoDocument?.status === 'rejected'
+                                                        ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                                                        : 'bg-black text-white hover:bg-gray-800'
+                                                }`}
                                             >
-                                                <FileUp size={12} /> Upload SCO
+                                                <FileUp size={12} /> {trade.scoDocument?.status === 'rejected' ? 'Re-upload SCO' : 'Upload SCO'}
                                             </button>
+                                        ) : trade.scoDocument?.status !== 'approved' ? (
+                                            <span className="text-blue-500 text-xs text-center block">Awaiting Buyer Review</span>
                                         ) : (
                                             <span className="text-gray-400 text-xs text-center block">Waiting for ICPO</span>
                                         )}
@@ -542,6 +637,25 @@ export const PurchaseOrderStatus = () => {
                     tradeId={viewDocTrade._id}
                     documentType={viewDocType}
                     document={(viewDocType === 'sco' ? viewDocTrade.scoDocument : viewDocTrade.icpoDocument) as DocumentInfo | null}
+                    canVerify={
+                        viewDocType === 'icpo' &&
+                        viewDocTrade.icpoDocument?.status !== 'approved' &&
+                        viewDocTrade.icpoDocument?.status !== 'rejected'
+                    }
+                    onVerify={viewDocType === 'icpo' ? handleVerifyICPOFromModal : undefined}
+                />
+            )}
+
+            {/* SCO Upload Modal */}
+            {scoUploadModalOpen && (
+                <DocumentUploadModal
+                    isOpen={scoUploadModalOpen}
+                    onClose={() => {
+                        setScoUploadModalOpen(false);
+                        setScoUploadTradeId(null);
+                    }}
+                    onUpload={handleSCOUpload}
+                    documentType="sco"
                 />
             )}
         </div>

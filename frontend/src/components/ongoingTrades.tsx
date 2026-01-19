@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Filter, Check, X, Loader2, Eye, ArrowRight, Search, Calendar } from "lucide-react";
 import { getUserTrades, getSellerTrades, acceptTrade, rejectTrade, Trade, TradePhase } from "../services/trade.service";
 import { validateCookie } from "../services/auth.service";
 import TradeDetailsModal from "./TradeDetailsModal";
 import TradeCancellationModal from "./TradeCancellationModal";
+import TrackTrade from "./TrackTrade";
 import { Pagination } from "./Pagination";
+import { useNotifications } from "../contexts/NotificationContext";
 
 type OngoingStatusFilter = 'all' | 'pending' | 'countered' | 'buyer_responded' | 'accepted';
 
@@ -27,10 +29,13 @@ interface TradeWithExtras extends Omit<Trade, 'purchaseRequestStatus' | 'negotia
     };
     purchaseRequestStatus?: string;
     negotiationStatus?: string;
+    tradePhase?: TradePhase;
 }
 
 export const OngoingTrades = () => {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const { showToast } = useNotifications();
     const [trades, setTrades] = useState<TradeWithExtras[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -40,6 +45,9 @@ export const OngoingTrades = () => {
     const [userRole, setUserRole] = useState<string | null>(null);
     const [selectedTradeId, setSelectedTradeId] = useState<string | null>(null);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
+
+    // Get tradeId from URL for tracking view
+    const trackingTradeId = searchParams.get('tradeId');
 
     // Cancellation modal state
     const [showCancelModal, setShowCancelModal] = useState(false);
@@ -61,6 +69,22 @@ export const OngoingTrades = () => {
     const handleNavigateToNegotiation = (tradeId: string) => {
         const basePath = userRole === 'Seller' ? '/seller' : '/buyer';
         navigate(`${basePath}/negotiation/${tradeId}`);
+    };
+
+    // Navigate to trade tracking/progress view
+    const handleTrackProgress = (tradeId: string) => {
+        // Update URL to include tradeId (stays on ongoing tab)
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set('tab', 'ongoing');
+        newParams.set('tradeId', tradeId);
+        setSearchParams(newParams, { replace: true });
+    };
+
+    // Go back from tracking view to list
+    const handleBackFromTracking = () => {
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('tradeId');
+        setSearchParams(newParams, { replace: true });
     };
 
     useEffect(() => {
@@ -103,11 +127,11 @@ export const OngoingTrades = () => {
                 response = { data: uniqueTrades };
             }
 
-            // Filter for ongoing trades (not completed, not rejected)
+            // Filter for ongoing trades - strict phase filtering: only PAYMENT and BOL phases
+            // Other phases are shown in their respective tabs (PR Status, PO Status, SPA Status)
             const ongoingTrades = (response.data as TradeWithExtras[]).filter(
-                trade => trade.negotiationStatus !== 'rejected' &&
-                         trade.purchaseRequestStatus !== 'rejected' &&
-                         trade.tradeStatus !== 'completed'
+                trade => trade.negotiationStatus === 'accepted' &&
+                         (trade.tradePhase === 'PAYMENT' || trade.tradePhase === 'BOL')
             );
             setTrades(ongoingTrades);
         } catch (err) {
@@ -125,7 +149,7 @@ export const OngoingTrades = () => {
             await checkRoleAndFetchTrades();
         } catch (err) {
             console.error('Failed to accept:', err);
-            alert('Failed to accept. Please try again.');
+            showToast('Failed to accept. Please try again.', 'error');
         } finally {
             setProcessingId(null);
         }
@@ -248,6 +272,27 @@ export const OngoingTrades = () => {
     useEffect(() => {
         setCurrentPage(1);
     }, [entriesPerPage, searchQuery, statusFilter, startDate, endDate]);
+
+    // Determine if acting as seller - check URL path for dual-role users
+    // This ensures the correct context when userRole is 'Seller and Buyer'
+    const isActingAsSeller = userRole === 'Seller' ||
+        (userRole === 'Seller and Buyer' && window.location.pathname.startsWith('/seller'));
+
+    // If trackingTradeId is present, show the TrackTrade component
+    if (trackingTradeId) {
+        return (
+            <div className="border-t-2 border-x-2 rounded-lg my-8 p-6">
+                <button
+                    onClick={handleBackFromTracking}
+                    className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                    <ArrowRight className="w-4 h-4 rotate-180" />
+                    <span className="font-medium">Back to Ongoing Trades</span>
+                </button>
+                <TrackTrade tradeId={trackingTradeId} isSeller={isActingAsSeller} />
+            </div>
+        );
+    }
 
     if (loading) {
         return (
@@ -433,34 +478,41 @@ export const OngoingTrades = () => {
                                     {getStatusBadge(trade)}
                                 </td>
                                 <td className="py-4">
-                                    <div className="flex w-full justify-center gap-2">
+                                    <div className="flex w-full justify-center gap-2 flex-wrap">
+                                        {/* Track Progress button - primary action for ongoing trades */}
                                         <button
-                                            onClick={() => handleAccept(trade._id)}
-                                            disabled={processingId === trade._id || !canUserAccept(trade)}
-                                            className="border-2 border-green-400 rounded-full p-1 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                            title={canUserAccept(trade) ? getAcceptLabel(trade) : "Waiting for other party"}
+                                            onClick={() => handleTrackProgress(trade._id)}
+                                            className="px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 flex items-center gap-1.5"
+                                            title="Track Progress"
                                         >
-                                            {processingId === trade._id ? (
-                                                <Loader2 className="text-green-400 animate-spin" size={18} />
-                                            ) : (
-                                                <Check className="text-green-400" size={18} />
-                                            )}
+                                            <Eye size={14} />
+                                            Track
                                         </button>
-                                        <button
-                                            onClick={() => handleReject(trade._id)}
-                                            disabled={processingId === trade._id}
-                                            className="border-2 rounded-full p-1 border-red-400 hover:bg-red-50 disabled:opacity-50"
-                                            title="Reject/Withdraw"
-                                        >
-                                            <X className="text-red-400" size={18} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleViewDetails(trade._id)}
-                                            className="border-2 rounded-full p-1 border-gray-400 hover:bg-gray-50"
-                                            title="View Details"
-                                        >
-                                            <Eye className="text-gray-400" size={18} />
-                                        </button>
+                                        {/* Accept/Reject only shown for trades still in negotiation (shouldn't appear for PAYMENT/BOL) */}
+                                        {(trade.negotiationStatus !== 'accepted' || !['PAYMENT', 'BOL'].includes(trade.tradePhase || '')) && (
+                                            <>
+                                                <button
+                                                    onClick={() => handleAccept(trade._id)}
+                                                    disabled={processingId === trade._id || !canUserAccept(trade)}
+                                                    className="border-2 border-green-400 rounded-full p-1 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    title={canUserAccept(trade) ? getAcceptLabel(trade) : "Waiting for other party"}
+                                                >
+                                                    {processingId === trade._id ? (
+                                                        <Loader2 className="text-green-400 animate-spin" size={18} />
+                                                    ) : (
+                                                        <Check className="text-green-400" size={18} />
+                                                    )}
+                                                </button>
+                                                <button
+                                                    onClick={() => handleReject(trade._id)}
+                                                    disabled={processingId === trade._id}
+                                                    className="border-2 rounded-full p-1 border-red-400 hover:bg-red-50 disabled:opacity-50"
+                                                    title="Reject/Withdraw"
+                                                >
+                                                    <X className="text-red-400" size={18} />
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
                                 </td>
                             </tr>

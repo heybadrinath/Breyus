@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Filter, Check, X, MessageSquare, ArrowRight, Eye, Bot, FileUp, RefreshCw, FileText, CheckCircle } from "lucide-react";
-import { getSellerTrades, acceptTrade, rejectTrade, Trade, DocumentInfo } from "../../services/trade.service";
+import { getSellerTrades, acceptTrade, rejectTrade, Trade, DocumentInfo, uploadDocument } from "../../services/trade.service";
 import StatusBadge, { getTradeStatusType } from "../../components/StatusBadge";
 import TradeDetailsModal from "../../components/TradeDetailsModal";
 import TradeCancellationModal from "../../components/TradeCancellationModal";
 import ViewDocumentModal from "../../components/ViewDocumentModal";
 import DocumentReplaceModal from "../../components/DocumentReplaceModal";
+import DocumentUploadModal from "../../components/DocumentUploadModal";
+import { useNotifications } from "../../contexts/NotificationContext";
 
 interface TradeWithExtras extends Omit<Trade, 'purchaseRequestStatus' | 'negotiationStatus'> {
     purchaseRequestStatus?: string;
@@ -23,6 +25,7 @@ const ADVANCED_PHASES = ['SPA', 'PAYMENT', 'BOL', 'COMPLETED'];
 
 export const PurchaseRequestStatus = () => {
     const navigate = useNavigate();
+    const { showToast } = useNotifications();
     const [trades, setTrades] = useState<TradeWithExtras[]>([]);
     const [acceptedTrades, setAcceptedTrades] = useState<TradeWithExtras[]>([]);
     const [loading, setLoading] = useState(true);
@@ -47,6 +50,10 @@ export const PurchaseRequestStatus = () => {
     // Replace Document Modal state
     const [showReplaceModal, setShowReplaceModal] = useState(false);
     const [replaceDocTrade, setReplaceDocTrade] = useState<TradeWithExtras | null>(null);
+
+    // SCO Upload Modal state
+    const [showSCOUploadModal, setShowSCOUploadModal] = useState(false);
+    const [scoUploadTradeId, setScoUploadTradeId] = useState<string | null>(null);
 
     const handleNavigateToNegotiation = (tradeId: string) => {
         navigate(`/seller/negotiation/${tradeId}`);
@@ -89,8 +96,17 @@ export const PurchaseRequestStatus = () => {
     };
 
     const handleSendSCO = (tradeId: string) => {
-        // Navigate to SCO upload page
-        navigate(`/seller/sco-upload?tradeId=${tradeId}`);
+        // Open SCO upload modal
+        setScoUploadTradeId(tradeId);
+        setShowSCOUploadModal(true);
+    };
+
+    const handleSCOUpload = async (file: File, notes?: string) => {
+        if (!scoUploadTradeId) return;
+        await uploadDocument(scoUploadTradeId, 'sco', file, notes);
+        setShowSCOUploadModal(false);
+        setScoUploadTradeId(null);
+        await fetchTrades(); // Refresh to show updated status
     };
 
     const handleAccept = async (tradeId: string) => {
@@ -100,7 +116,7 @@ export const PurchaseRequestStatus = () => {
             await fetchTrades();
         } catch (err) {
             console.error('Failed to accept trade:', err);
-            alert('Failed to accept trade. Please try again.');
+            showToast('Failed to accept trade. Please try again.', 'error');
         } finally {
             setProcessingId(null);
         }
@@ -142,12 +158,14 @@ export const PurchaseRequestStatus = () => {
         setShowReplaceModal(true);
     };
 
-    // Confirm replace and navigate to upload page
+    // Confirm replace and open SCO upload modal
     const handleConfirmReplace = (reason: string) => {
         if (replaceDocTrade) {
-            navigate(`/seller/sco-upload?tradeId=${replaceDocTrade._id}&replace=true`);
+            // Close replace modal and open SCO upload modal
+            setShowReplaceModal(false);
+            setScoUploadTradeId(replaceDocTrade._id);
+            setShowSCOUploadModal(true);
         }
-        setShowReplaceModal(false);
         setReplaceDocTrade(null);
     };
 
@@ -504,6 +522,17 @@ export const PurchaseRequestStatus = () => {
                     currentDocument={replaceDocTrade.scoDocument}
                 />
             )}
+
+            {/* SCO Upload Modal */}
+            <DocumentUploadModal
+                isOpen={showSCOUploadModal}
+                onClose={() => {
+                    setShowSCOUploadModal(false);
+                    setScoUploadTradeId(null);
+                }}
+                onUpload={handleSCOUpload}
+                documentType="sco"
+            />
         </>
     );
 };

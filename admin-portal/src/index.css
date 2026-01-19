@@ -1,0 +1,147 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 10%;
+    --primary: 238 43% 59%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 10% 96%;
+    --secondary-foreground: 240 10% 20%;
+    --muted: 240 10% 95%;
+    --muted-foreground: 240 5% 45%;
+    --accent: 238 43% 59%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 10% 90%;
+    --input: 240 10% 90%;
+    --ring: 238 43% 59%;
+    --radius: 0.5rem;
+
+    /* Chart colors - Indigo palette */
+    --chart-1: 238 43% 59%;
+    --chart-2: 238 35% 65%;
+    --chart-3: 238 28% 70%;
+    --chart-4: 238 20% 75%;
+    --chart-5: 238 15% 82%;
+  }
+
+  .dark {
+    --background: 240 10% 6%;
+    --foreground: 240 10% 95%;
+    --card: 240 10% 8%;
+    --card-foreground: 240 10% 95%;
+    --popover: 240 10% 8%;
+    --popover-foreground: 240 10% 95%;
+    --primary: 238 43% 65%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 10% 15%;
+    --secondary-foreground: 240 10% 90%;
+    --muted: 240 10% 15%;
+    --muted-foreground: 240 5% 55%;
+    --accent: 238 43% 65%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 10% 18%;
+    --input: 240 10% 18%;
+    --ring: 238 43% 65%;
+
+    /* Chart colors - dark mode Indigo palette */
+    --chart-1: 238 43% 65%;
+    --chart-2: 238 35% 70%;
+    --chart-3: 238 28% 75%;
+    --chart-4: 238 20% 80%;
+    --chart-5: 238 15% 85%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Custom scrollbar */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+  }
+}
+
+/* Gradient text utility */
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary to-indigo-400 bg-clip-text text-transparent;
+  }
+}
+
+/* Glass effect */
+@layer utilities {
+  .glass {
+    @apply bg-background/80 backdrop-blur-xl border border-border/50;
+  }
+
+  .glass-dark {
+    @apply bg-background/60 backdrop-blur-xl border border-border/30;
+  }
+}
+
+/* Glow effects */
+@layer utilities {
+  .glow {
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.15);
+  }
+
+  .glow-sm {
+    box-shadow: 0 0 10px hsl(var(--primary) / 0.1);
+  }
+}
+
+/* Animation utilities */
+@layer utilities {
+  .animate-in {
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

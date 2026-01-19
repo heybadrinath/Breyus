@@ -21,6 +21,13 @@ Commands:
     retry-errors                Retry failed rows
     reset                       Clear pipeline outputs and truncate DB tables
 
+    # Google Drive Sync Commands (NEW)
+    drive-auth                  One-time OAuth setup to get refresh token
+    upload-to-drive             Upload normalized files from local to Google Drive
+    fetch-from-drive            Fetch normalized files from Google Drive to local
+    vps-sync                    Full VPS sync: fetch + insert + retry
+    manifest-status             Show DB manifest summary (Drive sync tracking)
+
 Size Filters (for convert-all and run-all-pending):
     --size all                  Process all files (default)
     --size small                Process only files < 2MB
@@ -53,6 +60,7 @@ from __future__ import annotations
 import argparse
 import pandas as pd
 import sys
+import time
 from pathlib import Path
 
 from .convert import convert_all_raw, convert_file
@@ -478,6 +486,63 @@ def cmd_organize(args: argparse.Namespace) -> int:
     return 0
 
 
+# =============================================================================
+# Google Drive Sync Commands
+# =============================================================================
+
+
+def cmd_drive_auth(_: argparse.Namespace) -> int:
+    """Run OAuth flow to get Google Drive refresh token."""
+    from .drive_auth import main as drive_auth_main
+    drive_auth_main()
+    return 0
+
+
+def cmd_upload_to_drive(args: argparse.Namespace) -> int:
+    """Upload normalized files to Google Drive."""
+    from .drive_upload import run_upload
+    return run_upload(dry_run=args.dry_run)
+
+
+def cmd_fetch_from_drive(args: argparse.Namespace) -> int:
+    """Fetch normalized files from Google Drive."""
+    from .drive_fetch import run_fetch
+    return run_fetch(dry_run=args.dry_run)
+
+
+def cmd_vps_sync(args: argparse.Namespace) -> int:
+    """Full VPS sync: fetch from Drive, insert to DB, retry failed."""
+    from .vps_sync import run_sync
+    return run_sync(
+        skip_fetch=args.skip_fetch,
+        skip_retry=args.skip_retry,
+    )
+
+
+def cmd_manifest_status(_: argparse.Namespace) -> int:
+    """Show DB manifest summary."""
+    from .manifest_db import get_manifest_summary
+
+    try:
+        summary = get_manifest_summary()
+    except Exception as e:
+        print(f"Error connecting to database: {e}")
+        print("Make sure PostgreSQL is running and environment variables are set.")
+        return 1
+
+    print("=" * 50)
+    print("Pipeline File Manifest (DB)")
+    print("=" * 50)
+    print(f"Total files tracked:    {summary['total_files']}")
+    print(f"Total rows inserted:    {summary['total_rows_inserted']}")
+    print(f"Total rows failed:      {summary['total_rows_failed']}")
+    print()
+    print("By status:")
+    for status, count in sorted(summary["by_status"].items()):
+        print(f"  {status}: {count}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Data pipeline CLI")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -591,6 +656,65 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
     )
     reset_p.set_defaults(func=cmd_reset)
+
+    # =========================================================================
+    # Google Drive Sync Commands
+    # =========================================================================
+
+    # drive-auth: One-time OAuth setup
+    drive_auth_p = sub.add_parser(
+        "drive-auth",
+        help="One-time OAuth setup to get Google Drive refresh token"
+    )
+    drive_auth_p.set_defaults(func=cmd_drive_auth)
+
+    # upload-to-drive: Upload normalized files to Drive
+    upload_p = sub.add_parser(
+        "upload-to-drive",
+        help="Upload normalized files from local to Google Drive"
+    )
+    upload_p.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be uploaded without actually uploading"
+    )
+    upload_p.set_defaults(func=cmd_upload_to_drive)
+
+    # fetch-from-drive: Fetch normalized files from Drive
+    fetch_p = sub.add_parser(
+        "fetch-from-drive",
+        help="Fetch normalized files from Google Drive to local"
+    )
+    fetch_p.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be downloaded without actually downloading"
+    )
+    fetch_p.set_defaults(func=cmd_fetch_from_drive)
+
+    # vps-sync: Full VPS orchestration
+    vps_sync_p = sub.add_parser(
+        "vps-sync",
+        help="Full VPS sync: fetch from Drive, insert to DB, retry failed"
+    )
+    vps_sync_p.add_argument(
+        "--skip-fetch",
+        action="store_true",
+        help="Skip the Google Drive fetch step"
+    )
+    vps_sync_p.add_argument(
+        "--skip-retry",
+        action="store_true",
+        help="Skip the retry step for failed files"
+    )
+    vps_sync_p.set_defaults(func=cmd_vps_sync)
+
+    # manifest-status: Show DB manifest summary
+    manifest_status_p = sub.add_parser(
+        "manifest-status",
+        help="Show DB manifest summary (Drive sync tracking)"
+    )
+    manifest_status_p.set_defaults(func=cmd_manifest_status)
 
     return parser
 

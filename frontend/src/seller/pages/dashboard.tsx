@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Scatter, Line, ResponsiveContainer, ComposedChart } from 'recharts';
 import { PieChart, Pie, Cell, Label, Sector } from 'recharts';
-import { analyticsService, BarGraphData, ScatterGraphData, PieChartData, CountrySalesData, MetricsData } from '../../services/analytics.service';
+import { Eye, ShoppingCart, DollarSign, Users } from 'lucide-react';
+import { analyticsService, BarGraphData, ScatterGraphData, PieChartData, CountrySalesData, MetricsData, TimeRange } from '../../services/analytics.service';
+import TimeRangeSelector from '../../components/analytics/TimeRangeSelector';
+import MetricCard from '../../components/analytics/MetricCard';
 
 // Loading component
 const LoadingSpinner = () => (
@@ -53,7 +56,24 @@ const NoSalesData = () => (
   </div>
 );
 
-// Bargraph ui element
+// Custom tooltip component for charts
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white px-4 py-3 rounded-lg shadow-lg border border-gray-100">
+        <p className="text-sm font-medium text-gray-700 mb-1">{label}</p>
+        {payload.map((entry: any, index: number) => (
+          <p key={index} className="text-sm" style={{ color: entry.color }}>
+            {entry.name}: <span className="font-semibold">{entry.value.toLocaleString()}</span>
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
+// Bargraph ui element with gradient
 const Bargraph = ({ data, loading, error }: { data: BarGraphData[], loading: boolean, error: string | null }) => {
   if (loading) return <LoadingSpinner />;
   if (error) return <ErrorMessage message={error} />;
@@ -61,19 +81,40 @@ const Bargraph = ({ data, loading, error }: { data: BarGraphData[], loading: boo
 
   return (
     <ResponsiveContainer height={300} width="100%">
-      <BarChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="date" />
-        <YAxis domain={[0, Math.max(...data.map(d => d.storeVisits)) + 5]} />
-        <Tooltip />
-        <Legend />
-        <Bar dataKey="storeVisits" fill="#71DE5F" radius={[8, 8, 0, 0]} />
+      <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+        <defs>
+          <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.9}/>
+            <stop offset="95%" stopColor="#16a34a" stopOpacity={0.7}/>
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+        <XAxis
+          dataKey="date"
+          tick={{ fill: '#6b7280', fontSize: 12 }}
+          axisLine={{ stroke: '#e5e7eb' }}
+          tickLine={false}
+        />
+        <YAxis
+          domain={[0, Math.max(...data.map(d => d.storeVisits)) + 5]}
+          tick={{ fill: '#6b7280', fontSize: 12 }}
+          axisLine={false}
+          tickLine={false}
+        />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
+        <Bar
+          dataKey="storeVisits"
+          name="Store Visits"
+          fill="url(#barGradient)"
+          radius={[6, 6, 0, 0]}
+          maxBarSize={50}
+        />
       </BarChart>
     </ResponsiveContainer>
   );
 };
 
-// Scatter graph ui element
+// Scatter graph ui element with area fill
 const Scattergraph = ({ data, loading, error }: { data: ScatterGraphData[], loading: boolean, error: string | null }) => {
   if (loading) return <LoadingSpinner />;
   if (error) return <ErrorMessage message={error} />;
@@ -83,21 +124,50 @@ const Scattergraph = ({ data, loading, error }: { data: ScatterGraphData[], load
 
   return (
     <ResponsiveContainer height={300} width="100%">
-      <ComposedChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis type="number" dataKey="x" name="Day" />
-        <YAxis type="number" dataKey="y" name="Value" domain={[0, maxY + 10]} />
-        <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-        <Legend />
-        <Line type="monotone" dataKey="y" stroke="#71DE5F" dot={false} strokeWidth={3} />
-        <Scatter name="Data Points" data={data} fill="#1A8208" />
+      <ComposedChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+        <defs>
+          <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05}/>
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+        <XAxis
+          type="number"
+          dataKey="x"
+          name="Day"
+          tick={{ fill: '#6b7280', fontSize: 12 }}
+          axisLine={{ stroke: '#e5e7eb' }}
+          tickLine={false}
+        />
+        <YAxis
+          type="number"
+          dataKey="y"
+          name="Value"
+          domain={[0, maxY + 10]}
+          tick={{ fill: '#6b7280', fontSize: 12 }}
+          axisLine={false}
+          tickLine={false}
+          tickFormatter={(value) => `$${value.toLocaleString()}`}
+        />
+        <Tooltip content={<CustomTooltip />} />
+        <Line
+          type="monotone"
+          dataKey="y"
+          name="Revenue"
+          stroke="#3b82f6"
+          strokeWidth={2.5}
+          dot={false}
+          activeDot={{ r: 6, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
+        />
+        <Scatter name="Data Points" data={data} fill="#1d4ed8" opacity={0.8} />
       </ComposedChart>
     </ResponsiveContainer>
   );
 };
 
 // Pie chart ui element
-const COLORS = ['#8F85FF', '#B7B1E9'];
+const COLORS = ['#6366f1', '#a5b4fc'];
 
 const renderActiveShape = (props: any) => {
   const RADIAN = Math.PI / 180;
@@ -198,129 +268,171 @@ const Analytics = () => {
   const [metrics, setMetrics] = useState<MetricsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [timeRange, setTimeRange] = useState<TimeRange>('7d');
+
+  const fetchData = useCallback(async (range: TimeRange) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const params = { range };
+      const [bar, scatter, pie, country, metricsData] = await Promise.all([
+        analyticsService.getBarGraphData(params),
+        analyticsService.getScatterGraphData(params),
+        analyticsService.getPieChartData(params),
+        analyticsService.getCountrySalesData(params),
+        analyticsService.getMetricsData(params)
+      ]);
+
+      setBarData(bar || []);
+      setScatterData(scatter || []);
+      setPieData(pie || []);
+      setCountrySalesData(country || []);
+      setMetrics(metricsData || null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch analytics data');
+      console.error('Error fetching analytics:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const [bar, scatter, pie, country, metricsData] = await Promise.all([
-          analyticsService.getBarGraphData(),
-          analyticsService.getScatterGraphData(),
-          analyticsService.getPieChartData(),
-          analyticsService.getCountrySalesData(),
-          analyticsService.getMetricsData()
-        ]);
+    fetchData(timeRange);
+  }, [timeRange, fetchData]);
 
-        setBarData(bar || []);
-        setScatterData(scatter || []);
-        setPieData(pie || []);
-        setCountrySalesData(country || []);
-        setMetrics(metricsData || null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch analytics data');
-        console.error('Error fetching analytics:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const handleTimeRangeChange = (range: TimeRange) => {
+    setTimeRange(range);
+  };
 
-    fetchData();
-  }, []);
+  const getChangeLabel = (range: TimeRange): string => {
+    switch (range) {
+      case '7d': return 'vs previous week';
+      case '30d': return 'vs previous month';
+      case '90d': return 'vs previous quarter';
+      case '1y': return 'vs previous year';
+      default: return 'vs previous period';
+    }
+  };
 
   return (
     <div id="analytics-section">
-      <div className="mx-10 pl-1 pr-10 pb-2 pt-4">
-        <h1 className="font-black text-4xl">Analytics</h1>
-        <p>Check the sales, value and bounce rate by country</p>
+      <div className="mx-10 pl-1 pr-10 pb-2 pt-4 flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="font-black text-4xl">Analytics</h1>
+          <p className="text-gray-500">Track your sales, revenue, and customer metrics</p>
+        </div>
+        <div className="mt-4 md:mt-0">
+          <TimeRangeSelector value={timeRange} onChange={handleTimeRangeChange} />
+        </div>
       </div>
 
-      {/* graph section div */}
-      <div className="my-10 mx-auto flex flex-col xl:flex-row">
-        <div className="shadow-2xl w-full md:w-[60%] md:mx-auto rounded-md my-4 xl:mx-8 pl-1 pr-10 pb-2 pt-4 bg-gray-50">
-          <h2 className="mx-10 font-bold text-2xl">In-Store Visits</h2>
-          <p className="mx-10 my-0 mb-8">Last Campaign Performance</p>
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mx-4 md:mx-10 my-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 className="font-bold text-lg text-gray-800 mb-1">Store Visits</h2>
+          <p className="text-sm text-gray-500 mb-6">Visits over selected period</p>
           <Bargraph data={barData} loading={loading} error={error} />
         </div>
 
-        <div className="shadow-2xl w-full md:w-[60%] md:mx-auto rounded-md my-4 xl:mx-8 pl-1 pr-10 pb-2 pt-4 bg-white">
-          <h2 className="mx-10 font-bold text-2xl">Daily Sales</h2>
-          <p className="mx-10 my-0 mb-8">(+15%) increase in todays sales</p>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 className="font-bold text-lg text-gray-800 mb-1">Revenue Trend</h2>
+          <p className="text-sm text-gray-500 mb-6">Daily revenue over time</p>
           <Scattergraph data={scatterData} loading={loading} error={error} />
         </div>
 
-        <div className="shadow-2xl w-full md:w-[60%] md:mx-auto rounded-md my-4 xl:mx-8 pl-1 pr-10 pb-2 pt-4 bg-white">
-          <h2 className="mx-10 font-bold text-2xl">Customer Distribution</h2>
-          <p className="mx-10 my-0 mb-8">Customer categories</p>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 className="font-bold text-lg text-gray-800 mb-1">Customer Distribution</h2>
+          <p className="text-sm text-gray-500 mb-6">New vs returning customers</p>
           <PiChart data={pieData} loading={loading} error={error} />
         </div>
       </div>
 
-      {/* analytics data in numbers */}
-      {metrics && !loading && !error && (
-        <div className="flex flex-col md:flex-row mx-4 my-8 gap-4">
-          <div className="p-4 mx-4 md:mx-10 w-full shadow-lg rounded-lg bg-gray-50">
-            <p className="text-[#353535] text-xs">Website Views</p>
-            <p className="text-[#353535] text-3xl">{metrics.totalVisits.toLocaleString()}</p>
-            <hr className="border-0 h-[1.5px] bg-gradient-to-r from-[#ECECEC] via-[#00000080] to-[#ECECEC]" />
-            <p className="text-[#CCCCCC]">Total store visits</p>
-          </div>
-
-          <div className="p-4 mx-4 md:mx-10 w-full shadow-lg rounded-lg bg-gray-50">
-            <p className="text-[#353535] text-xs">Total Sales</p>
-            <p className="text-3xl">{metrics.totalSales.toLocaleString()}</p>
-            <hr className="border-0 h-[1.5px] bg-gradient-to-r from-[#ECECEC] via-[#00000080] to-[#ECECEC]" />
-            <p className="text-[#CCCCCC]">Total sales count</p>
-          </div>
-
-          <div className="p-4 mx-4 md:mx-10 w-full shadow-lg rounded-lg bg-gray-50">
-            <p className="text-[#353535] text-xs">Revenue</p>
-            <p className="text-3xl">${metrics.totalRevenue.toLocaleString()}</p>
-            <hr className="border-0 h-[1.5px] bg-gradient-to-r from-[#ECECEC] via-[#00000080] to-[#ECECEC]" />
-            <p className="text-[#CCCCCC]">Total revenue</p>
-          </div>
-
-          <div className="p-4 mx-4 md:mx-10 w-full shadow-lg rounded-lg bg-gray-50">
-            <p className="text-[#353535] text-xs">Customers</p>
-            <p className="text-3xl">{metrics.totalCustomers.toLocaleString()}</p>
-            <hr className="border-0 h-[1.5px] bg-gradient-to-r from-[#ECECEC] via-[#00000080] to-[#ECECEC]" />
-            <p className="text-[#CCCCCC]">Total customers</p>
-          </div>
+      {/* Metrics Cards Section */}
+      {!loading && !error && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mx-4 md:mx-10 my-8">
+          <MetricCard
+            title="Website Views"
+            value={metrics?.totalVisits || 0}
+            change={metrics?.comparison?.visitsChange}
+            changeLabel={getChangeLabel(timeRange)}
+            icon={Eye}
+            iconBgColor="bg-blue-100"
+            iconColor="text-blue-600"
+          />
+          <MetricCard
+            title="Total Sales"
+            value={metrics?.totalSales || 0}
+            change={metrics?.comparison?.salesChange}
+            changeLabel={getChangeLabel(timeRange)}
+            icon={ShoppingCart}
+            iconBgColor="bg-green-100"
+            iconColor="text-green-600"
+          />
+          <MetricCard
+            title="Revenue"
+            value={metrics?.totalRevenue || 0}
+            change={metrics?.comparison?.revenueChange}
+            changeLabel={getChangeLabel(timeRange)}
+            icon={DollarSign}
+            iconBgColor="bg-purple-100"
+            iconColor="text-purple-600"
+            prefix="$"
+          />
+          <MetricCard
+            title="Customers"
+            value={metrics?.totalCustomers || 0}
+            change={metrics?.comparison?.customersChange}
+            changeLabel={getChangeLabel(timeRange)}
+            icon={Users}
+            iconBgColor="bg-orange-100"
+            iconColor="text-orange-600"
+          />
         </div>
       )}
 
       {/* Sales by country */}
-      <div className="p-8 rounded-lg shadow-lg flex flex-col m-10">
-        <h2 className="text-2xl font-bold mb-4">Sales by Country</h2>
+      <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 m-4 md:m-10">
+        <h2 className="text-xl font-bold text-gray-800 mb-6">Sales by Country</h2>
         {loading ? (
           <LoadingSpinner />
         ) : error ? (
           <ErrorMessage message={error} />
         ) : !countrySalesData || countrySalesData.length === 0 ? (
-          <NoSalesData />
+          <div className="text-center py-8 text-gray-500">
+            <p>No country data available for the selected period.</p>
+            <p className="text-sm mt-2">Complete some trades to see buyer country distribution.</p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full bg-white">
+            <table className="min-w-full">
               <thead>
-                <tr>
-                  <th className="py-2 px-4 border-b">Country</th>
-                  <th className="py-2 px-4 border-b">Sales</th>
-                  <th className="py-2 px-4 border-b">Value</th>
-                  <th className="py-2 px-4 border-b">Bounce</th>
+                <tr className="border-b border-gray-200">
+                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-600">Country</th>
+                  <th className="py-3 px-4 text-right text-sm font-semibold text-gray-600">Sales</th>
+                  <th className="py-3 px-4 text-right text-sm font-semibold text-gray-600">Value</th>
+                  <th className="py-3 px-4 text-right text-sm font-semibold text-gray-600">Share</th>
                 </tr>
               </thead>
               <tbody>
                 {countrySalesData.map((country, index) => (
-                  <tr key={index}>
-                    <td className="py-2 px-4 border-b">
-                      <div className="flex items-center">
-                        <img src={country.flag} alt={country.country} className="w-6 h-4 mr-2" />
-                        {country.country}
+                  <tr key={index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={country.flag}
+                          alt={country.country}
+                          className="w-8 h-5 rounded shadow-sm object-cover"
+                        />
+                        <span className="font-medium text-gray-800">{country.country}</span>
                       </div>
                     </td>
-                    <td className="py-2 px-4 border-b">{country.sales.toLocaleString()}</td>
-                    <td className="py-2 px-4 border-b">{country.value}</td>
-                    <td className="py-2 px-4 border-b">{country.bounce}</td>
+                    <td className="py-3 px-4 text-right text-gray-700">{country.sales.toLocaleString()}</td>
+                    <td className="py-3 px-4 text-right text-gray-700">{country.value}</td>
+                    <td className="py-3 px-4 text-right">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {country.percentage}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>

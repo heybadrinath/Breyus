@@ -7,6 +7,7 @@ import { Conversation } from './schemas/conversations.schema';
 import { Company } from 'src/company/company.schema';
 import { Message } from './schemas/messages.schema';
 import { User } from 'src/users/user.schema';
+import { NotificationService } from 'src/notification/notification.service';
 
 @Injectable()
 export class InboxService {
@@ -16,7 +17,35 @@ export class InboxService {
     @InjectModel(User.name) private userModel: Model<User>,
 
     @InjectModel(Product.name) private productModel: Model<Product>,
+    private readonly notificationService: NotificationService,
   ) { }
+
+  private buildReplyReference(message: any) {
+    const reply = message?.replyTo;
+    if (!reply || typeof reply !== 'object' || !('text' in reply)) {
+      return null;
+    }
+    return {
+      _id: reply._id,
+      text: reply.text,
+      sender: reply.sender,
+      createdAt: (reply as any).createdAt || null,
+    };
+  }
+
+  private formatMessage(message: any) {
+    return {
+      _id: message._id,
+      text: message.text,
+      sender: message.sender,
+      receiver: message.receiver,
+      createdAt: (message as any).createdAt || null,
+      editedAt: message.editedAt || null,
+      readBy: message.readBy,
+      reactions: message.reactions || [],
+      replyTo: this.buildReplyReference(message),
+    };
+  }
 
   async createConversation(createConversationDto: CreateConversationDto, companyId: string): Promise<string> {
     const product = await this.productModel
@@ -52,10 +81,11 @@ export class InboxService {
     return conversation._id as string;
   }
 
-  async getConversationsByCompanyId(companyId: string): Promise<any[]> {
+  async getConversationsByCompanyId(companyId: string): Promise<any[]> {        
+    const companyObjectId = new Types.ObjectId(companyId);
     const conversations = await this.conversationModel.aggregate([
       // 1. Match conversations where the company is a participant
-      { $match: { participants: new Types.ObjectId(companyId) } },
+      { $match: { participants: companyObjectId } },
 
       // 2. Lookup Product details
       {
@@ -87,7 +117,7 @@ export class InboxService {
             {
               $match: {
                 $expr: { $in: ['$_id', '$$msgIds'] },
-                readBy: { $ne: new Types.ObjectId(companyId) }
+                readBy: { $nin: [companyObjectId, companyId] }
               }
             },
             { $count: 'count' }
@@ -159,7 +189,13 @@ export class InboxService {
         options: { sort: { createdAt: 1 } },
         populate: [
           { path: 'sender', select: 'companyName _id' },
-          { path: 'receiver', select: 'companyName _id' }
+          { path: 'receiver', select: 'companyName _id' },
+          { path: 'reactions.user', select: 'companyName _id' },
+          {
+            path: 'replyTo',
+            select: 'text sender createdAt',
+            populate: { path: 'sender', select: 'companyName _id' },
+          },
         ]
       })
       .populate({ path: 'participants', select: 'companyName _id' })
@@ -170,17 +206,17 @@ export class InboxService {
       throw new NotFoundException('Not a participant');
     }
     // Return messages with sender/receiver info
-    return (Array.isArray(conversation.messages) ? conversation.messages : []).filter((msg: any) => msg && msg.text !== undefined).map((msg: any) => ({
-      _id: msg._id,
-      text: msg.text,
-      sender: msg.sender,
-      receiver: msg.receiver,
-      createdAt: (msg as any).createdAt || null,
-      readBy: msg.readBy,
-    }));
+    return (Array.isArray(conversation.messages) ? conversation.messages : [])
+      .filter((msg: any) => msg && msg.text !== undefined)
+      .map((msg: any) => this.formatMessage(msg));
   }
 
-  async sendMessage(conversationId: string, senderId: string, text: string): Promise<any> {
+  async sendMessage(
+    conversationId: string,
+    senderId: string,
+    text: string,
+    replyToId?: string | null,
+  ): Promise<any> {
     const conversation = await this.conversationModel.findById(conversationId).populate('participants').exec();
     if (!conversation) throw new NotFoundException('Conversation not found');
     // Find the receiver (the other participant)
@@ -188,41 +224,233 @@ export class InboxService {
     if (!participants.includes(senderId)) throw new NotFoundException('Sender not a participant');
     const receiverId = participants.find((id: string) => id !== senderId);
     if (!receiverId) throw new NotFoundException('Receiver not found');
+    const trimmedText = (text || '').trim();
+    if (!trimmedText) {
+      throw new NotFoundException('Message text cannot be empty');
+    }
+    let replyTo: Types.ObjectId | null = null;
+    if (replyToId) {
+      if (!Types.ObjectId.isValid(replyToId)) {
+        throw new NotFoundException('Reply target not found');
+      }
+      const messageIds = (conversation.messages || [])
+        .map((msg: any) => (msg?._id ? msg._id.toString() : msg.toString()));
+      if (!messageIds.includes(replyToId)) {
+        throw new NotFoundException('Reply target not found');
+      }
+      replyTo = new Types.ObjectId(replyToId);
+    }
     // Create message
     const message = await this.messageModel.create({
-      text,
+      text: trimmedText,
       sender: senderId,
       receiver: receiverId,
-      readBy: [senderId], // sender has read their own message
+      replyTo,
+      readBy: [new Types.ObjectId(senderId)], // sender has read their own message
     });
     // Add message to conversation
     conversation.messages.push(message._id as any);
     await conversation.save();
-    return {
-      _id: message._id,
-      text: message.text,
-      sender: message.sender,
-      receiver: message.receiver,
-      createdAt: (message as any).createdAt || null,
-      readBy: message.readBy,
-    };
+    const populated = await this.messageModel
+      .findById(message._id)
+      .populate({ path: 'sender', select: 'companyName _id' })
+      .populate({ path: 'receiver', select: 'companyName _id' })
+      .populate({ path: 'reactions.user', select: 'companyName _id' })
+      .populate({
+        path: 'replyTo',
+        select: 'text sender createdAt',
+        populate: { path: 'sender', select: 'companyName _id' },
+      })
+      .exec();
+    if (!populated) throw new NotFoundException('Message not found');
+    return this.formatMessage(populated);
+  }
+
+  async editMessage(
+    conversationId: string,
+    messageId: string,
+    companyId: string,
+    text: string,
+  ): Promise<any> {
+    const conversation = await this.conversationModel.findById(conversationId).exec();
+    if (!conversation) throw new NotFoundException('Conversation not found');
+    if (!conversation.participants.map((p: any) => p.toString()).includes(companyId)) {
+      throw new NotFoundException('Not a participant');
+    }
+    const isInConversation = (conversation.messages || []).some(
+      (id: any) => id.toString() === messageId,
+    );
+    if (!isInConversation) throw new NotFoundException('Message not found in conversation');
+
+    const message = await this.messageModel.findById(messageId).exec();
+    if (!message) throw new NotFoundException('Message not found');
+    if (message.sender.toString() !== companyId) {
+      throw new NotFoundException('Not allowed to edit this message');
+    }
+
+    const trimmedText = (text || '').trim();
+    if (!trimmedText) {
+      throw new NotFoundException('Message text cannot be empty');
+    }
+
+    if (message.text !== trimmedText) {
+      message.text = trimmedText;
+      message.editedAt = new Date();
+      message.editedBy = new Types.ObjectId(companyId);
+      await message.save();
+    }
+
+    const populated = await this.messageModel
+      .findById(messageId)
+      .populate({ path: 'sender', select: 'companyName _id' })
+      .populate({ path: 'receiver', select: 'companyName _id' })
+      .populate({ path: 'reactions.user', select: 'companyName _id' })
+      .populate({
+        path: 'replyTo',
+        select: 'text sender createdAt',
+        populate: { path: 'sender', select: 'companyName _id' },
+      })
+      .exec();
+
+    if (!populated) throw new NotFoundException('Message not found');
+
+    return this.formatMessage(populated);
+  }
+
+  async toggleReaction(
+    conversationId: string,
+    messageId: string,
+    companyId: string,
+    emoji: string,
+  ): Promise<any> {
+    const conversation = await this.conversationModel.findById(conversationId).exec();
+    if (!conversation) throw new NotFoundException('Conversation not found');
+    if (!conversation.participants.map((p: any) => p.toString()).includes(companyId)) {
+      throw new NotFoundException('Not a participant');
+    }
+    const isInConversation = (conversation.messages || []).some(
+      (id: any) => id.toString() === messageId,
+    );
+    if (!isInConversation) throw new NotFoundException('Message not found in conversation');
+
+    const message = await this.messageModel.findById(messageId).exec();
+    if (!message) throw new NotFoundException('Message not found');
+
+    const normalizedEmoji = (emoji || '').trim();
+    if (!normalizedEmoji) {
+      throw new NotFoundException('Reaction emoji required');
+    }
+
+    const reactions = Array.isArray(message.reactions) ? message.reactions : [];
+    const existingIndex = reactions.findIndex(
+      (reaction: any) => reaction.user?.toString() === companyId,
+    );
+
+    if (existingIndex !== -1) {
+      if (reactions[existingIndex].emoji === normalizedEmoji) {
+        reactions.splice(existingIndex, 1);
+      } else {
+        reactions[existingIndex].emoji = normalizedEmoji;
+        reactions[existingIndex].reactedAt = new Date();
+      }
+    } else {
+      reactions.push({
+        user: new Types.ObjectId(companyId),
+        emoji: normalizedEmoji,
+        reactedAt: new Date(),
+      });
+    }
+
+    message.reactions = reactions as any;
+    await message.save();
+
+    const populated = await this.messageModel
+      .findById(messageId)
+      .populate({ path: 'sender', select: 'companyName _id' })
+      .populate({ path: 'receiver', select: 'companyName _id' })
+      .populate({ path: 'reactions.user', select: 'companyName _id' })
+      .populate({
+        path: 'replyTo',
+        select: 'text sender createdAt',
+        populate: { path: 'sender', select: 'companyName _id' },
+      })
+      .exec();
+
+    if (!populated) throw new NotFoundException('Message not found');
+
+    return this.formatMessage(populated);
   }
 
   async markMessagesAsRead(conversationId: string, companyId: string): Promise<void> {
-    const conversation = await this.conversationModel.findById(conversationId).populate('messages').exec();
+    const companyObjectId = new Types.ObjectId(companyId);
+    const conversation = await this.conversationModel.findById(conversationId).exec();
     if (!conversation) throw new NotFoundException('Conversation not found');
     // Only mark as read if company is a participant
     if (!conversation.participants.map((p: any) => p.toString()).includes(companyId)) {
       throw new NotFoundException('Not a participant');
     }
-    // Update all messages in the conversation
-    await this.messageModel.updateMany(
-      { _id: { $in: conversation.messages }, readBy: { $ne: companyId } },
-      { $addToSet: { readBy: companyId } }
-    ).exec();
+    const messageIds = (conversation.messages || [])
+      .map((msg: any) => msg?._id || msg)
+      .filter(Boolean)
+      .map((id: any) => new Types.ObjectId(id));
+    if (messageIds.length > 0) {
+      // Update all messages in the conversation
+      await this.messageModel.updateMany(
+        { _id: { $in: messageIds }, readBy: { $ne: companyObjectId } },
+        { $addToSet: { readBy: companyObjectId } }
+      ).exec();
+    }
+
+    // Convert companyId to ObjectId for the query
+    const companyIdObj = Types.ObjectId.isValid(companyId) ? new Types.ObjectId(companyId) : null;
+    if (!companyIdObj) {
+      console.log(`[InboxService] Invalid companyId: ${companyId}`);
+      return;
+    }
+
+    const users = await this.userModel.find({ company: companyIdObj }).select('_id').exec();
+    console.log(`[InboxService] markMessagesAsRead found ${users.length} users for company ${companyId}`);
+
+    if (users.length > 0) {
+      await this.notificationService.markConversationNotificationsRead(
+        users.map(user => user._id.toString()),
+        conversationId,
+      );
+      console.log(`[InboxService] Marked conversation notifications as read for ${users.length} users`);
+    }
   }
 
   async getUsersByCompany(companyId: string): Promise<User[]> {
-    return this.userModel.find({ company: companyId }).exec();
+    console.log(`[InboxService] getUsersByCompany called with companyId: '${companyId}'`);
+
+    // Validate the companyId first
+    if (!companyId || typeof companyId !== 'string') {
+      console.error(`[InboxService] Invalid companyId: ${companyId}`);
+      return [];
+    }
+
+    // Clean the companyId (remove any whitespace)
+    const cleanCompanyId = companyId.trim();
+
+    // Validate it's a valid ObjectId
+    if (!Types.ObjectId.isValid(cleanCompanyId)) {
+      console.error(`[InboxService] companyId is not a valid ObjectId: '${cleanCompanyId}'`);
+      return [];
+    }
+
+    // Query with ObjectId (most reliable approach)
+    const companyObjectId = new Types.ObjectId(cleanCompanyId);
+    console.log(`[InboxService] Querying for users with company ObjectId: ${companyObjectId}`);
+
+    const users = await this.userModel.find({ company: companyObjectId }).exec();
+    console.log(`[InboxService] Found ${users.length} users for company ${cleanCompanyId}`);
+
+    if (users.length > 0) {
+      users.forEach((u, i) => {
+        console.log(`  User ${i}: _id=${u._id.toString()}, mail=${u.mail}`);
+      });
+    }
+
+    return users;
   }
 }

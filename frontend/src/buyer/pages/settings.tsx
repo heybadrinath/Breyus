@@ -5,22 +5,19 @@ import SettingsTabs, { Tab } from "../../components/SettingsTabs";
 import MyDetailsTab from "../../components/settings/MyDetailsTab";
 import TradeDetailsTab from "../../components/settings/TradeDetailsTab";
 import NotificationsTab from "../../components/settings/NotificationsTab";
-
-// Placeholder components for tabs that are not yet implemented
-const PlaceholderTab: React.FC<{ title: string }> = ({ title }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 className="text-xl font-bold text-gray-800 mb-4">{title}</h3>
-        <p className="text-gray-500">This feature is coming soon.</p>
-    </div>
-);
+import SecurityAccessTab from "../../components/settings/SecurityAccessTab";
+import BillingsTab from "../../components/settings/BillingsTab";
+import PlansTab from "../../components/settings/PlansTab";
 
 const SettingsContent = () => {
     const [profile, setProfile] = useState<CompanyProfile | null>(null);
+    const [userEmail, setUserEmail] = useState<string>('');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         fetchProfile();
+        fetchUserEmail();
     }, []);
 
     const fetchProfile = async () => {
@@ -34,6 +31,25 @@ const SettingsContent = () => {
             setError('Failed to load profile. Please try again.');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const fetchUserEmail = async () => {
+        try {
+            const response = await fetch(
+                `${process.env.REACT_APP_BACKEND_URL}/users/return-name`,
+                {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                }
+            );
+            if (response.ok) {
+                const data = await response.json();
+                setUserEmail(data.name || '');
+            }
+        } catch (err) {
+            console.error('Error fetching user email:', err);
         }
     };
 
@@ -68,27 +84,27 @@ const SettingsContent = () => {
         {
             id: 'my-details',
             label: 'My Details',
-            component: <MyDetailsTab profile={profile} onUpdate={handleProfileUpdate} />
+            component: <MyDetailsTab profile={profile} userEmail={userEmail} onUpdate={handleProfileUpdate} />
         },
         {
             id: 'security',
             label: 'Security & Access',
-            component: <PlaceholderTab title="Security & Access" />
+            component: <SecurityAccessTab userEmail={userEmail} />
         },
         {
             id: 'billings',
             label: 'Billings',
-            component: <PlaceholderTab title="Billings" />
+            component: <BillingsTab profile={profile} onUpdate={handleProfileUpdate} />
         },
         {
             id: 'plans',
             label: 'Plans',
-            component: <PlaceholderTab title="Plans" />
+            component: <PlansTab />
         },
         {
             id: 'notifications',
             label: 'Notifications',
-            component: <NotificationsTab />
+            component: <NotificationsTab userEmail={userEmail} />
         },
         {
             id: 'trade-details',

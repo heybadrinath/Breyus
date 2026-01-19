@@ -24,6 +24,14 @@ from typing import Optional, Tuple, List, Dict, Any, Iterable
 import pandas as pd
 import psycopg2
 from psycopg2.extras import execute_values, Json
+from dotenv import load_dotenv
+
+# Load .env file from AI_NEW directory
+_script_dir = Path(__file__).parent
+_ai_dir = _script_dir.parent.parent
+_env_file = _ai_dir / ".env"
+if _env_file.exists():
+    load_dotenv(_env_file)
 
 from .dedupe import dedupe_file
 from .summarize import summarize_csv
@@ -483,6 +491,27 @@ def _prep_rows(df: pd.DataFrame, allowed_cols: List[str]) -> Tuple[List[Dict[str
     return rows, col_order
 
 
+def _execute_values_batched(
+    cur,
+    sql: str,
+    row_values: List[List[Any]],
+    page_size: int = 500,
+) -> int:
+    """
+    Execute batched inserts and return total rows inserted.
+
+    execute_values only reports the last batch's rowcount, so we sum per batch.
+    """
+    inserted = 0
+    if not row_values:
+        return 0
+    for start in range(0, len(row_values), page_size):
+        batch = row_values[start:start + page_size]
+        execute_values(cur, sql, batch, page_size=len(batch))
+        inserted += cur.rowcount
+    return inserted
+
+
 def _insert_to_db(
     csv_path: Path,
     mapping: Optional[str],
@@ -528,8 +557,7 @@ def _insert_to_db(
     try:
         with conn:
             with conn.cursor() as cur:
-                execute_values(cur, sql, row_values, page_size=500)
-                rows_inserted = cur.rowcount
+                rows_inserted = _execute_values_batched(cur, sql, row_values, page_size=500)
                 _log_import(
                     cur,
                     csv_path,
@@ -625,8 +653,12 @@ def _insert_to_db_stream(
                     sql = f"INSERT INTO {target_table} ({columns_sql}) VALUES %s ON CONFLICT (id) DO NOTHING"
                     row_values = [[row.get(col) for col in col_order] for row in rows]
                     try:
-                        execute_values(cur, sql, row_values, page_size=500)
-                        rows_inserted += cur.rowcount
+                        rows_inserted += _execute_values_batched(
+                            cur,
+                            sql,
+                            row_values,
+                            page_size=500,
+                        )
                         # Commit per chunk so Ctrl+C keeps prior progress.
                         conn.commit()
                     except Exception as exc:

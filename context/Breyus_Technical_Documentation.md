@@ -1005,6 +1005,20 @@ import { FileUploadInterceptor } from './file-upload.interceptor';
 
 
 
+## 10. Deployment Architecture
+
+**Production Topology:**
+- Frontend build is served by Nginx on the VPS at `https://breyus.com`.
+- Admin Portal is served by Nginx at `https://admin.breyus.com`.
+- Nginx proxies API traffic to the backend at `https://api.breyus.com` and passes WebSocket upgrades.
+- Backend, AI service, and data stores run in Docker Compose on the Hetzner host.
+- Frontend is built on the VPS (`frontend/` -> `frontend/build`) and bind-mounted into the Nginx container.
+- Admin Portal is built on the VPS (`admin/` -> `admin/dist`) and bind-mounted into the Nginx container.
+
+**Reference:** See `DEPLOYMENT.md` and `SERVER_SETUP.md` for step-by-step setup.
+
+---
+
 ## 16. Migration Path & Roadmap
 
 ### 16.1 Current vs. Planned Features
@@ -1032,12 +1046,18 @@ import { FileUploadInterceptor } from './file-upload.interceptor';
 
 **In Development:**
 🔄 Real-time messaging (WebSocket gateway exists, needs completion)
-🔄 Document verification workflow (status fields exist, admin UI pending)
+🔄 Document verification workflow (status fields exist, admin portal planned)
+🔄 Admin Portal (`admin.breyus.com`) - See `ADMIN_PORTAL_PLAN.md` for full specifications
+   - User & Company management (KYC verification, account suspension)
+   - Trade oversight and dispute resolution
+   - AI pipeline monitoring and database operations
+   - System health monitoring, logs viewer, alerts
+   - Content management (commodities, Incoterms, countries)
+   - GDPR compliance tools
 
 **Planned:**
 📋 MFA enhancement (TOTP/SMS)
 📋 E-signature integration (DocuSign/Adobe Sign)
-📋 Admin panel for KYC/document verification
 📋 AI services (similarity search, gravity score, demand forecasting)
 📋 Logistics integration (Maersk, INTTRA)
 📋 KYC verification service (Onfido/Trulioo)

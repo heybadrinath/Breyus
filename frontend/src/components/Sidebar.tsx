@@ -1,10 +1,11 @@
-import { Store, Inbox, ShoppingCart, Repeat, Heart, HelpCircle, Settings, ChevronDown, LayoutDashboard, Tag, CircleUser, LogOut } from "lucide-react";
+import { Store, Inbox, ShoppingCart, Repeat, Heart, HelpCircle, Settings, ChevronDown, LayoutDashboard, Tag, CircleUser, LogOut, Sparkles, Globe } from "lucide-react";
 import BreyusLogo from "../assets/Logos/full-logo.svg"
 import { useState } from "react";
 import React from "react";
 import { useNavigate, Link } from 'react-router-dom';
 import { usernameService } from "../services/users.service";
 import { logout } from "../services/auth.service";
+import { useNotifications } from "../contexts/NotificationContext";
 
 
 interface UserProfileProps {
@@ -15,14 +16,16 @@ interface UserProfileProps {
 const UserProfile: React.FC<UserProfileProps> = ({ name, className = '' }) => {
   return (
     <div style={{
-      borderTop: '1.6px solid transparent',
-      borderBottom: '1.6px solid transparent',
-      borderImage: 'linear-gradient(to left, #ECECEC, #0000007e, #ECECEC) 1',
+      borderTop: '1px solid transparent',
+      borderBottom: '1px solid transparent',
+      borderImage: 'linear-gradient(to left, #f0f0f0, #d0d0d0, #f0f0f0) 1',
       borderLeft: 'none',
       borderRight: 'none'
-    }} className={`flex items-center w-fit mx-auto border px-6 py-4 ${className}`}>
-      <CircleUser strokeWidth={1.8} size={40}/>
-      <div className="ml-4 text-base font-semibold text-gray-800 capitalize">{name}</div>
+    }} className={`flex items-center w-full px-6 py-5 ${className}`}>
+      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100">
+        <CircleUser strokeWidth={1.5} size={24} className="text-gray-600"/>
+      </div>
+      <div className="ml-3 text-sm font-semibold text-gray-800 truncate max-w-[140px]">{name}</div>
     </div>
   );
 };
@@ -49,26 +52,26 @@ const SidebarBottom: React.FC<SidebarBottomProps> = ({ settingsPath = '/seller/s
   };
 
   return (
-    <div className="px-6 mb-8 space-y-6 mx-auto">
-      <div className="flex items-center space-x-4 cursor-pointer hover:text-gray-700 transition-colors">
-        <HelpCircle size={22} />
-        <span className="text-md font-medium">Help & Support</span>
+    <div className="px-4 pb-6 pt-4 space-y-1 border-t border-gray-100">
+      <div className="flex items-center space-x-3 px-3 py-2.5 rounded-lg cursor-pointer text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors">
+        <HelpCircle size={20} />
+        <span className="text-sm font-medium">Help & Support</span>
       </div>
 
       <div
-        className="flex items-center space-x-4 cursor-pointer hover:text-gray-700 transition-colors"
+        className="flex items-center space-x-3 px-3 py-2.5 rounded-lg cursor-pointer text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
         onClick={() => navigate(settingsPath)}
       >
-        <Settings size={22} />
-        <span className="text-md font-medium">Settings</span>
+        <Settings size={20} />
+        <span className="text-sm font-medium">Settings</span>
       </div>
 
       <div
-        className="flex items-center space-x-4 cursor-pointer hover:text-red-600 transition-colors"
+        className="flex items-center space-x-3 px-3 py-2.5 rounded-lg cursor-pointer text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors"
         onClick={handleLogout}
       >
-        <LogOut size={22} />
-        <span className="text-md font-medium">{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
+        <LogOut size={20} />
+        <span className="text-sm font-medium">{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
       </div>
     </div>
   );
@@ -81,9 +84,11 @@ interface SidebarItemProps {
   label: string;
   path?: string;
   className?: string;
+  showDot?: boolean;
+  badgeCount?: number;
 }
 
-const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, path, className = '' }) => {
+const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, path, className = '', showDot = false, badgeCount }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
@@ -92,13 +97,25 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, path, className 
     }
   };
 
+  // Show badge with count if badgeCount > 0, otherwise show dot if showDot is true
+  const showBadge = badgeCount !== undefined && badgeCount > 0;
+
   return (
     <div
-      className={`flex w-full cursor-pointer pl-2 pr-10 py-2 rounded-xl hover:bg-[#00000021] transition-colors ${className}`}
+      className={`flex items-center w-full cursor-pointer px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors ${className}`}
       onClick={handleClick}
     >
-      <div className='mr-4'>{icon}</div>
-      <span className="text-md font-medium">{label}</span>
+      <div className="relative mr-3 flex-shrink-0">
+        {icon}
+        {showBadge ? (
+          <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold text-white bg-red-500 rounded-full px-1">
+            {badgeCount > 99 ? '99+' : badgeCount}
+          </span>
+        ) : showDot && (
+          <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" />
+        )}
+      </div>
+      <span className="text-sm font-medium">{label}</span>
     </div>
   );
 };
@@ -133,27 +150,27 @@ const SideBarItemDropDownItem: React.FC<CollapsibleDropdownProps> = ({
     <div>
       <div
         onClick={toggleDropdown}
-        className={`flex items-center cursor-pointer p-2 rounded-lg transition-all duration-300 ease-in-out 
-                    hover:!bg-[#00000025] ${isOpen ? "bg-[#00000025]" : "bg-none"}`}
+        className={`flex items-center cursor-pointer px-3 py-2.5 rounded-lg transition-all duration-300 ease-in-out
+                    text-gray-700 hover:bg-gray-100 hover:text-gray-900 ${isOpen ? "bg-gray-100" : ""}`}
       >
-        <div className='mr-4'>{icon}</div>
-        <span className="text-md font-medium">{label}</span>
+        <div className='mr-3 flex-shrink-0'>{icon}</div>
+        <span className="text-sm font-medium">{label}</span>
         {downArrow && (
           <ChevronDown
             size={16}
-            className={`transition-transform ml-auto duration-500 ${isOpen ? "rotate-180" : "rotate-0"}`}
+            className={`transition-transform ml-auto duration-300 ${isOpen ? "rotate-180" : "rotate-0"}`}
           />
         )}
       </div>
 
       {/* Dropdown content */}
       <div
-        className={`flex flex-col overflow-hidden transition-all duration-500 ease-out ${isOpen ? "max-h-56 opacity-100" : "max-h-0 opacity-0"}`}
+        className={`flex flex-col overflow-hidden transition-all duration-300 ease-out ${isOpen ? "max-h-56 opacity-100 mt-1" : "max-h-0 opacity-0"}`}
       >
         {dropdownLinks.map((link, index) => (
           <Link
             key={index}
-            className=" pt-4 px-3 font-medium"
+            className="py-2 px-3 pl-9 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
             to={link.to}
           >
             {link.label}
@@ -175,6 +192,7 @@ const Sidebar: React.FC<SideBarProp> = ({ Buyer = false, Seller = false }) => {
 
   const [username, setUsername] = useState<string>("");
   const navigate = useNavigate();
+  const { hasUnreadMessages, unreadCounts } = useNotifications();
 
   React.useEffect(() => {
     const fetchUsername = async () => {
@@ -191,52 +209,54 @@ const Sidebar: React.FC<SideBarProp> = ({ Buyer = false, Seller = false }) => {
     fetchUsername();
   }, []);
   return (
-    <aside className="w-64 bg-white shadow-md h-screen flex flex-col justify-between">
-      {/* Top Section */}
-      <div>
-        {/* Logo */}
-        <div className="px-6 py-8 mx-auto w-fit cursor-pointer">
-          <img
-            src={BreyusLogo}
-            alt="BREYUS Logo"
-            onClick={ () => {navigate((Buyer?"/buyer/homepage": "/seller/dashboard"))}}
-            className="h-10"
-          />
-        </div>
+    <aside className="w-64 bg-white border-r border-gray-100 h-screen flex flex-col">
+      {/* Logo */}
+      <div className="px-6 py-6 flex-shrink-0">
+        <img
+          src={BreyusLogo}
+          alt="BREYUS Logo"
+          onClick={() => {navigate((Buyer ? "/buyer/homepage" : "/seller/dashboard"))}}
+          className="h-8 cursor-pointer"
+        />
+      </div>
 
-        {/* User Profile */}
-        <UserProfile name={username} />
+      {/* User Profile */}
+      <UserProfile name={username} />
 
-        {/* Navigation Links */}
-        {Buyer && <nav className="mt-8 space-y-4 w-fit px-6 mx-auto">
-          <SidebarItem icon={<Store size={22} />} label="Market" path="/buyer/homepage" />
-          <SidebarItem icon={<Inbox size={22} />} label="Inbox" path="/buyer/inbox" />
-          {/* <SidebarItem icon={<ShoppingCart size={22} />} label="Cart" path="/buyer/cartpage" /> */}
-          <SidebarItem icon={<Repeat size={22} />} label="Trade" path="/buyer/trade" />
-          <SidebarItem icon={<Heart size={22} />} label="Wishlist" path="/buyer/wishlist" />
+      {/* Navigation Links */}
+      <div className="flex-1 overflow-y-auto px-4 py-6">
+        {Buyer && <nav className="space-y-1">
+          <SidebarItem icon={<Store size={20} />} label="Market" path="/buyer/homepage" />
+          <SidebarItem icon={<Globe size={20} />} label="Marketplace" path="/buyer/marketplace" />
+          <SidebarItem icon={<Inbox size={20} />} label="Inbox" path="/buyer/inbox" badgeCount={unreadCounts.messages} showDot={hasUnreadMessages} />
+          <SidebarItem icon={<Repeat size={20} />} label="Trade" path="/buyer/trade" />
+          <SidebarItem icon={<Heart size={20} />} label="Wishlist" path="/buyer/wishlist" />
+          <SidebarItem icon={<Sparkles size={20} />} label="BreyusAI" path="/buyer/ai" />
         </nav>}
 
-        {Seller && <nav className="mt-8 space-y-4 w-fit px-6 mx-auto">
-          <SideBarItemDropDownItem icon={<LayoutDashboard size={22} />} label={"Dashboard"} dropdownLinks={[
+        {Seller && <nav className="space-y-1">
+          <SideBarItemDropDownItem icon={<LayoutDashboard size={20} />} label={"Dashboard"} dropdownLinks={[
             { to: "/seller/dashboard", label: "Analytics", },
             { to: "/seller/sales", label: "Sales", },
             { to: "/seller/upgrade", label: "Product Analysis", },
             { to: "/seller/upgrade", label: "Advanced Analysis", }
           ]} />
-          <SideBarItemDropDownItem icon={<Tag size={22} />} label={"Products"} dropdownLinks={[
+          <SideBarItemDropDownItem icon={<Tag size={20} />} label={"Products"} dropdownLinks={[
             { to: "/seller/add-products", label: "Add Product", },
             { to: "/seller/inventory", label: "Inventory", },
             { to: "/seller/Product-Feedback", label: "Feedback", },
-
           ]} />
-          <SidebarItem icon={<Inbox size={22} />} label="Inbox" path="/seller/inbox" />
-          <SidebarItem icon={<Repeat size={22} />} label="Trade" path="/seller/trade" />
-
+          <SidebarItem icon={<Globe size={20} />} label="Marketplace" path="/seller/marketplace" />
+          <SidebarItem icon={<Inbox size={20} />} label="Inbox" path="/seller/inbox" badgeCount={unreadCounts.messages} showDot={hasUnreadMessages} />
+          <SidebarItem icon={<Repeat size={20} />} label="Trade" path="/seller/trade" />
+          <SidebarItem icon={<Sparkles size={20} />} label="BreyusAI" path="/seller/ai" />
         </nav>}
       </div>
 
       {/* Bottom Section */}
-      <SidebarBottom settingsPath={Buyer ? '/buyer/settings' : '/seller/settings'} />
+      <div className="flex-shrink-0">
+        <SidebarBottom settingsPath={Buyer ? '/buyer/settings' : '/seller/settings'} />
+      </div>
     </aside>
   );
 };

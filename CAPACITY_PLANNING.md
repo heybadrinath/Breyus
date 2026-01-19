@@ -1,18 +1,19 @@
 # Breyus Platform - Capacity Planning & Load Analysis
 
-**Last Updated**: December 24, 2025
+**Last Updated**: January 19, 2026
 **Target Deployment**: 2,000 total users | 100-200 concurrent users (5-10% concurrency)
-**Infrastructure**: Hetzner Cloud CPX41 (8 vCPU, 16 GB RAM) @ €34.90/month
+**Infrastructure**: Vultr High Performance Mumbai (8 vCPU, 16 GB RAM, 320 GB NVMe) @ $96/month + Vultr Object Storage @ $18/month
 
 ---
 
 ## Executive Summary
 
-✅ **CAPACITY VERDICT**: Hetzner CPX41 will comfortably handle 2k users (100-200 concurrent)
+✅ **CAPACITY VERDICT**: Vultr High Performance will comfortably handle 2k users (100-200 concurrent)
 ✅ **HEADROOM**: 25% CPU buffer, 9% RAM buffer under peak load
-✅ **STORAGE**: 10TB Hetzner Storage Box provides 93% unused capacity after 12 months
+✅ **STORAGE**: 1 TB Object Storage + 320 GB NVMe SSD provides ample capacity for 12+ months
+✅ **LATENCY**: Mumbai datacenter provides <20ms latency to India/South Asia users (vs 200ms+ from Europe)
 ✅ **SCALING THRESHOLD**: Can stretch to 5k users with optimizations, 10k+ requires horizontal scaling
-✅ **COST EFFICIENCY**: €0.02 per user/month (3.8× cheaper than AWS equivalent)
+✅ **COST**: $0.057 per user/month at 2,000 users
 
 ---
 
@@ -75,7 +76,7 @@
 
 ### PostgreSQL (AI Database)
 
-**Current State**: Schema ready, NO DATA (embeddings not generated)
+**Current State**: Schema ready, Partial Data (Normalization complete, Embeddings pending)
 
 **Initial Setup** (one-time):
 - Companies: 130,620 records × 2 KB = **261 MB**
@@ -96,7 +97,7 @@
 - AI job tracking: ~5 KB per job × 50 active = **250 KB**
 - **Total: < 10 MB persistent, mostly ephemeral**
 
-### File Storage (Hetzner Storage Box 10TB)
+### File Storage (Vultr Object Storage - 1 TB Standard Tier)
 
 **Monthly Growth**:
 - 6,000 trades × 5 documents × 2 MB avg = **60 GB/month**
@@ -106,13 +107,21 @@
 
 **6-Month Projection**: 372 GB
 **12-Month Projection**: 744 GB
-**10TB Capacity**: **93% unused after 12 months** ✅
+**1 TB Capacity**: **25% unused after 12 months** ✅
+
+**Note**: If approaching 1 TB, upgrade to next tier (~$0.018/GB overage) or add additional storage.
+
+**Benefits of Object Storage over Filesystem Mount:**
+- S3-compatible API (industry standard)
+- No filesystem mount latency
+- Direct file URLs for CDN integration
+- Automatic redundancy
 
 ---
 
 ## Server Resource Breakdown
 
-### CPX41 (8 vCPU, 16 GB RAM) - All Services via Docker Compose
+### Vultr High Performance Mumbai (8 vCPU, 16 GB RAM, 320 GB NVMe) - All Services via Docker Compose
 
 #### 1. Backend API (NestJS + WebSockets)
 **Estimated Resource Usage**:
@@ -202,7 +211,7 @@
 **Configuration**:
 - SSL termination (Let's Encrypt)
 - Proxy to backend API
-- Static file serving (if frontend served from same server)
+- Static file serving for the React frontend (served from the VPS)
 - Rate limiting (prevent abuse)
 
 **Resource Allocation**: 0.5 vCPU, 512 MB RAM
@@ -216,7 +225,7 @@
 | Backend (NestJS) | 2 | 4 GB | - | WebSocket + API |
 | AI Service (FastAPI) | 1 | 3 GB | - | PyTorch model |
 | MongoDB | 1 | 3 GB | 50 GB | Primary DB |
-| PostgreSQL | 1 | 3 GB | 80 GB | AI DB (38GB initial data) - **RISK** |
+| PostgreSQL | 1 | 3 GB | 80 GB | AI DB (38GB initial data) - **RISK** (Data ingestion in progress) |
 | Redis | 0.5 | 1 GB | 10 GB | Cache |
 | Nginx | 0.5 | 512 MB | - | Reverse proxy |
 | **TOTAL** | **6** | **14.5 GB** | **110 GB** | - |
@@ -298,12 +307,24 @@
 
 | Item | Monthly Cost | Annual Cost |
 |------|--------------|-------------|
-| Hetzner CPX41 (8 vCPU, 16 GB) | €34.90 | €418.80 |
-| Hetzner Storage Box BX11 (10 TB) | €3.81 | €45.72 |
-| Domain + SSL (Let's Encrypt) | €1.00 | €12.00 |
-| **Total** | **€39.71** | **€476.52** |
+| Vultr High Performance Mumbai (8 vCPU, 16 GB, 320 GB NVMe) | $96.00 | $1,152.00 |
+| Vultr Object Storage Standard (1 TB) | $18.00 | $216.00 |
+| Domain + SSL (Let's Encrypt) | ~$1.00 | ~$12.00 |
+| **Total** | **$115.00** | **$1,380.00** |
 
-**Cost per User**: €0.02/month (2,000 users)
+**Cost per User**: $0.057/month (2,000 users)
+
+### Why Vultr Over Hetzner?
+
+| Aspect | Hetzner (Previous) | Vultr Mumbai (Current) |
+|--------|-------------------|------------------------|
+| **Monthly Cost** | ~$42 | $115 |
+| **Latency to India** | 200-300ms | <20ms |
+| **Storage Type** | SATA SSD + CIFS mount | NVMe SSD + S3 API |
+| **Datacenter** | Germany | Mumbai, India |
+| **Uptime SLA** | 99.9% | 100% |
+
+**Trade-off**: +$73/month for **10× better latency** and **Mumbai datacenter** for Indian users.
 
 ### Comparison to Cloud Alternatives
 
@@ -311,14 +332,19 @@
 - EC2 t3.xlarge (4 vCPU, 16 GB): $120/month
 - S3 (1 TB storage): $23/month
 - Data transfer (100 GB/month): $9/month
-- **Total**: ~$152/month (~€140)
+- **Total**: ~$152/month
 
-**DigitalOcean**:
-- Droplet (8 GB, 4 vCPU): $48/month
-- Spaces (1 TB): $5/month
-- **Total**: ~$53/month (~€49)
+**DigitalOcean (Singapore)**:
+- Droplet (8 vCPU, 16 GB): $96/month
+- Spaces (1 TB): $20/month
+- **Total**: ~$116/month (no India datacenter)
 
-**Verdict**: Hetzner is **3.8× cheaper than AWS**, **1.2× cheaper than DigitalOcean** ✅
+**Linode/Akamai (Mumbai)**:
+- Dedicated 16 GB: $144/month
+- Object Storage (1 TB): $20/month
+- **Total**: ~$164/month
+
+**Verdict**: Vultr offers **best value for India** with Mumbai datacenter at $115/month ✅
 
 ---
 
@@ -326,19 +352,21 @@
 
 ### Low Risk ✅
 - **Server Capacity**: 25% CPU buffer, 9% RAM buffer
-- **Storage**: 93% unused after 12 months
+- **Storage**: 25% unused after 12 months (1 TB Object Storage)
 - **Database Growth**: Slow, predictable
-- **Cost**: Fixed, no surprise charges
+- **Cost**: Fixed monthly billing (no usage-based surprises)
+- **Latency**: Mumbai datacenter provides excellent India coverage
 
 ### Medium Risk ⚠️
 - **Single Point of Failure**: No redundancy (acceptable for MVP)
-- **Backup Strategy**: Need automated backups (Hetzner Backup: +€7/month)
-- **DDoS Protection**: CloudFlare Free tier recommended
+- **Backup Strategy**: Need automated backups to Object Storage bucket
+- **DDoS Protection**: Vultr offers optional DDoS protection (+$10/month) or use CloudFlare Free tier
 
 ### High Risk 🔴
 - **Performance Optimization Required**: See optimization section below
 - **Monitoring**: Need APM/logging solution for production visibility
 - **Scaling Plan**: Must have clear triggers for horizontal scaling
+- **Data Ingestion**: Monitor disk usage as embeddings are generated (currently pending)
 
 ---
 
@@ -360,9 +388,29 @@
 
 ## Monitoring & Alerting Strategy
 
+### Admin Portal (Built-in Monitoring)
+
+The **Admin Portal** (`admin.breyus.com`) provides built-in monitoring and operations capabilities:
+
+**System Health Dashboard**:
+- CPU utilization (real-time + threshold alerts)
+- RAM usage monitoring
+- Disk space tracking per service
+- Container status and health checks
+- Service uptime indicators
+
+**Operations Features**:
+- **Logs Viewer**: Real-time container logs with filtering
+- **Database Operations**: Backup/restore for MongoDB & PostgreSQL
+- **Alert Management**: Configure thresholds and notification rules
+- **AI Pipeline Monitor**: Job status, queue depth, processing times
+- **Audit Logs**: Admin activity tracking
+
+**Reference**: See `ADMIN_PORTAL_PLAN.md` for full specifications.
+
 ### Key Metrics to Track
 
-**Server Health**:
+**Server Health** (via Admin Portal):
 - CPU utilization (alert at >80% sustained)
 - RAM usage (alert at >90%)
 - Disk space (alert at >85%)
@@ -386,7 +434,9 @@
 - Active messaging sessions
 - AI service cache hit rate
 
-### Recommended Tools
+### External Tools (Optional Enhancement)
+
+For advanced APM and error tracking beyond the admin portal:
 
 **Free Tier Options**:
 - **Sentry** (error tracking): Free up to 5k events/month
@@ -428,12 +478,16 @@
 
 ### Backup Commands
 
+**Via Admin Portal** (Recommended):
+The Admin Portal provides a UI for database backup/restore operations. Access via `admin.breyus.com` → Database Operations.
+
+**Via CLI/Scripts**:
 ```bash
 # MongoDB backup
 docker exec mongo mongodump --archive=/backup/mongo-$(date +%Y%m%d).gz --gzip
 
-# PostgreSQL backup
-docker exec postgres pg_dump -U breyus breyus_ai | gzip > /mnt/storage_box/backups/postgres-$(date +%Y%m%d).sql.gz
+# PostgreSQL backup (use scripts/db-backup.sh)
+./scripts/db-backup.sh --keep 30
 
 # Automated backup script (add to cron)
 0 2 * * * /opt/scripts/backup.sh
@@ -443,14 +497,15 @@ docker exec postgres pg_dump -U breyus breyus_ai | gzip > /mnt/storage_box/backu
 
 ## Conclusion & Capacity Verdict
 
-**Your Hetzner CPX41 deployment plan is well-architected and will comfortably handle 2,000 users (100-200 concurrent).**
+**Your Vultr Mumbai deployment plan is well-architected and will comfortably handle 2,000 users (100-200 concurrent) with excellent latency for Indian users.**
 
 ### Key Strengths
+- **Latency**: Mumbai datacenter provides <20ms latency to India/South Asia (10× better than Europe)
 - **Headroom**: 25% CPU buffer and 9% RAM buffer under peak load
-- **Storage**: Massively over-provisioned - 93% unused after 12 months (excellent growth buffer)
-- **Cost Model**: Fixed monthly pricing eliminates surprise bills (€39.71/month total)
+- **Storage**: 1 TB Object Storage with 25% unused after 12 months
+- **Cost Model**: Fixed monthly pricing eliminates surprise bills ($115/month total)
 - **Scalability**: Can stretch to 5k users on same infrastructure with optimizations
-- **Efficiency**: €0.02 per user/month - 3.8× cheaper than AWS equivalent
+- **Efficiency**: $0.057 per user/month at 2,000 users
 
 ### Resource Utilization Summary
 - **API Load**: 31 calls/second average, 10 calls/second peak (well within capacity)
@@ -460,13 +515,18 @@ docker exec postgres pg_dump -U breyus breyus_ai | gzip > /mnt/storage_box/backu
 - **AI Requests**: 200-400/day with 90% cache hit rate (low load)
 
 ### Scaling Milestones
-- **0-2k users**: Single CPX41 server (current plan) ✅
+- **0-2k users**: Single Vultr High Performance Mumbai (current plan) ✅
 - **2k-5k users**: Same server with performance optimizations ✅
-- **5k-10k users**: Add CPX31 instances + load balancer (~€150/month)
-- **10k+ users**: Managed MongoDB Atlas + multi-region setup (~€500/month)
+- **5k-10k users**: Add additional Vultr instances + Vultr Load Balancer (~$200-250/month)
+- **10k+ users**: Managed MongoDB Atlas + multi-region setup (~$500+/month)
 
 ### Recommendation
-Your infrastructure is production-ready for the target user base, **BUT** the disk space is now critical due to the large initial dataset (4.5M trades). **Strongly recommend adding a Hetzner Volume (100GB for ~€5) specifically for the AI Database.**
+Your Vultr Mumbai infrastructure is production-ready for the target user base with excellent latency for Indian users. The 320 GB NVMe SSD provides sufficient space for databases, and 1 TB Object Storage handles all file uploads with room to grow.
+
+**Optional Enhancements:**
+- Add CloudFlare Free tier for DDoS protection and CDN caching
+- Enable Vultr automated backups (+20% server cost = ~$19/month)
+- Consider Vultr DDoS protection for production (+$10/month)
 
 ---
 
@@ -508,5 +568,6 @@ For questions about capacity planning or scaling decisions:
 - Consult SERVER_SETUP.md for server configuration
 
 **Document Maintained By**: DevOps Team
-**Last Reviewed**: December 24, 2025
+**Last Reviewed**: January 19, 2026
+**Infrastructure**: Vultr Mumbai High Performance + Object Storage
 **Next Review**: Quarterly or at 70% capacity threshold

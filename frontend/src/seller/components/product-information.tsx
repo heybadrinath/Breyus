@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
+import SelectField from "../../components/SelectField";
+import UnitSelector from "../../components/UnitSelector";
+import CategorySelector from "../../components/CategorySelector";
 
 interface ProductInformationProps {
   productInformation: {
@@ -11,6 +14,8 @@ interface ProductInformationProps {
     description: string;
     detailedDescription: string;
     category: string;
+    categoryId?: string; // New: Category ObjectId for database reference
+    isNicheCommodity?: boolean; // New: Classification from category
     hsnCode: string;
     application: string;
     environmentalImpact: string;
@@ -25,6 +30,8 @@ interface ProductInformationProps {
     description: string;
     detailedDescription: string;
     category: string;
+    categoryId?: string;
+    isNicheCommodity?: boolean;
     hsnCode: string;
     application: string;
     environmentalImpact: string;
@@ -39,35 +46,8 @@ interface HSNRESULTS {
   category: string;
 }
 
-const UNIT_OPTIONS = [
-  { value: "", label: "Unit" },
-  { value: "kg", label: "KG" },
-  { value: "pieces", label: "Pieces" },
-  { value: "boxes", label: "Boxes" },
-  { value: "cartons", label: "Cartons" },
-  { value: "grams", label: "Grams" },
-  { value: "liters", label: "Liters" },
-  { value: "tons", label: "Tons" },
-  { value: "meters", label: "Meters" },
-  { value: "sets", label: "Sets" },
-  { value: "dozens", label: "Dozens" },
-  { value: "pallets", label: "Pallets" },
-];
-
-const CATEGORY_OPTIONS = [
-  { value: "", label: "Select Category" },
-  { value: "oils", label: "Oils" },
-  { value: "chemicals", label: "Chemicals" },
-  { value: "metals", label: "Metals" },
-  { value: "agriculture", label: "Agriculture" },
-  { value: "textiles", label: "Textiles" },
-  { value: "electronics", label: "Electronics" },
-  { value: "machinery", label: "Machinery" },
-  { value: "food", label: "Food Products" },
-  { value: "pharmaceuticals", label: "Pharmaceuticals" },
-  { value: "plastics", label: "Plastics" },
-  { value: "other", label: "Other" },
-];
+// Unit and Category options are now fetched dynamically from the admin-managed content API
+// via UnitSelector and CascadingCategorySelector components
 
 const ProductInformation: React.FC<ProductInformationProps> = ({
   productInformation,
@@ -79,12 +59,33 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
   const [isHsnSelected, setIsHsnSelected] = useState<boolean>(!!productInformation.hsnCode);
   const [showHsnDropdown, setShowHsnDropdown] = useState(false);
 
+  useEffect(() => {
+    if (productInformation.hsnCode) {
+      setHsnQuery(productInformation.hsnCode);
+      setIsHsnSelected(true);
+      setShowHsnDropdown(false);
+    } else {
+      setHsnQuery('');
+      setIsHsnSelected(false);
+    }
+  }, [productInformation.hsnCode]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setProductInformation(prev => ({
-      ...prev,
-      [name]: value
-    }));
+
+    // Sync stockUnit and moqUnit - they should always be the same
+    if (name === 'stockUnit' || name === 'moqUnit') {
+      setProductInformation(prev => ({
+        ...prev,
+        stockUnit: value,
+        moqUnit: value,
+      }));
+    } else {
+      setProductInformation(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   // Debounced HSN search
@@ -133,6 +134,23 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
     }));
   };
 
+  // Handle category selection from the new grouped CategorySelector
+  const handleCategoryChange = (categoryId: string, isMainstream: boolean, categoryName: string) => {
+    setProductInformation(prev => ({
+      ...prev,
+      category: categoryName, // Store the category name for display
+      categoryId: categoryId, // Store the category ID for database reference
+      isNicheCommodity: !isMainstream, // Inverse of isMainstream
+    }));
+  };
+
+  // Handle new category suggestion
+  const handleCategorySuggested = (name: string) => {
+    console.log('User suggested new category:', name);
+    // The category is now pending admin approval
+    // User will need to wait or select an existing category
+  };
+
   return (
     <div className="space-y-6">
       {/* Title */}
@@ -153,51 +171,43 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
         </div>
 
         {/* Stock with Unit */}
-        <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+        <div className="flex border border-gray-300 rounded-lg overflow-visible">
           <input
             type="text"
             name="stock"
             placeholder="Stock"
             value={productInformation.stock}
             onChange={handleChange}
-            className="flex-1 px-4 py-3 border-0 focus:ring-2 focus:ring-[#C4A962] outline-none"
+            className="flex-1 min-w-0 px-4 py-3 border-0 rounded-l-lg focus:ring-2 focus:ring-[#C4A962] outline-none"
           />
-          <select
+          <UnitSelector
             name="stockUnit"
             value={productInformation.stockUnit}
             onChange={handleChange}
-            className="px-3 py-3 bg-gray-50 border-l border-gray-300 text-gray-600 focus:outline-none cursor-pointer"
-          >
-            {UNIT_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value} disabled={opt.value === ""}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            wrapperClassName="flex-shrink-0"
+            className="!border-0 !border-l !border-gray-300 !rounded-none !rounded-r-lg bg-gray-50 text-gray-700 text-sm whitespace-nowrap min-w-[130px]"
+            placeholder="Unit"
+          />
         </div>
 
         {/* MOQ with Unit */}
-        <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+        <div className="flex border border-gray-300 rounded-lg overflow-visible">
           <input
             type="text"
             name="moq"
             placeholder="MOQ"
             value={productInformation.moq}
             onChange={handleChange}
-            className="flex-1 px-4 py-3 border-0 focus:ring-2 focus:ring-[#C4A962] outline-none"
+            className="flex-1 min-w-0 px-4 py-3 border-0 rounded-l-lg focus:ring-2 focus:ring-[#C4A962] outline-none"
           />
-          <select
+          <UnitSelector
             name="moqUnit"
             value={productInformation.moqUnit}
             onChange={handleChange}
-            className="px-3 py-3 bg-gray-50 border-l border-gray-300 text-gray-600 focus:outline-none cursor-pointer"
-          >
-            {UNIT_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value} disabled={opt.value === ""}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            wrapperClassName="flex-shrink-0"
+            className="!border-0 !border-l !border-gray-300 !rounded-none !rounded-r-lg bg-gray-50 text-gray-700 text-sm whitespace-nowrap min-w-[130px]"
+            placeholder="Unit"
+          />
         </div>
       </div>
 
@@ -241,7 +251,7 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
         </div>
 
         {/* HSN Code and Category */}
-        <div className="space-y-4">
+        <div className="space-y-4" style={{ overflow: 'visible' }}>
           {/* HSN Code */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">HSN Code:</label>
@@ -281,22 +291,29 @@ const ProductInformation: React.FC<ProductInformationProps> = ({
 
           {/* Category */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-            <div className="relative">
-              <select
-                name="category"
-                value={productInformation.category}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C4A962] focus:border-transparent outline-none appearance-none cursor-pointer bg-white"
-              >
-                {CATEGORY_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value} disabled={opt.value === ""}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-            </div>
+            <CategorySelector
+              value={productInformation.categoryId}
+              onChange={handleCategoryChange}
+              onSuggestNew={handleCategorySuggested}
+              label="Commodity Category"
+              placeholder="Select a commodity..."
+              required
+            />
+            {/* Show classification badge if category is selected */}
+            {productInformation.categoryId && (
+              <p className="mt-2 text-sm flex items-center gap-2">
+                <span className="text-gray-500">Classification:</span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                    productInformation.isNicheCommodity
+                      ? 'bg-orange-100 text-orange-700'
+                      : 'bg-green-100 text-green-700'
+                  }`}
+                >
+                  {productInformation.isNicheCommodity ? 'Niche Commodity' : 'Mainstream Commodity'}
+                </span>
+              </p>
+            )}
           </div>
         </div>
       </div>

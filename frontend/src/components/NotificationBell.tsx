@@ -19,6 +19,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
   const unreadCounts = useUnreadCounts();
   const totalUnread = unreadCounts.total;
   const prevCountRef = useRef(totalUnread);
+  const shouldWiggle = showPulse;
 
   useEffect(() => {
     if (totalUnread > prevCountRef.current) {
@@ -40,7 +41,9 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
         className={`relative cursor-pointer hover:opacity-80 transition-opacity ${className}`}
         onClick={toggleDropdown}
       >
-        <Bell color={color} size={size} />
+        <span className={`inline-flex ${shouldWiggle ? 'notification-bell-wiggle' : ''}`}>
+          <Bell color={color} size={size} />
+        </span>
         
         {totalUnread > 0 && (
           <>

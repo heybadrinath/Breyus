@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
+import SelectField from '../../components/SelectField';
 
 interface TradeTermsProp {
     tradeTerms: {
+        exportLocation: string;
+        nearestPort: string;
         revenueMin: string;
         revenueMax: string;
         currency: string;
         unit: string;
+        paymentTerms: string;
+        logisticsTerms: string;
+        popTerms: string;
         yearsTrade: string;
         industry: string;
         marketYears: string;
@@ -13,10 +19,15 @@ interface TradeTermsProp {
         marketcapture: string;
     };
     setTradeTerms: React.Dispatch<React.SetStateAction<{
+        exportLocation: string;
+        nearestPort: string;
         revenueMin: string;
         revenueMax: string;
         currency: string;
         unit: string;
+        paymentTerms: string;
+        logisticsTerms: string;
+        popTerms: string;
         yearsTrade: string;
         industry: string;
         marketYears: string;
@@ -48,6 +59,32 @@ const SellerTradeTerms: React.FC<TradeTermsProp> = ({tradeTerms, setTradeTerms})
             <div className='product-card'>
                 <div>
                     <label className="block font-medium">
+                        Enter export location of this product <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        name="exportLocation"
+                        value={tradeTerms.exportLocation}
+                        onChange={handleChange}
+                        className="border p-2 mt-2 w-full rounded"
+                    />
+                </div>
+
+                <div>
+                    <label className="block font-medium">
+                        Enter your nearest exporting port <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        name="nearestPort"
+                        value={tradeTerms.nearestPort}
+                        onChange={handleChange}
+                        className="border p-2 mt-2 w-full rounded"
+                    />
+                </div>
+
+                <div>
+                    <label className="block font-medium">
                         What's your preferred buyer revenue range? <span className="text-red-500">*</span>
                     </label>
                     <div className="flex items-center space-x-2 mt-2">
@@ -68,25 +105,64 @@ const SellerTradeTerms: React.FC<TradeTermsProp> = ({tradeTerms, setTradeTerms})
                             placeholder="To"
                             className="border p-2 rounded w-24"
                         />
-                        <select
+                        <SelectField
                             name="currency"
                             value={tradeTerms.currency}
                             onChange={handleChange}
-                            className="border p-2 rounded"
+                            className="select-field--sm"
                         >
                             <option value="USD">USD</option>
                             <option value="INR">INR</option>
-                        </select>
-                        <select
+                        </SelectField>
+                        <SelectField
                             name="unit"
                             value={tradeTerms.unit}
                             onChange={handleChange}
-                            className="border p-2 rounded"
+                            className="select-field--sm"
                         >
                             <option value="Crore">Crore</option>
                             <option value="Million">Million</option>
-                        </select>
+                        </SelectField>
                     </div>
+                </div>
+
+                <div>
+                    <label className="block font-medium">
+                        What's your Payment, Bank and Insurance terms <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        name="paymentTerms"
+                        value={tradeTerms.paymentTerms}
+                        onChange={handleChange}
+                        className="border p-2 mt-2 w-full rounded"
+                    />
+                </div>
+
+                <div>
+                    <label className="block font-medium">
+                        What's your Delivery/Logistics terms <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        name="logisticsTerms"
+                        value={tradeTerms.logisticsTerms}
+                        onChange={handleChange}
+                        className="border p-2 mt-2 w-full rounded"
+                    />
+                </div>
+
+                <div>
+                    <label className="block font-medium">
+                        What's your POP (proof of product) terms <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        name="popTerms"
+                        value={tradeTerms.popTerms}
+                        onChange={handleChange}
+                        className="border p-2 mt-2 w-full rounded"
+                    />
                 </div>
 
                 <div>
@@ -103,7 +179,9 @@ const SellerTradeTerms: React.FC<TradeTermsProp> = ({tradeTerms, setTradeTerms})
                 </div>
 
                 <div>
-                    <label className="block font-medium">Which industry uses your product?</label>
+                    <label className="block font-medium">
+                        Which industry uses your product? <span className="text-red-500">*</span>
+                    </label>
                     <input
                         type="text"
                         name="industry"

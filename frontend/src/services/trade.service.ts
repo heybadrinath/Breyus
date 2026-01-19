@@ -358,6 +358,7 @@ export interface DocumentInfo {
     uploadedBy: string;
     status: DocumentStatus;
     notes?: string;
+    verificationNotes?: string;  // Notes from verification/rejection
     // Single signature fields (for SCO, ICPO, BoL)
     signatureDataUrl?: string;
     signedAt?: string;
@@ -542,7 +543,6 @@ export const completeTrade = async (tradeId: string): Promise<TradeResponse> => 
  * Different documents are verified by different parties:
  * - SCO → Buyer verifies
  * - ICPO → Seller verifies
- * - SPA → Either party verifies
  * - Payment Proof → Seller verifies
  * - BoL → Buyer verifies
  */
@@ -716,9 +716,9 @@ export const getUnreadCounts = async (): Promise<UnreadCountsResponse> => {
 
 /**
  * Mark trades as read for a specific tab type
- * @param tabType - The tab type: 'pr', 'po', 'spa', or 'ongoing'
+ * @param tabType - The tab type: 'pr', 'po', 'spa', 'ongoing', or 'history'
  */
-export const markTradesAsRead = async (tabType: 'pr' | 'po' | 'spa' | 'ongoing'): Promise<void> => {
+export const markTradesAsRead = async (tabType: 'pr' | 'po' | 'spa' | 'ongoing' | 'history'): Promise<void> => {
     try {
         const response = await fetch(`${BACKEND_END_POINT}/mark-read/${tabType}`, {
             method: 'PUT',
@@ -1102,6 +1102,202 @@ export const signDocument = async (
         return data;
     } catch (error) {
         console.error('Error signing document:', error);
+        throw error;
+    }
+};
+
+// ========================
+// DISPUTE APIs
+// ========================
+
+export type DisputeReason =
+    | 'payment_issue'
+    | 'quality_issue'
+    | 'delivery_delay'
+    | 'documentation_problem'
+    | 'communication_issue'
+    | 'pricing_dispute'
+    | 'contract_breach'
+    | 'other';
+
+export type DisputePriority = 'low' | 'medium' | 'high' | 'urgent';
+export type DisputeStatus = 'open' | 'under_review' | 'resolved' | 'closed';
+
+export interface CreateDisputeData {
+    reason: DisputeReason;
+    description: string;
+    priority?: DisputePriority;
+}
+
+export interface DisputeMessage {
+    _id: string;
+    content: string;
+    sender: {
+        _id: string;
+        mail?: string;
+        email?: string;
+    };
+    senderType: 'buyer' | 'seller' | 'admin';
+    senderEmail?: string;
+    createdAt: string;
+    isInternal?: boolean;
+}
+
+export interface TradeDispute {
+    _id: string;
+    trade: string;
+    raisedBy: {
+        _id: string;
+        mail: string;
+    };
+    raisedByRole: 'buyer' | 'seller';
+    raisedByEmail: string;
+    reason: DisputeReason;
+    description: string;
+    priority: DisputePriority;
+    status: DisputeStatus;
+    assignedAdmin?: {
+        _id: string;
+        email: string;
+        name?: string;
+    };
+    assignedAdminEmail?: string;
+    assignedAt?: string;
+    resolutionNotes?: string;
+    resolvedAt?: string;
+    resolvedBy?: {
+        _id: string;
+        email: string;
+    };
+    resolvedByEmail?: string;
+    closedAt?: string;
+    messages?: DisputeMessage[];
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface DisputeResponse {
+    statusCode: number;
+    message: string;
+    data: TradeDispute | null;
+}
+
+export interface DisputeMessageData {
+    content: string;
+}
+
+/**
+ * Raise a dispute on a trade
+ * Either buyer or seller can raise a dispute on their trade
+ */
+export const raiseDispute = async (
+    tradeId: string,
+    disputeData: CreateDisputeData
+): Promise<DisputeResponse> => {
+    try {
+        const response = await fetch(`${BACKEND_END_POINT}/${tradeId}/dispute`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify(disputeData),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to raise dispute');
+        }
+
+        return data;
+    } catch (error) {
+        console.error('Error raising dispute:', error);
+        throw error;
+    }
+};
+
+/**
+ * Get dispute status for a trade
+ * Returns the active or most recent dispute for this trade
+ */
+export const getTradeDispute = async (tradeId: string): Promise<DisputeResponse> => {
+    try {
+        const response = await fetch(`${BACKEND_END_POINT}/${tradeId}/dispute`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to fetch dispute');
+        }
+
+        return data;
+    } catch (error) {
+        console.error('Error fetching dispute:', error);
+        throw error;
+    }
+};
+
+/**
+ * Add a message to an existing dispute on a trade
+ */
+export const addDisputeMessage = async (
+    tradeId: string,
+    messageData: DisputeMessageData
+): Promise<{ statusCode: number; message: string; data: DisputeMessage }> => {
+    try {
+        const response = await fetch(`${BACKEND_END_POINT}/${tradeId}/dispute/message`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify(messageData),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to add message');
+        }
+
+        return data;
+    } catch (error) {
+        console.error('Error adding dispute message:', error);
+        throw error;
+    }
+};
+
+/**
+ * Get all messages for a dispute on a trade
+ */
+export const getDisputeMessages = async (
+    tradeId: string
+): Promise<{ statusCode: number; message: string; data: DisputeMessage[] }> => {
+    try {
+        const response = await fetch(`${BACKEND_END_POINT}/${tradeId}/dispute/messages`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to fetch dispute messages');
+        }
+
+        return data;
+    } catch (error) {
+        console.error('Error fetching dispute messages:', error);
         throw error;
     }
 };

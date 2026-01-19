@@ -1,6 +1,7 @@
-import { Pencil, Ship, Plane } from 'lucide-react'
+import { Pencil } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
 import type { Incoterm, CostAllocation } from '../types'
 
 interface IncotermCardProps {
@@ -32,75 +33,34 @@ export function IncotermCard({ incoterm, onEdit }: IncotermCardProps) {
 
   return (
     <Card
-      className="group cursor-pointer relative overflow-hidden transition-all duration-300
-        bg-gradient-to-br from-slate-800/80 to-slate-900/80
-        border border-slate-700/50
-        hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10
-        hover:-translate-y-1"
+      className="group relative cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
       onClick={() => onEdit(incoterm)}
     >
       <CardContent className="p-5">
-        {/* Transport mode icon - top right with glow */}
-        <div
-          className={`absolute top-3 right-3 p-1.5 rounded-full ${
-            isAnyMode
-              ? 'bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30'
-              : 'bg-sky-500/20 text-sky-400 ring-1 ring-sky-500/30'
-          }`}
-        >
-          {isAnyMode ? (
-            <Plane className="h-4 w-4" />
-          ) : (
-            <Ship className="h-4 w-4" />
-          )}
-        </div>
-
-        {/* Code badge - more prominent */}
-        <div className="mb-3">
-          <span
-            className={`inline-flex items-center justify-center text-2xl font-bold px-4 py-2 rounded-xl ${
-              isAnyMode
-                ? 'bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 text-emerald-300 ring-1 ring-emerald-500/40'
-                : 'bg-gradient-to-br from-sky-500/20 to-sky-600/10 text-sky-300 ring-1 ring-sky-500/40'
-            }`}
-          >
-            {incoterm.code}
-          </span>
+        {/* Code - large and bold, no color */}
+        <div className="text-2xl font-bold text-foreground mb-1">
+          {incoterm.code}
         </div>
 
         {/* Name */}
-        <h3 className="font-semibold text-foreground mb-1.5">{incoterm.name}</h3>
+        <h3 className="font-medium text-foreground mb-1">{incoterm.name}</h3>
+
+        {/* Transport mode - muted text */}
+        <p className="text-xs text-muted-foreground mb-3">
+          {isAnyMode ? 'Any Transport Mode' : 'Sea & Inland Waterway'}
+        </p>
 
         {/* Description - truncated to 2 lines */}
         <p className="text-sm text-muted-foreground line-clamp-2 mb-4 min-h-[2.5rem]">
           {incoterm.description}
         </p>
 
-        {/* Cost allocation visualization - dual color */}
-        <div className="mt-4 space-y-3">
-          {/* Dual progress bar */}
-          <div className="relative h-3 rounded-full overflow-hidden bg-slate-700/50">
-            <div
-              className="absolute left-0 top-0 h-full bg-gradient-to-r from-sky-500 to-sky-400 transition-all duration-300"
-              style={{ width: `${percentage}%` }}
-            />
-            <div
-              className="absolute right-0 top-0 h-full bg-gradient-to-l from-amber-500 to-amber-400"
-              style={{ width: `${100 - percentage}%` }}
-            />
-          </div>
-
-          {/* Labels */}
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-sky-400" />
-              <span className="text-slate-300">Seller: {sellerCount}/{total}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-slate-300">Buyer: {total - sellerCount}/{total}</span>
-              <div className="w-2 h-2 rounded-full bg-amber-400" />
-            </div>
-          </div>
+        {/* Single-color progress bar */}
+        <div className="space-y-1.5">
+          <Progress value={percentage} className="h-2" />
+          <p className="text-xs text-muted-foreground">
+            Seller responsibility: {sellerCount}/{total} ({percentage}%)
+          </p>
         </div>
 
         {/* Edit button - appears on hover */}

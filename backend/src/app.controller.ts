@@ -1,10 +1,14 @@
 import { Controller, Get, Res } from '@nestjs/common';
 import { AppService } from './app.service';
 import { Response } from 'express';
+import { SystemService } from './admin/system/system.service';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly appService: AppService,
+    private readonly systemService: SystemService,
+  ) {}
 
    @Get('health')
   healthCheck() {
@@ -34,8 +38,18 @@ export class AppController {
     };
   }
 
+  @Get('maintenance/status')
+  async getMaintenanceStatus() {
+    const status = await this.systemService.isMaintenanceActive();
+    return {
+      statusCode: 200,
+      message: 'Maintenance status retrieved',
+      data: status,
+    };
+  }
+
   @Get()
- getRoot(@Res() res: Response) {
+  getRoot(@Res() res: Response) {
     res
       .status(403)
       .send(`

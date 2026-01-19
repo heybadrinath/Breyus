@@ -9,18 +9,17 @@ import {
     Ship,
     Award,
     Loader2,
-    Download,
     Upload,
     Eye,
     AlertCircle,
     Pen,
-    Check,
-    X
+    Check
 } from 'lucide-react';
 import {
     Trade,
     TradePhase,
     DocumentInfo,
+    DocumentStatus,
     SPAStatus,
     getTradeById,
     getTradeDocuments,
@@ -35,8 +34,8 @@ import {
 } from '../services/trade.service';
 import DocumentUploadModal, { DocumentType } from './DocumentUploadModal';
 import ViewDocumentModal from './ViewDocumentModal';
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+import SignatureCanvas from './SignatureCanvas';
+import { useNotifications } from '../contexts/NotificationContext';
 
 interface TrackTradeProps {
     tradeId: string;
@@ -117,8 +116,60 @@ const PHASES: PhaseInfo[] = [
     }
 ];
 
+const DOCUMENT_LABELS: Record<DocumentType, string> = {
+    sco: 'SCO',
+    icpo: 'ICPO',
+    spa: 'SPA',
+    'payment-proof': 'Payment Proof',
+    bol: 'BoL'
+};
+
+const DOCUMENT_ORDER: DocumentType[] = [
+    'sco',
+    'icpo',
+    'spa',
+    'payment-proof',
+    'bol'
+];
+
+const DOCUMENT_STATUS_LABELS: Record<DocumentStatus, string> = {
+    pending: 'Pending',
+    uploaded: 'Submitted',
+    approved: 'Approved',
+    rejected: 'Rejected'
+};
+
+const DOCUMENT_STATUS_STYLES: Record<DocumentStatus, string> = {
+    pending: 'bg-gray-100 text-gray-600',
+    uploaded: 'bg-yellow-50 text-yellow-700',
+    approved: 'bg-green-50 text-green-700',
+    rejected: 'bg-red-50 text-red-700'
+};
+
+const getDocumentStatus = (doc?: DocumentInfo | null): DocumentStatus => {
+    return doc?.status || 'uploaded';
+};
+
+const getVerifierRole = (docType: DocumentType): 'buyer' | 'seller' | 'signatures' => {
+    if (docType === 'spa') return 'signatures';
+    if (docType === 'sco' || docType === 'bol') return 'buyer';
+    return 'seller';
+};
+
+const formatDate = (value?: string) => {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
+    return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    });
+};
+
 const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
     const navigate = useNavigate();
+    const { showToast } = useNotifications();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [trade, setTrade] = useState<Trade | null>(null);
@@ -136,6 +187,11 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
     // SPA dual signature tracking
     const [spaStatus, setSpaStatus] = useState<SPAStatus | null>(null);
     const [signingSpa, setSigningSpa] = useState(false);
+
+    // Signature modal state
+    const [showSignatureModal, setShowSignatureModal] = useState(false);
+    const [signatureData, setSignatureData] = useState<string | null>(null);
+    const [signatureConfirmed, setSignatureConfirmed] = useState(false);
 
     useEffect(() => {
         fetchTradeData();
@@ -206,14 +262,67 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
         return phase === currentPhase;
     };
 
+    /**
+     * Check if any prior document in the workflow is rejected
+     * This blocks uploading subsequent documents until the rejection is resolved
+     */
+    const checkPriorDocumentsRejected = (docType: DocumentType): boolean => {
+        const currentIndex = DOCUMENT_ORDER.indexOf(docType);
+        if (currentIndex <= 0) return false; // No prior documents for SCO
+
+        for (let i = 0; i < currentIndex; i++) {
+            const priorDoc = documents[DOCUMENT_ORDER[i]];
+            if (priorDoc?.status === 'rejected') {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    /**
+     * Find the first rejected prior document (for displaying a message)
+     */
+    const findRejectedPriorDocument = (docType: DocumentType): { type: DocumentType; label: string } | null => {
+        const currentIndex = DOCUMENT_ORDER.indexOf(docType);
+        if (currentIndex <= 0) return null;
+
+        for (let i = 0; i < currentIndex; i++) {
+            const priorDocType = DOCUMENT_ORDER[i];
+            const priorDoc = documents[priorDocType];
+            if (priorDoc?.status === 'rejected') {
+                return { type: priorDocType, label: DOCUMENT_LABELS[priorDocType] };
+            }
+        }
+        return null;
+    };
+
     const canUpload = (phase: PhaseInfo): boolean => {
-        if (!isCurrentPhase(phase.key)) return false;
         if (!phase.documentType) return false;
 
         const roleMatches = (isSeller && phase.uploadedBy === 'seller') ||
                           (!isSeller && phase.uploadedBy === 'buyer');
+        const existingDoc = documents[phase.documentType];
+        const isRejected = existingDoc?.status === 'rejected';
 
-        return roleMatches && !documents[phase.documentType];
+        // Special case: Allow re-upload of rejected documents even if not current phase
+        // This is needed when a prior document is rejected after trade has progressed
+        if (isRejected && roleMatches) {
+            // But still block if there's a prior rejected document that needs to be fixed first
+            if (checkPriorDocumentsRejected(phase.documentType)) {
+                return false;
+            }
+            return true;
+        }
+
+        // For non-rejected documents, only allow upload during current phase
+        if (!isCurrentPhase(phase.key)) return false;
+
+        // Block upload if any prior document is rejected
+        if (checkPriorDocumentsRejected(phase.documentType)) {
+            return false;
+        }
+
+        return roleMatches && !existingDoc;
     };
 
     const handleUploadClick = (docType: DocumentType) => {
@@ -236,16 +345,10 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
         await fetchTradeData();
     };
 
-    const handleDownload = (doc: DocumentInfo) => {
-        const url = `${BACKEND_URL}${doc.filePath}`;
-        window.open(url, '_blank');
-    };
-
     // Determine if user can verify a document based on role and document type
     const canVerifyDocument = (docType: DocumentType): boolean => {
         if (docType === 'sco') return !isSeller;          // Buyer verifies SCO
         if (docType === 'icpo') return isSeller;          // Seller verifies ICPO
-        if (docType === 'spa') return true;               // Both can verify SPA
         if (docType === 'payment-proof') return isSeller; // Seller verifies payment
         if (docType === 'bol') return !isSeller;          // Buyer verifies BoL
         return false;
@@ -282,13 +385,13 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
             }
 
             // Show success message
-            alert(result.message || 'SPA signed successfully!');
+            showToast(result.message || 'SPA signed successfully!', 'success');
 
             // Refresh full data in background (without loading spinner)
             fetchTradeData(false);
         } catch (err: any) {
             console.error('Failed to sign SPA:', err);
-            alert(err.message || 'Failed to sign SPA. Please try again.');
+            showToast(err.message || 'Failed to sign SPA. Please try again.', 'error');
         } finally {
             setSigningSpa(false);
         }
@@ -310,13 +413,236 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
         try {
             setCompleting(true);
             await completeTrade(tradeId);
-            navigate(isSeller ? '/seller/trade-complete' : '/buyer/trade-complete');
+            const destination = isSeller
+                ? '/seller/trade-complete'
+                : `/buyer/trade-complete?tradeId=${tradeId}`;
+            navigate(destination);
         } catch (err) {
             console.error('Failed to complete trade:', err);
-            alert('Failed to complete trade. Please try again.');
+            showToast('Failed to complete trade. Please try again.', 'error');
         } finally {
             setCompleting(false);
         }
+    };
+
+    const currentPhaseInfo = PHASES.find(p => p.key === currentPhase);
+    const bolDocument = documents['bol'];
+    const bolStatus = bolDocument ? getDocumentStatus(bolDocument) : null;
+
+    const primaryActionClasses =
+        'inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm';
+    const secondaryActionClasses =
+        'inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm';
+
+    const renderCurrentPhaseAction = () => {
+        const phase = currentPhaseInfo;
+        if (!phase) return null;
+
+        if (!phase.documentType) {
+            if (currentPhase === 'PR') {
+                return (
+                    <p className="text-sm text-gray-600">
+                        Waiting for seller to upload SCO to continue.
+                    </p>
+                );
+            }
+            return (
+                <p className="text-sm text-gray-600">
+                    Waiting for the next step to begin.
+                </p>
+            );
+        }
+
+        const docType = phase.documentType;
+
+        // Check if a prior document is rejected - block progress until it's resolved
+        const rejectedPriorDoc = findRejectedPriorDocument(docType);
+        if (rejectedPriorDoc) {
+            const uploaderRole = PHASES.find(p => p.documentType === rejectedPriorDoc.type)?.uploadedBy || 'party';
+            return (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <span>
+                            Cannot proceed - <strong>{rejectedPriorDoc.label}</strong> was rejected and needs to be re-uploaded
+                            {uploaderRole === 'seller' ? ' by the seller' : ' by the buyer'} first.
+                        </span>
+                    </p>
+                </div>
+            );
+        }
+        const docLabel = DOCUMENT_LABELS[docType];
+        const doc = documents[docType];
+        const docStatus = doc ? getDocumentStatus(doc) : null;
+        const waitingFor = phase.uploadedBy === 'seller' ? 'seller' : 'buyer';
+        const verifier = getVerifierRole(docType);
+
+        const renderUploadButton = (labelText: string) => (
+            <button
+                onClick={() => handleUploadClick(docType)}
+                className={primaryActionClasses}
+            >
+                <Upload className="w-4 h-4" />
+                {labelText}
+            </button>
+        );
+
+        const renderReviewButton = (labelText: string) => (
+            <button
+                onClick={() => handleViewDocument(doc!, docType)}
+                className={primaryActionClasses}
+            >
+                <Eye className="w-4 h-4" />
+                {labelText}
+            </button>
+        );
+
+        const renderViewButton = (labelText: string) => (
+            <button
+                onClick={() => handleViewDocument(doc!, docType)}
+                className={secondaryActionClasses}
+            >
+                <Eye className="w-4 h-4" />
+                {labelText}
+            </button>
+        );
+
+        if (docType === 'spa') {
+            if (!doc) {
+                return canUpload(phase)
+                    ? renderUploadButton(`Upload ${docLabel}`)
+                    : (
+                        <p className="text-sm text-gray-600">
+                            Waiting for {waitingFor} to upload {docLabel}.
+                        </p>
+                    );
+            }
+
+            if (docStatus === 'rejected') {
+                return canUpload(phase) ? (
+                    <div className="flex flex-col gap-2">
+                        <p className="text-sm text-red-600">
+                            SPA was rejected. Please upload a revised copy.
+                        </p>
+                        {renderUploadButton(`Upload revised ${docLabel}`)}
+                    </div>
+                ) : (
+                    <p className="text-sm text-gray-600">
+                        SPA was rejected. Waiting for {waitingFor} to upload a revised copy.
+                    </p>
+                );
+            }
+
+            if (spaStatus?.fullySigned) {
+                return (
+                    <div className="flex flex-col gap-2">
+                        <p className="text-sm text-green-700 flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4" />
+                            SPA signed by both parties. Moving to Payment phase.
+                        </p>
+                        {renderViewButton('View SPA')}
+                    </div>
+                );
+            }
+
+            const userHasSigned = isSeller ? spaStatus?.sellerSigned : spaStatus?.buyerSigned;
+            const otherParty = isSeller ? 'buyer' : 'seller';
+            const otherHasSigned = isSeller ? spaStatus?.buyerSigned : spaStatus?.sellerSigned;
+
+            return (
+                <div className="flex flex-col gap-2">
+                    {userHasSigned ? (
+                        <p className="text-sm text-gray-600 flex items-center gap-2">
+                            <Clock className="w-4 h-4" />
+                            You have signed. Waiting for {otherParty} to sign.
+                        </p>
+                    ) : (
+                        <p className="text-sm text-gray-600">
+                            {otherHasSigned
+                                ? `The ${otherParty} has signed. Your signature is required.`
+                                : 'Awaiting signatures from both parties.'}
+                        </p>
+                    )}
+                    {canSignSPA() && (
+                        <button
+                            onClick={() => {
+                                setSignatureData(null);
+                                setSignatureConfirmed(false);
+                                setShowSignatureModal(true);
+                            }}
+                            disabled={signingSpa}
+                            className={primaryActionClasses}
+                        >
+                            {signingSpa ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Signing...
+                                </>
+                            ) : (
+                                <>
+                                    <Pen className="w-4 h-4" />
+                                    Sign SPA
+                                </>
+                            )}
+                        </button>
+                    )}
+                </div>
+            );
+        }
+
+        if (!doc) {
+            return canUpload(phase)
+                ? renderUploadButton(`Upload ${docLabel}`)
+                : (
+                    <p className="text-sm text-gray-600">
+                        Waiting for {waitingFor} to upload {docLabel}.
+                    </p>
+                );
+        }
+
+        if (docStatus === 'rejected') {
+            return canUpload(phase) ? (
+                <div className="flex flex-col gap-2">
+                    <p className="text-sm text-red-600">
+                        {docLabel} was rejected. Please upload a revised copy.
+                    </p>
+                    {renderUploadButton(`Upload revised ${docLabel}`)}
+                </div>
+            ) : (
+                <p className="text-sm text-gray-600">
+                    {docLabel} was rejected. Waiting for {waitingFor} to upload a revised copy.
+                </p>
+            );
+        }
+
+        if (docStatus === 'approved') {
+            return (
+                <div className="flex flex-col gap-2">
+                    <p className="text-sm text-green-700 flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4" />
+                        {docLabel} approved.
+                    </p>
+                    {renderViewButton(`View ${docLabel}`)}
+                </div>
+            );
+        }
+
+        if (canVerifyDocument(docType)) {
+            return (
+                <div className="flex flex-col gap-2">
+                    <p className="text-sm text-gray-700">
+                        {docLabel} submitted. Please review to continue.
+                    </p>
+                    {renderReviewButton(`Review ${docLabel}`)}
+                </div>
+            );
+        }
+
+        return (
+            <p className="text-sm text-gray-600">
+                Awaiting {verifier} verification for {docLabel}.
+            </p>
+        );
     };
 
     if (loading) {
@@ -359,7 +685,7 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                     {/* Progress Line */}
                     <div className="absolute top-6 left-6 right-6 h-1 bg-gray-200 rounded">
                         <div
-                            className="h-full bg-green-500 rounded transition-all duration-500"
+                            className="h-full bg-gray-900 rounded transition-all duration-500"
                             style={{
                                 width: `${(getPhaseIndex(currentPhase) / (PHASES.length - 1)) * 100}%`
                             }}
@@ -374,17 +700,17 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                             const doc = phase.documentType ? documents[phase.documentType] : null;
 
                             return (
-                                <div key={phase.key} className="flex flex-col items-center" style={{ width: '14%' }}>
+                                <div key={phase.key} className="flex flex-col items-center flex-1 min-w-0">
                                     {/* Node */}
-                                    <div
-                                        className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all ${
-                                            isComplete
-                                                ? 'bg-green-500 border-green-500 text-white'
-                                                : isCurrent
-                                                    ? 'bg-blue-500 border-blue-500 text-white animate-pulse'
-                                                    : 'bg-white border-gray-300 text-gray-400'
-                                        }`}
-                                    >
+                                <div
+                                    className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all ${
+                                        isComplete
+                                            ? 'bg-gray-900 border-gray-900 text-white'
+                                            : isCurrent
+                                                ? 'bg-white border-gray-900 text-gray-900 shadow-sm ring-4 ring-gray-100'
+                                                : 'bg-white border-gray-300 text-gray-400'
+                                    }`}
+                                >
                                         {isComplete ? (
                                             <CheckCircle className="w-6 h-6" />
                                         ) : isCurrent ? (
@@ -396,7 +722,7 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
 
                                     {/* Label */}
                                     <span className={`mt-2 text-xs font-medium text-center ${
-                                        isCurrent ? 'text-blue-600' : isComplete ? 'text-green-600' : 'text-gray-500'
+                                        isCurrent ? 'text-gray-900' : isComplete ? 'text-gray-800' : 'text-gray-400'
                                     }`}>
                                         {phase.shortLabel}
                                     </span>
@@ -409,19 +735,33 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                                                 <div className="flex flex-col items-center gap-1">
                                                     <button
                                                         onClick={() => handleViewDocument(doc, phase.documentType!)}
-                                                        className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
+                                                        className="flex items-center gap-1 px-2.5 py-1 border border-gray-200 text-gray-700 rounded text-xs hover:bg-gray-50"
                                                     >
                                                         <Eye className="w-3 h-3" />
                                                         View
                                                     </button>
-                                                    {/* SPA Signature Status */}
-                                                    {spaStatus && (
+                                                    {/* SPA rejected - show re-upload option */}
+                                                    {doc.status === 'rejected' ? (
+                                                        <>
+                                                            {canUpload(phase) && (
+                                                                <button
+                                                                    onClick={() => handleUploadClick(phase.documentType!)}
+                                                                    className="flex items-center gap-1 px-2.5 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700"
+                                                                >
+                                                                    <Upload className="w-3 h-3" />
+                                                                    Re-upload
+                                                                </button>
+                                                            )}
+                                                            <span className="text-xs text-red-600 font-medium">Rejected</span>
+                                                        </>
+                                                    ) : spaStatus && (
+                                                        /* SPA Signature Status */
                                                         <div className="flex flex-col items-center gap-0.5 mt-1">
-                                                            <div className={`flex items-center gap-1 text-xs ${spaStatus.sellerSigned ? 'text-green-600' : 'text-yellow-600'}`}>
+                                                            <div className={`flex items-center gap-1 text-xs ${spaStatus.sellerSigned ? 'text-gray-800' : 'text-gray-500'}`}>
                                                                 {spaStatus.sellerSigned ? <Check className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                                                                 Seller
                                                             </div>
-                                                            <div className={`flex items-center gap-1 text-xs ${spaStatus.buyerSigned ? 'text-green-600' : 'text-yellow-600'}`}>
+                                                            <div className={`flex items-center gap-1 text-xs ${spaStatus.buyerSigned ? 'text-gray-800' : 'text-gray-500'}`}>
                                                                 {spaStatus.buyerSigned ? <Check className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                                                                 Buyer
                                                             </div>
@@ -429,17 +769,33 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                                                     )}
                                                 </div>
                                             ) : doc ? (
-                                                <button
-                                                    onClick={() => handleViewDocument(doc, phase.documentType!)}
-                                                    className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
-                                                >
-                                                    <Eye className="w-3 h-3" />
-                                                    View
-                                                </button>
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <button
+                                                        onClick={() => handleViewDocument(doc, phase.documentType!)}
+                                                        className="flex items-center gap-1 px-2.5 py-1 border border-gray-200 text-gray-700 rounded text-xs hover:bg-gray-50"
+                                                    >
+                                                        <Eye className="w-3 h-3" />
+                                                        View
+                                                    </button>
+                                                    {/* Show re-upload button if document is rejected and user can upload */}
+                                                    {doc.status === 'rejected' && canUpload(phase) && (
+                                                        <button
+                                                            onClick={() => handleUploadClick(phase.documentType!)}
+                                                            className="flex items-center gap-1 px-2.5 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700"
+                                                        >
+                                                            <Upload className="w-3 h-3" />
+                                                            Re-upload
+                                                        </button>
+                                                    )}
+                                                    {/* Show rejected badge */}
+                                                    {doc.status === 'rejected' && (
+                                                        <span className="text-xs text-red-600 font-medium">Rejected</span>
+                                                    )}
+                                                </div>
                                             ) : canUpload(phase) ? (
                                                 <button
                                                     onClick={() => handleUploadClick(phase.documentType!)}
-                                                    className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
+                                                    className="flex items-center gap-1 px-2.5 py-1 bg-gray-900 text-white rounded text-xs hover:bg-gray-800"
                                                 >
                                                     <Upload className="w-3 h-3" />
                                                     Upload
@@ -458,107 +814,27 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                 </div>
 
                 {/* Current Phase Details */}
-                <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-                    <h3 className="font-medium text-blue-800 flex items-center gap-2">
+                <div className="mt-8 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
                         <Clock className="w-4 h-4" />
-                        Current Phase: {PHASES.find(p => p.key === currentPhase)?.label}
-                    </h3>
-                    <p className="text-sm text-blue-600 mt-1">
-                        {PHASES.find(p => p.key === currentPhase)?.description}
+                        <span>Current Phase: {currentPhaseInfo?.label}</span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">
+                        {currentPhaseInfo?.description}
                     </p>
 
-                    {/* Action Prompt */}
                     {currentPhase !== 'COMPLETED' && (
-                        <div className="mt-3">
-                            {(() => {
-                                const phase = PHASES.find(p => p.key === currentPhase);
-                                if (!phase?.documentType) return null;
-
-                                // Special handling for SPA - dual signature flow
-                                if (currentPhase === 'SPA' && documents['spa']) {
-                                    if (spaStatus?.fullySigned) {
-                                        return (
-                                            <p className="text-sm text-green-600 flex items-center gap-2">
-                                                <CheckCircle className="w-4 h-4" />
-                                                SPA fully signed by both parties - proceeding to Payment phase
-                                            </p>
-                                        );
-                                    }
-
-                                    const userHasSigned = isSeller ? spaStatus?.sellerSigned : spaStatus?.buyerSigned;
-                                    const otherParty = isSeller ? 'buyer' : 'seller';
-                                    const otherHasSigned = isSeller ? spaStatus?.buyerSigned : spaStatus?.sellerSigned;
-
-                                    if (userHasSigned) {
-                                        return (
-                                            <p className="text-sm text-yellow-600 flex items-center gap-2">
-                                                <Clock className="w-4 h-4" />
-                                                You have signed. Waiting for {otherParty} to sign...
-                                            </p>
-                                        );
-                                    }
-
-                                    return (
-                                        <div className="space-y-2">
-                                            {otherHasSigned && (
-                                                <p className="text-sm text-blue-600">
-                                                    The {otherParty} has already signed. Your signature is required.
-                                                </p>
-                                            )}
-                                            <p className="text-sm text-gray-600 mb-2">
-                                                Please review and sign the SPA to proceed.
-                                            </p>
-                                            <button
-                                                onClick={() => {
-                                                    // For now, use a simple signature - in production, use SignatureCanvas
-                                                    const signaturePlaceholder = `data:text/plain;base64,${btoa(isSeller ? 'Seller Signature' : 'Buyer Signature')}`;
-                                                    handleSignSPA(signaturePlaceholder);
-                                                }}
-                                                disabled={signingSpa}
-                                                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-purple-400"
-                                            >
-                                                {signingSpa ? (
-                                                    <>
-                                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                                        Signing...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Pen className="w-4 h-4" />
-                                                        Sign SPA
-                                                    </>
-                                                )}
-                                            </button>
-                                        </div>
-                                    );
-                                }
-
-                                const canAct = canUpload(phase);
-                                const waitingFor = phase.uploadedBy === 'seller' ? 'seller' : 'buyer';
-
-                                return canAct ? (
-                                    <button
-                                        onClick={() => handleUploadClick(phase.documentType!)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                                    >
-                                        <Upload className="w-4 h-4" />
-                                        Upload {phase.shortLabel}
-                                    </button>
-                                ) : (
-                                    <p className="text-sm text-gray-500">
-                                        Waiting for {waitingFor} to upload {phase.shortLabel}...
-                                    </p>
-                                );
-                            })()}
+                        <div className="mt-4">
+                            {renderCurrentPhaseAction()}
                         </div>
                     )}
 
-                    {/* Complete Trade Button - shown when BoL is uploaded */}
-                    {currentPhase === 'BOL' && documents['bol'] && (
+                    {/* Complete Trade Button - shown when BoL is approved */}
+                    {currentPhase === 'BOL' && bolStatus === 'approved' && (
                         <button
                             onClick={handleCompleteTrade}
                             disabled={completing}
-                            className="mt-4 flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed"
+                            className="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed"
                         >
                             {completing ? (
                                 <>
@@ -578,32 +854,75 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                 {/* Documents List */}
                 <div className="mt-6">
                     <h3 className="font-medium text-gray-800 mb-3">Uploaded Documents</h3>
-                    {Object.keys(documents).length === 0 ? (
+                    {DOCUMENT_ORDER.filter(type => documents[type]).length === 0 ? (
                         <p className="text-sm text-gray-500">No documents uploaded yet</p>
                     ) : (
-                        <div className="space-y-2">
-                            {Object.entries(documents).map(([type, doc]) => (
-                                <div
-                                    key={type}
-                                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <FileText className="w-5 h-5 text-gray-400" />
-                                        <div>
-                                            <p className="font-medium text-sm">{doc.originalName}</p>
-                                            <p className="text-xs text-gray-500">
-                                                {type.toUpperCase()} - Uploaded {new Date(doc.uploadedAt).toLocaleDateString()}
-                                            </p>
+                        <div className="space-y-3">
+                            {DOCUMENT_ORDER.filter(type => documents[type]).map((type) => {
+                                const doc = documents[type] as DocumentInfo;
+                                const docStatus = getDocumentStatus(doc);
+                                const statusLabel = DOCUMENT_STATUS_LABELS[docStatus];
+                                const statusClass = DOCUMENT_STATUS_STYLES[docStatus];
+                                const displayName = doc.originalName || `${DOCUMENT_LABELS[type]} Document`;
+                                const needsApproval =
+                                    (docStatus === 'uploaded' || docStatus === 'pending') &&
+                                    canVerifyDocument(type);
+                                const spaDoc = type === 'spa' ? (doc as any) : null;
+                                const spaFullySigned = type === 'spa'
+                                    ? (spaStatus?.fullySigned ??
+                                        (!!spaDoc?.sellerSignatureDataUrl && !!spaDoc?.buyerSignatureDataUrl))
+                                    : false;
+                                const spaUserSigned = type === 'spa'
+                                    ? (isSeller
+                                        ? (spaStatus?.sellerSigned ?? !!spaDoc?.sellerSignatureDataUrl)
+                                        : (spaStatus?.buyerSigned ?? !!spaDoc?.buyerSignatureDataUrl))
+                                    : false;
+                                const needsSignature = type === 'spa' && doc && !spaFullySigned;
+                                const signatureLabel = needsSignature
+                                    ? (spaUserSigned ? 'Awaiting other signature' : 'Your signature needed')
+                                    : '';
+                                return (
+                                    <div
+                                        key={type}
+                                        className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 p-3"
+                                    >
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="rounded-lg bg-gray-100 p-2">
+                                                <FileText className="w-5 h-5 text-gray-500" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-medium text-gray-900 truncate">
+                                                    {displayName}
+                                                </p>
+                                                <p className="text-xs text-gray-500">
+                                                    {DOCUMENT_LABELS[type]} - Uploaded {formatDate(doc.uploadedAt)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            {needsApproval && (
+                                                <span className="rounded-full bg-yellow-50 px-2.5 py-1 text-xs font-medium text-yellow-700">
+                                                    Needs your approval
+                                                </span>
+                                            )}
+                                            {needsSignature && (
+                                                <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+                                                    {signatureLabel}
+                                                </span>
+                                            )}
+                                            <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusClass}`}>
+                                                {statusLabel}
+                                            </span>
+                                            <button
+                                                onClick={() => handleViewDocument(doc, type)}
+                                                className="rounded-lg border border-gray-200 p-2 hover:bg-gray-50"
+                                            >
+                                                <Eye className="w-4 h-4 text-gray-600" />
+                                            </button>
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={() => handleViewDocument(doc, type as DocumentType)}
-                                        className="p-2 hover:bg-gray-200 rounded-lg"
-                                    >
-                                        <Eye className="w-4 h-4 text-gray-600" />
-                                    </button>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
@@ -620,7 +939,12 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                     }}
                     document={viewingDocument}
                     documentType={viewingDocType}
-                    canVerify={canVerifyDocument(viewingDocType) && viewingDocument?.status === 'uploaded'}
+                    tradeId={tradeId}
+                    canVerify={
+                        canVerifyDocument(viewingDocType) &&
+                        (!viewingDocument?.status || viewingDocument?.status === 'uploaded' || viewingDocument?.status === 'pending')
+                    }
+                    canRejectSPA={viewingDocType === 'spa' && viewingDocument?.status !== 'rejected'}
                     onVerify={handleVerify}
                 />
             )}
@@ -636,6 +960,78 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                     onUpload={handleUpload}
                     documentType={selectedDocType}
                 />
+            )}
+
+            {/* Signature Modal */}
+            {showSignatureModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-xl max-w-lg w-full mx-4 p-6">
+                        <h3 className="text-lg font-bold mb-2">Sign SPA Document</h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Draw your signature below to sign the Sales Purchase Agreement.
+                        </p>
+
+                        <SignatureCanvas
+                            onSignatureChange={setSignatureData}
+                            width={400}
+                            height={150}
+                        />
+
+                        {/* Confirmation checkbox */}
+                        <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <label className="flex items-start gap-3 cursor-pointer">
+                                <div className="relative flex items-center mt-0.5">
+                                    <input
+                                        type="checkbox"
+                                        checked={signatureConfirmed}
+                                        onChange={(e) => setSignatureConfirmed(e.target.checked)}
+                                        className="w-5 h-5 rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer"
+                                    />
+                                </div>
+                                <span className="text-sm text-gray-600">
+                                    I confirm that this is my legal signature and I authorize its use to sign this Sales Purchase Agreement.
+                                </span>
+                            </label>
+                        </div>
+
+                        <div className="flex gap-3 mt-6">
+                            <button
+                                onClick={() => {
+                                    setShowSignatureModal(false);
+                                    setSignatureData(null);
+                                    setSignatureConfirmed(false);
+                                }}
+                                className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (signatureData && signatureConfirmed) {
+                                        handleSignSPA(signatureData);
+                                        setShowSignatureModal(false);
+                                        setSignatureData(null);
+                                        setSignatureConfirmed(false);
+                                    }
+                                }}
+                                disabled={!signatureData || !signatureConfirmed || signingSpa}
+                                className="flex-1 py-2 px-4 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {signingSpa ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Signing...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Pen className="w-4 h-4" />
+                                        Confirm & Sign
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

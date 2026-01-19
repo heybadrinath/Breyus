@@ -59,6 +59,8 @@ env/
 pipeline/csv/*.csv
 pipeline/normalized/*.csv
 pipeline/errors/*.csv
+pipeline/duplicates/*.csv
+pipeline/summaries/*.json
 !pipeline/csv/.gitkeep
 !pipeline/normalized/.gitkeep
 !pipeline/errors/.gitkeep

@@ -15,10 +15,19 @@ from __future__ import annotations
 import math
 import os
 import time
+from pathlib import Path
 from typing import List, Tuple
 
 import psycopg2
 from psycopg2.extras import execute_values, Json
+from dotenv import load_dotenv
+
+# Load .env file from AI_NEW directory
+_script_dir = Path(__file__).parent
+_ai_dir = _script_dir.parent.parent
+_env_file = _ai_dir / ".env"
+if _env_file.exists():
+    load_dotenv(_env_file)
 
 
 def compute_all_predictions(limit: int = 500) -> int:

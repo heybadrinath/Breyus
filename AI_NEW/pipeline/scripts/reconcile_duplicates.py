@@ -18,6 +18,14 @@ from typing import List, Tuple
 import pandas as pd
 import psycopg2
 from psycopg2.extras import execute_values
+from dotenv import load_dotenv
+
+# Load .env file from AI_NEW directory
+_script_dir = Path(__file__).parent
+_ai_dir = _script_dir.parent.parent
+_env_file = _ai_dir / ".env"
+if _env_file.exists():
+    load_dotenv(_env_file)
 
 from .insert import _detect_target, _prep_rows, _load_df
 

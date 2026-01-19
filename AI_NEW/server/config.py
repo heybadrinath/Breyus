@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     # Pipeline
     PIPELINE_DEV_NAME: Optional[str] = Field(default=None, description="Pipeline developer name tag")
 
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=False, extra="ignore")
 
 
 @lru_cache()

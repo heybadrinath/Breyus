@@ -16,6 +16,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
   const [showAnimation, setShowAnimation] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
+  const isFeatured = Boolean(product?.isFeatured);
 
   // All hooks must be called before any conditional logic
   useEffect(() => {
@@ -50,13 +51,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
   // Handle case when no product is provided (placeholder)
   if (!product) {
     return (
-      <div className="bg-white rounded-xl shadow-sm p-4 flex w-[240px] h-[320px] flex-col items-center justify-between animate-pulse">
-        <div className="w-full h-48 bg-gray-200 rounded-lg"></div>
-        <div className="w-full space-y-2">
-          <div className="h-4 bg-gray-200 rounded"></div>
-          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-          <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col animate-pulse min-w-[220px]">
+        <div className="w-full aspect-[4/3] bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl"></div>
+        <div className="mt-4 space-y-3">
+          <div className="h-4 bg-gray-200 rounded-full"></div>
+          <div className="h-3 bg-gray-100 rounded-full w-2/3"></div>
+          <div className="h-5 bg-gray-200 rounded-full w-1/2 mt-2"></div>
         </div>
+        <div className="h-10 bg-gray-100 rounded-xl mt-4"></div>
       </div>
     );
   }
@@ -105,16 +107,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
     };
 
     return (
-      <div className="relative w-full h-48 bg-gray-50 rounded-lg flex items-center justify-center overflow-hidden">
+      <div className="relative w-full aspect-[4/3] bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl flex items-center justify-center overflow-hidden group-hover:shadow-inner transition-all duration-300">
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400"></div>
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-gray-400"></div>
           </div>
         )}
         <img
           src={getProductImage()}
           alt={product.name}
-          className={`w-full h-full object-cover rounded-lg transition-opacity duration-200 ${isLoading ? 'opacity-0' : 'opacity-100'
+          className={`w-full h-full object-cover rounded-xl transition-all duration-300 group-hover:scale-105 ${isLoading ? 'opacity-0' : 'opacity-100'
             }`}
           onLoad={handleImageLoad}
           onError={handleImageError}
@@ -125,8 +127,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
           }}
         />
         {currentImageError && getProductImage() === '/placeholder-product.svg' && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg text-gray-400 text-sm">
-            No Image
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl">
+            <svg className="w-12 h-12 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span className="text-gray-400 text-xs font-medium">No Image</span>
           </div>
         )}
       </div>
@@ -152,17 +157,26 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
   return (
     <div
       onClick={handleCardClick}
-      className="bg-white rounded-xl shadow-sm p-4 flex w-[240px] h-[320px] flex-col cursor-pointer hover:shadow-lg transition-shadow duration-300"
+      className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-gray-200 p-5 flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-1"
     >
       {/* Image Area */}
-      <div className="relative">
+      <div className="relative overflow-hidden rounded-xl">
         <ProductImage />
+
+        {isFeatured && (
+          <div className="absolute top-3 left-3 rounded-full bg-amber-50 border border-amber-200/50 px-3 py-1 text-xs font-semibold text-amber-700 shadow-sm backdrop-blur-sm">
+            ✨ Featured
+          </div>
+        )}
 
         {/* Heart Icon */}
         <div className="absolute top-3 right-3">
           <div
-            className={`w-8 h-8 rounded-full border flex items-center justify-center hover:bg-gray-100 cursor-pointer transition-colors ${isWishlisted ? 'bg-red-50 border-red-200' : 'border-gray-300 bg-white/80'
-              }`}
+            className={`w-9 h-9 rounded-full border-2 flex items-center justify-center cursor-pointer transition-all duration-200 backdrop-blur-sm ${
+              isWishlisted
+                ? 'bg-red-50 border-red-200 shadow-sm'
+                : 'border-white/60 bg-white/70 hover:bg-white hover:border-gray-200 hover:shadow-md'
+            }`}
             onClick={async (e) => {
               e.stopPropagation();
               if (!product || wishlistLoading) return;
@@ -185,50 +199,50 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
             title={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
           >
             <Heart
-              size={16}
-              className={isWishlisted ? 'text-red-500 fill-red-500' : 'text-gray-600'}
+              size={18}
+              className={`transition-all duration-200 ${isWishlisted ? 'text-red-500 fill-red-500 scale-110' : 'text-gray-500 group-hover:text-gray-700'}`}
             />
           </div>
         </div>
 
         {/* Wishlist Animation */}
         {showAnimation && (
-          <div className="absolute top-3 left-3 bg-red-500 text-white text-xs px-2 py-1 rounded animate-bounce">
-            Added to Wishlist!
+          <div className="absolute top-3 left-3 bg-red-500 text-white text-xs px-3 py-1.5 rounded-full animate-bounce shadow-lg">
+            ❤️ Added to Wishlist!
           </div>
         )}
-
       </div>
 
       {/* Product Info */}
-      <div className="flex-1 flex flex-col justify-between pt-3">
-        <div>
-          <h3 className="text-sm font-medium text-gray-900 line-clamp-2 mb-1">
+      <div className="flex-1 flex flex-col justify-between pt-4">
+        <div className="space-y-2">
+          <h3 className="text-base font-semibold text-gray-900 line-clamp-2 leading-snug group-hover:text-gray-700 transition-colors">
             {product.name}
           </h3>
 
-          <p className="text-xs text-gray-500 mb-2">
-            by {product.companyName || product.sellerName || 'Unknown Company'}
+          <p className="text-sm text-gray-400 truncate">
+            {product.companyName || product.sellerName || 'Unknown Company'}
           </p>
 
-
-
           {/* Price */}
-
-          <div className="flex items-baseline gap-3">
-            <span className="text-lg font-bold text-gray-900">{(product.salePrice) ? product.salePrice.toLocaleString() + ' ' + product.currency : product.price.toLocaleString() + ' ' + product.currency}</span>
+          <div className="flex items-baseline gap-2 pt-1">
+            <span className="text-xl font-bold text-gray-900">
+              {(product.salePrice) ? product.salePrice.toLocaleString() : product.price.toLocaleString()}
+            </span>
+            <span className="text-sm font-medium text-gray-500">{product.currency}</span>
             {product.onSale && (
-              <>
-                <span className="text-sm text-gray-500 line-through">{product.price.toLocaleString() + ' ' + product.currency}</span>
-              </>
+              <span className="text-sm text-gray-400 line-through ml-1">
+                {product.price.toLocaleString()}
+              </span>
             )}
           </div>
         </div>
 
-        {/* Send Purchase Request*/}
+        {/* Send Purchase Request */}
         <button
           onClick={handlePurchaseRequest}
-          className={`mt-3 w-full py-2 px-4 rounded-lg text-sm font-medium transition-all duration-300 bg-black text-white hover:bg-gray-800 hover:scale-[1.02]`}>
+          className="mt-4 w-full py-2.5 px-4 rounded-xl text-sm font-semibold transition-all duration-200 bg-gray-900 text-white hover:bg-gray-800 active:scale-[0.98] shadow-sm hover:shadow-md"
+        >
           Send Purchase Request
         </button>
       </div>

@@ -13,6 +13,39 @@ export enum TradeType {
     DOMESTIC = 'domestic',
 }
 
+// KYC Document Types (Phase 4)
+export enum KycDocumentType {
+    CIS = 'cis',
+    PASSPORT = 'passport',
+    TAX_CERTIFICATE = 'tax_certificate',
+    BUSINESS_REGISTRATION = 'business_registration',
+    OTHER = 'other',
+}
+
+// KYC Document Status (Phase 4)
+export enum KycDocumentStatus {
+    PENDING = 'pending',
+    APPROVED = 'approved',
+    REJECTED = 'rejected',
+}
+
+// KYC Document interface for embedded documents (Phase 4)
+export interface KycDocument {
+    _id: Types.ObjectId;
+    type: KycDocumentType;
+    customName: string;           // User-provided name
+    filename: string;
+    originalName: string;
+    path: string;
+    mimeType: string;
+    size: number;
+    status: KycDocumentStatus;    // default: 'pending'
+    uploadedAt: Date;
+    reviewedBy?: Types.ObjectId;  // AdminUser who reviewed
+    reviewedAt?: Date;
+    reviewNotes?: string;         // Admin notes (visible to user)
+}
+
 // Address interface for delivery addresses
 export interface DeliveryAddress {
     fullName: string;
@@ -42,6 +75,12 @@ export interface TradeDetails {
     cisDocument?: string; // URL to uploaded CIS file
 }
 
+// Billing Preferences interface (Settings Page)
+export interface BillingPreferences {
+    invoiceEmail?: string;
+    useExistingEmail?: boolean; // true = use primaryEmail for invoices
+}
+
 @Schema({ timestamps: true })
 export class Company extends Document {
 
@@ -54,7 +93,9 @@ export class Company extends Document {
     @Prop()
     companyMobile: string;
 
-    @Prop()
+    // FIXED: Added unique constraint (Audit Bug #4 - Missing unique constraints)
+    // sparse: true allows null values but enforces uniqueness when present
+    @Prop({ unique: true, sparse: true })
     taxId: string;
 
     @Prop()
@@ -108,10 +149,48 @@ export class Company extends Document {
     @Prop()
     whatsappContact: string;
 
-    @Prop()
+    // FIXED: Added unique constraint with normalization (Audit Bug #4)
+    @Prop({ unique: true, sparse: true, lowercase: true, trim: true })
     primaryEmail: string;
 
     @Prop()
     alternativeSalesEmail: string;
+
+    // KYC Documents (Phase 4)
+    @Prop({ type: [Object], default: [] })
+    kycDocuments: KycDocument[];
+
+    // Company-level KYC verification (Phase 4)
+    @Prop({ type: Boolean, default: false })
+    isKycVerified: boolean;
+
+    @Prop({ type: Types.ObjectId, ref: 'AdminUser' })
+    kycVerifiedBy?: Types.ObjectId;
+
+    @Prop({ type: Date })
+    kycVerifiedAt?: Date;
+
+    @Prop({ type: String })
+    kycVerificationNotes?: string;
+
+    // Profile Media (Settings Page)
+    @Prop({ type: String })
+    profilePicture?: string;
+
+    @Prop({ type: String })
+    bannerImage?: string;
+
+    // Billing Preferences (Settings Page)
+    @Prop({ type: Object, default: { useExistingEmail: true } })
+    billingPreferences: BillingPreferences;
+
+    // Currency for analytics display (ISO 4217)
+    @Prop({ type: String, default: 'USD' })
+    currency: string;
 }
-export const CompanySchema = SchemaFactory.createForClass(Company)
+
+export const CompanySchema = SchemaFactory.createForClass(Company);
+
+// Add indexes for KYC queries
+CompanySchema.index({ isKycVerified: 1 });
+CompanySchema.index({ 'kycDocuments.status': 1 });

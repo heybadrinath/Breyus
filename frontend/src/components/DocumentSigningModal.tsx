@@ -3,7 +3,7 @@ import { X, Download, FileText, Upload, CheckCircle, Loader2, AlertCircle, PenTo
 import { DocumentInfo, DocumentType } from '../services/trade.service';
 import SignatureCanvas from './SignatureCanvas';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
 type SigningMode = 'choose' | 'in-app' | 'upload';
 
@@ -239,8 +239,8 @@ const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
     if (mode === 'in-app') {
         return (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] shadow-xl flex flex-col">
-                    <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+                <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] shadow-xl flex flex-col overflow-hidden">
+                    <div className="flex items-center justify-between p-4 border-b flex-shrink-0 bg-white">
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setMode('choose')}
@@ -256,7 +256,7 @@ const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
                     </div>
 
                     {/* Document Preview */}
-                    <div className="flex-1 overflow-hidden p-4 bg-gray-100 min-h-[300px]">
+                    <div className="flex-1 overflow-auto p-4 bg-gray-100 min-h-[200px] max-h-[40vh]">
                         {document && isPDF ? (
                             <object
                                 data={documentUrl || ''}
@@ -301,7 +301,7 @@ const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
                     </div>
 
                     {/* Agreement and Signature Section */}
-                    <div className="p-4 border-t flex-shrink-0 space-y-4 overflow-y-auto max-h-[40vh]">
+                    <div className="p-4 border-t flex-shrink-0 space-y-4">
                         {/* Signature Canvas */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">

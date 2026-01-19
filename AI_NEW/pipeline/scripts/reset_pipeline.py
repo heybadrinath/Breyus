@@ -14,6 +14,15 @@ import shutil
 from pathlib import Path
 from typing import Iterable, List, Optional
 
+from dotenv import load_dotenv
+
+# Load .env file from AI_NEW directory
+_script_dir = Path(__file__).parent
+_ai_dir = _script_dir.parent.parent
+_env_file = _ai_dir / ".env"
+if _env_file.exists():
+    load_dotenv(_env_file)
+
 from .utils import MANIFEST_PATH, default_manifest, save_manifest
 
 PIPELINE_ROOT = Path(__file__).resolve().parent.parent

@@ -65,9 +65,12 @@ class NotificationService {
     /**
      * Get total unread count
      */
-    async getUnreadCount(): Promise<number> {
+    async getUnreadCount(type?: NotificationQuery['type']): Promise<number> {
         try {
-            const response = await fetch(`${API_URL}/notifications/unread-count`, {
+            const params = new URLSearchParams();
+            if (type) params.append('type', type);
+            const suffix = params.toString() ? `?${params.toString()}` : '';
+            const response = await fetch(`${API_URL}/notifications/unread-count${suffix}`, {
                 method: 'GET',
                 headers: this.getHeaders(),
                 credentials: 'include',

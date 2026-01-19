@@ -1,8 +1,55 @@
 # Docker Commands - Quick Reference
 
-**Last Updated:** 2025-12-19
+**Last Updated:** 2026-01-19
 
 Quick reference for Docker operations during development. For pipeline commands, see **PIPELINE.md**.
+
+---
+
+## Build Optimization (BuildKit)
+
+The AI server Dockerfile uses **BuildKit** features for faster builds. BuildKit provides:
+- **Pip cache mounts** - Reuses downloaded packages across builds (~30-60s saved)
+- **Multi-stage builds** - Smaller final images (~500MB smaller)
+- **CPU-only PyTorch** - Downloads ~200MB instead of ~2GB
+
+### Enable BuildKit
+
+```bash
+# Option 1: Set environment variable (recommended)
+export DOCKER_BUILDKIT=1
+
+# Option 2: Use per-command prefix
+DOCKER_BUILDKIT=1 docker-compose build
+
+# Option 3: Enable globally in Docker daemon config
+# Add to ~/.docker/daemon.json (or Docker Desktop settings):
+# { "features": { "buildkit": true } }
+```
+
+### Build Commands with BuildKit
+
+```bash
+# Build with BuildKit caching (FASTEST for rebuilds)
+DOCKER_BUILDKIT=1 docker-compose build
+
+# Build specific service
+DOCKER_BUILDKIT=1 docker-compose build ai-service
+
+# Build and run in one command
+DOCKER_BUILDKIT=1 docker-compose up -d --build
+
+# Force rebuild without cache (clean build)
+DOCKER_BUILDKIT=1 docker-compose build --no-cache
+```
+
+### Build Time Comparison
+
+| Build Type | Without BuildKit | With BuildKit |
+|------------|------------------|---------------|
+| Fresh build (no cache) | ~4-5 min | ~2-3 min |
+| Rebuild (deps unchanged) | ~4-5 min | ~30 sec |
+| Code-only change | ~2-3 min | ~20 sec |
 
 ---
 
@@ -14,8 +61,8 @@ Quick reference for Docker operations during development. For pipeline commands,
 # Start all services (Postgres + Redis + AI Server)
 docker-compose up -d
 
-# Start and rebuild containers
-docker-compose up -d --build
+# Start and rebuild containers (with BuildKit)
+DOCKER_BUILDKIT=1 docker-compose up -d --build
 
 # Stop all services
 docker-compose down
@@ -81,7 +128,7 @@ docker-compose exec postgres psql -U postgres -d breyus_ai
 docker-compose exec postgres psql -U postgres -d breyus_ai -c "SELECT COUNT(*) FROM companies;"
 
 # Check if Postgres is ready
-docker-compose exec postgres pg_isready
+docker compose exec postgres pg_isready
 
 # Exit PostgreSQL CLI
 \q
@@ -154,14 +201,14 @@ docker-compose logs -t ai-server > ai-server-logs-timestamped.txt
 
 ```bash
 # Apply AI cache migration to an existing database
-docker-compose exec -T postgres psql -U postgres -d breyus_ai < shared/db/migrations/001_add_ai_cache_tables.sql
+docker compose exec -T postgres psql -U postgres -d breyus_ai < shared/db/migrations/001_add_ai_cache_tables.sql
 ```
 
 ### Quick Queries
 
 ```bash
 # Count records in all tables
-docker-compose exec postgres psql -U postgres -d breyus_ai -c "
+docker compose exec postgres psql -U postgres -d breyus_ai -c "
 SELECT
   'companies' as table, COUNT(*) as count FROM companies
 UNION ALL
@@ -175,33 +222,62 @@ SELECT 'predicted_partners', COUNT(*) FROM predicted_partners;
 "
 
 # Check import status
-docker-compose exec postgres psql -U postgres -d breyus_ai -c "
+docker compose exec postgres psql -U postgres -d breyus_ai -c "
 SELECT status, COUNT(*) as files, SUM(rows_imported) as total_rows
 FROM data_import_log
 GROUP BY status;
 "
 
 # View recent imports
-docker-compose exec postgres psql -U postgres -d breyus_ai -c "
+docker compose exec postgres psql -U postgres -d breyus_ai -c "
 SELECT file_name, rows_imported, status, completed_at
 FROM data_import_log
 ORDER BY created_at DESC
-LIMIT 100;
+LIMIT 200;
 "
 
 # Check database size
-docker-compose exec postgres psql -U postgres -d breyus_ai -c "
+docker compose exec postgres psql -U postgres -d breyus_ai -c "
 SELECT pg_size_pretty(pg_database_size('breyus_ai')) as size;
 "
 
+# Check table sizes (largest first)
+docker compose exec postgres psql -U postgres -d breyus_ai -c "
+SELECT
+  relname AS table,
+  pg_size_pretty(pg_total_relation_size(relid)) AS total_size,
+  pg_size_pretty(pg_relation_size(relid)) AS data_size,
+  pg_size_pretty(pg_indexes_size(relid)) AS index_size
+FROM pg_catalog.pg_statio_user_tables
+ORDER BY pg_total_relation_size(relid) DESC;
+"
+
+# Check database activity/status
+docker compose exec postgres psql -U postgres -d breyus_ai -c "
+SELECT
+  datname,
+  numbackends AS connections,
+  xact_commit,
+  xact_rollback,
+  blks_hit,
+  blks_read,
+  tup_returned,
+  tup_fetched,
+  tup_inserted,
+  tup_updated,
+  tup_deleted
+FROM pg_stat_database
+WHERE datname = 'breyus_ai';
+"
+
 # List all tables
-docker-compose exec postgres psql -U postgres -d breyus_ai -c "\dt"
+docker compose exec postgres psql -U postgres -d breyus_ai -c "\dt"
 
 # Describe table structure
-docker-compose exec postgres psql -U postgres -d breyus_ai -c "\d companies"
+docker compose exec postgres psql -U postgres -d breyus_ai -c "\d companies"
 
 # embed list
-docker exec -i breyus_ai_postgres psql -U postgres -d breyus_ai -c "SELECT count(*) FROM trade_records WHERE product_embedding IS NOT NULL;"
+docker compose exec postgres psql -U postgres -d breyus_ai -c "SELECT count(*) FROM trade_records WHERE product_embedding IS NOT NULL;"
 ```
 
 ### Database Backup
@@ -331,7 +407,7 @@ curl -o /dev/null -s -w "%{http_code}\n" http://localhost:8000/health
 docker-compose ps | grep healthy
 
 # Check if Postgres is accepting connections
-docker-compose exec postgres pg_isready -U postgres
+docker compose exec postgres pg_isready -U postgres
 # Should return: /var/run/postgresql:5432 - accepting connections
 
 # Check if Redis is responding
@@ -591,8 +667,13 @@ lsof -i :6379
 ## Quick Command Reference
 
 ```bash
+# === BUILD (with BuildKit) ===
+DOCKER_BUILDKIT=1 docker-compose build            # Build with caching (fast)
+DOCKER_BUILDKIT=1 docker-compose build ai-service # Build AI service only
+
 # === START/STOP ===
 docker-compose up -d                              # Start all
+DOCKER_BUILDKIT=1 docker-compose up -d --build    # Build + Start all
 docker-compose down                               # Stop all
 docker-compose restart                            # Restart all
 docker-compose down -v                            # Stop + remove volumes
@@ -651,5 +732,5 @@ docker-compose down
 
 ```bash
 docker-compose down -v
-docker-compose up -d --build
+DOCKER_BUILDKIT=1 docker-compose up -d --build
 ```

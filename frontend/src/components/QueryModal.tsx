@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Loader2, Send, MessageCircle } from 'lucide-react';
-import { createConversation, sendMessage } from '../services/inbox.service';
+import { createConversation, getCurrentCompanyId } from '../services/inbox.service';
+import { socketService } from '../services/socket.service';
 import { useNavigate } from 'react-router-dom';
 
 interface QueryModalProps {
@@ -39,28 +40,72 @@ export const QueryModal: React.FC<QueryModalProps> = ({
     setError(null);
 
     try {
-      // Create or get existing conversation
-      const conversationResult = await createConversation(productId);
+    // Create or get existing conversation
+    if (!productId) {
+      throw new Error('Missing product reference');
+    }
+    const conversationResult = await createConversation(productId);
 
-      let conversationId: string | undefined;
+    let conversationId: string | undefined;
+    if (conversationResult.status === 'success') {
+      const data = conversationResult.data;
+      if (typeof data === 'string') {
+        conversationId = data;
+      } else if (data && typeof data === 'object') {
+        conversationId =
+          data._id ||
+          data.conversationId ||
+          data.id ||
+          data.data?._id ||
+          data.data?.conversationId ||
+          data.data;
+      }
+    }
+    if (!conversationId && conversationResult.conversationId) {
+      // Conversation already exists
+      conversationId = conversationResult.conversationId;
+    }
 
-      if (conversationResult.status === 'success' && conversationResult.data?._id) {
-        conversationId = conversationResult.data._id;
-      } else if (conversationResult.conversationId) {
-        // Conversation already exists
-        conversationId = conversationResult.conversationId;
+    if (!conversationId) {
+      throw new Error(conversationResult.message || 'Failed to create conversation');
+    }
+
+      const companyResult = await getCurrentCompanyId();
+      if (companyResult.status !== 'success' || !companyResult.companyId) {
+        throw new Error('Failed to resolve company ID');
       }
 
-      if (!conversationId) {
-        throw new Error('Failed to create conversation');
-      }
+      const ensureConnected = () =>
+        new Promise<void>((resolve, reject) => {
+          if (socketService.isConnected()) {
+            resolve();
+            return;
+          }
 
-      // Send the query as first message
-      const messageResult = await sendMessage(conversationId, query);
+          let unsubscribe = () => {};
+          const timeout = setTimeout(() => {
+            unsubscribe();
+            reject(new Error('Unable to connect to chat server'));
+          }, 5000);
 
-      if (messageResult.status !== 'success') {
-        throw new Error('Failed to send message');
-      }
+          unsubscribe = socketService.onInboxStateChange((state) => {
+            if (state === 'connected') {
+              clearTimeout(timeout);
+              unsubscribe();
+              resolve();
+            }
+            if (state === 'failed') {
+              clearTimeout(timeout);
+              unsubscribe();
+              reject(new Error('Unable to connect to chat server'));
+            }
+          });
+
+          socketService.connect();
+        });
+
+      await ensureConnected();
+      socketService.sendMessage(conversationId, companyResult.companyId, query);
 
       // Navigate to inbox with the conversation
       const basePath = userRole === 'Seller' ? '/seller/Inbox' : '/buyer/inbox';

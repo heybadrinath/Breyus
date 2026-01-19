@@ -16,6 +16,9 @@ export interface Product {
   name: string;
   description: string;
   detailedDescription: string;
+  application?: string;
+  environmentalImpact?: string;
+  qualityAssurance?: string;
   category: string;
   hsnCode: string;
   price: number;
@@ -43,10 +46,15 @@ export interface Product {
   companyName: string;
 
   // trade terms
+  exportLocation?: string;
+  nearestPort?: string;
   revenueMin: string;
   revenueMax: string;
   currencyTrade: string;
   unitTrade: string;
+  paymentTerms?: string;
+  logisticsTerms?: string;
+  popTerms?: string;
   yearsTrade: string;
   industry: string;
   marketYears: string;
@@ -57,6 +65,10 @@ export interface Product {
   selectedIncoterm: IncotermType;
   selectedIncotermData: IncotermRowData;
   defaults: Record<IncotermType, IncotermRowData>;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  featuredAt?: Date;
+  featuredBy?: string;
 }
 
 export interface CreateProductData {
@@ -68,7 +80,12 @@ export interface CreateProductData {
   moqUnit: string;
   description: string;
   detailedDescription: string;
+  application?: string;
+  environmentalImpact?: string;
+  qualityAssurance?: string;
   category: string;
+  categoryId?: string; // Reference to ProductCategory collection
+  isNicheCommodity?: boolean; // true = niche, false = mainstream
   hsnCode: string;
 
   // Pricing
@@ -86,10 +103,15 @@ export interface CreateProductData {
   tags: string[];
 
   // Trade terms
+  exportLocation?: string;
+  nearestPort?: string;
   revenueMin?: string;
   revenueMax?: string;
   currencyTrade?: string;
   unitTrade?: string;
+  paymentTerms?: string;
+  logisticsTerms?: string;
+  popTerms?: string;
   yearsTrade?: string;
   industry?: string;
   marketYears?: string;
@@ -99,6 +121,9 @@ export interface CreateProductData {
   // Incoterms
   selectedIncoterm?: string;
   selectedIncotermData?: Record<string, 'Buyer' | 'Seller'>;
+
+  productImages?: string[];
+  testReports?: string[];
 }
 
 export interface ProductResponse {
@@ -126,6 +151,35 @@ export interface PaginationResponse {
     totalProducts: number;
     hasNextPage: boolean;
     hasPrevPage: boolean;
+  };
+}
+
+export interface UserProductsPaginationParams {
+  page: number;
+  limit: number;
+  search?: string;
+  category?: string;
+  stockStatus?: string;
+  sort?: string;
+  isMainstream?: boolean; // Filter by commodity classification (true = mainstream, false = niche)
+}
+
+export interface UserProductsPaginationResponse {
+  statusCode: number;
+  message: string;
+  data: any[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalProducts: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+  stats: {
+    totalProducts: number;
+    inStockProducts: number;
+    lowStockProducts: number;
+    outOfStockProducts: number;
   };
 }
 
@@ -229,6 +283,49 @@ export const getUserProducts = async (): Promise<ProductResponse> => {
   }
 };
 
+export const getUserProductsWithPagination = async (
+  params: UserProductsPaginationParams
+): Promise<UserProductsPaginationResponse> => {
+  try {
+    const queryParams = new URLSearchParams();
+    queryParams.append('page', params.page.toString());
+    queryParams.append('limit', params.limit.toString());
+
+    if (params.search) {
+      queryParams.append('search', params.search);
+    }
+    if (params.category) {
+      queryParams.append('category', params.category);
+    }
+    if (params.stockStatus) {
+      queryParams.append('stockStatus', params.stockStatus);
+    }
+    if (params.sort) {
+      queryParams.append('sort', params.sort);
+    }
+    if (params.isMainstream !== undefined) {
+      queryParams.append('isMainstream', params.isMainstream.toString());
+    }
+
+    const response = await fetch(`${BACKEND_END_POINT}/user-products?${queryParams.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to fetch user products');
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+  }
+};
+
 export const getProductById = async (productId: string): Promise<ProductResponse> => {
   try {
     const response = await fetch(`${BACKEND_END_POINT}/${productId}`, {
@@ -242,6 +339,81 @@ export const getProductById = async (productId: string): Promise<ProductResponse
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || 'Failed to fetch product');
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+  }
+};
+
+export const updateProduct = async (
+  productId: string,
+  productData: CreateProductData,
+  files: File[]
+): Promise<ProductResponse> => {
+  try {
+    const formData = new FormData();
+    formData.append('productData', JSON.stringify(productData));
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+
+    const response = await fetch(`${BACKEND_END_POINT}/${productId}`, {
+      method: 'PATCH',
+      body: formData,
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to update product');
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+  }
+};
+
+export const updateProductVisibility = async (
+  productId: string,
+  isActive: boolean
+): Promise<ProductResponse> => {
+  try {
+    const response = await fetch(`${BACKEND_END_POINT}/${productId}/visibility`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ isActive }),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to update product visibility');
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+  }
+};
+
+export const deleteProduct = async (productId: string): Promise<ProductResponse> => {
+  try {
+    const response = await fetch(`${BACKEND_END_POINT}/${productId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to delete product');
     }
 
     return await response.json();

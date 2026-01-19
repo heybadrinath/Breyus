@@ -18,6 +18,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+from dotenv import load_dotenv
+
+# Load .env file from AI_NEW directory
+_script_dir = Path(__file__).parent
+_ai_dir = _script_dir.parent.parent
+_env_file = _ai_dir / ".env"
+if _env_file.exists():
+    load_dotenv(_env_file)
+
 # Thresholds in MB (can be overridden by environment variables)
 SMALL_THRESHOLD_MB = float(os.getenv("SIZE_THRESHOLD_SMALL_MB", "2"))
 MEDIUM_THRESHOLD_MB = float(os.getenv("SIZE_THRESHOLD_MEDIUM_MB", "20"))

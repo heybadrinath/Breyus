@@ -22,7 +22,7 @@ export class LoginService {
         const { mail, password } = loginDto;
 
 
-        const user = await this.userSchema.findOne({ mail });
+        const user = await this.userSchema.findOne({ mail }).populate<{ company: Company }>('company', 'role');
         if (!user) {
             throw new HttpException('No account found with this email. Please sign up first.', HttpStatus.BAD_REQUEST);
         }
@@ -33,6 +33,20 @@ export class LoginService {
             throw new HttpException('Incorrect password. Please try again.', HttpStatus.BAD_REQUEST);
         }
 
+        // Check if user is suspended
+        if (user.isSuspended) {
+            throw new HttpException(
+                'Your account has been suspended. Please contact support for assistance.',
+                HttpStatus.FORBIDDEN
+            );
+        }
+
+        // TESTING BYPASS: Skip OTP and return token directly
+        // TODO: Remove this bypass and uncomment OTP logic below for production
+        const AccountToken = this.authService.generateAccountToken(user._id.toString(), (user.company as any)._id.toString());
+        return { AccountToken, role: user.company.role, bypassOtp: true };
+
+        /* ORIGINAL OTP LOGIC - Uncomment for production
         try {
             const otp = this.mailService.generateOtp()
             await this.mailService.storeOtp(mail as string, otp as string);
@@ -43,6 +57,7 @@ export class LoginService {
                 HttpStatus.INTERNAL_SERVER_ERROR
             );
         }
+        */
 
     }
 
@@ -60,6 +75,15 @@ export class LoginService {
                 'Invalid or expired OTP. Please check your code and try again.',
                 HttpStatus.BAD_REQUEST
             )
+        }
+
+        // Double-check suspension status before issuing token
+        // (User could have been suspended between login and OTP validation)
+        if (user.isSuspended) {
+            throw new HttpException(
+                'Your account has been suspended. Please contact support for assistance.',
+                HttpStatus.FORBIDDEN
+            );
         }
 
         const AccountToken = this.authService.generateAccountToken(user._id.toString(), (user.company as any)._id.toString());

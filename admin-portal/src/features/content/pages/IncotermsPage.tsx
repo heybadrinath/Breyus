@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
-import { Loader2, RefreshCw, Database, Ship, Plane, AlertTriangle } from 'lucide-react'
+import { Loader2, RefreshCw, Database, Ship, Plane, AlertTriangle, Eye } from 'lucide-react'
 import {
   useIncoterms,
   useSeedIncoterms,
@@ -23,6 +23,7 @@ import {
 } from '../hooks/useIncoterms'
 import { IncotermCard } from '../components/IncotermCard'
 import { IncotermEditSheet } from '../components/IncotermEditSheet'
+import { IncotermsUserViewModal } from '../components/IncotermsUserViewModal'
 import type { Incoterm, UpdateIncotermDto } from '../types'
 
 // Helper to extract error message from various error types
@@ -41,33 +42,23 @@ function TransportModeSection({
   title,
   icon: Icon,
   count,
-  colorClass,
-  gradientClass,
   children,
 }: {
   title: string
   icon: typeof Plane | typeof Ship
   count: number
-  colorClass: string
-  gradientClass: string
   children: React.ReactNode
 }) {
   return (
-    <section className="space-y-6">
-      <div className="flex items-center gap-4">
-        {/* Icon with glow effect */}
-        <div className={`relative p-3 rounded-xl ${colorClass}`}>
-          <div className={`absolute inset-0 rounded-xl ${gradientClass} blur-sm opacity-50`} />
-          <Icon className="h-6 w-6 relative z-10" />
-        </div>
+    <section className="space-y-4">
+      <div className="flex items-center gap-3">
+        <Icon className="h-5 w-5 text-muted-foreground" />
         <div>
-          <h3 className="text-xl font-semibold text-foreground">{title}</h3>
+          <h3 className="text-lg font-semibold">{title}</h3>
           <p className="text-sm text-muted-foreground">{count} incoterms</p>
         </div>
-        {/* Decorative line */}
-        <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent ml-4" />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {children}
       </div>
     </section>
@@ -99,6 +90,7 @@ export function IncotermsPage() {
   const [selectedIncoterm, setSelectedIncoterm] = useState<Incoterm | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
+  const [isUserViewOpen, setIsUserViewOpen] = useState(false)
 
   const { data, isLoading, error } = useIncoterms()
   const seedMutation = useSeedIncoterms()
@@ -235,6 +227,16 @@ export function IncotermsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* View as User button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsUserViewOpen(true)}
+            disabled={!data?.incoterms?.length}
+          >
+            <Eye className="mr-2 h-4 w-4" />
+            View as User
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -283,8 +285,6 @@ export function IncotermsPage() {
               title="Any Mode of Transport"
               icon={Plane}
               count={anyModeIncoterms.length}
-              colorClass="bg-emerald-500/20 text-emerald-400"
-              gradientClass="bg-emerald-500"
             >
               {anyModeIncoterms.map((incoterm) => (
                 <IncotermCard
@@ -302,8 +302,6 @@ export function IncotermsPage() {
               title="Sea & Inland Waterway Only"
               icon={Ship}
               count={seaInlandIncoterms.length}
-              colorClass="bg-sky-500/20 text-sky-400"
-              gradientClass="bg-sky-500"
             >
               {seaInlandIncoterms.map((incoterm) => (
                 <IncotermCard
@@ -348,6 +346,13 @@ export function IncotermsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* User View Modal */}
+      <IncotermsUserViewModal
+        open={isUserViewOpen}
+        onOpenChange={setIsUserViewOpen}
+        incoterms={data?.incoterms || []}
+      />
     </div>
   )
 }

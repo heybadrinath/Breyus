@@ -7,6 +7,7 @@ import { createConversation } from "../../services/inbox.service";
 import { useNavigate } from "react-router-dom";
 import { addToWishlist, removeFromWishlist, getWishlist } from '../../services/wishlist.service';
 import { TryBreyusCoreHeader } from "../../components/Header";
+import { useNotifications } from "../../contexts/NotificationContext";
 
 // import social media icons
 import fb from "../assets/social-icons/fb.svg";
@@ -20,20 +21,18 @@ import x_twitter from "../assets/social-icons/x.svg";
 const ProductPage: React.FC = () => {
 
   const navigate = useNavigate();
+  const { showToast } = useNotifications();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState('');
+  const [quantityError, setQuantityError] = useState<string | null>(null);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
 
   const [tradeRequestSent, setTradeRequestSent] = useState(false);
-  const [notification, setNotification] = useState<{
-    type: 'success' | 'error' | 'info';
-    message: string;
-  } | null>(null);
   const [showTestReport, setShowTestReport] = useState(false);
 
   const [showTradeTerms, setShowTradeTerms] = useState(false);
@@ -257,19 +256,6 @@ const ProductPage: React.FC = () => {
     fetchProduct();
   }, []);
 
-  // Auto-hide notifications after 5 seconds
-  useEffect(() => {
-    if (notification) {
-      const timer = setTimeout(() => {
-        setNotification(null);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [notification]);
-
-  const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
-    setNotification({ type, message });
-  };
 
 
 
@@ -327,13 +313,14 @@ const ProductPage: React.FC = () => {
 
   const handleQuantityValidation = () => {
     if (Number(quantity) < product.moq) {
-      setNotification({ type: 'error', message: `Minimum order quantity is ${product.moq} ${product.moqUnit}` });
+      setQuantityError(`Minimum order quantity is ${product.moq} ${product.moqUnit}`);
       return;
     }
     if (Number(quantity) > product.stock) {
-      setNotification({ type: 'error', message: `Only ${product.stock} ${product.stockUnit} available in stock.` });
+      setQuantityError(`Only ${product.stock} ${product.stockUnit} available in stock.`);
       return;
     }
+    setQuantityError(null);
     navigate(`/buyer/purchase-request?id=${product.id}&quantity=${quantity}&quantity_unit=${product.moqUnit}`);
   }
 
@@ -441,11 +428,17 @@ const ProductPage: React.FC = () => {
                         placeholder="Quantity"
                         className="w-full !border-0 !rounded-r-none"
                         value={quantity}
-                        onChange={(event) => { setQuantity(event.target.value) }}
+                        onChange={(event) => {
+                          setQuantity(event.target.value);
+                          setQuantityError(null);
+                        }}
                         name="quantity"
                       />
                       <span className="my-auto mx-2">{product.moqUnit}</span>
                     </div>
+                    {quantityError && (
+                      <p className="mt-2 text-sm text-red-600">{quantityError}</p>
+                    )}
                   </div>
 
 
@@ -530,12 +523,12 @@ const ProductPage: React.FC = () => {
                             result.message === "You can't send a message to yourself" ||
                             (result.message && result.message.toLowerCase().includes('yourself'))
                           ) {
-                            showNotification('error', "You can't send a message to yourself.");
+                            showToast("You can't send a message to yourself.", 'error');
                           } else {
-                            showNotification('error', result.message || 'Failed to create conversation');
+                            showToast(result.message || 'Failed to create conversation', 'error');
                           }
                         } catch (error) {
-                          showNotification('error', 'Error creating conversation.');
+                          showToast('Error creating conversation.', 'error');
                           console.error('Error creating conversation:', error);
                         }
                       }}
@@ -582,35 +575,6 @@ const ProductPage: React.FC = () => {
             )}
           </div>
 
-          {/* Notifications */}
-          {notification && (
-            <div className={`fixed bottom-4 right-4 max-w-md p-4 rounded-lg shadow-lg animate-bounce z-50 ${notification.type === 'success'
-              ? 'bg-green-500 text-white'
-              : notification.type === 'error'
-                ? 'bg-red-500 text-white'
-                : 'bg-blue-500 text-white'
-              }`}>
-              <div className="flex items-start">
-                <div className="flex-shrink-0">
-                  {notification.type === 'success' && <span className="text-xl">✅</span>}
-                  {notification.type === 'error' && <span className="text-xl">❌</span>}
-                  {notification.type === 'info' && <span className="text-xl">ℹ️</span>}
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium">{notification.message}</p>
-                  {notification.type === 'success' && tradeRequestSent && (
-                    <p className="text-xs mt-1 opacity-90">Redirecting to trade requests...</p>
-                  )}
-                </div>
-                <button
-                  onClick={() => setNotification(null)}
-                  className="ml-auto -mx-1.5 -my-1.5 text-white hover:bg-black hover:bg-opacity-20 rounded-lg p-1.5"
-                >
-                  <span className="text-sm">✕</span>
-                </button>
-              </div>
-            </div>
-          )}
 
 
 

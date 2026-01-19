@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Put,
   Get,
   Body,
   Param,
@@ -9,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { FeedbackService } from './feedback.service';
-import { CreateFeedbackDto } from './dto/create-feedback.dto';
+import { CreateFeedbackDto, UpdateFeedbackDto } from './dto/create-feedback.dto';
 import { FeedbackType } from './feedback.schema';
 
 @Controller('feedback')
@@ -134,6 +135,107 @@ export class FeedbackController {
         statusCode: HttpStatus.OK,
         message: 'Feedback by type retrieved successfully',
         data: feedbacks,
+      });
+    } catch (error) {
+      return response.status(error.status || 500).json({
+        statusCode: error.status || 500,
+        message: error.message || 'Internal server error',
+      });
+    }
+  }
+
+  @Get('my/:tradeId/:feedbackType')
+  async getMyFeedback(
+    @Param('tradeId') tradeId: string,
+    @Param('feedbackType') feedbackType: FeedbackType,
+    @Res() response: Response,
+  ) {
+    try {
+      const accountToken = response.req.signedCookies['account'];
+
+      if (!accountToken) {
+        return response.status(401).json({
+          statusCode: 401,
+          message: 'No valid cookie found',
+        });
+      }
+
+      const feedback = await this.feedbackService.getMyFeedbackForTrade(
+        accountToken,
+        tradeId,
+        feedbackType,
+      );
+
+      return response.status(HttpStatus.OK).json({
+        statusCode: HttpStatus.OK,
+        message: 'Feedback retrieved successfully',
+        data: feedback,
+      });
+    } catch (error) {
+      return response.status(error.status || 500).json({
+        statusCode: error.status || 500,
+        message: error.message || 'Internal server error',
+      });
+    }
+  }
+
+  @Put('my/:tradeId/:feedbackType')
+  async updateFeedback(
+    @Param('tradeId') tradeId: string,
+    @Param('feedbackType') feedbackType: FeedbackType,
+    @Body() updateFeedbackDto: UpdateFeedbackDto,
+    @Res() response: Response,
+  ) {
+    try {
+      const accountToken = response.req.signedCookies['account'];
+
+      if (!accountToken) {
+        return response.status(401).json({
+          statusCode: 401,
+          message: 'No valid cookie found',
+        });
+      }
+
+      const feedback = await this.feedbackService.updateFeedback(
+        accountToken,
+        tradeId,
+        feedbackType,
+        updateFeedbackDto,
+      );
+
+      return response.status(HttpStatus.OK).json({
+        statusCode: HttpStatus.OK,
+        message: 'Feedback updated successfully',
+        data: feedback,
+      });
+    } catch (error) {
+      return response.status(error.status || 500).json({
+        statusCode: error.status || 500,
+        message: error.message || 'Internal server error',
+      });
+    }
+  }
+
+  @Get('seller/dashboard')
+  async getSellerDashboard(@Res() response: Response) {
+    try {
+      const accountToken = response.req.signedCookies['account'];
+
+      if (!accountToken) {
+        return response.status(401).json({
+          statusCode: 401,
+          message: 'No valid cookie found',
+        });
+      }
+
+      const result = await this.feedbackService.getSellerFeedbackDashboard(
+        accountToken,
+      );
+
+      return response.status(HttpStatus.OK).json({
+        statusCode: HttpStatus.OK,
+        message: 'Seller feedback dashboard retrieved successfully',
+        data: result,
       });
     } catch (error) {
       return response.status(error.status || 500).json({

@@ -1,13 +1,21 @@
-import { Controller, Query, Get, Res, Post, Body, HttpStatus, UseInterceptors, UploadedFiles, Param } from '@nestjs/common';
+import { Controller, Query, Get, Res, Post, Body, HttpStatus, UseInterceptors, UploadedFiles, Param, Patch, Delete, UseGuards } from '@nestjs/common';
 import { HSN } from './schema/hsn.schema';
 import { ProductsService } from './products.service';
 import { Response } from 'express';
 import { CreateProductDto } from './create-product.dto';
 import { FileUploadInterceptor } from './file-upload.interceptor';
 import { AuthService } from '../auth/auth.service';
+import { AuthGuard } from '../auth/auth.guard';
 
-
+/**
+ * Products Controller
+ * All routes are protected by AuthGuard which validates:
+ * - Cookie-based JWT authentication
+ * - User existence in database
+ * - User is not suspended
+ */
 @Controller('products')
+@UseGuards(AuthGuard)
 export class ProductsController {
     constructor(
         private readonly productsService: ProductsService,
@@ -98,7 +106,16 @@ export class ProductsController {
     }
 
     @Get('user-products')
-    async getUserProducts(@Res() response: Response) {
+    async getUserProducts(
+        @Query('page') page: string = '',
+        @Query('limit') limit: string = '',
+        @Query('search') search: string = '',
+        @Query('category') category: string = '',
+        @Query('stockStatus') stockStatus: string = '',
+        @Query('sort') sort: string = '',
+        @Query('isMainstream') isMainstreamStr: string = '',
+        @Res() response: Response
+    ) {
         try {
             const accountToken = response.req.signedCookies['account'];
 
@@ -117,6 +134,37 @@ export class ProductsController {
                 return response.status(HttpStatus.UNAUTHORIZED).send({
                     statusCode: HttpStatus.UNAUTHORIZED,
                     message: 'Invalid token',
+                });
+            }
+
+            if (page || limit || search || category || stockStatus || sort || isMainstreamStr) {
+                const pageNum = parseInt(page || '1', 10);
+                const limitNum = parseInt(limit || '10', 10);
+                // Parse isMainstream query parameter (string 'true'/'false' to boolean)
+                const isMainstream = isMainstreamStr === '' ? undefined : isMainstreamStr === 'true';
+
+                const result = await this.productsService.getProductsByUserWithPagination(userId, {
+                    page: pageNum,
+                    limit: limitNum,
+                    search,
+                    category,
+                    stockStatus,
+                    sort,
+                    isMainstream,
+                });
+
+                return response.status(HttpStatus.OK).send({
+                    statusCode: HttpStatus.OK,
+                    message: 'Products retrieved successfully',
+                    data: result.products,
+                    pagination: {
+                        currentPage: result.currentPage,
+                        totalPages: result.totalPages,
+                        totalProducts: result.totalProducts,
+                        hasNextPage: result.hasNextPage,
+                        hasPrevPage: result.hasPrevPage,
+                    },
+                    stats: result.stats,
                 });
             }
 
@@ -240,6 +288,169 @@ export class ProductsController {
             return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
                 statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
                 message: 'Failed to retrieve product',
+                error: error.message || 'Internal Server Error',
+            });
+        }
+    }
+
+    @Patch(':id')
+    @UseInterceptors(FileUploadInterceptor)
+    async updateProduct(
+        @Param('id') id: string,
+        @Res() response: Response,
+        @Body() body: any,
+        @UploadedFiles() files?: Express.Multer.File[]
+    ) {
+        try {
+            const accountToken = response.req.signedCookies['account'];
+
+            if (!accountToken) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'No valid cookie found',
+                });
+            }
+
+            let userId: string;
+            try {
+                const decoded = this.authService.validateAccountToken(accountToken);
+                userId = (decoded as any).userId;
+            } catch (error) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'Invalid token',
+                });
+            }
+
+            let updateProductDto: CreateProductDto;
+            try {
+                updateProductDto = JSON.parse(body.productData);
+            } catch (error) {
+                return response.status(HttpStatus.BAD_REQUEST).send({
+                    statusCode: HttpStatus.BAD_REQUEST,
+                    message: 'Invalid product data format',
+                });
+            }
+
+            const result = await this.productsService.updateProduct(id, userId, updateProductDto, files);
+
+            if (!result) {
+                return response.status(HttpStatus.NOT_FOUND).send({
+                    statusCode: HttpStatus.NOT_FOUND,
+                    message: 'Product not found',
+                });
+            }
+
+            return response.status(HttpStatus.OK).send({
+                statusCode: HttpStatus.OK,
+                message: 'Product updated successfully',
+                data: result,
+            });
+        } catch (error) {
+            return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: 'Failed to update product',
+                error: error.message || 'Internal Server Error',
+            });
+        }
+    }
+
+    @Patch(':id/visibility')
+    async updateProductVisibility(
+        @Param('id') id: string,
+        @Res() response: Response,
+        @Body('isActive') isActive: boolean
+    ) {
+        try {
+            const accountToken = response.req.signedCookies['account'];
+
+            if (!accountToken) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'No valid cookie found',
+                });
+            }
+
+            let userId: string;
+            try {
+                const decoded = this.authService.validateAccountToken(accountToken);
+                userId = (decoded as any).userId;
+            } catch (error) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'Invalid token',
+                });
+            }
+
+            if (typeof isActive !== 'boolean') {
+                return response.status(HttpStatus.BAD_REQUEST).send({
+                    statusCode: HttpStatus.BAD_REQUEST,
+                    message: 'isActive must be a boolean',
+                });
+            }
+
+            const result = await this.productsService.updateProductVisibility(id, userId, isActive);
+
+            if (!result) {
+                return response.status(HttpStatus.NOT_FOUND).send({
+                    statusCode: HttpStatus.NOT_FOUND,
+                    message: 'Product not found',
+                });
+            }
+
+            return response.status(HttpStatus.OK).send({
+                statusCode: HttpStatus.OK,
+                message: 'Product visibility updated successfully',
+                data: result,
+            });
+        } catch (error) {
+            return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: 'Failed to update product visibility',
+                error: error.message || 'Internal Server Error',
+            });
+        }
+    }
+
+    @Delete(':id')
+    async deleteProduct(@Param('id') id: string, @Res() response: Response) {
+        try {
+            const accountToken = response.req.signedCookies['account'];
+
+            if (!accountToken) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'No valid cookie found',
+                });
+            }
+
+            let userId: string;
+            try {
+                const decoded = this.authService.validateAccountToken(accountToken);
+                userId = (decoded as any).userId;
+            } catch (error) {
+                return response.status(HttpStatus.UNAUTHORIZED).send({
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                    message: 'Invalid token',
+                });
+            }
+
+            const deleted = await this.productsService.deleteProduct(id, userId);
+            if (!deleted) {
+                return response.status(HttpStatus.NOT_FOUND).send({
+                    statusCode: HttpStatus.NOT_FOUND,
+                    message: 'Product not found',
+                });
+            }
+
+            return response.status(HttpStatus.OK).send({
+                statusCode: HttpStatus.OK,
+                message: 'Product deleted successfully',
+            });
+        } catch (error) {
+            return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                message: 'Failed to delete product',
                 error: error.message || 'Internal Server Error',
             });
         }

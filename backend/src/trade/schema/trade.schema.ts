@@ -45,6 +45,15 @@ export interface NegotiationEntry {
     timestamp: Date;
 }
 
+// Admin note interface - for internal admin notes (not visible to users)
+export interface AdminNote {
+    _id: Types.ObjectId;
+    content: string;
+    addedBy: Types.ObjectId;      // Admin user ID
+    addedByEmail: string;          // Admin email for display
+    addedAt: Date;
+}
+
 // Negotiation status type
 type NegotiationStatus = 'pending' | 'countered' | 'buyer_responded' | 'accepted' | 'rejected' | 'cancelled';
 
@@ -115,15 +124,17 @@ export class Trade extends Document {
      @Prop({ default: 'pending' })
     purchaseOrderStatus: string;
 
-    @Prop({ required: true })
-    quantity: string;
+    // FIXED: Changed from string to number for proper numeric operations (Audit Bug #1)
+    @Prop({ required: true, type: Number, min: 1 })
+    quantity: number;
 
     @Prop({ required: true })
     quantityUnit: string;
 
     // Step 1: Negotiation (Optional/Skippable)
-    @Prop()
-    buyerOfferedPrice?: string;
+    // FIXED: Changed from string to number (Audit Bug #1)
+    @Prop({ type: Number, min: 0 })
+    buyerOfferedPrice?: number;
 
     @Prop({ type: Object })
     buyerIncoterms?: Incoterms;
@@ -196,6 +207,11 @@ export class Trade extends Document {
         default: 'PR'
     })
     tradePhase: TradePhase;
+
+    // Race condition protection: Tracks if document upload is in progress
+    // Used to prevent concurrent first document uploads from causing issues
+    @Prop({ default: false })
+    documentUploadInProgress: boolean;
 
     // SCO (Soft Corporate Offer) - Uploaded by Seller
     @Prop({ type: Object })
@@ -279,6 +295,48 @@ export class Trade extends Document {
     @Prop()
     lastSellerViewedAt?: Date;
 
+    // ========================
+    // ADMIN MANAGEMENT (Phase 5)
+    // ========================
+
+    // Internal admin notes (not visible to users)
+    @Prop({ type: [Object], default: [] })
+    adminNotes: AdminNote[];
+
+    // Tracks when the trade last changed phase (for stalled detection)
+    @Prop()
+    lastPhaseChangeAt?: Date;
+
+    // Reference to any active dispute on this trade
+    @Prop({ type: Types.ObjectId, ref: 'TradeDispute' })
+    activeDispute?: Types.ObjectId;
+
+    // ========================
+    // USER DELETION TRACKING (Bug #6: Cascade Deletes)
+    // ========================
+
+    // Tracks if the buyer account was deleted (soft-delete for audit trail)
+    @Prop({ type: Boolean, default: false })
+    buyerDeleted: boolean;
+
+    @Prop()
+    buyerDeletedAt?: Date;
+
+    // Tracks if the seller account was deleted (soft-delete for audit trail)
+    @Prop({ type: Boolean, default: false })
+    sellerDeleted: boolean;
+
+    @Prop()
+    sellerDeletedAt?: Date;
+
+    // ========================
+    // STOCK RESTORATION TRACKING (Audit Bug #8 - Double restoration fix)
+    // ========================
+
+    // Flag to prevent double stock restoration on rejection/cancellation
+    @Prop({ type: Boolean, default: false })
+    stockRestored: boolean;
+
     // Timestamps
     @Prop({ default: Date.now })
     createdAt: Date;
@@ -288,3 +346,13 @@ export class Trade extends Document {
 }
 
 export const TradeSchema = SchemaFactory.createForClass(Trade);
+
+// Performance indexes for common queries (Audit Bug #2 - Missing indexes)
+TradeSchema.index({ buyer: 1, tradePhase: 1, createdAt: -1 });     // Buyer's trades by phase
+TradeSchema.index({ seller: 1, tradePhase: 1, createdAt: -1 });    // Seller's trades by phase
+TradeSchema.index({ negotiationStatus: 1, tradePhase: 1 });        // Negotiation filtering
+TradeSchema.index({ buyer: 1, buyerHasUnread: 1 });                // Buyer unread notifications
+TradeSchema.index({ seller: 1, sellerHasUnread: 1 });              // Seller unread notifications
+TradeSchema.index({ product: 1 });                                  // Product-based queries
+TradeSchema.index({ lastPhaseChangeAt: 1 });                        // Stalled trade detection (admin)
+TradeSchema.index({ createdAt: -1 });                               // Recent trades

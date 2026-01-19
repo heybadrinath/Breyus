@@ -10,21 +10,22 @@ import {
     DollarSign,
     Eye,
     Loader2,
-    ChevronDown,
     MessageCircle,
     Star,
     Truck,
     FileText,
     ShoppingBag,
-    ExternalLink
+    ExternalLink,
+    User
 } from 'lucide-react';
 import { getUserTrades, getSellerTrades, Trade, downloadInvoice } from '../services/trade.service';
 import TradeDetailsModal from './TradeDetailsModal';
 import FeedbackModal, { FeedbackType, FeedbackData } from './FeedbackModal';
 import QueryModal from './QueryModal';
-import { createFeedback, hasUserLeftFeedback } from '../services/feedback.service';
+import { createFeedback, getMyFeedback, hasUserLeftFeedback, updateFeedback } from '../services/feedback.service';
+import { useNotifications } from '../contexts/NotificationContext';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
 interface TradeHistoryProps {
     isSeller: boolean;
@@ -42,6 +43,7 @@ type FilterStatus = 'all' | 'rejected' | 'completed';
 
 const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
     const navigate = useNavigate();
+    const { showToast } = useNotifications();
     const [trades, setTrades] = useState<TradeWithExtras[]>([]);
     const [filteredTrades, setFilteredTrades] = useState<TradeWithExtras[]>([]);
     const [loading, setLoading] = useState(true);
@@ -55,9 +57,18 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
     // Feedback modal state
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
     const [feedbackTradeId, setFeedbackTradeId] = useState<string | null>(null);
-    const [feedbackType, setFeedbackType] = useState<FeedbackType>('seller');
-    const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
-    const [feedbackLeft, setFeedbackLeft] = useState<Record<string, { seller: boolean; delivery: boolean }>>({});
+    const [feedbackType, setFeedbackType] = useState<FeedbackType>('delivery');
+    const [feedbackLeft, setFeedbackLeft] = useState<Record<string, { seller: boolean; delivery: boolean; product: boolean }>>({});
+    const [feedbackEditing, setFeedbackEditing] = useState(false);
+    const [feedbackInitialRating, setFeedbackInitialRating] = useState(0);
+    const [feedbackInitialComment, setFeedbackInitialComment] = useState('');
+    const [feedbackInitialTags, setFeedbackInitialTags] = useState<string[]>([]);
+    const [feedbackInitialDetails, setFeedbackInitialDetails] = useState<Record<string, string>>({});
+    const [feedbackProductName, setFeedbackProductName] = useState<string | undefined>(undefined);
+    const [feedbackRecipientName, setFeedbackRecipientName] = useState<string | undefined>(undefined);
+    const [feedbackLoading, setFeedbackLoading] = useState<{ tradeId: string; type: FeedbackType } | null>(null);
+    const [showFeedbackSelector, setShowFeedbackSelector] = useState(false);
+    const [feedbackSelectorTrade, setFeedbackSelectorTrade] = useState<TradeWithExtras | null>(null);
 
     // Query modal state
     const [showQueryModal, setShowQueryModal] = useState(false);
@@ -97,20 +108,22 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
             // Check feedback status for completed trades (buyer only)
             if (!isSeller) {
                 const completedTrades = historicalTrades.filter(t => t.tradePhase === 'COMPLETED');
-                const feedbackStatus: Record<string, { seller: boolean; delivery: boolean }> = {};
+                const feedbackStatus: Record<string, { seller: boolean; delivery: boolean; product: boolean }> = {};
 
                 for (const trade of completedTrades) {
                     try {
-                        const [sellerCheck, deliveryCheck] = await Promise.all([
+                        const [sellerCheck, deliveryCheck, productCheck] = await Promise.all([
                             hasUserLeftFeedback(trade._id, 'seller'),
-                            hasUserLeftFeedback(trade._id, 'delivery')
+                            hasUserLeftFeedback(trade._id, 'delivery'),
+                            hasUserLeftFeedback(trade._id, 'product')
                         ]);
                         feedbackStatus[trade._id] = {
                             seller: sellerCheck.data?.hasLeftFeedback || false,
-                            delivery: deliveryCheck.data?.hasLeftFeedback || false
+                            delivery: deliveryCheck.data?.hasLeftFeedback || false,
+                            product: productCheck.data?.hasLeftFeedback || false
                         };
                     } catch {
-                        feedbackStatus[trade._id] = { seller: false, delivery: false };
+                        feedbackStatus[trade._id] = { seller: false, delivery: false, product: false };
                     }
                 }
                 setFeedbackLeft(feedbackStatus);
@@ -177,16 +190,52 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
         setShowQueryModal(true);
     };
 
-    const handleLeaveFeedback = (tradeId: string, type: FeedbackType) => {
-        setFeedbackTradeId(tradeId);
+    const handleLeaveFeedback = async (trade: TradeWithExtras, type: FeedbackType, isEditing = false) => {
+        setFeedbackLoading({ tradeId: trade._id, type });
+        setFeedbackTradeId(trade._id);
         setFeedbackType(type);
+        setFeedbackEditing(isEditing);
+        setFeedbackInitialRating(0);
+        setFeedbackInitialComment('');
+        setFeedbackInitialTags([]);
+        setFeedbackInitialDetails({});
+        setFeedbackProductName(trade.product?.name);
+        setFeedbackRecipientName(trade.seller?.mail);
+
+        if (isEditing) {
+            try {
+                const existing = await getMyFeedback(trade._id, type);
+                const existingData = existing.data as any;
+                if (existingData) {
+                    setFeedbackInitialRating(existingData.rating || 0);
+                    setFeedbackInitialComment(existingData.comment || '');
+                    setFeedbackInitialTags(existingData.tags || []);
+                    setFeedbackInitialDetails(existingData.details || {});
+                }
+            } catch (err) {
+                console.error('Failed to load feedback:', err);
+                showToast('Failed to load your feedback. Please try again.', 'error');
+                setFeedbackLoading(null);
+                return;
+            }
+        }
+
         setShowFeedbackModal(true);
+        setFeedbackLoading(null);
     };
 
     const handleFeedbackSubmit = async (data: FeedbackData) => {
-        setFeedbackSubmitting(true);
         try {
-            await createFeedback(data);
+            if (feedbackEditing && feedbackTradeId) {
+                await updateFeedback(feedbackTradeId, data.feedbackType, {
+                    rating: data.rating,
+                    comment: data.comment,
+                    tags: data.tags,
+                    details: data.details
+                });
+            } else {
+                await createFeedback(data);
+            }
             // Update local state
             if (feedbackTradeId) {
                 setFeedbackLeft(prev => ({
@@ -199,11 +248,10 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
             }
             setShowFeedbackModal(false);
             setFeedbackTradeId(null);
+            setFeedbackEditing(false);
         } catch (err) {
             console.error('Failed to submit feedback:', err);
-            alert('Failed to submit feedback. Please try again.');
-        } finally {
-            setFeedbackSubmitting(false);
+            showToast('Failed to submit feedback. Please try again.', 'error');
         }
     };
 
@@ -221,7 +269,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
             await downloadInvoice(tradeId);
         } catch (err) {
             console.error('Failed to download invoice:', err);
-            alert('Failed to download invoice. Please try again.');
+            showToast('Failed to download invoice. Please try again.', 'error');
         } finally {
             setDownloadingInvoice(null);
         }
@@ -342,6 +390,8 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
                             const isExpanded = expandedTradeId === trade._id;
                             const hasLeftSellerFeedback = feedbackLeft[trade._id]?.seller || false;
                             const hasLeftDeliveryFeedback = feedbackLeft[trade._id]?.delivery || false;
+                            const hasLeftProductFeedback = feedbackLeft[trade._id]?.product || false;
+                            const feedbackCompletedCount = [hasLeftSellerFeedback, hasLeftDeliveryFeedback, hasLeftProductFeedback].filter(Boolean).length;
 
                             return (
                                 <div key={trade._id} className="border rounded-lg overflow-hidden">
@@ -474,39 +524,25 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
 
                                             {/* Right: Action Buttons (for completed trades, buyer only) */}
                                             {isCompleted && !isSeller && (
-                                                <div className="w-48 flex flex-col gap-2 border-l pl-4">
+                                                <div className="w-52 flex flex-col gap-2 border-l pl-4">
                                                     <button
                                                         onClick={() => handleAskProductDoubt(trade.product._id, trade.product?.name || 'Product')}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 flex items-center justify-center gap-2"
                                                     >
                                                         <MessageCircle size={14} /> Ask Product Doubt
                                                     </button>
-
-                                                    {hasLeftSellerFeedback ? (
-                                                        <div className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center justify-center gap-2">
-                                                            <CheckCircle size={14} /> Seller Feedback Left
-                                                        </div>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => handleLeaveFeedback(trade._id, 'seller')}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 flex items-center justify-center gap-2"
-                                                        >
-                                                            <Star size={14} /> Leave Seller Feedback
-                                                        </button>
-                                                    )}
-
-                                                    {hasLeftDeliveryFeedback ? (
-                                                        <div className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center justify-center gap-2">
-                                                            <CheckCircle size={14} /> Delivery Feedback Left
-                                                        </div>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => handleLeaveFeedback(trade._id, 'delivery')}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 flex items-center justify-center gap-2"
-                                                        >
-                                                            <Truck size={14} /> Leave Delivery Feedback
-                                                        </button>
-                                                    )}
+                                                    <button
+                                                        onClick={() => {
+                                                            setFeedbackSelectorTrade(trade);
+                                                            setShowFeedbackSelector(true);
+                                                        }}
+                                                        className="w-full px-3 py-2 bg-black text-white rounded-lg text-sm hover:bg-gray-800 flex items-center justify-center gap-2"
+                                                    >
+                                                        <Star size={14} /> Give feedback
+                                                    </button>
+                                                    <div className="text-xs text-gray-500 text-center">
+                                                        Feedback submitted: {feedbackCompletedCount}/3
+                                                    </div>
                                                 </div>
                                             )}
 
@@ -543,6 +579,88 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
                 />
             )}
 
+            {/* Feedback Selector Modal */}
+            {showFeedbackSelector && feedbackSelectorTrade && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900">Give feedback</h3>
+                                <p className="text-sm text-gray-500">Choose the feedback type to submit.</p>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setShowFeedbackSelector(false);
+                                    setFeedbackSelectorTrade(null);
+                                }}
+                                className="text-gray-400 hover:text-gray-600"
+                                aria-label="Close feedback selector"
+                            >
+                                x
+                            </button>
+                        </div>
+                        <div className="space-y-3">
+                            {[
+                                {
+                                    type: 'seller' as FeedbackType,
+                                    title: 'Seller feedback',
+                                    description: 'Rate communication, professionalism, and support.',
+                                    icon: <User className="w-4 h-4" />
+                                },
+                                {
+                                    type: 'product' as FeedbackType,
+                                    title: 'Product feedback',
+                                    description: 'Rate quality, accuracy, and value.',
+                                    icon: <Package className="w-4 h-4" />
+                                },
+                                {
+                                    type: 'delivery' as FeedbackType,
+                                    title: 'Delivery feedback',
+                                    description: 'Rate delivery speed and condition.',
+                                    icon: <Truck className="w-4 h-4" />
+                                }
+                            ].map((option) => {
+                                const hasLeft = feedbackLeft[feedbackSelectorTrade._id]?.[option.type] || false;
+                                return (
+                                    <div key={option.type} className="border border-gray-200 rounded-xl p-4 flex items-center justify-between gap-4">
+                                        <div className="flex items-center gap-3">
+                                            <span className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center">
+                                                {option.icon}
+                                            </span>
+                                            <div>
+                                                <div className="text-sm font-semibold text-gray-900">{option.title}</div>
+                                                <div className="text-xs text-gray-500">{option.description}</div>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setShowFeedbackSelector(false);
+                                                setFeedbackSelectorTrade(null);
+                                                handleLeaveFeedback(feedbackSelectorTrade, option.type, hasLeft);
+                                            }}
+                                            className={`px-3 py-2 rounded-lg text-xs font-medium border ${hasLeft ? 'bg-green-50 border-green-200 text-green-700' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                                        >
+                                            {hasLeft ? 'Edit' : 'Give'} feedback
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="flex justify-end mt-5">
+                            <button
+                                onClick={() => {
+                                    setShowFeedbackSelector(false);
+                                    setFeedbackSelectorTrade(null);
+                                }}
+                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Feedback Modal */}
             {feedbackTradeId && (
                 <FeedbackModal
@@ -550,10 +668,24 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
                     onClose={() => {
                         setShowFeedbackModal(false);
                         setFeedbackTradeId(null);
+                        setFeedbackEditing(false);
+                        setFeedbackInitialRating(0);
+                        setFeedbackInitialComment('');
+                        setFeedbackInitialTags([]);
+                        setFeedbackInitialDetails({});
+                        setFeedbackProductName(undefined);
+                        setFeedbackRecipientName(undefined);
                     }}
                     onSubmit={handleFeedbackSubmit}
                     feedbackType={feedbackType}
                     tradeId={feedbackTradeId}
+                    productName={feedbackProductName}
+                    recipientName={feedbackRecipientName}
+                    defaultRating={feedbackInitialRating}
+                    defaultComment={feedbackInitialComment}
+                    defaultTags={feedbackInitialTags}
+                    defaultDetails={feedbackInitialDetails}
+                    isEditing={feedbackEditing}
                 />
             )}
 

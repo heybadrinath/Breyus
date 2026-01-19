@@ -2,16 +2,27 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 export type FeedbackType = 'seller' | 'delivery' | 'product';
 
+export interface ProductSummary {
+  _id: string;
+  name?: string;
+  price?: string;
+  currency?: string;
+  productImages?: string[];
+}
+
 export interface CreateFeedbackData {
   tradeId: string;
   feedbackType: FeedbackType;
   rating: number;
   comment?: string;
+  tags?: string[];
+  details?: Record<string, string>;
 }
 
 export interface Feedback {
   _id: string;
-  trade: string;
+  trade: string | { _id: string; product?: ProductSummary };
+  product?: ProductSummary;
   reviewer: {
     _id: string;
     mail: string;
@@ -23,6 +34,8 @@ export interface Feedback {
   feedbackType: FeedbackType;
   rating: number;
   comment: string;
+  tags?: string[];
+  details?: Record<string, string>;
   createdAt: string;
   updatedAt: string;
 }
@@ -53,6 +66,27 @@ export interface AverageRatingResponse {
   };
 }
 
+export interface SellerFeedbackDashboardResponse {
+  statusCode: number;
+  message: string;
+  data: {
+    summary: {
+      totalReviews: number;
+      averageRating: number;
+      ratingBreakdown: Record<number, number>;
+      byType: Record<FeedbackType, { count: number; averageRating: number }>;
+    };
+    productBreakdown: Array<{
+      product: ProductSummary;
+      totalReviews: number;
+      averageRating: number;
+      ratingBreakdown: Record<number, number>;
+      latestFeedbackAt?: string;
+    }>;
+    recentFeedback: Feedback[];
+  };
+}
+
 export interface HasLeftFeedbackResponse {
   statusCode: number;
   message: string;
@@ -80,8 +114,52 @@ export const createFeedback = async (data: CreateFeedbackData): Promise<Feedback
   return result;
 };
 
+export const updateFeedback = async (
+  tradeId: string,
+  feedbackType: FeedbackType,
+  data: Omit<CreateFeedbackData, 'tradeId' | 'feedbackType'>
+): Promise<FeedbackResponse> => {
+  const response = await fetch(`${BACKEND_URL}/feedback/my/${tradeId}/${feedbackType}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || 'Failed to update feedback');
+  }
+
+  return result;
+};
+
 export const getFeedbackByTrade = async (tradeId: string): Promise<FeedbackResponse> => {
   const response = await fetch(`${BACKEND_URL}/feedback/trade/${tradeId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || 'Failed to fetch feedback');
+  }
+
+  return result;
+};
+
+export const getMyFeedback = async (
+  tradeId: string,
+  feedbackType: FeedbackType
+): Promise<FeedbackResponse> => {
+  const response = await fetch(`${BACKEND_URL}/feedback/my/${tradeId}/${feedbackType}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -171,6 +249,24 @@ export const hasUserLeftFeedback = async (
 
   if (!response.ok) {
     throw new Error(result.message || 'Failed to check feedback status');
+  }
+
+  return result;
+};
+
+export const getSellerFeedbackDashboard = async (): Promise<SellerFeedbackDashboardResponse> => {
+  const response = await fetch(`${BACKEND_URL}/feedback/seller/dashboard`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || 'Failed to fetch seller feedback dashboard');
   }
 
   return result;

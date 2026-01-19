@@ -3,8 +3,10 @@ import { JwtModule } from '@nestjs/jwt';
 import { UsersModule } from 'src/users/users.module';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { AuthGuard } from './auth.guard';
 import { User, UserSchema } from 'src/users/user.schema';
-import { MongooseModule } from '@nestjs/mongoose/dist/mongoose.module';
+import { Company, CompanySchema } from 'src/company/company.schema';
+import { MongooseModule } from '@nestjs/mongoose';
 import { MailModule } from 'src/mail/mail.module';
 
 @Module({
@@ -15,10 +17,13 @@ import { MailModule } from 'src/mail/mail.module';
     }),
     forwardRef(() => UsersModule),
     MailModule,
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema}]),
+    MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema },
+      { name: Company.name, schema: CompanySchema },
+    ]),
   ],
-  providers: [AuthService],
+  providers: [AuthService, AuthGuard],
   controllers: [AuthController],
-  exports: [AuthService],
+  exports: [AuthService, AuthGuard, MongooseModule],
 })
 export class AuthModule {}

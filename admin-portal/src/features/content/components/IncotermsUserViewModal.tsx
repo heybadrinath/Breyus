@@ -60,23 +60,23 @@ export function IncotermsUserViewModal({
               <tr>
                 <th
                   rowSpan={2}
-                  className="sticky left-0 z-20 bg-slate-900 text-white px-3 py-3 border border-slate-700 w-48"
+                  className="sticky left-0 z-20 bg-muted text-foreground px-3 py-3 border w-48"
                 />
                 <th
                   colSpan={2}
-                  className="bg-slate-900 text-white px-2 py-2 border border-slate-700 text-xs font-semibold uppercase tracking-wide"
+                  className="bg-muted text-foreground px-2 py-2 border text-xs font-semibold uppercase tracking-wide"
                 >
                   Any Transport Mode
                 </th>
                 <th
                   colSpan={4}
-                  className="bg-slate-900 text-white px-2 py-2 border border-slate-700 text-xs font-semibold uppercase tracking-wide"
+                  className="bg-muted text-foreground px-2 py-2 border text-xs font-semibold uppercase tracking-wide"
                 >
                   Sea/Inland Waterway Transport
                 </th>
                 <th
                   colSpan={5}
-                  className="bg-slate-900 text-white px-2 py-2 border border-slate-700 text-xs font-semibold uppercase tracking-wide"
+                  className="bg-muted text-foreground px-2 py-2 border text-xs font-semibold uppercase tracking-wide"
                 >
                   Any Transport Mode
                 </th>
@@ -86,7 +86,7 @@ export function IncotermsUserViewModal({
                 {INCOTERM_ORDER.map((code) => (
                   <th
                     key={code}
-                    className="bg-slate-800 text-white px-2 py-2 border border-slate-700 text-xs font-semibold"
+                    className="bg-muted/70 text-foreground px-2 py-2 border text-xs font-semibold"
                   >
                     {code}
                   </th>
@@ -97,7 +97,7 @@ export function IncotermsUserViewModal({
             <tbody>
               {/* Name Row */}
               <tr>
-                <td className="sticky left-0 z-10 bg-slate-900 text-white px-3 py-2 border border-slate-700 font-semibold">
+                <td className="sticky left-0 z-10 bg-muted text-foreground px-3 py-2 border font-semibold">
                   Charges/Fees
                 </td>
                 {INCOTERM_ORDER.map((code) => {
@@ -105,7 +105,7 @@ export function IncotermsUserViewModal({
                   return (
                     <td
                       key={code}
-                      className="bg-slate-50 text-slate-700 px-2 py-2 border border-slate-200 text-center text-[10px] leading-tight"
+                      className="bg-background text-muted-foreground px-2 py-2 border text-center text-[10px] leading-tight"
                     >
                       {incoterm?.name || code}
                     </td>
@@ -116,7 +116,7 @@ export function IncotermsUserViewModal({
               {/* Cost Allocation Rows */}
               {COST_ROWS.map(({ key, label }) => (
                 <tr key={key}>
-                  <td className="sticky left-0 z-10 bg-slate-900 text-white px-3 py-2 border border-slate-700 font-semibold text-xs">
+                  <td className="sticky left-0 z-10 bg-muted text-foreground px-3 py-2 border font-semibold text-xs">
                     {label}
                   </td>
                   {INCOTERM_ORDER.map((code) => {
@@ -126,10 +126,10 @@ export function IncotermsUserViewModal({
                     return (
                       <td
                         key={code}
-                        className={`px-2 py-2 border border-slate-200 text-center font-medium ${
+                        className={`px-2 py-2 border text-center font-medium ${
                           isSeller
-                            ? 'bg-cyan-100 text-cyan-800'
-                            : 'bg-amber-50 text-amber-800'
+                            ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300'
+                            : 'bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
                         }`}
                       >
                         {value}
@@ -146,11 +146,11 @@ export function IncotermsUserViewModal({
         <div className="px-6 py-3 border-t bg-muted/30 flex items-center gap-6 text-xs">
           <span className="font-medium text-muted-foreground">Legend:</span>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-cyan-100 border border-cyan-300" />
+            <div className="w-4 h-4 rounded bg-cyan-100 dark:bg-cyan-900/30 border border-cyan-300 dark:border-cyan-700" />
             <span>Seller Responsibility</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-amber-50 border border-amber-300" />
+            <div className="w-4 h-4 rounded bg-amber-50 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700" />
             <span>Buyer Responsibility</span>
           </div>
         </div>

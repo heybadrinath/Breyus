@@ -23,6 +23,7 @@ import { Company, CompanySchema } from '../company/company.schema';
     AuthModule
   ],
   providers: [ProductsService, FileUploadInterceptor],
-  controllers: [ProductsController]
+  controllers: [ProductsController],
+  exports: [MongooseModule, ProductsService],
 })
 export class ProductsModule { }

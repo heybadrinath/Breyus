@@ -130,20 +130,26 @@ export const changePassword = async (currentPassword: string, newPassword: strin
 // Notification Preferences Types
 export interface NotificationPreferences {
     email: {
+        tradeCreated: boolean;
         counterOffer: boolean;
         tradeAccepted: boolean;
         tradeRejected: boolean;
         documentUploaded: boolean;
+        documentsInvalidated: boolean;
         phaseAdvanced: boolean;
         tradeCompleted: boolean;
+        tradeCancelled: boolean;
     };
     realtime: {
+        tradeCreated: boolean;
         counterOffer: boolean;
         tradeAccepted: boolean;
         tradeRejected: boolean;
         documentUploaded: boolean;
+        documentsInvalidated: boolean;
         phaseAdvanced: boolean;
         tradeCompleted: boolean;
+        tradeCancelled: boolean;
     };
 }
 
@@ -185,6 +191,57 @@ export const updateNotificationPreferences = async (preferences: NotificationPre
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.message || "Failed to update notification preferences");
+        }
+
+        const result = await response.json();
+        return result.data;
+    } catch (error) {
+        throw new Error(error instanceof Error ? error.message : "An unknown error occurred");
+    }
+};
+
+// AI Buddy Notification Preferences (Settings Page)
+export interface AINotificationPreferences {
+    email?: string;
+    useExistingEmail: boolean;
+}
+
+export const getAINotificationPreferences = async (): Promise<AINotificationPreferences> => {
+    try {
+        const response = await fetch(`${USERS_END_POINT}/ai-notification-preferences`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || "Failed to fetch AI notification preferences");
+        }
+
+        const result = await response.json();
+        return result.data;
+    } catch (error) {
+        throw new Error(error instanceof Error ? error.message : "An unknown error occurred");
+    }
+};
+
+export const updateAINotificationPreferences = async (preferences: AINotificationPreferences): Promise<AINotificationPreferences> => {
+    try {
+        const response = await fetch(`${USERS_END_POINT}/ai-notification-preferences`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(preferences),
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || "Failed to update AI notification preferences");
         }
 
         const result = await response.json();

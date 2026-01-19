@@ -8,7 +8,14 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
+import { Logger, Inject, forwardRef } from '@nestjs/common';
+// SECURITY FIX: Import WsAuthService for proper authentication (Audit Bug #6)
+import { WsAuthService } from '../inbox/ws-auth.service';
+
+const corsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)
+  : [];
+const corsOrigin = corsOrigins.length > 0 ? corsOrigins : true;
 
 interface JoinTradePayload {
   userId: string;
@@ -25,7 +32,7 @@ interface LeaveTradePayload {
  */
 @WebSocketGateway({
   cors: {
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: corsOrigin,
     credentials: true,
   },
   namespace: '/trade',
@@ -42,8 +49,40 @@ export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // Track trade subscriptions: tradeId -> Set of socketIds
   private tradeSubscriptions: Map<string, Set<string>> = new Map();
 
-  handleConnection(client: Socket) {
-    this.logger.log(`Trade client connected: ${client.id}`);
+  // SECURITY FIX: Constructor with WsAuthService injection (Audit Bug #6)
+  constructor(
+    @Inject(forwardRef(() => WsAuthService))
+    private readonly wsAuthService: WsAuthService,
+  ) {}
+
+  /**
+   * SECURITY FIX: Authenticate socket on connection (Audit Bug #6)
+   * Validates JWT token from cookie/header and stores validated userId on socket.data
+   */
+  async handleConnection(client: Socket) {
+    this.logger.log(`Trade client attempting connection: ${client.id}`);
+
+    try {
+      // Use WsAuthService to validate the socket connection
+      const authResult = await this.wsAuthService.validateSocket(client);
+
+      if (!authResult) {
+        this.logger.warn(`Trade client ${client.id} authentication failed - no valid credentials`);
+        client.emit('error', { message: 'Authentication failed' });
+        client.disconnect();
+        return;
+      }
+
+      // Store validated user info on socket.data (trusted source)
+      client.data.userId = authResult.userId;
+      client.data.companyId = authResult.companyId;
+
+      this.logger.log(`Trade client ${client.id} authenticated as user ${authResult.userId}`);
+    } catch (error) {
+      this.logger.error(`Trade client ${client.id} authentication error: ${error.message}`);
+      client.emit('error', { message: 'Authentication error' });
+      client.disconnect();
+    }
   }
 
   handleDisconnect(client: Socket) {
@@ -68,19 +107,32 @@ export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   /**
    * Join trade notifications - register user connection
+   * SECURITY FIX: Now uses validated socket.data.userId instead of payload.userId (Audit Bug #6)
    */
   @SubscribeMessage('join-trade')
   handleJoinTrade(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: JoinTradePayload,
   ) {
-    const { userId, tradeId } = payload;
+    // SECURITY FIX: Use authenticated userId from socket.data, NOT from payload (Audit Bug #6)
+    // payload.userId is ignored to prevent impersonation attacks
+    const userId = client.data.userId;
+    const { tradeId } = payload;
+
+    // Reject if not authenticated
+    if (!userId) {
+      this.logger.warn(`[join-trade] Unauthenticated socket ${client.id} attempted to join`);
+      return { success: false, error: 'Authentication required' };
+    }
+
+    this.logger.log(`[join-trade] User ${userId} joining with socket ${client.id}`);
 
     // Track user connection
     if (!this.connectedUsers.has(userId)) {
       this.connectedUsers.set(userId, new Set());
     }
     this.connectedUsers.get(userId)?.add(client.id);
+    this.logger.log(`[join-trade] User ${userId} now has ${this.connectedUsers.get(userId)?.size} socket(s)`);
 
     // If specific trade ID provided, subscribe to that trade's room
     if (tradeId) {
@@ -208,6 +260,85 @@ export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /**
+   * Issue #17 - Emit document signed event
+   */
+  emitDocumentSigned(tradeId: string, buyerId: string, sellerId: string, data: {
+    documentType: string;
+    signedBy: 'buyer' | 'seller';
+    fullySigned?: boolean;
+  }) {
+    const eventData = {
+      tradeId,
+      type: 'document-signed',
+      ...data,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.notifyUser(buyerId, 'document-signed', eventData);
+    this.notifyUser(sellerId, 'document-signed', eventData);
+    this.notifyTradeRoom(tradeId, 'document-signed', eventData);
+  }
+
+  /**
+   * Issue #17 - Emit document verified event
+   */
+  emitDocumentVerified(tradeId: string, buyerId: string, sellerId: string, data: {
+    documentType: string;
+    verifiedBy: 'buyer' | 'seller';
+    status: 'approved' | 'rejected';
+  }) {
+    const eventData = {
+      tradeId,
+      type: 'document-verified',
+      ...data,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.notifyUser(buyerId, 'document-verified', eventData);
+    this.notifyUser(sellerId, 'document-verified', eventData);
+    this.notifyTradeRoom(tradeId, 'document-verified', eventData);
+  }
+
+  /**
+   * Issue #17 - Emit phase advanced event
+   */
+  emitPhaseAdvanced(tradeId: string, buyerId: string, sellerId: string, data: {
+    previousPhase: string;
+    newPhase: string;
+    advancedBy: 'buyer' | 'seller';
+  }) {
+    const eventData = {
+      tradeId,
+      type: 'phase-advanced',
+      ...data,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.notifyUser(buyerId, 'phase-advanced', eventData);
+    this.notifyUser(sellerId, 'phase-advanced', eventData);
+    this.notifyTradeRoom(tradeId, 'phase-advanced', eventData);
+  }
+
+  /**
+   * Issue #17 - Emit trade completed event
+   */
+  emitTradeCompleted(tradeId: string, buyerId: string, sellerId: string, data: {
+    completedBy: 'buyer' | 'seller';
+    completedAt: Date;
+  }) {
+    const eventData = {
+      tradeId,
+      type: 'trade-completed',
+      ...data,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.notifyUser(buyerId, 'trade-completed', eventData);
+    this.notifyUser(sellerId, 'trade-completed', eventData);
+    this.notifyTradeRoom(tradeId, 'trade-completed', eventData);
+  }
+
+  /**
    * Emit notification event to a specific user
    * Used when a new notification is created
    */
@@ -215,6 +346,9 @@ export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
     notification: any;
     unreadCount: number;
   }): void {
+    this.logger.log(`Emitting notification-created to user ${userId}, type: ${data.notification?.type}`);
+    const sockets = this.connectedUsers.get(userId);
+    this.logger.log(`User ${userId} has ${sockets?.size || 0} connected sockets`);
     this.notifyUser(userId, 'notification-created', data);
   }
 }
