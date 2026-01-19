@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { User, NotificationPreferences, defaultNotificationPreferences } from './user.schema';
+import { User, NotificationPreferences, defaultNotificationPreferences, AINotificationPreferences, defaultAINotificationPreferences } from './user.schema';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -81,8 +81,17 @@ export class UsersService {
             if (!user) {
                 throw new Error('User not found');
             }
-            // Return existing preferences or defaults if not set
-            return user.notificationPreferences || defaultNotificationPreferences;
+            const prefs = user.notificationPreferences || defaultNotificationPreferences;
+            return {
+                email: {
+                    ...defaultNotificationPreferences.email,
+                    ...prefs.email,
+                },
+                realtime: {
+                    ...defaultNotificationPreferences.realtime,
+                    ...prefs.realtime,
+                },
+            };
         } catch (error) {
             throw new Error('Error fetching notification preferences');
         }
@@ -93,9 +102,20 @@ export class UsersService {
         preferences: NotificationPreferences
     ): Promise<NotificationPreferences> {
         try {
+            const mergedPreferences = {
+                email: {
+                    ...defaultNotificationPreferences.email,
+                    ...preferences.email,
+                },
+                realtime: {
+                    ...defaultNotificationPreferences.realtime,
+                    ...preferences.realtime,
+                },
+            };
+
             const user = await this.userSchema.findByIdAndUpdate(
                 userId,
-                { notificationPreferences: preferences },
+                { notificationPreferences: mergedPreferences },
                 { new: true }
             ).exec();
 
@@ -106,6 +126,46 @@ export class UsersService {
             return user.notificationPreferences;
         } catch (error) {
             throw new Error('Error updating notification preferences');
+        }
+    }
+
+    // AI Buddy notification preferences methods (Settings Page)
+
+    async getAINotificationPreferences(userId: string): Promise<AINotificationPreferences> {
+        try {
+            const user = await this.userSchema.findById(userId).exec();
+            if (!user) {
+                throw new Error('User not found');
+            }
+            return user.aiNotificationPreferences || defaultAINotificationPreferences;
+        } catch (error) {
+            throw new Error('Error fetching AI notification preferences');
+        }
+    }
+
+    async updateAINotificationPreferences(
+        userId: string,
+        preferences: AINotificationPreferences
+    ): Promise<AINotificationPreferences> {
+        try {
+            const mergedPreferences: AINotificationPreferences = {
+                useExistingEmail: preferences.useExistingEmail ?? true,
+                email: preferences.useExistingEmail ? undefined : preferences.email,
+            };
+
+            const user = await this.userSchema.findByIdAndUpdate(
+                userId,
+                { aiNotificationPreferences: mergedPreferences },
+                { new: true }
+            ).exec();
+
+            if (!user) {
+                throw new Error('User not found');
+            }
+
+            return user.aiNotificationPreferences;
+        } catch (error) {
+            throw new Error('Error updating AI notification preferences');
         }
     }
 }

@@ -12,12 +12,14 @@ export interface UnreadCounts {
   spa: number;
   ongoing: number;
   total: number;
+  messages: number;
 }
 
 interface NotificationState {
   notifications: Notification[];
   recentNotifications: Notification[];
   unreadCounts: UnreadCounts;
+  hasUnreadMessages: boolean;
   isConnected: boolean;
   connectionState: ConnectionState;
   isLoading: boolean;
@@ -25,11 +27,13 @@ interface NotificationState {
 }
 
 interface NotificationContextValue extends NotificationState {
+  showToast: (message: string, type?: ToastType, title?: string) => void;
   markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   deleteNotification: (notificationId: string) => Promise<void>;
   clearNotifications: () => void; // Clears local state + calls deleteReadNotifications
   refreshUnreadCounts: () => Promise<void>;
+  refreshUnreadMessageCount: () => Promise<void>;
   fetchNotifications: () => Promise<void>;
   fetchRecentNotifications: () => Promise<void>;
   connectTradeSocket: (userId: string) => void;
@@ -43,6 +47,7 @@ const defaultUnreadCounts: UnreadCounts = {
   spa: 0,
   ongoing: 0,
   total: 0,
+  messages: 0,
 };
 
 const NotificationContext = createContext<NotificationContextValue | null>(null);
@@ -55,20 +60,24 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [recentNotifications, setRecentNotifications] = useState<Notification[]>([]);
   const [unreadCounts, setUnreadCounts] = useState<UnreadCounts>(defaultUnreadCounts);
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingRecent, setIsLoadingRecent] = useState(false);
-  const [toasts, setToasts] = useState<Array<{ id: string; message: string; type: ToastType }>>([]);
-  
+  const [toasts, setToasts] = useState<Array<{ id: string; message: string; title?: string; type: ToastType }>>([]);
+
   const stateUnsubscribeRef = useRef<(() => void) | null>(null);
   const isFirstConnectionRef = useRef(true);
   const lastStateRef = useRef<ConnectionState>('disconnected');
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isFetchingNotificationsRef = useRef(false);
+  const isFetchingRecentRef = useRef(false);
 
   // Show a toast notification
-  const showToast = useCallback((message: string, type: ToastType = 'info') => {
+  const showToast = useCallback((message: string, type: ToastType = 'info', title?: string) => {
     const id = `toast_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    setToasts((prev) => [...prev, { id, message, type }].slice(-5));
+    setToasts((prev) => [...prev, { id, message, title, type }].slice(-5));
   }, []);
 
   // Remove a toast
@@ -91,16 +100,27 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         ...prev,
         total: count,
         // Optional: Reset others or keep them? Resetting seems safer to avoid confusion.
-        pr: 0, po: 0, spa: 0, ongoing: count 
+        pr: 0, po: 0, spa: 0, ongoing: count,
       }));
     } catch (error) {
       console.error('Failed to refresh unread counts', error);
     }
   }, []);
 
+  const refreshUnreadMessageCount = useCallback(async () => {
+    try {
+      const count = await notificationService.getUnreadCount('new_message');
+      setUnreadCounts(prev => ({ ...prev, messages: count }));
+      setHasUnreadMessages(count > 0);
+    } catch (error) {
+      console.error('Failed to refresh unread message count', error);
+    }
+  }, []);
+
   // Fetch notifications
   const fetchNotifications = useCallback(async () => {
-    if (isLoading) return; // Prevent duplicate fetch
+    if (isFetchingNotificationsRef.current) return; // Prevent duplicate fetch
+    isFetchingNotificationsRef.current = true;
     setIsLoading(true);
     try {
       const result = await notificationService.getNotifications({ page: 1, limit: 50 });
@@ -112,11 +132,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       console.error('Failed to fetch notifications', error);
     } finally {
       setIsLoading(false);
+      isFetchingNotificationsRef.current = false;
     }
-  }, [isLoading]);
+  }, []);
 
   const fetchRecentNotifications = useCallback(async () => {
-    if (isLoadingRecent) return; // Prevent duplicate fetch
+    if (isFetchingRecentRef.current) return; // Prevent duplicate fetch
+    isFetchingRecentRef.current = true;
     setIsLoadingRecent(true);
     try {
       const result = await notificationService.getRecentUnread();
@@ -125,11 +147,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       console.error('Failed to fetch recent notifications', error);
     } finally {
       setIsLoadingRecent(false);
+      isFetchingRecentRef.current = false;
     }
-  }, [isLoadingRecent]);
+  }, []);
 
   // Handle new notification from socket
   const handleNotificationCreated = useCallback((payload: { notification: Notification; unreadCount: number }) => {
+    console.log('%c[NotificationContext] RECEIVED notification-created:', 'background: green; color: white; font-weight: bold;', payload);
     const { notification, unreadCount } = payload;
 
     // Update list
@@ -150,18 +174,28 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
        total: unreadCount,
        ongoing: unreadCount // Simplified mapping
     }));
+    if (notification.type === 'new_message') {
+      setHasUnreadMessages(true);
+      setUnreadCounts(prev => ({ ...prev, messages: prev.messages + 1 }));
+    }
 
     // Show toast
-    let toastType: ToastType = 'info';
-    if (notification.type === 'trade_accepted' || notification.type === 'trade_completed' || notification.type === 'analysis_completed') {
-      toastType = 'success';
+    if (notification.type === 'new_message') {
+      // Use special message toast type with title showing sender name
+      const senderName = notification.metadata?.senderName || notification.title?.replace('Message from ', '') || 'Someone';
+      showToastRef.current(notification.message, 'message', senderName);
+    } else {
+      let toastType: ToastType = 'info';
+      if (notification.type === 'trade_accepted' || notification.type === 'trade_completed' || notification.type === 'analysis_completed') {
+        toastType = 'success';
+      }
+      if (notification.type === 'trade_rejected' || notification.type === 'documents_invalidated' || notification.type === 'trade_cancelled') {
+        toastType = 'error';
+      }
+      if (notification.type === 'counter_offer') toastType = 'warning';
+
+      showToastRef.current(notification.message, toastType);
     }
-    if (notification.type === 'trade_rejected' || notification.type === 'documents_invalidated' || notification.type === 'trade_cancelled') {
-      toastType = 'error';
-    }
-    if (notification.type === 'counter_offer') toastType = 'warning';
-    
-    showToastRef.current(notification.message, toastType);
 
   }, []);
 
@@ -173,38 +207,44 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     setConnectionState(state);
     setIsConnected(state === 'connected');
 
-    if (state === 'connected') {
-      if (!isFirstConnectionRef.current && (prevState === 'reconnecting' || prevState === 'disconnected')) {
-        showToastRef.current('Connected to real-time updates', 'success');
+      if (state === 'connected') {
+        if (!isFirstConnectionRef.current && (prevState === 'reconnecting' || prevState === 'disconnected')) {
+          showToastRef.current('Connected to real-time updates', 'success');
+        }
+        isFirstConnectionRef.current = false;
+        // Fetch latest notifications on connect/reconnect
+        fetchNotifications();
+        fetchRecentNotifications();
+        refreshUnreadCounts();
+        refreshUnreadMessageCount();
+      } else if (state === 'reconnecting' && prevState !== 'reconnecting') {
+        showToastRef.current('Connection lost. Reconnecting...', 'warning');
+      } else if (state === 'failed') {
+        showToastRef.current('Unable to connect to real-time updates', 'error');
       }
-      isFirstConnectionRef.current = false;
-      // Fetch latest notifications on connect/reconnect
-      fetchNotifications();
-      fetchRecentNotifications();
-      refreshUnreadCounts();
-    } else if (state === 'reconnecting' && prevState !== 'reconnecting') {
-      showToastRef.current('Connection lost. Reconnecting...', 'warning');
-    } else if (state === 'failed') {
-      showToastRef.current('Unable to connect to real-time updates', 'error');
-    }
 
     lastStateRef.current = state;
   }, [fetchNotifications, fetchRecentNotifications, refreshUnreadCounts]);
 
   // Connect socket
   const connectTradeSocket = useCallback((userId: string) => {
+    console.log('%c[NotificationContext] connectTradeSocket called with userId:', 'background: blue; color: white;', userId);
     if (stateUnsubscribeRef.current) {
       stateUnsubscribeRef.current();
     }
 
     stateUnsubscribeRef.current = socketService.onTradeStateChange(handleConnectionStateChange);
-    
+
+    console.log('[NotificationContext] Calling socketService.connectTrade()...');
     socketService.connectTrade();
+    console.log('[NotificationContext] Calling socketService.joinTrade(' + userId + ')...');
     socketService.joinTrade(userId); // Join user room (often same as userId)
 
     // Listen for general notification event
+    console.log('[NotificationContext] Setting up notification-created listener...');
     socketService.offNotificationCreated();
     socketService.onNotificationCreated(handleNotificationCreated);
+    console.log('[NotificationContext] Notification listener setup complete');
 
     // Previously separate handlers (trade, negotiation, document) are theoretically replaced by notification-created
     // BUT, if frontend *also* needs to update specific UI (like a trade board) based on trade-update,
@@ -243,11 +283,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     try {
       await notificationService.markAsRead(id);
       await refreshUnreadCounts();
+      await refreshUnreadMessageCount();
     } catch (error) {
        // Revert or error toast?
        console.error(error);
     }
-  }, [refreshUnreadCounts]);
+  }, [refreshUnreadCounts, refreshUnreadMessageCount]);
 
   const markAllAsRead = useCallback(async () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
@@ -256,10 +297,11 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     try {
       await notificationService.markAllAsRead();
       await refreshUnreadCounts();
+      await refreshUnreadMessageCount();
     } catch (error) {
       console.error(error);
     }
-  }, [refreshUnreadCounts]);
+  }, [refreshUnreadCounts, refreshUnreadMessageCount]);
 
   const deleteNotification = useCallback(async (id: string) => {
     setNotifications(prev => prev.filter(n => n._id !== id));
@@ -267,10 +309,11 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     try {
       await notificationService.deleteNotification(id);
       await refreshUnreadCounts();
+      await refreshUnreadMessageCount();
     } catch (error) {
       console.error(error);
     }
-  }, [refreshUnreadCounts]);
+  }, [refreshUnreadCounts, refreshUnreadMessageCount]);
 
   const clearNotifications = useCallback(async () => {
     // Optimistic clear
@@ -283,17 +326,40 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       // implementation_plan said "Delete Read". Let's assume clear clears read ones visually.
       // But user might want to simple clear view.
       // I'll map this to deleteReadNotifications for now as safe default.
+      await refreshUnreadMessageCount();
     } catch (error) {
       console.error(error);
     }
-  }, []);
+  }, [refreshUnreadMessageCount]);
 
   // Cleanup
   useEffect(() => {
     return () => {
       disconnectTradeSocket();
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
     };
   }, [disconnectTradeSocket]);
+
+  useEffect(() => {
+    if (connectionState === 'connected') {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+      return;
+    }
+
+    if (!pollIntervalRef.current) {
+      pollIntervalRef.current = setInterval(() => {
+        fetchRecentNotifications();
+        refreshUnreadCounts();
+        refreshUnreadMessageCount();
+      }, 30000);
+    }
+  }, [connectionState, fetchRecentNotifications, refreshUnreadCounts, refreshUnreadMessageCount]);
 
   useEffect(() => {
     let isMounted = true;
@@ -302,6 +368,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         const result = await getMe();
         if (!isMounted || !result?.userId) return;
         connectTradeSocket(result.userId);
+        refreshUnreadMessageCount();
       } catch (error) {
         // Ignore missing auth; notifications are only for signed-in users
       }
@@ -312,21 +379,24 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     return () => {
       isMounted = false;
     };
-  }, [connectTradeSocket]);
+  }, [connectTradeSocket, refreshUnreadMessageCount]);
 
   const value: NotificationContextValue = {
     notifications,
     recentNotifications,
     unreadCounts,
+    hasUnreadMessages,
     isConnected,
     connectionState,
     isLoading,
     isLoadingRecent,
+    showToast,
     markAsRead,
     markAllAsRead,
     deleteNotification,
     clearNotifications,
     refreshUnreadCounts,
+    refreshUnreadMessageCount,
     fetchNotifications,
     fetchRecentNotifications,
     connectTradeSocket,

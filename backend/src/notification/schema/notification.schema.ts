@@ -12,7 +12,19 @@ export type NotificationType =
     | 'trade_completed'
     | 'trade_cancelled'
     | 'new_message'
-    | 'analysis_completed';
+    | 'analysis_completed'
+    // Admin actions
+    | 'account_suspended'
+    | 'account_unsuspended'
+    | 'password_reset_required'
+    // KYC notifications
+    | 'kyc_document_approved'
+    | 'kyc_document_rejected'
+    | 'company_kyc_verified'
+    // Dispute notifications
+    | 'dispute_created'
+    | 'dispute_resolved'
+    | 'dispute_message';
 
 export type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent';
 
@@ -21,7 +33,18 @@ export class Notification extends Document {
     @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
     userId: Types.ObjectId;
 
-    @Prop({ type: String, required: true, enum: ['trade_created', 'counter_offer', 'trade_accepted', 'trade_rejected', 'document_uploaded', 'documents_invalidated', 'phase_advanced', 'trade_completed', 'trade_cancelled', 'new_message', 'analysis_completed'] })
+    @Prop({
+        type: String,
+        required: true,
+        enum: [
+            'trade_created', 'counter_offer', 'trade_accepted', 'trade_rejected',
+            'document_uploaded', 'documents_invalidated', 'phase_advanced',
+            'trade_completed', 'trade_cancelled', 'new_message', 'analysis_completed',
+            'account_suspended', 'account_unsuspended', 'password_reset_required',
+            'kyc_document_approved', 'kyc_document_rejected', 'company_kyc_verified',
+            'dispute_created', 'dispute_resolved', 'dispute_message'
+        ]
+    })
     type: NotificationType;
 
     @Prop({ required: true })

@@ -23,9 +23,22 @@ export const createConversation = async (productId: string) => {
 
     // Return the response data (e.g., conversationId or success data)
     const responseData = await response.json();
+    let conversationId: string | undefined;
+    if (typeof responseData === 'string') {
+      conversationId = responseData;
+    } else if (responseData && typeof responseData === 'object') {
+      conversationId =
+        responseData._id ||
+        responseData.conversationId ||
+        responseData.id ||
+        responseData.data?._id ||
+        responseData.data?.conversationId ||
+        responseData.data;
+    }
     return {
       status: 'success',
-      data: responseData,
+      data: conversationId ?? responseData,
+      conversationId,
     };
   } catch (error) {
     // Log the error for debugging purposes
@@ -101,14 +114,18 @@ export const getMessages = async (conversationId: string) => {
   }
 };
 
-export const sendMessage = async (conversationId: string, text: string) => {
+export const sendMessage = async (
+  conversationId: string,
+  text: string,
+  replyTo?: string | null,
+) => {
   try {
     const backendUri = process.env.REACT_APP_BACKEND_URL;
     if (!backendUri) throw new Error('Backend URL is not defined');
     const response = await fetch(`${backendUri}/inbox/${conversationId}/send-message`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, replyTo }),
       credentials: 'include',
     });
     if (!response.ok) throw new Error('Failed to send message');

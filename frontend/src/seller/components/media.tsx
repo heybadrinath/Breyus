@@ -6,14 +6,30 @@ interface MediaUploadProps {
   testReports: File[];
   onProductImagesChange: (newImages: File[]) => void;
   onTestReportsChange: (newReports: File[]) => void;
+  existingProductImages?: string[];
+  existingTestReports?: string[];
+  onExistingProductImagesChange?: (existingImages: string[]) => void;
+  onExistingTestReportsChange?: (existingReports: string[]) => void;
 }
 
 const MediaUpload: React.FC<MediaUploadProps> = ({
   productImages,
   testReports,
   onProductImagesChange,
-  onTestReportsChange
+  onTestReportsChange,
+  existingProductImages = [],
+  existingTestReports = [],
+  onExistingProductImagesChange,
+  onExistingTestReportsChange
 }) => {
+  const totalProductImages = productImages.length + existingProductImages.length;
+  const totalTestReports = testReports.length + existingTestReports.length;
+
+  const getFileUrl = (filePath: string) => {
+    if (!filePath) return '';
+    if (filePath.startsWith('http')) return filePath;
+    return `${process.env.REACT_APP_BACKEND_URL}/${filePath}`;
+  };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -82,6 +98,16 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
     onTestReportsChange(newReports);
   };
 
+  const removeExistingProductImage = (index: number) => {
+    const nextImages = existingProductImages.filter((_, i) => i !== index);
+    onExistingProductImagesChange?.(nextImages);
+  };
+
+  const removeExistingTestReport = (index: number) => {
+    const nextReports = existingTestReports.filter((_, i) => i !== index);
+    onExistingTestReportsChange?.(nextReports);
+  };
+
   return (
     <div className="space-y-6">
       {/* Title */}
@@ -119,6 +145,30 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
           </div>
 
           {/* Image Previews */}
+          {existingProductImages.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-gray-500">Existing Images</p>
+              <div className="grid grid-cols-4 gap-3">
+                {existingProductImages.map((filePath, index) => (
+                  <div key={`${filePath}-${index}`} className="relative group">
+                    <img
+                      src={getFileUrl(filePath)}
+                      alt={`Existing Product ${index + 1}`}
+                      className="w-full h-20 object-cover rounded-lg border border-gray-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeExistingProductImage(index)}
+                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {productImages.length > 0 && (
             <div className="grid grid-cols-4 gap-3">
               {productImages.map((file, index) => (
@@ -140,7 +190,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
             </div>
           )}
           <p className="text-xs text-gray-400">
-            {productImages.length} image{productImages.length !== 1 ? 's' : ''} selected
+            {totalProductImages} image{totalProductImages !== 1 ? 's' : ''} selected
           </p>
         </div>
 
@@ -175,6 +225,40 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
           </div>
 
           {/* File List */}
+          {existingTestReports.length > 0 && (
+            <div className="space-y-2">
+              {existingTestReports.map((filePath, index) => (
+                <div
+                  key={`${filePath}-${index}`}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                >
+                  <div className="flex items-center gap-3">
+                    {filePath.toLowerCase().endsWith('.pdf') ? (
+                      <FileText className="w-5 h-5 text-red-500" />
+                    ) : (
+                      <ImageIcon className="w-5 h-5 text-blue-500" />
+                    )}
+                    <a
+                      className="text-sm text-gray-700 truncate max-w-[180px]"
+                      href={getFileUrl(filePath)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {filePath.split('/').pop()}
+                    </a>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeExistingTestReport(index)}
+                    className="text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           {testReports.length > 0 && (
             <div className="space-y-2">
               {testReports.map((file, index) => (
@@ -204,7 +288,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
             </div>
           )}
           <p className="text-xs text-gray-400">
-            {testReports.length} file{testReports.length !== 1 ? 's' : ''} selected
+            {totalTestReports} file{totalTestReports !== 1 ? 's' : ''} selected
           </p>
         </div>
       </div>

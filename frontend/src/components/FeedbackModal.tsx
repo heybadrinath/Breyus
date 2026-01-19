@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Loader2, Star, Send } from 'lucide-react';
+import SelectField from './SelectField';
 
 export type FeedbackType = 'seller' | 'delivery' | 'product';
 
@@ -10,6 +11,11 @@ interface FeedbackModalProps {
   feedbackType: FeedbackType;
   recipientName?: string;
   productName?: string;
+  defaultRating?: number;
+  defaultComment?: string;
+  defaultTags?: string[];
+  defaultDetails?: Record<string, string>;
+  isEditing?: boolean;
   onSubmit?: (data: FeedbackData) => Promise<void>;
 }
 
@@ -18,31 +24,60 @@ export interface FeedbackData {
   feedbackType: FeedbackType;
   rating: number;
   comment: string;
+  tags?: string[];
+  details?: Record<string, string>;
+}
+
+interface FeedbackDetailField {
+  key: string;
+  label: string;
+  options: string[];
 }
 
 const feedbackTypeConfig: Record<FeedbackType, {
   title: string;
+  editTitle: string;
   description: string;
   ratingLabel: string;
   commentPlaceholder: string;
+  tags: string[];
+  detailFields: FeedbackDetailField[];
 }> = {
   seller: {
     title: 'Leave Seller Feedback',
+    editTitle: 'Edit Seller Feedback',
     description: 'Share your experience with this seller',
     ratingLabel: 'How would you rate this seller?',
-    commentPlaceholder: 'Tell us about your experience with this seller...'
+    commentPlaceholder: 'Tell us about your experience with this seller...',
+    tags: ['Responsive', 'Transparent', 'Professional', 'Helpful', 'Reliable'],
+    detailFields: [
+      { key: 'communication', label: 'Communication', options: ['Excellent', 'Good', 'Average', 'Poor'] },
+      { key: 'professionalism', label: 'Professionalism', options: ['Excellent', 'Good', 'Average', 'Poor'] }
+    ]
   },
   delivery: {
     title: 'Leave Delivery Feedback',
+    editTitle: 'Edit Delivery Feedback',
     description: 'Share your experience with the delivery',
     ratingLabel: 'How would you rate the delivery?',
-    commentPlaceholder: 'Tell us about the delivery experience (timing, packaging, condition)...'
+    commentPlaceholder: 'Tell us about the delivery experience (timing, packaging, condition)...',
+    tags: ['On time', 'Well packed', 'Safe handling', 'Good tracking', 'Friendly delivery'],
+    detailFields: [
+      { key: 'deliverySpeed', label: 'Delivery speed', options: ['Early', 'On time', 'Delayed'] },
+      { key: 'packageCondition', label: 'Package condition', options: ['Excellent', 'Good', 'Damaged'] }
+    ]
   },
   product: {
     title: 'Leave Product Feedback',
+    editTitle: 'Edit Product Feedback',
     description: 'Share your experience with this product',
     ratingLabel: 'How would you rate this product?',
-    commentPlaceholder: 'Tell us about the product quality, specifications, etc...'
+    commentPlaceholder: 'Tell us about the product quality, specifications, etc...',
+    tags: ['Matches description', 'Great quality', 'Value for money', 'Consistent', 'Would reorder'],
+    detailFields: [
+      { key: 'qualityExpectation', label: 'Quality vs expectation', options: ['Exceeded', 'Met', 'Below'] },
+      { key: 'specAccuracy', label: 'Specification match', options: ['Exact', 'Mostly accurate', 'Not accurate'] }
+    ]
   }
 };
 
@@ -53,16 +88,35 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   feedbackType,
   recipientName,
   productName,
+  defaultRating = 0,
+  defaultComment = '',
+  defaultTags = [],
+  defaultDetails = {},
+  isEditing = false,
   onSubmit
 }) => {
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [comment, setComment] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [details, setDetails] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const config = feedbackTypeConfig[feedbackType];
+
+  useEffect(() => {
+    if (isOpen) {
+      setRating(defaultRating || 0);
+      setHoveredRating(0);
+      setComment(defaultComment || '');
+      setSelectedTags(defaultTags || []);
+      setDetails(defaultDetails || {});
+      setError(null);
+      setSuccess(false);
+    }
+  }, [isOpen, defaultRating, defaultComment, defaultTags, defaultDetails]);
 
   if (!isOpen) return null;
 
@@ -83,7 +137,9 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
           tradeId,
           feedbackType,
           rating,
-          comment
+          comment,
+          tags: selectedTags,
+          details
         });
       }
       setSuccess(true);
@@ -101,9 +157,17 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
     setRating(0);
     setHoveredRating(0);
     setComment('');
+    setSelectedTags([]);
+    setDetails({});
     setError(null);
     setSuccess(false);
     onClose();
+  };
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) => (
+      prev.includes(tag) ? prev.filter((item) => item !== tag) : [...prev, tag]
+    ));
   };
 
   const StarRating = () => (
@@ -136,12 +200,12 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
           <div>
-            <h2 className="text-lg font-semibold">{config.title}</h2>
+            <h2 className="text-lg font-semibold">{isEditing ? config.editTitle : config.title}</h2>
             <p className="text-sm text-gray-500">{config.description}</p>
           </div>
           <button
@@ -154,15 +218,17 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
         {/* Content */}
         {success ? (
-          <div className="p-8 text-center">
+          <div className="p-8 text-center flex-shrink-0">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Star className="w-8 h-8 fill-green-500 text-green-500" />
             </div>
             <h3 className="text-lg font-medium text-green-700 mb-2">Thank you!</h3>
-            <p className="text-gray-500">Your feedback has been submitted successfully.</p>
+            <p className="text-gray-500">
+              {isEditing ? 'Your feedback has been updated successfully.' : 'Your feedback has been submitted successfully.'}
+            </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-4">
+          <form onSubmit={handleSubmit} className="p-4 flex-1 overflow-y-auto">
             {/* Product/Recipient Info */}
             {(recipientName || productName) && (
               <div className="mb-4 p-3 bg-gray-50 rounded-lg text-sm">
@@ -187,6 +253,63 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                 </p>
               )}
             </div>
+
+            {/* Quick Details */}
+            {config.detailFields.length > 0 && (
+              <div className="mb-5">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Quick details
+                </label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {config.detailFields.map((field) => (
+                    <div key={field.key} className="space-y-1">
+                      <span className="text-xs text-gray-500">{field.label}</span>
+                      <SelectField
+                        value={details[field.key] || ''}
+                        className="select-field--sm w-full"
+                        onValueChange={(value) =>
+                          setDetails((prev) => ({ ...prev, [field.key]: String(value) }))
+                        }
+                        disabled={loading}
+                      >
+                        <option value="">Select</option>
+                        {field.options.map((option) => (
+                          <option key={option} value={option}>{option}</option>
+                        ))}
+                      </SelectField>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Tags */}
+            {config.tags.length > 0 && (
+              <div className="mb-5">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Helpful tags
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {config.tags.map((tag) => {
+                    const active = selectedTags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => toggleTag(tag)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition ${
+                          active ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                        }`}
+                        disabled={loading}
+                        aria-pressed={active}
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Comment */}
             <div className="mb-4">
@@ -226,12 +349,12 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Submitting...
+                    {isEditing ? 'Updating...' : 'Submitting...'}
                   </>
                 ) : (
                   <>
                     <Send className="w-4 h-4" />
-                    Submit Feedback
+                    {isEditing ? 'Update Feedback' : 'Submit Feedback'}
                   </>
                 )}
               </button>

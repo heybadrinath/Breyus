@@ -2,6 +2,8 @@ import React, { useState, ChangeEvent, useRef } from "react";
 import OnboardingProgress from "../components/OnboardingProgress";
 import { motion, AnimatePresence, Variants, Variant } from "framer-motion";
 import BreyusLogo from "../assets/Logos/full-logo.svg";
+import SelectField from "../components/SelectField";
+import CountrySelector from "../components/CountrySelector";
 
 // import service (backend integration)
 import { sendOtpService, verifyOtpService, validateTokenService, setPasswordService, continueOnboardingService, step2Service, step3Service, MeanMonthlyRevenueEnum, step4Service, step5Service, getOnboardingProgressService } from '../services/onboarding.service';
@@ -19,10 +21,16 @@ const OnBoarding: React.FC = () => {
     const [errorMessage, setErrorMessage] = React.useState('');
     const [successMessage, setSuccessMessage] = React.useState('');
     const [emailOtpStatus, setEmailOtpStatus] = useState<'idle' | 'success' | 'error'>('idle');
+    const [isSendingEmailOtp, setIsSendingEmailOtp] = useState(false);
+    const [isVerifyingEmailOtp, setIsVerifyingEmailOtp] = useState(false);
     const [accountExists, setAccountExists] = React.useState(false);
     const [createAccount, setCreateAccount] = React.useState(false)
     const [isPasswordVerified, setIsPasswordVerified] = useState(false);
     const [AccountToken, setAccountToken] = useState('');
+
+    const isSendingEmailOtpRef = useRef(false);
+    const isVerifyingEmailOtpRef = useRef(false);
+    const isEmailOtpBusy = isSendingEmailOtp || isVerifyingEmailOtp;
 
     const navigate = useNavigate();
 
@@ -66,17 +74,26 @@ const OnBoarding: React.FC = () => {
     // mail onblur to make otp visible 
     const [ismailentered, setIsMailEntered] = useState(false);
     const handleMailBlur = async () => {
-        if (!ismailentered) {
-            try {
-                await sendOtpService(mail);
-                setSuccessMessage("Email successfully sent to your mail");
-                setErrorMessage('');
-            } catch (error: any) {
-                setErrorMessage(error?.message || "Failed to send OTP. Please try again.");
-                setSuccessMessage('');
-            }
+        if (ismailentered || isSendingEmailOtpRef.current) {
+            return;
         }
+
+        isSendingEmailOtpRef.current = true;
+        setIsSendingEmailOtp(true);
         setIsMailEntered(true);
+        setErrorMessage('');
+        setSuccessMessage('');
+
+        try {
+            await sendOtpService(mail);
+            setSuccessMessage("Email successfully sent to your mail");
+            setEmailOtpStatus('idle');
+        } catch (error: any) {
+            setErrorMessage(error?.message || "Failed to send OTP. Please try again.");
+        } finally {
+            isSendingEmailOtpRef.current = false;
+            setIsSendingEmailOtp(false);
+        }
     }
 
 
@@ -137,31 +154,33 @@ const OnBoarding: React.FC = () => {
     ) => {
         const otpCode = otp.join('');
         if (otpCode.length !== 6 || !/^\d{6}$/.test(otpCode)) {
-            setOtpStatus('error');
-            setErrorMessage('Please enter a valid 6-digit OTP.');
+            return;
+        }
+
+        if (isSendingEmailOtpRef.current || isSendingEmailOtp || ismailverified || isVerifyingEmailOtpRef.current || isVerifyingEmailOtp) {
             return;
         }
 
         // verify otp function call service
         (async () => {
-            if (!ismailverified) {
-                try {
-
-                    setonboarding(await verifyOtpService(mail, otpCode));
-                    setOtpStatus('success');
-                    setSuccessMessage('OTP verified successfully!');
-                    setErrorMessage('');
-                    // todo disable duplicate submissions and disable email and otp input
-                    setIsMailverified(true);
-                } catch (error: any) {
-                    setOtpStatus('error');
-                    const errorMsg = error?.message || error?.response?.data?.message;
-                    setErrorMessage(errorMsg || 'Invalid or expired OTP. Please check your code and try again.');
-                    setSuccessMessage('');
-                }
-
+            try {
+                isVerifyingEmailOtpRef.current = true;
+                setIsVerifyingEmailOtp(true);
+                setonboarding(await verifyOtpService(mail, otpCode));
+                setOtpStatus('success');
+                setSuccessMessage('OTP verified successfully!');
+                setErrorMessage('');
+                // todo disable duplicate submissions and disable email and otp input
+                setIsMailverified(true);
+            } catch (error: any) {
+                setOtpStatus('error');
+                const errorMsg = error?.message || error?.response?.data?.message;
+                setErrorMessage(errorMsg || 'Invalid or expired OTP. Please check your code and try again.');
+                setSuccessMessage('');
+            } finally {
+                isVerifyingEmailOtpRef.current = false;
+                setIsVerifyingEmailOtp(false);
             }
-
         })();
     };
 
@@ -170,8 +189,10 @@ const OnBoarding: React.FC = () => {
 
     // Resend OTP handler for email
     const handleResendEmailOtp = async () => {
-        if (!mail || ismailverified) return;
+        if (!mail || ismailverified || isEmailOtpBusy || isSendingEmailOtpRef.current) return;
         try {
+            isSendingEmailOtpRef.current = true;
+            setIsSendingEmailOtp(true);
             setSuccessMessage('');
             setErrorMessage('');
             await sendOtpService(mail);
@@ -181,6 +202,9 @@ const OnBoarding: React.FC = () => {
             emailOtpRefs.current[0]?.focus();
         } catch (error: any) {
             setErrorMessage(error?.message || 'Failed to resend OTP. Please try again.');
+        } finally {
+            isSendingEmailOtpRef.current = false;
+            setIsSendingEmailOtp(false);
         }
     };
 
@@ -324,7 +348,7 @@ const OnBoarding: React.FC = () => {
             taxId: prev.taxId || companyDetails.taxId || '',
         }));
     }, [companyDetails]);
-    const handleStep2InputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleStep2InputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setStep2Form((prevState) => ({
             ...prevState,
@@ -519,7 +543,7 @@ const OnBoarding: React.FC = () => {
                                 value={mail}
                                 required
                                 onChange={handleChangeMail}
-                                disabled={ismailverified}
+                                disabled={ismailverified || isSendingEmailOtp}
                                 onBlur={(e) => {
                                     const value = e.target.value.trim();
                                     // Simple email validation regex
@@ -528,7 +552,7 @@ const OnBoarding: React.FC = () => {
                                         handleMailBlur();
                                     }
                                 }}
-                                className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${(ismailverified) ? 'cursor-not-allowed' : 'cursor-auto'}`}
+                                className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${(ismailverified || isSendingEmailOtp) ? 'cursor-not-allowed' : 'cursor-auto'}`}
                                 placeholder="Enter your company email address"
                             />
                         </motion.div>
@@ -546,7 +570,14 @@ const OnBoarding: React.FC = () => {
 
                                     <p className="mt-1 text-xs text-gray-500">
                                         Check your inbox for a verification code to continue setting up your Breyus account. Didn't get it?{" "}
-                                        <a href="#" onClick={() => handleResendEmailOtp()} className={`text-blue-600 hover:underline ${(ismailverified) ? 'cursor-not-allowed' : 'cursor-auto'}`}>
+                                        <a
+                                            href="#"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                handleResendEmailOtp();
+                                            }}
+                                            className={`text-blue-600 hover:underline ${(ismailverified || isEmailOtpBusy) ? 'cursor-not-allowed pointer-events-none' : 'cursor-pointer'}`}
+                                        >
                                             Resend Code
                                         </a>
                                     </p>
@@ -557,7 +588,7 @@ const OnBoarding: React.FC = () => {
                                                 type="text"
                                                 maxLength={1}
                                                 value={digit}
-                                                disabled={ismailverified}
+                                                disabled={ismailverified || isEmailOtpBusy}
                                                 onChange={(e) => handleOtpChange(e, index, emailOtp, setEmailOtp, emailOtpRefs)}
                                                 onFocus={(e) => e.target.select()}
                                                 onBlur={() => verifyOtp(emailOtp, setEmailOtpStatus, 'email')}
@@ -568,7 +599,7 @@ const OnBoarding: React.FC = () => {
                                                     : emailOtpStatus === 'error'
                                                         ? 'border-red-500 focus:ring-red-500'
                                                         : 'border-gray-300 focus:ring-black'
-                                                    }  ${(ismailverified) ? 'cursor-not-allowed' : 'cursor-auto'}`}
+                                                    }  ${(ismailverified || isEmailOtpBusy) ? 'cursor-not-allowed' : 'cursor-auto'}`}
                                             />
                                         ))}
                                     </div>
@@ -649,21 +680,20 @@ const OnBoarding: React.FC = () => {
                                 required
                                 onChange={handleStep2InputChange}
                                 className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
-                                placeholder="Enter your company location"
+                                placeholder="Enter your company name"
                             />
                         </motion.div>
 
                         <motion.div variants={itemVariants}>
                             <label htmlFor="companyLocation" className="block text-2xl font-bold text-black">Company Location <span className="text-red-500">*</span></label>
-                            <input
-                                type="text"
+                            <CountrySelector
                                 name="companyLocation"
-                                id="companyLocation"
                                 value={step2Form.companyLocation}
-                                required
                                 onChange={handleStep2InputChange}
-                                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
-                                placeholder="Enter your company location"
+                                wrapperClassName="mt-3"
+                                className="w-full p-2 sm:text-sm !border !border-gray-200 rounded-lg"
+                                placeholder="Select your country"
+                                searchable
                             />
                         </motion.div>
 
@@ -809,34 +839,34 @@ const OnBoarding: React.FC = () => {
                             <label htmlFor="exporedBefore" className="block text-2xl font-bold text-black">
                                 Has your company exported before?
                             </label>
-                            <select
+                            <SelectField
                                 name="exporedBefore"
                                 id="exporedBefore"
                                 value={step4Form.exporedBefore}
                                 onChange={handleStep4InputChange}
-                                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
+                                wrapperClassName="w-full mt-3"
                             >
                                 <option value="">Select</option>
                                 <option value="Yes">Yes</option>
                                 <option value="No">No</option>
-                            </select>
+                            </SelectField>
                         </motion.div>
 
 
                         <motion.div variants={itemVariants}>
                             <label htmlFor="referrel" className="block text-2xl font-bold text-black">How do you get to know about Breyus? <span className="text-red-500">*</span></label>
-                            <select
+                            <SelectField
                                 id="referrel"
                                 name="referrel"
                                 value={step4Form.referrel}
                                 onChange={handleStep4InputChange}
-                                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
+                                wrapperClassName="w-full mt-3"
                             >
-                                <option>Select an option</option>
-                                <option>Partner company</option>
-                                <option>Ad campaign</option>
-                                <option>Other</option>
-                            </select>
+                                <option value="">Select an option</option>
+                                <option value="Partner company">Partner company</option>
+                                <option value="Ad campaign">Ad campaign</option>
+                                <option value="Other">Other</option>
+                            </SelectField>
                         </motion.div>
                     </motion.div>
                 );
@@ -893,6 +923,14 @@ const OnBoarding: React.FC = () => {
                 setErrorMessage("Please enter a valid email address.");
                 return false;
             }
+            if (isSendingEmailOtp || isSendingEmailOtpRef.current) {
+                setErrorMessage("Sending OTP. Please wait.");
+                return false;
+            }
+            if (isVerifyingEmailOtp || isVerifyingEmailOtpRef.current) {
+                setErrorMessage("Verifying OTP. Please wait.");
+                return false;
+            }
             if (!ismailentered) {
                 setErrorMessage("Please enter your email and request OTP.");
                 return false;
@@ -902,6 +940,8 @@ const OnBoarding: React.FC = () => {
                     setErrorMessage("Please enter a valid 6-digit OTP.");
                     return false;
                 }
+                setErrorMessage("Please verify the OTP sent to your email.");
+                return false;
             }
             if (accountExists && !currentPassword) {
                 setErrorMessage("Password is required.");
@@ -1025,6 +1065,38 @@ const OnBoarding: React.FC = () => {
                             {currentStep < 5 ? (
                                 <button
                                     onClick={async () => {
+                                        // Step 1: Handle email and OTP flow
+                                        if (currentStep === 1) {
+                                            // Validate email format first
+                                            if (!mail) {
+                                                setErrorMessage("Email is required.");
+                                                return;
+                                            }
+                                            const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail);
+                                            if (!isValidEmail) {
+                                                setErrorMessage("Please enter a valid email address.");
+                                                return;
+                                            }
+
+                                            // If OTP not sent yet, trigger it and wait
+                                            if (!ismailentered && !isSendingEmailOtp && !isSendingEmailOtpRef.current) {
+                                                await handleMailBlur();
+                                                return; // Return and let user enter OTP
+                                            }
+
+                                            // If OTP is currently being sent, show message and wait
+                                            if (isSendingEmailOtp || isSendingEmailOtpRef.current) {
+                                                setErrorMessage("Sending verification code... Please wait.");
+                                                return;
+                                            }
+
+                                            // If OTP is being verified, wait
+                                            if (isVerifyingEmailOtp || isVerifyingEmailOtpRef.current) {
+                                                setErrorMessage("Verifying OTP... Please wait.");
+                                                return;
+                                            }
+                                        }
+
                                         // If password is required and not verified, try to verify first
                                         if (currentStep === 1 && accountExists && !isPasswordVerified) {
                                             const verified = await ServiceCurrentPasswordChange();
@@ -1054,9 +1126,28 @@ const OnBoarding: React.FC = () => {
 
                                         if (currentStep === 1 && createAccount && !isPasswordSubmitted) ServiceCreateAccount();
                                     }}
-                                    className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors ml-auto mt-12"
+                                    disabled={currentStep === 1 && isEmailOtpBusy}
+                                    className={`px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors ml-auto mt-12 flex items-center gap-2 ${currentStep === 1 && isEmailOtpBusy ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
-                                    Next
+                                    {currentStep === 1 && isSendingEmailOtp ? (
+                                        <>
+                                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Sending OTP...
+                                        </>
+                                    ) : currentStep === 1 && isVerifyingEmailOtp ? (
+                                        <>
+                                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Verifying...
+                                        </>
+                                    ) : (
+                                        'Next'
+                                    )}
                                 </button>
                             ) : (
                                 <button

@@ -12,6 +12,7 @@ import {
     User,
     ArrowRight
 } from 'lucide-react';
+import SelectField from './SelectField';
 
 // Audit action types matching the backend
 type AuditAction =
@@ -246,10 +247,10 @@ const AuditHistory: React.FC<AuditHistoryProps> = ({ tradeId, onClose }) => {
                 {/* Filter */}
                 <div className="mt-3 flex items-center gap-2">
                     <Filter size={16} className="text-gray-400" />
-                    <select
+                    <SelectField
                         value={filterAction}
-                        onChange={(e) => setFilterAction(e.target.value as AuditAction | 'all')}
-                        className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="select-field--sm"
+                        onValueChange={(value) => setFilterAction(value as AuditAction | 'all')}
                     >
                         <option value="all">All Actions</option>
                         <option value="trade_created">Trade Created</option>
@@ -263,7 +264,7 @@ const AuditHistory: React.FC<AuditHistoryProps> = ({ tradeId, onClose }) => {
                         <option value="phase_advanced">Phase Changes</option>
                         <option value="trade_completed">Completed</option>
                         <option value="signature_added">Signatures</option>
-                    </select>
+                    </SelectField>
                 </div>
             </div>
 

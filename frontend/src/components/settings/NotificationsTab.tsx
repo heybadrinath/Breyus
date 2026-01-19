@@ -1,33 +1,47 @@
 import React, { useState, useEffect } from "react";
-import { Loader2, Bell, Mail, Zap } from "lucide-react";
+import { Loader2, Bell, Mail, Zap, Sparkles } from "lucide-react";
 import {
     NotificationPreferences,
     getNotificationPreferences,
-    updateNotificationPreferences
+    updateNotificationPreferences,
+    AINotificationPreferences,
+    getAINotificationPreferences,
+    updateAINotificationPreferences
 } from "../../services/auth.service";
 
 // Default preferences when loading fails
 const defaultPreferences: NotificationPreferences = {
     email: {
+        tradeCreated: true,
         counterOffer: true,
         tradeAccepted: true,
         tradeRejected: true,
         documentUploaded: true,
+        documentsInvalidated: true,
         phaseAdvanced: true,
         tradeCompleted: true,
+        tradeCancelled: true,
     },
     realtime: {
+        tradeCreated: true,
         counterOffer: true,
         tradeAccepted: true,
         tradeRejected: true,
         documentUploaded: true,
+        documentsInvalidated: true,
         phaseAdvanced: true,
         tradeCompleted: true,
+        tradeCancelled: true,
     },
 };
 
 // Notification event labels and descriptions
 const notificationEvents = [
+    {
+        key: 'tradeCreated' as const,
+        label: 'New Trade Request',
+        description: 'When a new purchase request is created for your products',
+    },
     {
         key: 'counterOffer' as const,
         label: 'Counter Offers',
@@ -49,6 +63,11 @@ const notificationEvents = [
         description: 'When a new document is uploaded to your trade',
     },
     {
+        key: 'documentsInvalidated' as const,
+        label: 'Documents Invalidated',
+        description: 'When a document replacement invalidates later documents',
+    },
+    {
         key: 'phaseAdvanced' as const,
         label: 'Phase Advanced',
         description: 'When your trade advances to the next phase',
@@ -57,6 +76,11 @@ const notificationEvents = [
         key: 'tradeCompleted' as const,
         label: 'Trade Completed',
         description: 'When your trade is marked as completed',
+    },
+    {
+        key: 'tradeCancelled' as const,
+        label: 'Trade Cancelled',
+        description: 'When your trade is cancelled by the counterparty',
     },
 ];
 
@@ -83,7 +107,11 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ enabled, onChange, disabled
     </button>
 );
 
-const NotificationsTab: React.FC = () => {
+interface NotificationsTabProps {
+    userEmail: string;
+}
+
+const NotificationsTab: React.FC<NotificationsTabProps> = ({ userEmail }) => {
     const [preferences, setPreferences] = useState<NotificationPreferences>(defaultPreferences);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -92,8 +120,14 @@ const NotificationsTab: React.FC = () => {
     const [hasChanges, setHasChanges] = useState(false);
     const [originalPreferences, setOriginalPreferences] = useState<NotificationPreferences>(defaultPreferences);
 
+    // AI Buddy notification preferences
+    const [aiPreferences, setAiPreferences] = useState<AINotificationPreferences>({ useExistingEmail: true });
+    const [aiEmail, setAiEmail] = useState('');
+    const [isSavingAi, setIsSavingAi] = useState(false);
+
     useEffect(() => {
         fetchPreferences();
+        fetchAiPreferences();
     }, []);
 
     const fetchPreferences = async () => {
@@ -110,6 +144,16 @@ const NotificationsTab: React.FC = () => {
             setOriginalPreferences(defaultPreferences);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const fetchAiPreferences = async () => {
+        try {
+            const data = await getAINotificationPreferences();
+            setAiPreferences(data);
+            setAiEmail(data.email || '');
+        } catch (err) {
+            console.error('Error fetching AI notification preferences:', err);
         }
     };
 
@@ -181,6 +225,24 @@ const NotificationsTab: React.FC = () => {
         setHasChanges(false);
         setSuccessMessage(null);
         setError(null);
+    };
+
+    const handleSaveAiPreferences = async () => {
+        try {
+            setIsSavingAi(true);
+            setError(null);
+            const updatedPrefs = await updateAINotificationPreferences({
+                useExistingEmail: aiPreferences.useExistingEmail,
+                email: aiPreferences.useExistingEmail ? undefined : aiEmail,
+            });
+            setAiPreferences(updatedPrefs);
+            setSuccessMessage('AI notification preferences saved successfully');
+        } catch (err) {
+            console.error('Error saving AI notification preferences:', err);
+            setError('Failed to save AI notification preferences. Please try again.');
+        } finally {
+            setIsSavingAi(false);
+        }
     };
 
     if (isLoading) {
@@ -300,6 +362,68 @@ const NotificationsTab: React.FC = () => {
                             />
                         </div>
                     ))}
+                </div>
+            </div>
+
+            {/* AI Buddy Notification Preferences */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                        <Sparkles className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                        <h4 className="text-lg font-semibold text-gray-800">Breyus AI Buddy</h4>
+                        <p className="text-gray-500 text-sm">Where should AI chat interactions be notified?</p>
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="radio"
+                            name="aiEmail"
+                            checked={aiPreferences.useExistingEmail}
+                            onChange={() => setAiPreferences({ ...aiPreferences, useExistingEmail: true })}
+                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className="text-gray-700">
+                            Send to Existing mail{' '}
+                            <span className="text-gray-500">({userEmail})</span>
+                        </span>
+                    </label>
+
+                    <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                            type="radio"
+                            name="aiEmail"
+                            checked={!aiPreferences.useExistingEmail}
+                            onChange={() => setAiPreferences({ ...aiPreferences, useExistingEmail: false })}
+                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 mt-1"
+                        />
+                        <div className="flex-1">
+                            <span className="text-gray-700">Add other Email address</span>
+                            {!aiPreferences.useExistingEmail && (
+                                <input
+                                    type="email"
+                                    value={aiEmail}
+                                    onChange={(e) => setAiEmail(e.target.value)}
+                                    className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="Enter email address for AI notifications"
+                                />
+                            )}
+                        </div>
+                    </label>
+                </div>
+
+                <div className="mt-4">
+                    <button
+                        onClick={handleSaveAiPreferences}
+                        disabled={isSavingAi}
+                        className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 font-medium disabled:opacity-50 flex items-center gap-2"
+                    >
+                        {isSavingAi && <Loader2 className="animate-spin h-4 w-4" />}
+                        {isSavingAi ? 'Saving...' : 'Save AI Preferences'}
+                    </button>
                 </div>
             </div>
 

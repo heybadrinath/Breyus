@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Filter, MessageCircle, Loader2, Upload, Eye } from "lucide-react";
-import { getSellerTrades, Trade, TradePhase, PaymentMethod, DocumentInfo, verifyDocument, uploadDocument, DocumentType } from "../../services/trade.service";
+import { getSellerTrades, Trade, TradePhase, PaymentMethod, DocumentInfo, SPADocumentInfo, verifyDocument, uploadDocument, DocumentType } from "../../services/trade.service";
 import { createConversation } from "../../services/inbox.service";
 import TrackTrade from "../../components/TrackTrade";
 import DocumentUploadModal from "../../components/DocumentUploadModal";
 import ViewDocumentModal from "../../components/ViewDocumentModal";
+import SelectField from "../../components/SelectField";
+import { useNotifications } from "../../contexts/NotificationContext";
 
 interface TradeWithProduct extends Omit<Trade, 'paymentMethod'> {
     product: {
@@ -23,13 +25,14 @@ interface TradeWithProduct extends Omit<Trade, 'paymentMethod'> {
     paymentMethod?: PaymentMethod;
     scoDocument?: DocumentInfo;
     icpoDocument?: DocumentInfo;
-    spaDocument?: DocumentInfo;
+    // Issue #14 - Use SPADocumentInfo for SPA document with dual signature support
+    spaDocument?: SPADocumentInfo;
     paymentProof?: DocumentInfo;
     bolDocument?: DocumentInfo;
 }
 
-// Document phases to filter for
-const DOCUMENT_PHASES: TradePhase[] = ['SCO', 'ICPO', 'SPA', 'PAYMENT', 'BOL'];
+// Document phases to filter for - strict SPA phase only
+const DOCUMENT_PHASES: TradePhase[] = ['SPA'];
 
 const PHASE_LABELS: Record<TradePhase, string> = {
     'PR': 'Purchase Request',
@@ -52,12 +55,14 @@ const PHASE_DOCUMENT_INFO: Record<string, { viewDoc: string; uploadDoc: Document
 
 export const SellerSPAStatus: React.FC = () => {
     const navigate = useNavigate();
+    const { showToast } = useNotifications();
     const [trades, setTrades] = useState<TradeWithProduct[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [entriesPerPage, setEntriesPerPage] = useState(5);
     const [selectedTradeId, setSelectedTradeId] = useState<string | null>(null);
-    const [chattingProductId, setChattingProductId] = useState<string | null>(null);
+    // Issue #20 - Use Set to track multiple concurrent chat operations
+    const [chattingProductIds, setChattingProductIds] = useState<Set<string>>(new Set());
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
     const [uploadTradeId, setUploadTradeId] = useState<string | null>(null);
     const [uploadDocType, setUploadDocType] = useState<DocumentType | null>(null);
@@ -92,23 +97,33 @@ export const SellerSPAStatus: React.FC = () => {
     };
 
     const handleChat = async (productId: string) => {
+        // Issue #20 - Prevent double-clicks on same product
+        if (chattingProductIds.has(productId)) {
+            return;
+        }
         try {
-            setChattingProductId(productId);
+            // Issue #20 - Add to Set of chatting products
+            setChattingProductIds(prev => new Set(prev).add(productId));
             const result = await createConversation(productId);
             if (result.status === 'success') {
                 navigate(`/seller/Inbox?conversationId=${result.data}`);
             } else if (result.conversationId) {
                 navigate(`/seller/Inbox?conversationId=${result.conversationId}`);
             } else if (result.message?.includes("yourself")) {
-                alert("You can't send a message to yourself.");
+                showToast("You can't send a message to yourself.", 'error');
             } else {
-                alert(result.message || 'Failed to create conversation');
+                showToast(result.message || 'Failed to create conversation', 'error');
             }
         } catch (error) {
             console.error("Error creating conversation:", error);
-            alert('Error creating conversation');
+            showToast('Error creating conversation', 'error');
         } finally {
-            setChattingProductId(null);
+            // Issue #20 - Remove from Set of chatting products
+            setChattingProductIds(prev => {
+                const next = new Set(prev);
+                next.delete(productId);
+                return next;
+            });
         }
     };
 
@@ -378,11 +393,11 @@ export const SellerSPAStatus: React.FC = () => {
                     <Filter className="ml-auto cursor-pointer hover:text-gray-600" />
                 </div>
                 <div className="flex mt-8 items-center">
-                    <select
+                    <SelectField
                         id="entries"
-                        className="w-fit bg-white border-2 rounded-lg px-2 py-1"
                         value={entriesPerPage}
-                        onChange={(e) => setEntriesPerPage(Number(e.target.value))}
+                        className="select-field--sm w-fit"
+                        onValueChange={(value) => setEntriesPerPage(Number(value))}
                     >
                         <option value="5">5</option>
                         <option value="10">10</option>
@@ -390,7 +405,7 @@ export const SellerSPAStatus: React.FC = () => {
                         <option value="20">20</option>
                         <option value="25">25</option>
                         <option value="30">30</option>
-                    </select>
+                    </SelectField>
                     <label className="ml-2 text-gray-500" htmlFor="entries">entries per page</label>
                     <span className="ml-auto text-gray-600">
                         {trades.length} trade{trades.length !== 1 ? 's' : ''} in document phase
@@ -448,10 +463,10 @@ export const SellerSPAStatus: React.FC = () => {
                                         {getActionButton(trade)}
                                         <button
                                             onClick={() => handleChat(trade.product._id)}
-                                            disabled={chattingProductId === trade.product._id}
+                                            disabled={chattingProductIds.has(trade.product._id)}
                                             className="text-blue-600 hover:underline text-sm flex items-center gap-1"
                                         >
-                                            {chattingProductId === trade.product._id ? (
+                                            {chattingProductIds.has(trade.product._id) ? (
                                                 <Loader2 className="w-3 h-3 animate-spin" />
                                             ) : (
                                                 <MessageCircle className="w-3 h-3" />
@@ -492,7 +507,10 @@ export const SellerSPAStatus: React.FC = () => {
                     }}
                     document={viewingDocument}
                     documentType={viewingDocType}
-                    canVerify={canVerifyDocument(viewingDocType) && viewingDocument?.status === 'uploaded'}
+                    canVerify={
+                        canVerifyDocument(viewingDocType) &&
+                        (!viewingDocument?.status || viewingDocument?.status === 'uploaded' || viewingDocument?.status === 'pending')
+                    }
                     onVerify={handleVerify}
                 />
             )}

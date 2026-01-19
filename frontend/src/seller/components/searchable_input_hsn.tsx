@@ -31,7 +31,7 @@ const SearchableInput: React.FC = () => {
     const timer = setTimeout(async () => {
       setHsnLoading(true);
       try {
-        const host = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+        const host = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
         const response = await fetch(`${host}/products/hsn?q=${hsnQuery}`);
         if (!response.ok) {
           throw new Error('Failed to fetch data');

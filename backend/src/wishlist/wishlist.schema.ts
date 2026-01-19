@@ -2,13 +2,58 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
+/**
+ * Wishlist Schema
+ * Supports two types of wishlist items:
+ * 1. Products (existing functionality)
+ * 2. Saved contacts from AI results (off-platform companies)
+ */
 @Schema()
 export class Wishlist extends Document {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   user: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'Product', required: true })
-  product: Types.ObjectId;
+  // For product wishlist items
+  @Prop({ type: Types.ObjectId, ref: 'Product' })
+  product?: Types.ObjectId;
+
+  // Type of wishlist item
+  @Prop({ type: String, enum: ['product', 'ai_contact'], default: 'product' })
+  sourceType: 'product' | 'ai_contact';
+
+  // ═══════════════════════════════════════════════════════════════
+  // SAVED CONTACT FIELDS (for AI-sourced off-platform companies)
+  // ═══════════════════════════════════════════════════════════════
+
+  @Prop()
+  savedContactName?: string;  // Company name from AI
+
+  @Prop()
+  savedContactEmail?: string;  // Email from AI
+
+  @Prop()
+  savedContactPhone?: string;  // Phone from AI
+
+  @Prop()
+  savedContactCountry?: string;  // Country from AI
+
+  @Prop()
+  savedContactAddress?: string;  // Address from AI
+
+  @Prop()
+  savedCommodity?: string;  // Commodity they trade (for reference)
+
+  @Prop()
+  savedHsCode?: string;  // HS code (for reference)
+
+  @Prop()
+  savedMatchScore?: number;  // AI match score at time of save
+
+  @Prop()
+  savedContactRole?: string;  // 'buyer' or 'seller'
+
+  @Prop()
+  notes?: string;  // User's notes about this contact
 
   @Prop({ default: Date.now })
   dateAdded: Date;
@@ -16,5 +61,17 @@ export class Wishlist extends Document {
 
 export const WishlistSchema = SchemaFactory.createForClass(Wishlist);
 
-// Add unique index to prevent duplicates of (user, product)
-WishlistSchema.index({ user: 1, product: 1 }, { unique: true });
+// Unique index for product wishlists (user + product)
+WishlistSchema.index(
+  { user: 1, product: 1 },
+  { unique: true, partialFilterExpression: { product: { $exists: true } } }
+);
+
+// Unique index for contact wishlists (user + contactEmail or contactName + contactCountry)
+WishlistSchema.index(
+  { user: 1, savedContactEmail: 1 },
+  { unique: true, partialFilterExpression: { savedContactEmail: { $exists: true } } }
+);
+
+// Compound index for querying by type
+WishlistSchema.index({ user: 1, sourceType: 1 });

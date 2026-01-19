@@ -7,36 +7,59 @@ import {
   ConnectedSocket,
   MessageBody,
 } from '@nestjs/websockets';
+import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { InboxService } from './inbox.service';
 import { NotificationService } from '../notification/notification.service';
 import { TradeGateway } from '../trade/trade.gateway';
+import { WsAuthService } from './ws-auth.service';
 
+const corsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)
+  : [];
+const corsOrigin = corsOrigins.length > 0 ? corsOrigins : true;
+
+// Payloads no longer need companyId - it comes from authenticated socket
 interface JoinConversationPayload {
   conversationId: string;
-  companyId: string;
+  companyId?: string; // Deprecated: ignored, uses socket auth
 }
 
 interface SendMessagePayload {
   conversationId: string;
-  companyId: string;
+  companyId?: string; // Deprecated: ignored, uses socket auth
   text: string;
+  replyTo?: string | null;
 }
 
 interface MarkReadPayload {
   conversationId: string;
-  companyId: string;
+  companyId?: string; // Deprecated: ignored, uses socket auth
 }
 
 interface TypingPayload {
   conversationId: string;
-  companyId: string;
+  companyId?: string; // Deprecated: ignored, uses socket auth
   isTyping: boolean;
+}
+
+interface EditMessagePayload {
+  conversationId: string;
+  companyId?: string; // Deprecated: ignored, uses socket auth
+  messageId: string;
+  text: string;
+}
+
+interface ReactionPayload {
+  conversationId: string;
+  companyId?: string; // Deprecated: ignored, uses socket auth
+  messageId: string;
+  emoji: string;
 }
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: corsOrigin,
     credentials: true,
   },
   namespace: '/inbox',
@@ -45,6 +68,7 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
+  private readonly logger = new Logger(InboxGateway.name);
   private connectedUsers: Map<string, Set<string>> = new Map(); // companyId -> Set of socketIds
   private activeConversations: Map<string, Map<string, Set<string>>> = new Map(); // conversationId -> companyId -> socketIds
 
@@ -52,10 +76,32 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly inboxService: InboxService,
     private readonly notificationService: NotificationService,
     private readonly tradeGateway: TradeGateway,
-  ) { }
+    private readonly wsAuthService: WsAuthService,
+  ) {}
 
-  handleConnection(client: Socket) {
-    console.log(`Client connected: ${client.id}`);
+  /**
+   * Authenticate socket connection using JWT cookie
+   * Unauthenticated connections are immediately disconnected
+   */
+  async handleConnection(client: Socket) {
+    this.logger.log(`Client attempting connection: ${client.id}`);
+
+    // Authenticate the socket connection
+    const auth = await this.wsAuthService.validateSocket(client);
+
+    if (!auth) {
+      this.logger.warn(`Client ${client.id} failed authentication - disconnecting`);
+      client.emit('auth-error', { message: 'Authentication failed. Please log in again.' });
+      client.disconnect(true);
+      return;
+    }
+
+    // Store authenticated identity in socket data
+    // This is the ONLY source of truth for user identity - never trust payload
+    client.data.userId = auth.userId;
+    client.data.companyId = auth.companyId;
+
+    this.logger.log(`Client ${client.id} authenticated as user=${auth.userId}, company=${auth.companyId}`);
   }
 
   handleDisconnect(client: Socket) {
@@ -76,7 +122,14 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: JoinConversationPayload,
   ) {
-    const { conversationId, companyId } = payload;
+    // Use authenticated companyId from socket, NOT from payload
+    const companyId = client.data.companyId;
+    if (!companyId) {
+      this.logger.warn(`Socket ${client.id} attempted join-conversation without auth`);
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const { conversationId } = payload;
     const room = `conversation-${conversationId}`;
     client.join(room);
 
@@ -98,7 +151,7 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     this.connectedUsers.get(companyId)?.add(client.id);
 
-    console.log(`Company ${companyId} joined room ${room}`);
+    this.logger.log(`Company ${companyId} joined room ${room}`);
     return { success: true, room };
   }
 
@@ -107,7 +160,13 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: JoinConversationPayload,
   ) {
-    const { conversationId, companyId } = payload;
+    // Use authenticated companyId from socket, NOT from payload
+    const companyId = client.data.companyId;
+    if (!companyId) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const { conversationId } = payload;
     const room = `conversation-${conversationId}`;
     client.leave(room);
 
@@ -126,7 +185,7 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
     }
 
-    console.log(`Client ${client.id} left room ${room}`);
+    this.logger.log(`Client ${client.id} left room ${room}`);
     return { success: true };
   }
 
@@ -136,14 +195,28 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: SendMessagePayload,
   ) {
     try {
-      const { conversationId, companyId, text } = payload;
+      // Use authenticated companyId from socket, NOT from payload
+      const companyId = client.data.companyId;
+      if (!companyId) {
+        return { success: false, error: 'Not authenticated' };
+      }
 
-      // Save message to database
+      const { conversationId, text, replyTo } = payload;
+
+      // Save message to database using authenticated companyId
       const message = await this.inboxService.sendMessage(
         conversationId,
         companyId,
         text,
+        replyTo,
       );
+
+      // Get receiver info for emission logic
+      const receiverObj = message.receiver as any;
+      const receiverId = receiverObj?._id?.toString() || receiverObj?.toString() || '';
+
+      // Check if receiver is currently viewing this conversation
+      const isReceiverActive = (this.activeConversations.get(conversationId)?.get(receiverId)?.size || 0) > 0;
 
       // Broadcast to all users in the conversation room
       const room = `conversation-${conversationId}`;
@@ -152,24 +225,44 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
         message,
       });
 
+      // Also emit to receiver's sockets ONLY if they're not viewing this conversation
+      // This ensures users on inbox page but viewing a different conversation get real-time updates
+      // without causing duplicate events for users viewing this conversation
+      if (!isReceiverActive) {
+        const receiverSockets = this.connectedUsers.get(receiverId);
+        if (receiverSockets && receiverSockets.size > 0) {
+          console.log(`[InboxGateway] Receiver not active in conversation, emitting to ${receiverSockets.size} sockets for company ${receiverId}`);
+          receiverSockets.forEach(socketId => {
+            this.server.to(socketId).emit('message-received', {
+              conversationId,
+              message,
+            });
+          });
+        }
+      }
+
       // Send notification if receiver is not active in this conversation
       try {
-        const receiverId = message.receiver.toString();
-        // Check if receiver company is active
-        const isReceiverActive = (this.activeConversations.get(conversationId)?.get(receiverId)?.size || 0) > 0;
+        // Extract sender company name from populated message
+        const senderObj = message.sender as any;
+        const senderName = senderObj?.companyName || 'Someone';
+
+        console.log(`[InboxGateway] receiverId: ${receiverId}, senderName: ${senderName}, isReceiverActive: ${isReceiverActive}`);
 
         if (!isReceiverActive) {
+          console.log(`[InboxGateway] Receiver ${receiverId} is NOT active in conversation ${conversationId}, creating notification...`);
           // Get all users for the receiver company
           const users = await this.inboxService.getUsersByCompany(receiverId);
+          console.log(`[InboxGateway] Found ${users.length} users for company ${receiverId}`);
 
           for (const user of users) {
             const messagePreview = text.length > 50 ? `${text.substring(0, 50)}...` : text;
-            const recipientRole = user.role === 'admin' ? 'buyer' : 'seller';
+            const recipientRole = user.role === 'Buyer' ? 'buyer' : 'seller';
             const inboxPath = recipientRole === 'seller' ? '/seller/Inbox' : '/buyer/inbox';
             const notification = await this.notificationService.createNotification({
-              userId: user._id.toString(), // user._id is ObjectId
+              userId: user._id.toString(),
               type: 'new_message',
-              title: 'New Message',
+              title: `Message from ${senderName}`,
               message: messagePreview,
               priority: 'normal',
               conversationId: conversationId,
@@ -177,24 +270,24 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
               metadata: {
                 conversationId,
                 senderId: companyId,
+                senderName,
                 messagePreview,
               }
             });
+            console.log(`[InboxGateway] Created notification for user ${user._id.toString()}`);
 
             const unreadCount = await this.notificationService.getUnreadCount(user._id.toString());
+            console.log(`[InboxGateway] User ${user._id.toString()} has ${unreadCount} unread notifications`);
 
-            // Emit to the user (via company socket)
-            // Note: We notify the company channel, which all users of that company listen to
-            this.notifyCompany(receiverId, 'notification-created', {
-              notification,
-              unreadCount,
-            });
-
+            // Only emit via trade gateway (removed notifyCompany to avoid duplicate toasts)
+            console.log(`[InboxGateway] Emitting notification via tradeGateway for user ${user._id.toString()}`);
             this.tradeGateway.emitNotificationCreated(user._id.toString(), {
               notification,
               unreadCount,
             });
           }
+        } else {
+          console.log(`[InboxGateway] Receiver ${receiverId} IS active in conversation ${conversationId}, skipping notification`);
         }
       } catch (err) {
         console.error('Failed to create message notification:', err);
@@ -213,9 +306,15 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: MarkReadPayload,
   ) {
     try {
-      const { conversationId, companyId } = payload;
+      // Use authenticated companyId from socket, NOT from payload
+      const companyId = client.data.companyId;
+      if (!companyId) {
+        return { success: false, error: 'Not authenticated' };
+      }
 
-      // Mark messages as read in database
+      const { conversationId } = payload;
+
+      // Mark messages as read in database using authenticated companyId
       await this.inboxService.markMessagesAsRead(conversationId, companyId);
 
       // Broadcast read receipt to all users in the conversation
@@ -227,7 +326,7 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       return { success: true };
     } catch (error) {
-      console.error('Error marking messages as read:', error);
+      this.logger.error('Error marking messages as read:', error);
       return { success: false, error: error.message };
     }
   }
@@ -237,7 +336,13 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: TypingPayload,
   ) {
-    const { conversationId, companyId, isTyping } = payload;
+    // Use authenticated companyId from socket, NOT from payload
+    const companyId = client.data.companyId;
+    if (!companyId) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const { conversationId, isTyping } = payload;
     const room = `conversation-${conversationId}`;
 
     // Broadcast typing status to other users in the conversation (exclude sender)
@@ -248,6 +353,72 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
 
     return { success: true };
+  }
+
+  @SubscribeMessage('edit-message')
+  async handleEditMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: EditMessagePayload,
+  ) {
+    try {
+      // Use authenticated companyId from socket, NOT from payload
+      const companyId = client.data.companyId;
+      if (!companyId) {
+        return { success: false, error: 'Not authenticated' };
+      }
+
+      const { conversationId, messageId, text } = payload;
+      const updatedMessage = await this.inboxService.editMessage(
+        conversationId,
+        messageId,
+        companyId,
+        text,
+      );
+
+      const room = `conversation-${conversationId}`;
+      this.server.to(room).emit('message-updated', {
+        conversationId,
+        message: updatedMessage,
+      });
+
+      return { success: true, message: updatedMessage };
+    } catch (error) {
+      this.logger.error('Error editing message via WebSocket:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  @SubscribeMessage('toggle-reaction')
+  async handleToggleReaction(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: ReactionPayload,
+  ) {
+    try {
+      // Use authenticated companyId from socket, NOT from payload
+      const companyId = client.data.companyId;
+      if (!companyId) {
+        return { success: false, error: 'Not authenticated' };
+      }
+
+      const { conversationId, messageId, emoji } = payload;
+      const updatedMessage = await this.inboxService.toggleReaction(
+        conversationId,
+        messageId,
+        companyId,
+        emoji,
+      );
+
+      const room = `conversation-${conversationId}`;
+      this.server.to(room).emit('message-updated', {
+        conversationId,
+        message: updatedMessage,
+      });
+
+      return { success: true, message: updatedMessage };
+    } catch (error) {
+      this.logger.error('Error toggling reaction via WebSocket:', error);
+      return { success: false, error: error.message };
+    }
   }
 
   // Helper method to check if a user is online

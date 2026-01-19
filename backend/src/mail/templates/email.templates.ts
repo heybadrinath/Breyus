@@ -369,4 +369,19 @@ export const emailTemplates = {
       `Invalidated Documents: ${docList}`
     );
   },
+
+  /**
+   * New Trade Request Email (Purchase Request Created)
+   * Sent to seller when a buyer submits a new purchase request
+   */
+  tradeCreated: (productName: string, buyerName: string, quantity: string, offeredPrice?: string): string => {
+    const priceText = offeredPrice ? `Offered Price: ${offeredPrice}` : `Quantity: ${quantity}`;
+    return emailTemplates.tradeNotificationBase(
+      'New Purchase Request Received',
+      `You have received a new purchase request for <strong style="color: #ffffff;">${productName}</strong> from <strong style="color: #bca86b;">${buyerName}</strong>. Review the request and respond to start the negotiation.`,
+      'View Request',
+      `${process.env.FRONTEND_URL || 'http://localhost:3000'}/seller/trade?tab=pr`,
+      priceText
+    );
+  },
 };

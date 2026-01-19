@@ -3,13 +3,15 @@ import { Loader2, Edit2, Check, X, CheckCircle } from "lucide-react";
 import { CompanyProfile, updateCompanyProfile } from "../../services/company.service";
 import ContactInfoSection from "./ContactInfoSection";
 import BankInfoSection from "./BankInfoSection";
+import ProfileHeader from "./ProfileHeader";
 
 interface MyDetailsTabProps {
     profile: CompanyProfile | null;
+    userEmail: string;
     onUpdate: (profile: CompanyProfile) => void;
 }
 
-const MyDetailsTab: React.FC<MyDetailsTabProps> = ({ profile, onUpdate }) => {
+const MyDetailsTab: React.FC<MyDetailsTabProps> = ({ profile, userEmail, onUpdate }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -74,6 +76,9 @@ const MyDetailsTab: React.FC<MyDetailsTabProps> = ({ profile, onUpdate }) => {
 
     return (
         <div className="w-full">
+            {/* Profile Header with Picture and Banner */}
+            <ProfileHeader profile={profile} userEmail={userEmail} onUpdate={onUpdate} />
+
             {/* Account Overview */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
                 <div className="flex items-center justify-between mb-4">

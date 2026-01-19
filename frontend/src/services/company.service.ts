@@ -118,6 +118,12 @@ export interface TradeDetails {
     cisDocument?: string;
 }
 
+// Billing Preferences interface (Settings Page)
+export interface BillingPreferences {
+    invoiceEmail?: string;
+    useExistingEmail?: boolean;
+}
+
 export interface CompanyProfile {
     companyName?: string;
     companyAddress?: string;
@@ -134,6 +140,10 @@ export interface CompanyProfile {
     whatsappContact?: string;
     primaryEmail?: string;
     alternativeSalesEmail?: string;
+    // Settings page fields
+    profilePicture?: string;
+    bannerImage?: string;
+    billingPreferences?: BillingPreferences;
 }
 
 export const getCompanyProfile = async (): Promise<CompanyProfile> => {
@@ -200,6 +210,226 @@ export const uploadCisDocument = async (file: File): Promise<{ cisDocument: stri
         return data.data;
     } catch (error) {
         console.error('Error uploading CIS document:', error);
+        throw error;
+    }
+};
+
+// KYC Document Types (Phase 4)
+export type KycDocumentType = 'cis' | 'passport' | 'tax_certificate' | 'business_registration' | 'other';
+export type KycDocumentStatus = 'pending' | 'approved' | 'rejected';
+
+export interface KycDocument {
+    _id: string;
+    type: KycDocumentType;
+    customName: string;
+    filename: string;
+    originalName: string;
+    path: string;
+    mimeType: string;
+    size: number;
+    status: KycDocumentStatus;
+    uploadedAt: string;
+    reviewedBy?: string;
+    reviewedAt?: string;
+    reviewNotes?: string;
+}
+
+export interface KycStatus {
+    isKycVerified: boolean;
+    documents: KycDocument[];
+    pendingCount: number;
+    approvedCount: number;
+    rejectedCount: number;
+}
+
+export const KYC_DOCUMENT_TYPE_LABELS: Record<KycDocumentType, string> = {
+    cis: 'CIS (Customer Information Sheet)',
+    passport: 'Passport',
+    tax_certificate: 'Tax Certificate',
+    business_registration: 'Business Registration',
+    other: 'Other',
+};
+
+export const getKycDocuments = async (): Promise<KycDocument[]> => {
+    try {
+        const response = await fetch(`${BACKEND_END_POINT}/kyc-documents`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch KYC documents: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.data || [];
+    } catch (error) {
+        console.error('Error fetching KYC documents:', error);
+        throw error;
+    }
+};
+
+export const getKycStatus = async (): Promise<KycStatus> => {
+    try {
+        const response = await fetch(`${BACKEND_END_POINT}/kyc-status`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch KYC status: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.data;
+    } catch (error) {
+        console.error('Error fetching KYC status:', error);
+        throw error;
+    }
+};
+
+export const uploadKycDocument = async (
+    file: File,
+    documentType: KycDocumentType,
+    customName: string
+): Promise<KycDocument> => {
+    try {
+        const formData = new FormData();
+        formData.append('files', file);
+        formData.append('documentType', documentType);
+        formData.append('customName', customName);
+
+        const response = await fetch(`${BACKEND_END_POINT}/kyc-documents`, {
+            method: 'POST',
+            credentials: 'include',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Failed to upload KYC document: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.data;
+    } catch (error) {
+        console.error('Error uploading KYC document:', error);
+        throw error;
+    }
+};
+
+export const deleteKycDocument = async (documentId: string): Promise<void> => {
+    try {
+        const response = await fetch(`${BACKEND_END_POINT}/kyc-documents/${documentId}`, {
+            method: 'DELETE',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Failed to delete KYC document: ${response.statusText}`);
+        }
+    } catch (error) {
+        console.error('Error deleting KYC document:', error);
+        throw error;
+    }
+};
+
+// Profile Media Functions (Settings Page)
+
+export const uploadProfilePicture = async (file: File): Promise<{ profilePicture: string }> => {
+    try {
+        const formData = new FormData();
+        formData.append('files', file);
+
+        const response = await fetch(`${BACKEND_END_POINT}/upload-profile-picture`, {
+            method: 'POST',
+            credentials: 'include',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Failed to upload profile picture: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.data;
+    } catch (error) {
+        console.error('Error uploading profile picture:', error);
+        throw error;
+    }
+};
+
+export const uploadBanner = async (file: File): Promise<{ bannerImage: string }> => {
+    try {
+        const formData = new FormData();
+        formData.append('files', file);
+
+        const response = await fetch(`${BACKEND_END_POINT}/upload-banner`, {
+            method: 'POST',
+            credentials: 'include',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Failed to upload banner image: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.data;
+    } catch (error) {
+        console.error('Error uploading banner image:', error);
+        throw error;
+    }
+};
+
+export const deleteProfilePicture = async (): Promise<void> => {
+    try {
+        const response = await fetch(`${BACKEND_END_POINT}/profile-picture`, {
+            method: 'DELETE',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Failed to delete profile picture: ${response.statusText}`);
+        }
+    } catch (error) {
+        console.error('Error deleting profile picture:', error);
+        throw error;
+    }
+};
+
+export const deleteBanner = async (): Promise<void> => {
+    try {
+        const response = await fetch(`${BACKEND_END_POINT}/banner`, {
+            method: 'DELETE',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Failed to delete banner image: ${response.statusText}`);
+        }
+    } catch (error) {
+        console.error('Error deleting banner image:', error);
         throw error;
     }
 }; 

@@ -17,6 +17,12 @@ from ..exceptions import DatabaseException, NoResultsException
 logger = logging.getLogger(__name__)
 dev_logger = DevLogger("CommoditySearch")
 
+# Minimum similarity threshold for search results.
+# Cosine similarity is 1 - cosine_distance.
+# Results below this threshold are filtered out as irrelevant.
+# 0.55 = strict filtering, only highly relevant items pass through.
+MIN_SIMILARITY_THRESHOLD = 0.55
+
 
 class CommoditySearchService:
     """Search for niche commodities related to a query."""
@@ -237,7 +243,14 @@ class CommoditySearchService:
             "price_presence": {"with_price": 0, "missing_price": 0},
         }
 
+        filtered_trade_count = 0
         for entry in trade_results:
+            # Calculate similarity first and filter out irrelevant results
+            similarity = max(0.0, 1 - float(entry["distance"]))
+            if similarity < MIN_SIMILARITY_THRESHOLD:
+                filtered_trade_count += 1
+                continue
+
             detail = trade_details.get(entry["id"], {})
             self._update_filter_stats(
                 stats,
@@ -251,7 +264,6 @@ class CommoditySearchService:
             name = entry.get("name") or detail.get("product_description") or detail.get("item_description")
             if not name:
                 continue
-            similarity = max(0.0, 1 - float(entry["distance"]))
             self._upsert_suggestion(
                 suggestions,
                 name,
@@ -260,7 +272,17 @@ class CommoditySearchService:
                 detail.get("price"),
             )
 
+        if filtered_trade_count > 0:
+            logger.debug(f"Filtered {filtered_trade_count} low-similarity trade results (threshold: {MIN_SIMILARITY_THRESHOLD})")
+
+        filtered_product_count = 0
         for entry in product_results:
+            # Calculate similarity first and filter out irrelevant results
+            similarity = max(0.0, 1 - float(entry["distance"]))
+            if similarity < MIN_SIMILARITY_THRESHOLD:
+                filtered_product_count += 1
+                continue
+
             detail = product_details.get(entry["id"], {})
             self._update_filter_stats(
                 stats,
@@ -274,7 +296,6 @@ class CommoditySearchService:
             name = entry.get("name") or detail.get("name")
             if not name:
                 continue
-            similarity = max(0.0, 1 - float(entry["distance"]))
             self._upsert_suggestion(
                 suggestions,
                 name,
@@ -282,6 +303,9 @@ class CommoditySearchService:
                 detail.get("country"),
                 detail.get("price_value"),
             )
+
+        if filtered_product_count > 0:
+            logger.debug(f"Filtered {filtered_product_count} low-similarity product results (threshold: {MIN_SIMILARITY_THRESHOLD})")
 
         return sorted(suggestions.values(), key=lambda x: x["similarity"], reverse=True), stats
 

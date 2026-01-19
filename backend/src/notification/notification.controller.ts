@@ -4,8 +4,17 @@ import { AuthService } from '../auth/auth.service';
 import { NotificationService } from './notification.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { NotificationQueryDto } from './dto/notification-query.dto';
+import { AuthGuard } from '../auth/auth.guard';
 
+/**
+ * Notification Controller
+ * All routes are protected by AuthGuard which validates:
+ * - Cookie-based JWT authentication
+ * - User existence in database
+ * - User is not suspended
+ */
 @Controller('notifications')
+@UseGuards(AuthGuard)
 export class NotificationController {
     constructor(
         private readonly notificationService: NotificationService,
@@ -49,10 +58,14 @@ export class NotificationController {
     }
 
     @Get('unread-count')
-    async getUnreadCount(@Res() response: Response) {
+    async getUnreadCount(
+        @Res() response: Response,
+        @Query('type') type?: string,
+        @Query('category') category?: string
+    ) {
         try {
             const userId = this.getUserIdFromCookie(response.req);
-            const count = await this.notificationService.getUnreadCount(userId);
+            const count = await this.notificationService.getUnreadCount(userId, type, category);
             response.status(HttpStatus.OK).json({ statusCode: HttpStatus.OK, data: { count } });
         } catch (error) {
             const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;

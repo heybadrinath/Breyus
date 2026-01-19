@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { InboxService } from './inbox.service';
 import { InboxController } from './inbox.controller';
 import { InboxGateway } from './inbox.gateway';
+import { WsAuthService } from './ws-auth.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Conversation, ConversationSchema } from './schemas/conversations.schema';
 import { Message, MessageSchema } from './schemas/messages.schema';
@@ -20,10 +21,9 @@ import { TradeModule } from '../trade/trade.module';
     AuthModule,
     NotificationModule,
     TradeModule,
-
   ],
-  providers: [InboxService, InboxGateway],
+  providers: [InboxService, InboxGateway, WsAuthService],
   controllers: [InboxController],
-  exports: [InboxGateway]
+  exports: [InboxGateway, WsAuthService],
 })
-export class InboxModule { }
+export class InboxModule {}

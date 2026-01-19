@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { MessageCircle, FlaskConical, Eye, Loader2, X, Clock, CheckCircle, AlertCircle, Pen } from "lucide-react";
-import { getUserTrades, Trade, cancelTrade, rejectTrade } from "../../services/trade.service";
+import { getUserTrades, Trade, cancelTrade, rejectTrade, verifyDocument, uploadICPO } from "../../services/trade.service";
 import ViewDocumentModal from "../../components/ViewDocumentModal";
+import DocumentUploadModal from "../../components/DocumentUploadModal";
 import ReviewTermsModal from "../../components/ReviewTermsModal";
+import QueryModal from "../../components/QueryModal";
+import TradeDetailsModal from "../../components/TradeDetailsModal";
+import { useNotifications } from "../../contexts/NotificationContext";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
@@ -55,8 +59,20 @@ const getImageUrl = (imagePath: string | undefined) => {
 const TradeStatusProgress = ({ trade }: { trade: TradeWithProduct }) => {
     const hasSCO = !!trade.scoDocument?.filePath;
     const hasICPO = !!trade.icpoDocument?.filePath;
+    const scoApproved = trade.scoDocument?.status === 'approved';
+    const scoRejected = trade.scoDocument?.status === 'rejected';
     const icpoApproved = trade.icpoDocument?.status === 'approved';
     const icpoRejected = trade.icpoDocument?.status === 'rejected';
+
+    // Determine SCO step status and sublabel
+    const getSCOStepInfo = () => {
+        if (!hasSCO) return { sublabel: "Waiting for seller", status: 'current', color: 'text-yellow-600' };
+        if (scoRejected) return { sublabel: "Rejected - Awaiting re-upload", status: 'rejected', color: 'text-red-600' };
+        if (scoApproved) return { sublabel: "Approved", status: 'completed', color: 'text-green-600' };
+        return { sublabel: "Pending your review", status: 'pending', color: 'text-blue-600' };
+    };
+
+    const scoStep = getSCOStepInfo();
 
     const getSteps = () => {
         return [
@@ -68,21 +84,21 @@ const TradeStatusProgress = ({ trade }: { trade: TradeWithProduct }) => {
             },
             {
                 label: "Seller SCO",
-                sublabel: hasSCO ? "SCO Received" : "Waiting for seller",
-                status: hasSCO ? 'completed' : 'current',
-                color: hasSCO ? 'text-green-600' : 'text-yellow-600'
+                sublabel: scoStep.sublabel,
+                status: scoStep.status,
+                color: scoStep.color
             },
             {
                 label: "Your ICPO",
                 sublabel: hasICPO
                     ? (icpoApproved ? "Verified" : icpoRejected ? "Rejected - Re-upload" : "Sent - Awaiting verification")
-                    : (hasSCO ? "Ready to upload" : "Waiting for SCO first"),
+                    : (scoApproved ? "Ready to upload" : hasSCO ? "Approve SCO first" : "Waiting for SCO first"),
                 status: hasICPO
                     ? (icpoApproved ? 'completed' : icpoRejected ? 'rejected' : 'pending')
-                    : (hasSCO ? 'current' : 'pending'),
+                    : (scoApproved ? 'current' : 'pending'),
                 color: hasICPO
                     ? (icpoApproved ? 'text-green-600' : icpoRejected ? 'text-red-600' : 'text-yellow-600')
-                    : (hasSCO ? 'text-blue-600' : 'text-gray-400')
+                    : (scoApproved ? 'text-blue-600' : 'text-gray-400')
             },
             {
                 label: "SPA & Completion",
@@ -136,6 +152,8 @@ const TradeStatusProgress = ({ trade }: { trade: TradeWithProduct }) => {
 const PhaseMessageBanner = ({ trade }: { trade: TradeWithProduct }) => {
     const hasSCO = !!trade.scoDocument?.filePath;
     const hasICPO = !!trade.icpoDocument?.filePath;
+    const scoApproved = trade.scoDocument?.status === 'approved';
+    const scoRejected = trade.scoDocument?.status === 'rejected';
     const icpoRejected = trade.icpoDocument?.status === 'rejected';
     const icpoApproved = trade.icpoDocument?.status === 'approved';
 
@@ -149,12 +167,25 @@ const PhaseMessageBanner = ({ trade }: { trade: TradeWithProduct }) => {
         bgColor = "bg-yellow-50 border-yellow-200";
         textColor = "text-yellow-700";
         Icon = Clock;
+    } else if (scoRejected) {
+        // SCO was rejected - waiting for seller to re-upload
+        message = "SCO was rejected. Waiting for seller to upload revised SCO.";
+        bgColor = "bg-red-50 border-red-200";
+        textColor = "text-red-700";
+        Icon = AlertCircle;
+    } else if (!scoApproved) {
+        // SCO exists but not yet approved - buyer needs to review
+        message = "SCO Received! Review and approve the SCO to proceed.";
+        bgColor = "bg-blue-50 border-blue-200";
+        textColor = "text-blue-700";
+        Icon = CheckCircle;
     } else if (!hasICPO || icpoRejected) {
+        // SCO approved, now ICPO phase
         message = icpoRejected
             ? "Your ICPO was rejected. Please re-upload with corrections."
-            : "SCO Received! Click PROCEED to upload your ICPO";
-        bgColor = icpoRejected ? "bg-red-50 border-red-200" : "bg-blue-50 border-blue-200";
-        textColor = icpoRejected ? "text-red-700" : "text-blue-700";
+            : "SCO Approved! Click PROCEED to upload your ICPO";
+        bgColor = icpoRejected ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200";
+        textColor = icpoRejected ? "text-red-700" : "text-green-700";
         Icon = icpoRejected ? AlertCircle : CheckCircle;
     } else if (icpoApproved) {
         message = "ICPO Verified! Proceed to SPA phase";
@@ -182,13 +213,21 @@ const POWaitingListItem = ({
     onCancel,
     onProceed,
     onViewSCO,
-    onViewICPO
+    onViewICPO,
+    onAskQueries,
+    onViewSubmittedOffer,
+    onViewProductQuality,
+    onChatWithSeller
 }: {
     trade: TradeWithProduct;
     onCancel: (tradeId: string) => void;
     onProceed: (tradeId: string) => void;
     onViewSCO: (trade: TradeWithProduct) => void;
     onViewICPO: (trade: TradeWithProduct) => void;
+    onAskQueries: (trade: TradeWithProduct) => void;
+    onViewSubmittedOffer: (tradeId: string) => void;
+    onViewProductQuality: (trade: TradeWithProduct) => void;
+    onChatWithSeller: (trade: TradeWithProduct) => void;
 }) => {
     const productPrice = parseFloat(trade.product?.price || '0');
     const finalPrice = parseFloat(trade.buyerOfferedPrice || trade.product?.price || '0');
@@ -197,12 +236,14 @@ const POWaitingListItem = ({
 
     const hasSCO = !!trade.scoDocument?.filePath;
     const hasICPO = !!trade.icpoDocument?.filePath;
+    const scoApproved = trade.scoDocument?.status === 'approved';
+    const scoRejected = trade.scoDocument?.status === 'rejected';
     const icpoRejected = trade.icpoDocument?.status === 'rejected';
     const icpoApproved = trade.icpoDocument?.status === 'approved';
 
-    // FIXED: PROCEED only enables if SCO exists AND (no ICPO or ICPO was rejected)
+    // FIXED: PROCEED only enables if SCO is APPROVED (not just exists) AND (no ICPO or ICPO was rejected)
     const canProceed = trade.negotiationStatus === 'accepted' &&
-                       hasSCO && // SCO must exist!
+                       scoApproved && // SCO must be approved, not just uploaded!
                        (!hasICPO || icpoRejected);
 
     // Show different button text based on state
@@ -210,7 +251,18 @@ const POWaitingListItem = ({
         if (hasICPO && icpoApproved) return 'ICPO VERIFIED';
         if (hasICPO && !icpoRejected) return 'ICPO SENT';
         if (icpoRejected) return 'RE-UPLOAD ICPO';
+        if (!hasSCO) return 'AWAITING SCO';
+        if (scoRejected) return 'SCO REJECTED';
+        if (!scoApproved) return 'REVIEW SCO';
         return 'PROCEED';
+    };
+
+    // Get tooltip text for disabled button
+    const getTooltipText = () => {
+        if (!hasSCO) return "Waiting for seller's SCO";
+        if (scoRejected) return "Waiting for seller to re-upload SCO";
+        if (!scoApproved) return "Review and approve the SCO first";
+        return "";
     };
 
     return (
@@ -257,10 +309,24 @@ const POWaitingListItem = ({
                             <div className="flex flex-wrap gap-2 mb-3">
                                 {/* SCO Status Badge */}
                                 <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                                    hasSCO ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                                    scoRejected
+                                        ? 'bg-red-100 text-red-700'
+                                        : scoApproved
+                                            ? 'bg-green-100 text-green-700'
+                                            : hasSCO
+                                                ? 'bg-blue-100 text-blue-700'
+                                                : 'bg-yellow-100 text-yellow-700'
                                 }`}>
-                                    <div className={`w-2 h-2 rounded-full ${hasSCO ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                                    SCO: {hasSCO ? 'Received' : 'Pending'}
+                                    <div className={`w-2 h-2 rounded-full ${
+                                        scoRejected
+                                            ? 'bg-red-500'
+                                            : scoApproved
+                                                ? 'bg-green-500'
+                                                : hasSCO
+                                                    ? 'bg-blue-500'
+                                                    : 'bg-yellow-500'
+                                    }`} />
+                                    SCO: {scoRejected ? 'Rejected' : scoApproved ? 'Approved' : hasSCO ? 'Pending Review' : 'Pending'}
                                 </div>
 
                                 {/* ICPO Status Badge */}
@@ -313,7 +379,10 @@ const POWaitingListItem = ({
                                     }}
                                 />
                             </div>
-                            <button className="flex items-center gap-1 py-2 px-4 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
+                            <button
+                                onClick={() => onAskQueries(trade)}
+                                className="flex items-center gap-1 py-2 px-4 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                            >
                                 <MessageCircle size={16} />
                                 Ask Queries
                             </button>
@@ -327,11 +396,17 @@ const POWaitingListItem = ({
                             <span className="text-sm font-medium">{trade.quantity}</span>
                             <span className="text-xs text-gray-500">{trade.quantityUnit}</span>
                         </div>
-                        <button className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50">
+                        <button
+                            onClick={() => onViewSubmittedOffer(trade._id)}
+                            className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50"
+                        >
                             <Eye size={16} />
                             <span className="text-sm">Submitted Offer</span>
                         </button>
-                        <button className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50">
+                        <button
+                            onClick={() => onViewProductQuality(trade)}
+                            className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50"
+                        >
                             <FlaskConical size={16} />
                             <span className="text-sm">Product Quality Report</span>
                         </button>
@@ -348,7 +423,10 @@ const POWaitingListItem = ({
                     Cancel Trade
                 </button>
                 <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
+                    <button
+                        onClick={() => onChatWithSeller(trade)}
+                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+                    >
                         <MessageCircle size={16} />
                         Chat with seller
                     </button>
@@ -367,9 +445,9 @@ const POWaitingListItem = ({
                             {getButtonText()}
                         </button>
                         {/* Tooltip for disabled state */}
-                        {!canProceed && !hasICPO && (
+                        {!canProceed && !hasICPO && getTooltipText() && (
                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                                {!hasSCO ? "Waiting for seller's SCO" : "Loading..."}
+                                {getTooltipText()}
                             </div>
                         )}
                     </div>
@@ -539,6 +617,7 @@ const CancelModal = ({
 
 export const PurchaseOrderWaitingList = () => {
     const navigate = useNavigate();
+    const { showToast } = useNotifications();
     const [trades, setTrades] = useState<TradeWithProduct[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -550,10 +629,23 @@ export const PurchaseOrderWaitingList = () => {
     const [viewDocModalOpen, setViewDocModalOpen] = useState(false);
     const [viewDocType, setViewDocType] = useState<'sco' | 'icpo'>('sco');
     const [viewDocInfo, setViewDocInfo] = useState<any>(null);
+    const [viewDocTradeId, setViewDocTradeId] = useState<string | null>(null);
 
     // Review Terms Modal state
     const [showReviewTermsModal, setShowReviewTermsModal] = useState(false);
     const [reviewTermsTradeId, setReviewTermsTradeId] = useState<string>('');
+
+    // ICPO Upload Modal state
+    const [icpoUploadModalOpen, setIcpoUploadModalOpen] = useState(false);
+    const [icpoUploadTradeId, setIcpoUploadTradeId] = useState<string | null>(null);
+
+    // Query Modal state
+    const [showQueryModal, setShowQueryModal] = useState(false);
+    const [queryTrade, setQueryTrade] = useState<TradeWithProduct | null>(null);
+
+    // Trade Details Modal state (for viewing submitted offer)
+    const [showTradeDetailsModal, setShowTradeDetailsModal] = useState(false);
+    const [detailsTradeId, setDetailsTradeId] = useState<string | null>(null);
 
     useEffect(() => {
         fetchTrades();
@@ -597,7 +689,57 @@ export const PurchaseOrderWaitingList = () => {
     };
 
     const handleProceed = (tradeId: string) => {
-        navigate(`/buyer/icpo-upload?tradeId=${tradeId}`);
+        // Open ICPO upload modal instead of navigating to dedicated page
+        setIcpoUploadTradeId(tradeId);
+        setIcpoUploadModalOpen(true);
+    };
+
+    // Handle ICPO file upload
+    const handleICPOUpload = async (file: File, notes?: string) => {
+        if (!icpoUploadTradeId) return;
+
+        try {
+            await uploadICPO(icpoUploadTradeId, file, notes);
+            showToast('ICPO uploaded successfully! The seller will review it.', 'success');
+            setIcpoUploadModalOpen(false);
+            setIcpoUploadTradeId(null);
+            await fetchTrades();
+        } catch (err: any) {
+            showToast(err.message || 'Failed to upload ICPO', 'error');
+            throw err;
+        }
+    };
+
+    // Handle Ask Queries button
+    const handleAskQueries = (trade: TradeWithProduct) => {
+        setQueryTrade(trade);
+        setShowQueryModal(true);
+    };
+
+    // Handle View Submitted Offer button
+    const handleViewSubmittedOffer = (tradeId: string) => {
+        setDetailsTradeId(tradeId);
+        setShowTradeDetailsModal(true);
+    };
+
+    // Handle View Product Quality Report button
+    const handleViewProductQuality = (trade: TradeWithProduct) => {
+        const productId = trade.product?._id;
+        if (productId) {
+            navigate(`/buyer/product-page?id=${productId}&tab=quality`);
+        } else {
+            showToast('Product information not available', 'warning');
+        }
+    };
+
+    // Handle Chat with Seller button
+    const handleChatWithSeller = (trade: TradeWithProduct) => {
+        const sellerId = (trade as any).seller?._id || (trade as any).sellerId;
+        if (sellerId) {
+            navigate(`/buyer/inbox?recipient=${sellerId}`);
+        } else {
+            showToast('Seller information not available', 'warning');
+        }
     };
 
     const handleViewSCO = (trade: TradeWithProduct) => {
@@ -611,7 +753,27 @@ export const PurchaseOrderWaitingList = () => {
                 uploadedAt: trade.scoDocument.uploadedAt || new Date().toISOString(),
                 status: trade.scoDocument.status || 'uploaded'
             });
+            setViewDocTradeId(trade._id);
             setViewDocModalOpen(true);
+        }
+    };
+
+    // Handle SCO verification (approve/reject)
+    const handleVerifySCO = async (status: 'approved' | 'rejected', notes?: string) => {
+        if (!viewDocTradeId) return;
+
+        try {
+            await verifyDocument(viewDocTradeId, 'sco', status, notes);
+            showToast(
+                status === 'approved'
+                    ? 'SCO approved successfully! You can now upload your ICPO.'
+                    : 'SCO rejected. The seller will be notified.',
+                status === 'approved' ? 'success' : 'info'
+            );
+            await fetchTrades();
+        } catch (err: any) {
+            showToast(err.message || 'Failed to verify SCO', 'error');
+            throw err;
         }
     };
 
@@ -637,7 +799,7 @@ export const PurchaseOrderWaitingList = () => {
                 : `${BACKEND_URL}${trade.spaDocument.filePath.startsWith('/') ? '' : '/'}${trade.spaDocument.filePath}`;
             window.open(spaUrl, '_blank');
         } else {
-            alert('SPA document not available yet.');
+            showToast('SPA document not available yet.', 'warning');
         }
     };
 
@@ -655,7 +817,7 @@ export const PurchaseOrderWaitingList = () => {
             fetchTrades();
         } catch (err) {
             console.error('Failed to reject trade:', err);
-            alert('Failed to reject trade. Please try again.');
+            showToast('Failed to reject trade. Please try again.', 'error');
         }
     };
 
@@ -665,14 +827,10 @@ export const PurchaseOrderWaitingList = () => {
     };
 
     // Filter trades
+    // Strict phase filtering: PO tab shows only SCO and ICPO phases
     const waitingTrades = trades.filter(t =>
         t.negotiationStatus === 'accepted' &&
-        (!t.tradePhase || t.tradePhase === 'PR' || t.tradePhase === 'SCO' || t.tradePhase === 'ICPO')
-    );
-
-    const spaReadyTrades = trades.filter(t =>
-        t.tradePhase === 'SPA' ||
-        (t.icpoDocument?.status === 'approved')
+        (t.tradePhase === 'SCO' || t.tradePhase === 'ICPO')
     );
 
     if (loading) {
@@ -693,56 +851,33 @@ export const PurchaseOrderWaitingList = () => {
 
     return (
         <div className="p-6">
-            <div className="flex gap-6">
-                {/* Left: Waiting List */}
-                <div className="flex-1">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                        Waiting list ({waitingTrades.length})
-                    </h2>
-                    {waitingTrades.length === 0 ? (
-                        <div className="bg-white border rounded-lg p-8 text-center text-gray-500">
-                            No pending purchase orders
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {waitingTrades.map((trade) => (
-                                <POWaitingListItem
-                                    key={trade._id}
-                                    trade={trade}
-                                    onCancel={handleCancel}
-                                    onProceed={handleProceed}
-                                    onViewSCO={handleViewSCO}
-                                    onViewICPO={handleViewICPO}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                {/* Right: Trade Review Panel (SPA Ready) */}
-                <div className="w-[380px] flex-shrink-0">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                        Trade Review Panel ({spaReadyTrades.length})
-                    </h2>
-                    {spaReadyTrades.length === 0 ? (
-                        <div className="bg-white border rounded-lg p-8 text-center text-gray-500">
-                            No orders in review
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {spaReadyTrades.map((trade) => (
-                                <AcceptedRequestItem
-                                    key={trade._id}
-                                    trade={trade}
-                                    onViewSPA={handleViewSPA}
-                                    onReviewTerms={handleReviewTerms}
-                                    onRejectTrade={handleRejectTrade}
-                                    onSignSPA={handleSignSPA}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </div>
+            {/* Purchase Order Status - SCO/ICPO phase trades */}
+            <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                    Purchase Order Status ({waitingTrades.length})
+                </h2>
+                {waitingTrades.length === 0 ? (
+                    <div className="bg-white border rounded-lg p-8 text-center text-gray-500">
+                        No trades in SCO/ICPO phase. Once a trade is accepted, it will appear here.
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {waitingTrades.map((trade) => (
+                            <POWaitingListItem
+                                key={trade._id}
+                                trade={trade}
+                                onCancel={handleCancel}
+                                onProceed={handleProceed}
+                                onViewSCO={handleViewSCO}
+                                onViewICPO={handleViewICPO}
+                                onAskQueries={handleAskQueries}
+                                onViewSubmittedOffer={handleViewSubmittedOffer}
+                                onViewProductQuality={handleViewProductQuality}
+                                onChatWithSeller={handleChatWithSeller}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Cancel Modal */}
@@ -763,9 +898,13 @@ export const PurchaseOrderWaitingList = () => {
                     onClose={() => {
                         setViewDocModalOpen(false);
                         setViewDocInfo(null);
+                        setViewDocTradeId(null);
                     }}
                     document={viewDocInfo}
                     documentType={viewDocType}
+                    tradeId={viewDocTradeId || undefined}
+                    canVerify={viewDocType === 'sco' && viewDocInfo?.status !== 'approved' && viewDocInfo?.status !== 'rejected'}
+                    onVerify={viewDocType === 'sco' ? handleVerifySCO : undefined}
                 />
             )}
 
@@ -778,6 +917,50 @@ export const PurchaseOrderWaitingList = () => {
                         setReviewTermsTradeId('');
                     }}
                     tradeId={reviewTermsTradeId}
+                />
+            )}
+
+            {/* ICPO Upload Modal */}
+            {icpoUploadModalOpen && (
+                <DocumentUploadModal
+                    isOpen={icpoUploadModalOpen}
+                    onClose={() => {
+                        setIcpoUploadModalOpen(false);
+                        setIcpoUploadTradeId(null);
+                    }}
+                    onUpload={handleICPOUpload}
+                    documentType="icpo"
+                />
+            )}
+
+            {/* Query Modal */}
+            {showQueryModal && queryTrade && (
+                <QueryModal
+                    isOpen={showQueryModal}
+                    onClose={() => {
+                        setShowQueryModal(false);
+                        setQueryTrade(null);
+                    }}
+                    productId={queryTrade.product?._id || ''}
+                    productName={queryTrade.product?.name || 'Unknown Product'}
+                    recipientType="seller"
+                    userRole="Buyer"
+                />
+            )}
+
+            {/* Trade Details Modal */}
+            {showTradeDetailsModal && detailsTradeId && (
+                <TradeDetailsModal
+                    isOpen={showTradeDetailsModal}
+                    onClose={() => {
+                        setShowTradeDetailsModal(false);
+                        setDetailsTradeId(null);
+                    }}
+                    tradeId={detailsTradeId}
+                    onNavigateToNegotiation={() => {
+                        setShowTradeDetailsModal(false);
+                        navigate(`/buyer/negotiation/${detailsTradeId}`);
+                    }}
                 />
             )}
         </div>

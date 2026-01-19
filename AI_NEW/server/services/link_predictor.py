@@ -28,6 +28,7 @@ Implements the waterfall logic for finding trade partners:
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import math
 import re
@@ -420,7 +421,21 @@ class LinkPredictor:
             seeker["country"] = profile.country
         if profile.location:
             seeker["location"] = (profile.location.lon, profile.location.lat)
-        extra = dict(seeker.get("extra") or {})
+
+        # Handle extra field - might be string (JSON) or dict from PostgreSQL
+        extra_raw = seeker.get("extra") or {}
+        if isinstance(extra_raw, str):
+            try:
+                extra = json.loads(extra_raw)
+                if not isinstance(extra, dict):
+                    extra = {}
+            except (json.JSONDecodeError, TypeError):
+                extra = {}
+        elif isinstance(extra_raw, dict):
+            extra = dict(extra_raw)
+        else:
+            extra = {}
+
         if profile.mean_monthly_revenue is not None:
             extra["meanMonthlyRevenue"] = profile.mean_monthly_revenue
         if profile.payment_terms:

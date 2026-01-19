@@ -177,7 +177,7 @@ CREATE TABLE trade_records (
 
     -- Quantity and units
     quantity DECIMAL(18, 4),
-    unit_of_measurement VARCHAR(20),  -- KGS, MTS, PCS, NOS, etc.
+    unit_of_measurement VARCHAR(100),  -- KGS, MTS, PCS, NOS, etc.
     net_weight_kg DECIMAL(18, 4),
 
     -- Pricing and value
@@ -647,6 +647,71 @@ CREATE INDEX idx_predicted_partners_score ON predicted_partners (probability_sco
 -- Data import log indexes
 CREATE INDEX idx_import_log_file_hash ON data_import_log (file_hash);
 CREATE INDEX idx_import_log_status ON data_import_log (status);
+
+-- =============================================================================
+-- TABLE: pipeline_file_manifest
+-- =============================================================================
+-- Tracks files synced from Google Drive for VPS pipeline processing.
+-- This is the DB-backed manifest for the simplified Drive sync workflow.
+
+CREATE TABLE pipeline_file_manifest (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    -- Source identification
+    source_type VARCHAR(20) NOT NULL,           -- 'local' or 'drive'
+    source_id VARCHAR(500) NOT NULL,            -- drive file_id or local filename
+
+    -- File information
+    file_name VARCHAR(500) NOT NULL,
+    normalized_hash VARCHAR(64),                -- SHA256 of normalized file content
+
+    -- Processing status
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    -- Status values:
+    --   'pending'     - File identified but not downloaded
+    --   'downloaded'  - File downloaded from Drive to local
+    --   'inserting'   - Currently being inserted into DB
+    --   'inserted'    - Successfully inserted into DB
+    --   'failed'      - Insert failed (check error_message)
+    --   'purged'      - Local file deleted after successful processing
+
+    -- Insert statistics
+    rows_inserted INTEGER DEFAULT 0,
+    rows_failed INTEGER DEFAULT 0,
+    target_table VARCHAR(50),                   -- 'companies', 'trade_records', 'products'
+
+    -- Error tracking
+    error_message TEXT,
+
+    -- Google Drive metadata
+    drive_file_id VARCHAR(100),                 -- Google Drive file ID
+    drive_modified_time TIMESTAMPTZ,            -- Last modified time in Drive
+    drive_md5_checksum VARCHAR(64),             -- MD5 checksum from Drive API
+
+    -- Local file paths (on VPS)
+    local_path TEXT,                            -- Path after download
+
+    -- Timestamps
+    downloaded_at TIMESTAMPTZ,
+    processed_at TIMESTAMPTZ,
+    purged_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+    -- Constraints
+    CONSTRAINT uq_manifest_source UNIQUE (source_type, source_id)
+);
+
+-- Pipeline file manifest indexes
+CREATE INDEX idx_manifest_status ON pipeline_file_manifest (status);
+CREATE INDEX idx_manifest_processed ON pipeline_file_manifest (processed_at);
+CREATE INDEX idx_manifest_drive_file ON pipeline_file_manifest (drive_file_id) WHERE drive_file_id IS NOT NULL;
+CREATE INDEX idx_manifest_file_name ON pipeline_file_manifest (file_name);
+
+-- Trigger for updated_at
+CREATE TRIGGER update_pipeline_file_manifest_updated_at
+    BEFORE UPDATE ON pipeline_file_manifest
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Embedding queue indexes
 CREATE INDEX idx_embedding_queue_status ON embedding_queue (status);

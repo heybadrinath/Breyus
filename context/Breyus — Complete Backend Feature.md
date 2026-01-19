@@ -1,6 +1,6 @@
 # Breyus — Complete Feature Specification & Implementation Tracker
 
-> **Last Updated**: December 16, 2025
+> **Last Updated**: January 12, 2026
 > **Document Purpose**: Track all features, their implementation status, file locations, and development progress
 
 ---
@@ -23,10 +23,10 @@
 | Metric | Count | Percentage |
 |--------|-------|------------|
 | Total Features | 93 | 100% |
-| Fully Implemented | ~58 | 62% |
+| Fully Implemented | ~65 | 70% |
 | Backend Only | ~6 | 6% |
-| Frontend Only | ~8 | 9% |
-| Not Started | ~21 | 23% |
+| Frontend Only | ~6 | 6% |
+| Not Started | ~16 | 17% |
 
 ---
 
@@ -573,10 +573,11 @@ PR → SCO → ICPO → SPA → Payment Proof → BoL → Verification → Compl
 #### E.9 Document Verification Workflow
 | Aspect | Details |
 |--------|---------|
-| Status | `[~]` Partial |
+| Status | `[x]` Done |
 | Priority | P1 |
-| Backend | `[x]` Document status fields exist (pending, uploaded, approved, rejected) |
-| Admin UI | `[ ]` Admin panel for document approval not implemented |
+| Backend | `[x]` Document status fields, `PUT /admin/trades/:id/verify-document` |
+| Admin UI | `[x]` Document verification in TradeDetailPage with approve/reject dialogs |
+| Features | Approve/reject documents, rejection notes, status tracking |
 | Dependencies | H.8, N.3 |
 
 #### E.10 Trade Status Tracking UI
@@ -1284,15 +1285,31 @@ Frontend:
 ## Module N: Admin & Operations
 
 ### Overview
-Admin panel for user management, verification, and monitoring.
+Admin portal for platform management, user verification, and monitoring.
+
+**📋 DETAILED SPECIFICATIONS AVAILABLE**: See `ADMIN_PORTAL_PLAN.md` for comprehensive planning including:
+- 17 modules with feature breakdowns
+- UI/UX design system (`ADMIN_PORTAL_DESIGN_SYSTEM.md`)
+- Technical specifications (`ADMIN_PORTAL_TECHNICAL_SPEC.md`)
+- Implementation tasks (`ADMIN_PORTAL_TASKS.md`)
+
+**URL**: `admin.breyus.com`
 
 ### Files
 ```
 Backend:
-└── (admin module not implemented)
+└── src/admin/              # To be implemented (17 API modules)
+    ├── admin.controller.ts
+    ├── admin.service.ts
+    └── dto/
 
-Frontend:
-└── (admin panel not implemented)
+Frontend (Separate App):
+└── admin/                  # Vite + React + shadcn/ui
+    ├── src/
+    │   ├── pages/          # Dashboard, Users, Companies, Trades, etc.
+    │   ├── components/     # Reusable admin UI components
+    │   └── services/       # Admin API layer
+    └── package.json
 ```
 
 ### Features
@@ -1300,47 +1317,81 @@ Frontend:
 #### N.1 User Management
 | Aspect | Details |
 |--------|---------|
-| Status | `[ ]` Pending |
-| Priority | P2 |
-| Features | View, edit, suspend users |
+| Status | `[📋]` Planning Complete |
+| Priority | P1 |
+| Features | View, edit, suspend users; role management; activity logs |
+| Reference | ADMIN_PORTAL_PLAN.md §3.1 |
 
 #### N.2 Account Suspension
 | Aspect | Details |
 |--------|---------|
-| Status | `[ ]` Pending |
-| Priority | P2 |
+| Status | `[📋]` Planning Complete |
+| Priority | P1 |
 | Dependencies | N.1 |
+| Reference | ADMIN_PORTAL_PLAN.md §3.1 (User Actions) |
 
 #### N.3 Verification Control Panel
 | Aspect | Details |
 |--------|---------|
-| Status | `[ ]` Pending |
+| Status | `[📋]` Planning Complete |
 | Priority | P1 |
-| Description | Review and approve KYC documents |
+| Description | Review and approve KYC documents, company verification |
 | Dependencies | B.4 |
+| Reference | ADMIN_PORTAL_PLAN.md §3.2, §3.3 |
 
 #### N.4 Dispute Resolution
 | Aspect | Details |
 |--------|---------|
-| Status | `[ ]` Pending |
-| Priority | P3 |
-| Description | Handle trade disputes |
+| Status | `[📋]` Planning Complete |
+| Priority | P2 |
+| Description | Handle trade disputes, mediation workflow |
+| Reference | ADMIN_PORTAL_PLAN.md §3.5 |
 
 #### N.5 AI Job Monitor
 | Aspect | Details |
 |--------|---------|
-| Status | `[ ]` Pending |
-| Priority | P3 |
-| Description | Monitor AI background jobs |
+| Status | `[📋]` Planning Complete |
+| Priority | P2 |
+| Description | Monitor AI pipeline jobs, queue depth, processing times |
 | Dependencies | K.* |
+| Reference | ADMIN_PORTAL_PLAN.md §3.9 |
 
 #### N.6 Audit Export
 | Aspect | Details |
 |--------|---------|
-| Status | `[ ]` Pending |
-| Priority | P3 |
-| Description | Export audit logs |
+| Status | `[📋]` Planning Complete |
+| Priority | P2 |
+| Description | Export audit logs, admin activity tracking |
 | Dependencies | P.3 |
+| Reference | ADMIN_PORTAL_PLAN.md §3.16 |
+
+#### N.7 Additional Admin Features (New)
+| Aspect | Details |
+|--------|---------|
+| Status | `[📋]` Planning Complete |
+| Priority | P1-P3 |
+| Features | System Health (§3.6), Content Management (§3.7), Database Ops (§3.8), Logs Viewer (§3.15), Alerts (§3.10), GDPR (§3.12), Analytics (§3.13), Legal Content (§3.14), System Announcements (§3.17) |
+| Reference | ADMIN_PORTAL_PLAN.md |
+
+#### N.8 Trade Management (Admin)
+| Aspect | Details |
+|--------|---------|
+| Status | `[x]` Done |
+| Priority | P1 |
+| Backend | `admin-trades.controller.ts`, `admin-trades.service.ts` |
+| Frontend | TradesPage, TradeDetailPage in admin-portal |
+| Features | Trade listing with filters, trade detail view, timeline, negotiation history, admin notes, stalled trade detection, document verification (approve/reject), force phase change, document download |
+| Endpoints | `GET /admin/trades`, `GET /admin/trades/:id`, `GET /admin/trades/stats`, `GET /admin/trades/stalled`, `PUT /admin/trades/:id/verify-document`, `PUT /admin/trades/:id/force-phase`, `GET /admin/trades/:id/documents/:type/download` |
+
+#### N.9 Dispute Management (Admin)
+| Aspect | Details |
+|--------|---------|
+| Status | `[x]` Done |
+| Priority | P1 |
+| Backend | `admin-disputes.controller.ts`, `admin-disputes.service.ts` |
+| Frontend | DisputesPage, DisputeDetailPage in admin-portal |
+| Features | Dispute creation, assignment to admin, resolution workflow, internal messaging, escalation levels, evidence management |
+| Endpoints | `GET /admin/disputes`, `POST /admin/disputes`, `PUT /admin/disputes/:id/assign`, `PUT /admin/disputes/:id/resolve`, `POST /admin/disputes/:id/messages` |
 
 ---
 
@@ -1575,13 +1626,39 @@ Backend:
 - [x] Analytics API (L.1-L.6) - Full analytics module with metrics, charts, country data
 - [ ] Demand Forecasting (K.4)
 
-### Phase 5: Admin & Compliance
-- [ ] KYC Workflow (B.4)
-- [ ] Admin Panel (N.1-N.3)
-- [ ] Audit Logs (P.3)
+### Phase 5: Admin & Compliance (Complete)
+- [x] Admin Authentication (N.1) - Separate admin sessions, JWT auth
+- [x] User Management (N.1) - View, suspend, reset password, GDPR export
+- [x] Company Management (N.2) - View, verify, unverify companies
+- [x] KYC Document Review (B.4, N.3) - Approve/reject with notes
+- [x] Trade Management (N.8) - Full trade oversight with document verification
+- [x] Dispute Management (N.9) - Full dispute workflow with messaging
+- [x] System Health Monitoring (N.7) - Health checks, maintenance mode
+- [x] Dashboard Stats (N.1) - Live metrics, pending actions
+- [x] Activity Audit Logs (P.3) - Admin action logging with @AdminAction decorator
 - [ ] Security Enhancements (P.1, P.2)
 
-### Phase 6: Integrations
+### Phase 6: Content Management (Complete)
+- [x] Currencies - Full CRUD with seed data
+- [x] Countries - Full CRUD with continent filtering
+- [x] Ports - Full CRUD with country/type filtering
+- [x] Product Categories - Hierarchical management (3 levels)
+- [x] HSN Codes - CRUD + bulk CSV import
+- [x] Incoterms - Edit-only (11 fixed types with cost allocation)
+- Note: Email templates and payment methods remain hardcoded by design
+
+### Phase 7: Analytics & Reports (Complete)
+- [x] Platform Overview Metrics - Users, trades, products, revenue with period comparison
+- [x] Trade Analytics - Volume over time, funnel, phase timing, rejection reasons
+- [x] User Analytics - Registrations, role distribution, geographic, onboarding funnel
+- [x] Financial Analytics - Revenue trends, avg deal size, by category/incoterm
+- [x] Operational Metrics - KYC backlog, doc processing time, stalled trades
+- [x] Date Range Selector - 7d, 30d, 90d, YTD presets
+- [x] Export (CSV) - All sections with metadata headers
+- [x] Export (PDF) - Branded reports with tables using pdfkit
+- Note: On-demand export only (no scheduled reports by design)
+
+### Future: Integrations
 - [ ] E-Signature (O.1)
 - [ ] KYC Service (O.4)
 - [ ] TOTP/SMS MFA enhancement (A.4)
@@ -1655,6 +1732,32 @@ Backend:
 | GET | `/feedback/user/:userId` | Get all user feedback |
 | GET | `/feedback/user/:userId/rating` | Get average rating |
 | GET | `/feedback/check/:tradeId/:type` | Check feedback status |
+
+### Admin - Trade Management
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/admin/trades` | List trades with filters |
+| GET | `/admin/trades/stats` | Trade statistics |
+| GET | `/admin/trades/stalled` | Get stalled trades |
+| GET | `/admin/trades/:id` | Get trade details |
+| GET | `/admin/trades/:id/timeline` | Get trade timeline |
+| GET | `/admin/trades/:id/notes` | Get admin notes |
+| POST | `/admin/trades/:id/notes` | Add admin note |
+| DELETE | `/admin/trades/:id/notes/:noteId` | Delete admin note |
+| PUT | `/admin/trades/:id/verify-document` | Verify/reject document |
+| PUT | `/admin/trades/:id/force-phase` | Force phase change |
+| GET | `/admin/trades/:id/documents/:type/download` | Download document |
+
+### Admin - Dispute Management
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/admin/disputes` | List disputes with filters |
+| GET | `/admin/disputes/stats` | Dispute statistics |
+| GET | `/admin/disputes/:id` | Get dispute details |
+| POST | `/admin/disputes` | Create new dispute |
+| PUT | `/admin/disputes/:id/assign` | Assign to admin |
+| PUT | `/admin/disputes/:id/resolve` | Resolve dispute |
+| POST | `/admin/disputes/:id/messages` | Add internal message |
 
 ---
 

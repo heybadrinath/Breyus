@@ -9,6 +9,7 @@ import { createTradeRequest, CreateTradeRequest, Address as AddressType, Payment
 import { useNavigate } from "react-router-dom";
 import { IncotermsState, defaultIncotermValues } from "../../types/Incoterms";
 import { getDeliveryAddresses, addDeliveryAddress, DeliveryAddress } from "../../services/company.service";
+import { useNotifications } from "../../contexts/NotificationContext";
 
 // Define step data types
 interface Step1Data {
@@ -44,15 +45,12 @@ interface StepData {
 
 export const PurchaseRequest = () => {
     const navigate = useNavigate();
+    const { showToast } = useNotifications();
 
-    // States 
+    // States
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [notification, setNotification] = useState<{
-        type: 'success' | 'error' | 'info';
-        message: string;
-    } | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
     // Product and quantity state
@@ -75,6 +73,7 @@ export const PurchaseRequest = () => {
     const [addresses, setAddresses] = useState<AddressType[]>([]);
     const [selectedAddressIndex, setSelectedAddressIndex] = useState<number>(0);
     const [showAddAddressPopup, setShowAddAddressPopup] = useState(false);
+    const [addressSuccessMessage, setAddressSuccessMessage] = useState<string | null>(null);
     const [newAddress, setNewAddress] = useState<AddressType>({
         fullName: '',
         mobileNumber: '',
@@ -157,16 +156,22 @@ export const PurchaseRequest = () => {
 
     const handleShowAddAddressPopupChange = (show: boolean) => {
         setShowAddAddressPopup(show);
+        if (show) {
+            setAddressSuccessMessage(null);
+        }
     };
 
     const handleNewAddressChange = (address: AddressType) => {
         setNewAddress(address);
+        if (addressSuccessMessage) {
+            setAddressSuccessMessage(null);
+        }
     };
 
     const handleAddNewAddress = async () => {
-        if (!newAddress.fullName || !newAddress.mobileNumber || !newAddress.pincode || 
+        if (!newAddress.fullName || !newAddress.mobileNumber || !newAddress.pincode ||
             !newAddress.streetName || !newAddress.city || !newAddress.state) {
-            setNotification({ type: 'error', message: 'Please fill in all required fields' });
+            showToast('Please fill in all required fields', 'error');
             return;
         }
 
@@ -218,16 +223,15 @@ export const PurchaseRequest = () => {
                 country: 'India',
                 additionalDetails: ''
             });
-            
-            setShowAddAddressPopup(false);
-            
-            setNotification({ type: 'success', message: 'Address added successfully!' });
+
+            setAddressSuccessMessage('Address added successfully.');
+            setTimeout(() => {
+                setShowAddAddressPopup(false);
+                setAddressSuccessMessage(null);
+            }, 1200);
         } catch (error) {
             console.error('Error adding address:', error);
-            setNotification({ 
-                type: 'error', 
-                message: error instanceof Error ? error.message : 'Failed to add address' 
-            });
+            showToast(error instanceof Error ? error.message : 'Failed to add address', 'error');
         } finally {
             setAddressesLoading(false);
         }
@@ -377,43 +381,43 @@ export const PurchaseRequest = () => {
 
     const handleSubmitPurchaseRequest = async () => {
         if (!product) {
-            setNotification({ type: 'error', message: 'Product not found' });
+            showToast('Product not found', 'error');
             return;
         }
 
         // Validate all required data
         if (addresses.length === 0) {
-            setNotification({ type: 'error', message: 'Please add at least one address' });
+            showToast('Please add at least one address', 'error');
             return;
         }
 
         if (!addresses[selectedAddressIndex]) {
-            setNotification({ type: 'error', message: 'Please select a delivery address' });
+            showToast('Please select a delivery address', 'error');
             return;
         }
 
         if (!marketYears || !tradeYears) {
-            setNotification({ type: 'error', message: 'Please fill in all required trade query fields' });
+            showToast('Please fill in all required trade query fields', 'error');
             return;
         }
 
         if (!selectedPaymentType) {
-            setNotification({ type: 'error', message: 'Please select a payment method' });
+            showToast('Please select a payment method', 'error');
             return;
         }
 
         if (!stepData.step4.paymentMethod) {
-            setNotification({ type: 'error', message: 'Payment method data is incomplete' });
+            showToast('Payment method data is incomplete', 'error');
             return;
         }
 
         if (selectedPaymentType === 'advance' && !paymentDetails.percentage) {
-            setNotification({ type: 'error', message: 'Please enter the advance payment percentage' });
+            showToast('Please enter the advance payment percentage', 'error');
             return;
         }
 
         if ((selectedPaymentType === 'credit' || selectedPaymentType === 'openAccount') && !paymentDetails.days) {
-            setNotification({ type: 'error', message: 'Please enter the credit period' });
+            showToast('Please enter the credit period', 'error');
             return;
         }
 
@@ -450,17 +454,11 @@ export const PurchaseRequest = () => {
                         }
                     });
             } else {
-                setNotification({ 
-                    type: 'error', 
-                    message: response.message || 'Failed to send purchase request' 
-                });
+                showToast(response.message || 'Failed to send purchase request', 'error');
             }
         } catch (error) {
             console.error('Error creating trade request:', error);
-            setNotification({ 
-                type: 'error', 
-                message: error instanceof Error ? error.message : 'Failed to send purchase request' 
-            });
+            showToast(error instanceof Error ? error.message : 'Failed to send purchase request', 'error');
         } finally {
             setSubmitting(false);
         }
@@ -565,16 +563,6 @@ export const PurchaseRequest = () => {
         }
     }, [product]);
 
-    // Auto-hide notifications after 5 seconds
-    useEffect(() => {
-        if (notification) {
-            const timer = setTimeout(() => {
-                setNotification(null);
-            }, 5000);
-            return () => clearTimeout(timer);
-        }
-    }, [notification]);
-
     const renderStep = () => {
         switch (step) {
             case 1:
@@ -594,8 +582,8 @@ export const PurchaseRequest = () => {
                 );
             case 2:
                 return (
-                    <Address 
-                        handlestep={handleStep} 
+                    <Address
+                        handlestep={handleStep}
                         currentStep={step}
                         onDataChange={(data) => handleStepDataChange(2, data)}
                         stepData={stepData.step2}
@@ -608,6 +596,7 @@ export const PurchaseRequest = () => {
                         onNewAddressChange={handleNewAddressChange}
                         onAddNewAddress={handleAddNewAddress}
                         onSelectedAddressIndexChange={handleSelectedAddressIndexChange}
+                        successMessage={addressSuccessMessage}
                         loading={addressesLoading}
                     />
                 );
@@ -693,35 +682,6 @@ export const PurchaseRequest = () => {
                 </div>
             )}
 
-            {/* Notifications */}
-            {notification && (
-                <div className={`fixed bottom-4 right-4 max-w-md p-4 rounded-lg shadow-lg animate-bounce z-50 ${notification.type === 'success'
-                    ? 'bg-green-500 text-white'
-                    : notification.type === 'error'
-                        ? 'bg-red-500 text-white'
-                        : 'bg-blue-500 text-white'
-                    }`}>
-                    <div className="flex items-start">
-                        <div className="flex-shrink-0">
-                            {notification.type === 'success' && <span className="text-xl">✅</span>}
-                            {notification.type === 'error' && <span className="text-xl">❌</span>}
-                            {notification.type === 'info' && <span className="text-xl">ℹ️</span>}
-                        </div>
-                        <div className="ml-3">
-                            <p className="text-sm font-medium">{notification.message}</p>
-                            {notification.type === 'success' && (
-                                <p className="text-xs mt-1 opacity-90">Redirecting to trade requests...</p>
-                            )}
-                        </div>
-                        <button
-                            onClick={() => setNotification(null)}
-                            className="ml-auto -mx-1.5 -my-1.5 text-white hover:bg-black hover:bg-opacity-20 rounded-lg p-1.5"
-                        >
-                            <span className="text-sm">✕</span>
-                        </button>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

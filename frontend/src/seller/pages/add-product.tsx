@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import ProductInformation from "../components/product-information";
 import Media from "../components/media";
 import Price from "../components/price";
@@ -8,7 +8,7 @@ import { Incoterms } from '../../components/incoterms';
 import AddProductTerms from '../components/product-terms';
 import AddProductProgress from "../../components/AddProductProgress";
 import '../css/product.css';
-import { createProduct, CreateProductData } from '../../services/products.service';
+import { createProduct, CreateProductData, getProductById, updateProduct } from '../../services/products.service';
 import { TryBreyusCoreHeader } from "../../components/Header";
 import { IncotermsState, defaultIncotermValues } from "../../types/Incoterms"
 
@@ -16,12 +16,33 @@ import { IncotermsState, defaultIncotermValues } from "../../types/Incoterms"
 export const AddProduct = () => {
 
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [productId, setProductId] = useState<string | null>(null);
+  const [existingProductImages, setExistingProductImages] = useState<string[]>([]);
+  const [existingTestReports, setExistingTestReports] = useState<string[]>([]);
+  const [loadingProduct, setLoadingProduct] = useState(false);
 
   // product information state
-  const [productInformation, setProductInformation] = React.useState({
+  const [productInformation, setProductInformation] = React.useState<{
+    name: string;
+    stock: string;
+    stockUnit: string;
+    moq: string;
+    moqUnit: string;
+    description: string;
+    detailedDescription: string;
+    category: string;
+    categoryId?: string; // Reference to ProductCategory collection
+    isNicheCommodity?: boolean; // true = niche, false = mainstream
+    hsnCode: string;
+    application: string;
+    environmentalImpact: string;
+    qualityAssurance: string;
+  }>({
     name: '',
     stock: '',
     stockUnit: '',
@@ -70,10 +91,15 @@ export const AddProduct = () => {
 
   // preferred trade terms
   const [tradeTerms, setTradeTerms] = React.useState({
+    exportLocation: '',
+    nearestPort: '',
     revenueMin: '',
     revenueMax: '',
     currency: 'INR',
     unit: 'Crore',
+    paymentTerms: '',
+    logisticsTerms: '',
+    popTerms: '',
     yearsTrade: '',
     industry: '',
     marketYears: '',
@@ -93,6 +119,102 @@ export const AddProduct = () => {
     selectedIncotermData: {},
     defaults: defaultIncotermValues,
   });
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const id = params.get('productId') || params.get('id');
+    if (!id) {
+      setIsEditMode(false);
+      setProductId(null);
+      setExistingProductImages([]);
+      setExistingTestReports([]);
+      return;
+    }
+
+    const fetchProduct = async () => {
+      setLoadingProduct(true);
+      setErrorMessage('');
+      setIsEditMode(true);
+      setProductId(id);
+      setProductImages([]);
+      setTestReports([]);
+      try {
+        const response = await getProductById(id);
+        if (response.statusCode !== 200 || !response.data) {
+          setErrorMessage(response.message || 'Failed to load product');
+          return;
+        }
+
+        const data = response.data;
+        setProductInformation({
+          name: data.name || '',
+          stock: data.stock || '',
+          stockUnit: data.stockUnit || '',
+          moq: data.moq || '',
+          moqUnit: data.moqUnit || '',
+          description: data.description || '',
+          detailedDescription: data.detailedDescription || '',
+          category: data.category || '',
+          categoryId: data.categoryId || undefined,
+          isNicheCommodity: data.isNicheCommodity ?? undefined,
+          hsnCode: data.hsnCode || '',
+          application: data.application || '',
+          environmentalImpact: data.environmentalImpact || '',
+          qualityAssurance: data.qualityAssurance || '',
+        });
+
+        setPriceData({
+          price: data.price || '',
+          currency: data.currency || 'INR',
+          sku: data.sku || '',
+          onSale: data.onSale || false,
+          discount: data.discount || '',
+          salePrice: data.salePrice || '',
+          costOfGoods: data.costOfGoods || '',
+          profit: data.profit || '',
+          pricing: data.pricing || '',
+          margin: data.margin || '',
+        });
+
+        setTagsData({
+          tags: data.tags || [],
+          input: '',
+        });
+
+        setTradeTerms({
+          exportLocation: data.exportLocation || '',
+          nearestPort: data.nearestPort || '',
+          revenueMin: data.revenueMin || '',
+          revenueMax: data.revenueMax || '',
+          currency: data.currencyTrade || 'INR',
+          unit: data.unitTrade || 'Crore',
+          paymentTerms: data.paymentTerms || '',
+          logisticsTerms: data.logisticsTerms || '',
+          popTerms: data.popTerms || '',
+          yearsTrade: data.yearsTrade || '',
+          industry: data.industry || '',
+          marketYears: data.marketYears || '',
+          sellerMarketYears: data.sellerMarketYears || '',
+          marketcapture: data.marketcapture || '',
+        });
+
+        setIncotermsState({
+          selectedIncoterm: data.selectedIncoterm || '',
+          selectedIncotermData: data.selectedIncotermData || {},
+          defaults: data.defaults || defaultIncotermValues,
+        });
+
+        setExistingProductImages(data.productImages || []);
+        setExistingTestReports(data.testReports || []);
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : 'Failed to load product');
+      } finally {
+        setLoadingProduct(false);
+      }
+    };
+
+    fetchProduct();
+  }, [location.search]);
 
 
   const validateStep = () => {
@@ -138,11 +260,11 @@ export const AddProduct = () => {
         return true;
 
       case 1: // Media
-        if (productImages.length === 0) {
+        if (productImages.length === 0 && existingProductImages.length === 0) {
           setErrorMessage("At least one product image is required.");
           return false;
         }
-        if (testReports.length === 0) {
+        if (testReports.length === 0 && existingTestReports.length === 0) {
           setErrorMessage("At least one test report is required.");
           return false;
         }
@@ -177,17 +299,37 @@ export const AddProduct = () => {
         setErrorMessage(''); // Clear error if all fields are valid
         return true;
 
-      case 4: // preferred trade terms 
+      case 4: // preferred trade terms
+        if (!tradeTerms.exportLocation) {
+          setErrorMessage("Export location is required.");
+          return false;
+        }
+        if (!tradeTerms.nearestPort) {
+          setErrorMessage("Nearest exporting port is required.");
+          return false;
+        }
         if (!(tradeTerms.revenueMin && tradeTerms.revenueMax && tradeTerms.currency && tradeTerms.unit)) {
           setErrorMessage("All the revenue fields are required.")
           return false;
         }
-        if (!tradeTerms.yearsTrade) {
-          setErrorMessage("How many potential years you want to trade with buyer? is required.")
+        if (!tradeTerms.paymentTerms) {
+          setErrorMessage("Payment, Bank and Insurance terms are required.");
+          return false;
+        }
+        if (!tradeTerms.logisticsTerms) {
+          setErrorMessage("Delivery/Logistics terms are required.");
+          return false;
+        }
+        if (!tradeTerms.popTerms) {
+          setErrorMessage("POP (proof of product) terms are required.");
           return false;
         }
         if (!tradeTerms.yearsTrade) {
           setErrorMessage("How many potential years you want to trade with buyer? is required.")
+          return false;
+        }
+        if (!tradeTerms.industry) {
+          setErrorMessage("Which industry uses your product? is required.");
           return false;
         }
         if (!tradeTerms.marketYears) {
@@ -229,7 +371,12 @@ export const AddProduct = () => {
         moqUnit: productInformation.moqUnit,
         description: productInformation.description,
         detailedDescription: productInformation.detailedDescription,
+        application: productInformation.application,
+        environmentalImpact: productInformation.environmentalImpact,
+        qualityAssurance: productInformation.qualityAssurance,
         category: productInformation.category,
+        categoryId: productInformation.categoryId,
+        isNicheCommodity: productInformation.isNicheCommodity,
         hsnCode: productInformation.hsnCode,
 
         // Pricing
@@ -247,10 +394,15 @@ export const AddProduct = () => {
         tags: tagsData.tags,
 
         // Trade terms
+        exportLocation: tradeTerms.exportLocation,
+        nearestPort: tradeTerms.nearestPort,
         revenueMin: tradeTerms.revenueMin,
         revenueMax: tradeTerms.revenueMax,
         currencyTrade: tradeTerms.currency,
         unitTrade: tradeTerms.unit,
+        paymentTerms: tradeTerms.paymentTerms,
+        logisticsTerms: tradeTerms.logisticsTerms,
+        popTerms: tradeTerms.popTerms,
         yearsTrade: tradeTerms.yearsTrade,
         industry: tradeTerms.industry,
         marketYears: tradeTerms.marketYears,
@@ -260,15 +412,19 @@ export const AddProduct = () => {
         // Incoterms
         selectedIncoterm: incotermsState.selectedIncoterm,
         selectedIncotermData: incotermsState.selectedIncotermData,
+
+        productImages: existingProductImages,
+        testReports: existingTestReports,
       };
 
       // Combine all files
       const allFiles = [...productImages, ...testReports];
 
-      // Submit to backend servce
-      const response = await createProduct(productData, allFiles);
+      const response = isEditMode && productId
+        ? await updateProduct(productId, productData, allFiles)
+        : await createProduct(productData, allFiles);
 
-      if (response.statusCode === 201) {
+      if (response.statusCode === 201 || response.statusCode === 200) {
         navigate('/seller/inventory');
       } else {
         setErrorMessage(response.message || 'Failed to create product');
@@ -287,9 +443,20 @@ export const AddProduct = () => {
       case 0:
         return <ProductInformation productInformation={productInformation} setProductInformation={setProductInformation} />;
       case 1:
-        return <Media productImages={productImages} onProductImagesChange={handleProductImagesChange} testReports={testReports} onTestReportsChange={handleTestReportsChange} />;
+        return (
+          <Media
+            productImages={productImages}
+            onProductImagesChange={handleProductImagesChange}
+            testReports={testReports}
+            onTestReportsChange={handleTestReportsChange}
+            existingProductImages={existingProductImages}
+            existingTestReports={existingTestReports}
+            onExistingProductImagesChange={setExistingProductImages}
+            onExistingTestReportsChange={setExistingTestReports}
+          />
+        );
       case 2:
-        return <Price priceData={priceData} setPriceData={setPriceData} moq={productInformation.moq + ' ' + productInformation.moqUnit} />;
+        return <Price priceData={priceData} setPriceData={setPriceData} moq={productInformation.moq + ' ' + productInformation.moqUnit} category={productInformation.category} />;
       case 3:
         return <Tags tagsData={tagsData} setTagsData={setTagsData} />;
       case 4:
@@ -305,7 +472,7 @@ export const AddProduct = () => {
     <>
       <TryBreyusCoreHeader />
       <div className="min-h-screen bg-gray-50 py-8 px-4">
-        <div className="max-w-4xl mx-auto">
+        <div className={`${step === 5 ? 'max-w-none' : 'max-w-4xl'} mx-auto`}>
           {/* Progress Header - Show for first 4 steps */}
           {step < 4 && (
             <div className="mb-6">
@@ -350,9 +517,9 @@ export const AddProduct = () => {
                 }}
                 type="button"
                 className="px-6 py-2.5 bg-[#C4A962] text-white rounded-lg font-medium hover:bg-[#B39952] transition-colors disabled:opacity-50"
-                disabled={isSubmitting}
+                disabled={isSubmitting || loadingProduct}
               >
-                {isSubmitting ? 'Processing...' : step === 4 ? 'Proceed to INCO-TERMS' : step < 5 ? 'Next' : 'Publish Product'}
+                {isSubmitting ? 'Processing...' : step === 4 ? 'Proceed to INCO-TERMS' : step < 5 ? 'Next' : isEditMode ? 'Update Product' : 'Publish Product'}
               </button>
             </div>
           </div>

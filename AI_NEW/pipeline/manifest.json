@@ -2,1609 +2,906 @@
   "version": "1.1",
   "files": [
     {
-      "file_name": "23 import sample 2309.xlsx",
+      "file_name": "Trade_data__kenya_import_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:27:22.918132+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__kenya_import_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__kenya_import_normalized.json",
+      "summarized_at": "2026-01-11T15:27:23.292004+00:00",
+      "file_hash": "d6dce3c75aed04e1c956c59a2945b62bfa064c1864d741a7d6ce1d7717870aef",
+      "rows_inserted": 20,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:27:24.637522+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__kenya_export_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:27:25.264055+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__kenya_export_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__kenya_export_normalized.json",
+      "summarized_at": "2026-01-11T15:27:25.555844+00:00",
+      "file_hash": "1f00eafa3eb1541f63923c259aeafce9117e20dceb28c7ab52f15e257b26e954",
+      "rows_inserted": 10,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:27:26.046825+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__kazakhstan_import_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:27:26.386467+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__kazakhstan_import_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__kazakhstan_import_normalized.json",
+      "summarized_at": "2026-01-11T15:27:28.913921+00:00",
+      "file_hash": "c17f1b73bf7aea3e49c2f3d9991eb6e6675443fabb55e764a1c3ca4f9b5ed514",
+      "rows_inserted": 18,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:27:30.473675+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__kazakhstan_export_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:27:31.132577+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__kazakhstan_export_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__kazakhstan_export_normalized.json",
+      "summarized_at": "2026-01-11T15:27:32.562123+00:00",
+      "file_hash": "cb0c5d7bc11268ee09d0d23e59fca48333540bf881cee0a0f99f432fdd4c6c98",
+      "rows_inserted": 14,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:27:34.384906+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__ivory_coast_import_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:27:35.008397+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__ivory_coast_import_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__ivory_coast_import_normalized.json",
+      "summarized_at": "2026-01-11T15:27:36.393395+00:00",
+      "file_hash": "b2ab617044fa5d20a6ce43a6c701cfff528abfb8ae1c1ad4fa630419ec639fe8",
+      "rows_inserted": 18,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:27:38.093002+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__ivory_coast_export_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:27:39.010955+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__ivory_coast_export_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__ivory_coast_export_normalized.json",
+      "summarized_at": "2026-01-11T15:27:40.473182+00:00",
+      "file_hash": "632aa50226f777d36d88e37cdd147c56669a6185002e62d024e4c0e23204f88a",
+      "rows_inserted": 17,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:27:41.421110+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__indonesia_import_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:27:41.846963+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__indonesia_import_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__indonesia_import_normalized.json",
+      "summarized_at": "2026-01-11T15:27:42.423810+00:00",
+      "file_hash": "9ed2bfb7892eb8e48705fc5c1a8371405ad48c3ea4a63a628569966142fac14b",
+      "rows_inserted": 13,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:27:43.091208+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__indonesia_export_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:27:43.725063+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__indonesia_export_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__indonesia_export_normalized.json",
+      "summarized_at": "2026-01-11T15:27:44.365344+00:00",
+      "file_hash": "d76da59995ba54142c0af178edf458b9ab3e2bc798c3ee1930efc899a21a0545",
+      "rows_inserted": 18,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:27:45.340202+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__guyana_import_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:27:45.995607+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__guyana_import_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__guyana_import_normalized.json",
+      "summarized_at": "2026-01-11T15:27:46.727672+00:00",
+      "file_hash": "47d711861e6f662c8f2dbc63ec6f7ef2f81e9f71346ffd1b7e915b57701f9f1c",
+      "rows_inserted": 20,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:27:49.471292+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__guyana_export_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:27:49.952494+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__guyana_export_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__guyana_export_normalized.json",
+      "summarized_at": "2026-01-11T15:27:50.888335+00:00",
+      "file_hash": "15de3f73549b75fe3ecd2e3d517689f9f00ef5ea599965adcfe4c3eeea79dfc4",
+      "rows_inserted": 20,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:27:51.501926+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__ghana_import_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:27:51.904133+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__ghana_import_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__ghana_import_normalized.json",
+      "summarized_at": "2026-01-11T15:27:52.450916+00:00",
+      "file_hash": "59f7e08eef17a9c8bde797f217a3685ba79356a60d78163d64de51a86c2337c5",
+      "rows_inserted": 17,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:27:53.528764+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__ghana_export_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:27:54.082470+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__ghana_export_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__ghana_export_normalized.json",
+      "summarized_at": "2026-01-11T15:27:54.799561+00:00",
+      "file_hash": "3d03ca5f67ca38e75a547e65a32f4b7c2aee589b5bd5f5b08c400c7ff33194ed",
+      "rows_inserted": 14,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:27:56.896104+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__ethiopia_import_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:27:59.045290+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__ethiopia_import_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__ethiopia_import_normalized.json",
+      "summarized_at": "2026-01-11T15:28:00.788540+00:00",
+      "file_hash": "383c397b0925d73998226be43662ba9b580ccb5ae90f7c5fd83278357b158ffd",
+      "rows_inserted": 20,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:28:05.890801+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__ethiopia_export_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:28:07.469498+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__ethiopia_export_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__ethiopia_export_normalized.json",
+      "summarized_at": "2026-01-11T15:28:14.857060+00:00",
+      "file_hash": "2c50b41ead23c40328f443e3bfd87ec0483bcb6c22aaf64cac2dd89cc1e84c65",
+      "rows_inserted": 16,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:28:30.797189+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__ecuador_import_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:28:36.150987+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__ecuador_import_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__ecuador_import_normalized.json",
+      "summarized_at": "2026-01-11T15:28:44.842284+00:00",
+      "file_hash": "833bf97b0316138941f3797f86c90d8784eebd1d6cfb99f96ae09de4a7bb9aff",
+      "rows_inserted": 14,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:28:49.012667+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__ecuador_export_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:28:51.049021+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__ecuador_export_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__ecuador_export_normalized.json",
+      "summarized_at": "2026-01-11T15:28:52.378770+00:00",
+      "file_hash": "02f21bd454b9c82817963876d59e3f3ea60b930505537a99cc503621012879f4",
+      "rows_inserted": 17,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:28:56.383483+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__dr_congo_import_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:29:01.295845+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__dr_congo_import_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__dr_congo_import_normalized.json",
+      "summarized_at": "2026-01-11T15:29:03.502878+00:00",
+      "file_hash": "f12b7e00c516bec556714c2bda76f60885278a32a28404892bbd4c5f3a4f1fb2",
+      "rows_inserted": 18,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:29:08.502039+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__dr_congo_export_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:29:10.199748+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__dr_congo_export_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__dr_congo_export_normalized.json",
+      "summarized_at": "2026-01-11T15:29:15.296734+00:00",
+      "file_hash": "6693af80d0dad3a142810ff6fae53bbad0dad05f28e46f9b9c5b7dc0cf3349f6",
+      "rows_inserted": 19,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:29:24.475269+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__costa_rica_import_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:29:30.123627+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__costa_rica_import_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__costa_rica_import_normalized.json",
+      "summarized_at": "2026-01-11T15:29:35.803367+00:00",
+      "file_hash": "c9a4bf7ed2c2f1c3968c6eb99a417ae393a372895cc2211308404edaaa6fffc6",
+      "rows_inserted": 16,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:29:43.015207+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__costa_rica_export_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:29:44.132600+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__costa_rica_export_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__costa_rica_export_normalized.json",
+      "summarized_at": "2026-01-11T15:29:46.309992+00:00",
+      "file_hash": "ef6e20c5054fe50ec9e9cee22efe75551f0f2aa0b3ea4916f6ff612cae3aaf7a",
+      "rows_inserted": 19,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:29:51.777776+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__colombia_import_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:29:53.232377+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__colombia_import_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__colombia_import_normalized.json",
+      "summarized_at": "2026-01-11T15:29:54.851686+00:00",
+      "file_hash": "f4cf3926a96eed65d604354c3b42ef49c1cfa92dcddb14efe7a8fa1d0440965e",
+      "rows_inserted": 11,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:29:57.852199+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__colombia_export_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:29:58.221402+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__colombia_export_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__colombia_export_normalized.json",
+      "summarized_at": "2026-01-11T15:29:58.816075+00:00",
+      "file_hash": "2d6a4675a8ca61c9dc185979b2fdcef4a00725e35cad2673f2434f1400891f68",
+      "rows_inserted": 11,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:30:01.344961+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__chile_import_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:30:02.138701+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__chile_import_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__chile_import_normalized.json",
+      "summarized_at": "2026-01-11T15:30:03.136533+00:00",
+      "file_hash": "49b37b8eca418cc2b1a2dfa85c96f4a4658f4d13ff054954acdf071c1e47f4f2",
+      "rows_inserted": 13,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:30:05.766181+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__chile_export_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:30:08.519036+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__chile_export_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__chile_export_normalized.json",
+      "summarized_at": "2026-01-11T15:30:12.895588+00:00",
+      "file_hash": "9f919124d7742a0c231b8c7a85150d3c027adf6ac847e941164b5501a6cf70f9",
+      "rows_inserted": 22,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:30:17.928261+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "71_ALL_PORT_EXPORT_FEB_2025__Sheet1_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:30:19.955670+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/71_ALL_PORT_EXPORT_FEB_2025__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/71_ALL_PORT_EXPORT_FEB_2025__Sheet1_normalized.json",
+      "summarized_at": "2026-01-11T17:08:58.606808+00:00",
+      "file_hash": "6ec087b731b4f9177e0fca2707c161b8c8495d64507ecddd3a10cbd66c4d3fcf",
+      "pending_since": null,
+      "rows_inserted": 48444,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T17:30:58.823559+00:00"
+    },
+    {
+      "file_name": "ch_31_exp_sep_24__Sheet1_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:53:19.749725+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/ch_31_exp_sep_24__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/ch_31_exp_sep_24__Sheet1_normalized.json",
+      "summarized_at": "2026-01-11T15:53:20.241745+00:00",
+      "file_hash": "748f4f50463f47c857296b3a5f2caa3e4e5fc2aa90479be33b6ea09d2e1bfd07",
+      "rows_inserted": 451,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:53:22.955375+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "ch_31_exp_feb_24__Sheet1_normalized.csv",
+      "status": "skipped_duplicate",
+      "created_at": "2026-01-11T15:53:23.153359+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/ch_31_exp_feb_24__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/ch_31_exp_feb_24__Sheet1_normalized.json",
+      "summarized_at": "2026-01-11T15:53:25.744221+00:00",
+      "file_hash": "b75eb38711c4d87ec0afb47392fba731d8fa61e17cd9cbea823efa30ff2ea986",
+      "rows_inserted": 22,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:53:25.457355+00:00",
+      "pending_since": null,
+      "skipped_reason": "Hash already present in data_import_log",
+      "duplicate_path": "/app/pipeline/duplicates/ch_31_exp_feb_24__Sheet1_normalized.csv"
+    },
+    {
+      "file_name": "CH_1_50_Exp_feb_2025__Sheet1_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:53:26.032691+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/CH_1_50_Exp_feb_2025__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/CH_1_50_Exp_feb_2025__Sheet1_normalized.json",
+      "summarized_at": "2026-01-11T17:32:08.606233+00:00",
+      "file_hash": "f826dde902129041999f9dc35e6d68f342802e8fb8f3c7e1d0880ecc5c61b15b",
+      "pending_since": null,
+      "rows_inserted": 47481,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T18:32:36.864453+00:00"
+    },
+    {
+      "file_name": "Aug24EXP1_xlsx_31__Sheet1_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:57:55.917735+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Aug24EXP1_xlsx_31__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Aug24EXP1_xlsx_31__Sheet1_normalized.json",
+      "summarized_at": "2026-01-11T15:57:56.362903+00:00",
+      "file_hash": "df797501091910d5c1608756f399156e0e346fe92b30a022d0d38616ffa055c8",
+      "rows_inserted": 16,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:57:58.006261+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Aug24EXP1_xlsx_19_1__Sheet1_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:57:58.294909+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Aug24EXP1_xlsx_19_1__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Aug24EXP1_xlsx_19_1__Sheet1_normalized.json",
+      "summarized_at": "2026-01-11T18:32:42.044469+00:00",
+      "file_hash": "e4dcce8a5282d536680b5b82ccc0b58439d5b49bf84c3ac40ba9104646009246",
+      "pending_since": null,
+      "rows_inserted": 2388,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T18:33:58.934703+00:00"
+    },
+    {
+      "file_name": "Animal_Feed_Products__Sheet1_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T15:58:11.491956+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Animal_Feed_Products__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Animal_Feed_Products__Sheet1_normalized.json",
+      "summarized_at": "2026-01-11T15:58:11.644449+00:00",
+      "file_hash": "8a07aaaef55d9568276d07c19bd250f4989af1a3bfc104191fc131804334619f",
+      "rows_inserted": 19,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T15:58:11.919163+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "CH_81_98_Exp_Feb_2025__Sheet1_normalized.csv",
+      "status": "pending_db_insert",
+      "created_at": "2026-01-11T16:31:54.928073+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/CH_81_98_Exp_Feb_2025__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/CH_81_98_Exp_Feb_2025__Sheet1_normalized.json",
+      "summarized_at": "2026-01-12T03:47:29.167758+00:00",
+      "file_hash": "fed8226681e10acbfe5e5b054b883d46d8db7576d09673cdf8a128917d219081",
+      "pending_since": "2026-01-12T03:48:06.722983+00:00",
+      "insert_error": "Error tokenizing data. C error: EOF inside string starting at row 42117"
+    },
+    {
+      "file_name": "CH_51_80_Exp_Feb_2025__Sheet1_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T16:33:46.771895+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/CH_51_80_Exp_Feb_2025__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/CH_51_80_Exp_Feb_2025__Sheet1_normalized.json",
+      "summarized_at": "2026-01-11T16:36:07.570201+00:00",
+      "file_hash": "e18934d96df07afe7e19fc61d3a08bcd5d4701611a094934c77f30b87afa8e6c",
+      "rows_inserted": 58180,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T17:07:30.978113+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Trade_data__mexico_export_normalized.csv",
+      "status": "skipped_duplicate",
+      "created_at": "2026-01-11T17:07:31.268742+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Trade_data__mexico_export_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Trade_data__mexico_export_normalized.json",
+      "summarized_at": "2026-01-11T17:07:31.527220+00:00",
+      "file_hash": "6aa6cde67f76534a1c8a2a0cc516086f0947cc2de7534be695bf71fd9395a241",
+      "skipped_reason": "Hash already present in data_import_log",
+      "duplicate_path": "/app/pipeline/duplicates/Trade_data__mexico_export_normalized.csv"
+    },
+    {
+      "file_name": "April24_19_1__Sheet1_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T18:33:59.539998+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/April24_19_1__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/April24_19_1__Sheet1_normalized.json",
+      "summarized_at": "2026-01-11T18:34:04.423486+00:00",
+      "file_hash": "4c8bb784a9f06778ba2abb1908d33dfb2b02014234088dc51a020d13b5f53661",
+      "rows_inserted": 1877,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T18:35:18.203146+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "Animal_Feed_Wholesaler_Detailed__Sheet1_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T18:35:18.373769+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/Animal_Feed_Wholesaler_Detailed__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/Animal_Feed_Wholesaler_Detailed__Sheet1_normalized.json",
+      "summarized_at": "2026-01-11T18:35:18.524001+00:00",
+      "file_hash": "9faf12e6b80200f99302a16ab6c56436f165a82021f8513810e2c053f0be8775",
+      "rows_inserted": 20,
+      "rows_failed": 0,
+      "db_table": "products",
+      "inserted_at": "2026-01-11T18:35:18.730082+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "85_ALL_PORT_EXPORT_FEB_2025__Export_Data_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T18:35:18.826904+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/85_ALL_PORT_EXPORT_FEB_2025__Export_Data_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/85_ALL_PORT_EXPORT_FEB_2025__Export_Data_normalized.json",
+      "summarized_at": "2026-01-11T18:36:24.982073+00:00",
+      "file_hash": "4ab1ce3e99ff393d236fd14d5c2e65f72c9ff83cbfcfdc20af7adf3037d3dd97",
+      "rows_inserted": 11742,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T18:49:47.204334+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "31_EXPORT_AUG_2025__Export_Records_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T18:49:47.474225+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/31_EXPORT_AUG_2025__Export_Records_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/31_EXPORT_AUG_2025__Export_Records_normalized.json",
+      "summarized_at": "2026-01-11T18:49:47.850730+00:00",
+      "file_hash": "f5b461947a52cc1b00a5d6860b53b034e971fcc7a81f16067793702cebd5a443",
+      "rows_inserted": 318,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T18:49:49.064263+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "31_ALL_PORT_IMPORT_APR_2025__Sheet1_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T18:49:49.166800+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/31_ALL_PORT_IMPORT_APR_2025__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/31_ALL_PORT_IMPORT_APR_2025__Sheet1_normalized.json",
+      "summarized_at": "2026-01-11T18:49:49.516558+00:00",
+      "file_hash": "6f0dac5fac1cca9c21f964a25655647a0b507b88092bcd652e5b8e22afcb5dc5",
+      "rows_inserted": 244,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T18:49:50.958533+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "31_ALL_PORT_EXPORT_MAR_2025__Sheet1_normalized.csv",
+      "status": "skipped_duplicate",
+      "created_at": "2026-01-11T18:49:51.052365+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/31_ALL_PORT_EXPORT_MAR_2025__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/31_ALL_PORT_EXPORT_MAR_2025__Sheet1_normalized.json",
+      "summarized_at": "2026-01-12T03:48:06.927596+00:00",
+      "file_hash": "05750b26656759b5785ff5a23d1628b6a3e744e3855acb3a565e80223633903a",
+      "rows_inserted": 247,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T18:49:52.657272+00:00",
+      "pending_since": null,
+      "skipped_reason": "Hash already present in data_import_log",
+      "duplicate_path": "/app/pipeline/duplicates/31_ALL_PORT_EXPORT_MAR_2025__Sheet1_normalized.csv"
+    },
+    {
+      "file_name": "31_ALL_PORT_EXPORT_JULY_2025__Sheet1_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T18:49:53.261000+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/31_ALL_PORT_EXPORT_JULY_2025__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/31_ALL_PORT_EXPORT_JULY_2025__Sheet1_normalized.json",
+      "summarized_at": "2026-01-11T18:49:53.503215+00:00",
+      "file_hash": "fa50dd2038aeed8b704a8324d36ac73265a6b290fd45c4e7a9be50e743a3b321",
+      "rows_inserted": 197,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T18:49:54.746826+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "31_ALL_EXPORT_TO_WORLD_MAY_25__Sheet1_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T18:49:54.837444+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/31_ALL_EXPORT_TO_WORLD_MAY_25__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/31_ALL_EXPORT_TO_WORLD_MAY_25__Sheet1_normalized.json",
+      "summarized_at": "2026-01-11T18:49:55.191478+00:00",
+      "file_hash": "07c05b76f164dfe66b9ad44771927384e7c85dc57407ec9fb667ae24d61e0b4c",
+      "rows_inserted": 247,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T18:49:57.399270+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "31_ALL_EXPORT_TO_WORLD_JUNE_25__Sheet1_normalized.csv",
+      "status": "skipped_duplicate",
+      "created_at": "2026-01-11T18:49:57.974201+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/31_ALL_EXPORT_TO_WORLD_JUNE_25__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/31_ALL_EXPORT_TO_WORLD_JUNE_25__Sheet1_normalized.json",
+      "summarized_at": "2026-01-11T18:50:04.544365+00:00",
+      "file_hash": "9f0cea8fb6db56ffdaced589d3b6351dfc748de4e580f9a33508d2588e66d6ad",
+      "rows_inserted": 45,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-11T18:50:04.160917+00:00",
+      "pending_since": null,
+      "skipped_reason": "Hash already present in data_import_log",
+      "duplicate_path": "/app/pipeline/duplicates/31_ALL_EXPORT_TO_WORLD_JUNE_25__Sheet1_normalized.csv"
+    },
+    {
+      "file_name": "23_import_sample_2309__Import_Records_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T18:50:04.861141+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/23_import_sample_2309__Import_Records_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/23_import_sample_2309__Import_Records_normalized.json",
+      "summarized_at": "2026-01-12T03:48:07.351766+00:00",
+      "file_hash": "7e50cb7e590e2bbca78dbca86854572f2b110533fca5a7b56947d690863d9d34",
+      "skipped_reason": "Hash already present in data_import_log",
+      "duplicate_path": "/app/pipeline/duplicates/23_import_sample_2309__Import_Records_normalized.csv",
+      "rows_inserted": 319,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-12T03:48:14.743960+00:00",
+      "pending_since": null
+    },
+    {
+      "file_name": "2309_export__Export_Records_normalized.csv",
+      "status": "skipped_duplicate",
+      "created_at": "2026-01-11T18:50:06.780981+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/2309_export__Export_Records_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/2309_export__Export_Records_normalized.json",
+      "summarized_at": "2026-01-11T18:50:06.987198+00:00",
+      "file_hash": "18de54339a412844eefb03fd4a2ef1a9d58ecaab718284ec97b1c9404cdb2eab",
+      "skipped_reason": "Hash already present in data_import_log",
+      "duplicate_path": "/app/pipeline/duplicates/2309_export__Export_Records_normalized.csv"
+    },
+    {
+      "file_name": "CH 1-50 Exp  feb 2025__Sheet1_part01.xlsx",
       "status": "csv",
-      "created_at": "2025-12-30T14:44:27.537118+00:00",
+      "created_at": "2026-01-11T20:03:58.050287+00:00",
       "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\23_import_sample_2309__Import_Records.csv"
+        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\CH_1_50_Exp_feb_2025_Sheet1_part01__Sheet1.csv"
       ],
-      "converted_at": "2025-12-30T14:44:27.537118+00:00",
-      "file_hash": "ab3aa3e54396df9a7ec0a3adac948806647db8a2314b56ff837df402e8f35fae"
+      "converted_at": "2026-01-11T20:03:58.050287+00:00",
+      "file_hash": "d6fc779f4f30891e71a4255cc854a48705a049ac0b971b113c23e0d2ce813a73"
     },
     {
-      "file_name": "2309 export.xlsx",
+      "file_name": "CH 1-50 Exp  feb 2025__Sheet1_part02.xlsx",
       "status": "csv",
-      "created_at": "2025-12-30T14:44:27.616012+00:00",
+      "created_at": "2026-01-11T20:06:15.589189+00:00",
       "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\2309_export__Export_Records.csv"
+        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\CH_1_50_Exp_feb_2025_Sheet1_part02__Sheet1.csv"
       ],
-      "converted_at": "2025-12-30T14:44:27.616012+00:00",
-      "file_hash": "d55e19102c1af20b584070c5c5fc10fa426fb55b60314221b014227a8e8a55a4"
+      "converted_at": "2026-01-11T20:06:15.589189+00:00",
+      "file_hash": "e0fa7157fb2fdc21537124503686ba8f7f0fad5b7c0c32c057f2a6de76b10d6b"
     },
     {
-      "file_name": "31  EXPORT AUG 2025.xlsx",
+      "file_name": "CH 51- 80 Exp Feb 2025__Sheet1_part02.xlsx",
       "status": "csv",
-      "created_at": "2025-12-30T14:44:27.761433+00:00",
+      "created_at": "2026-01-11T20:09:54.092035+00:00",
       "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\31_EXPORT_AUG_2025__Export_Records.csv"
+        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\CH_51_80_Exp_Feb_2025_Sheet1_part02__Sheet1.csv"
       ],
-      "converted_at": "2025-12-30T14:44:27.761433+00:00",
-      "file_hash": "12f54d68140a114bcdf8ef2fdbbd69af127f29d5dd8eb028a78b6e58cf5bb262"
+      "converted_at": "2026-01-11T20:09:54.092035+00:00",
+      "file_hash": "e28f2a3fa30882512bfe15dd594530c48825f248683116e8b0e519e51955c2cc"
     },
     {
-      "file_name": "31 ALL EXPORT TO WORLD JUNE 25.xlsx",
+      "file_name": "CH 81-98 Exp Feb 2025__Sheet1_part02.xlsx",
       "status": "csv",
-      "created_at": "2025-12-30T14:44:27.964607+00:00",
+      "created_at": "2026-01-11T20:13:58.787656+00:00",
       "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\31_ALL_EXPORT_TO_WORLD_JUNE_25__Sheet1.csv"
+        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\CH_81_98_Exp_Feb_2025_Sheet1_part02__Sheet1.csv"
       ],
-      "converted_at": "2025-12-30T14:44:27.964607+00:00",
-      "file_hash": "0f2c7beb6b99616a465bb327a509cc3430a429ca1128c86c0dfe7d1236571723"
+      "converted_at": "2026-01-11T20:13:58.787656+00:00",
+      "file_hash": "622fee78dbe5e2bef6795109e300fcde426a9caea9c801f61ad703ceeb582e78"
     },
     {
-      "file_name": "31 ALL EXPORT TO WORLD MAY 25.xlsx",
+      "file_name": "CH 51- 80 Exp Feb 2025__Sheet1_part01.xlsx",
       "status": "csv",
-      "created_at": "2025-12-30T14:44:28.201519+00:00",
+      "created_at": "2026-01-11T20:15:47.762561+00:00",
       "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\31_ALL_EXPORT_TO_WORLD_MAY_25__Sheet1.csv"
+        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\CH_51_80_Exp_Feb_2025_Sheet1_part01__Sheet1.csv"
       ],
-      "converted_at": "2025-12-30T14:44:28.201519+00:00",
-      "file_hash": "a035985b09c58f53527b2a737a91847eac8b232fa89285b7fe2d03db861d2e86"
+      "converted_at": "2026-01-11T20:15:47.762561+00:00",
+      "file_hash": "8e482fba91b3d362d394048794ead3bf670cdbcdd021b36b09df16d9a5f5878e"
     },
     {
-      "file_name": "31 ALL PORT EXPORT JULY 2025.xlsx",
+      "file_name": "CH_1_50_Exp_feb_2025_Sheet1_part02__Sheet1.csv",
+      "status": "normalized",
+      "created_at": "2026-01-11T20:19:09.396224+00:00",
+      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\CH_1_50_Exp_feb_2025_Sheet1_part02__Sheet1_normalized.csv",
+      "errors_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\errors\\CH_1_50_Exp_feb_2025_Sheet1_part02__Sheet1_errors.csv",
+      "normalized_at": "2026-01-11T20:19:09.397219+00:00",
+      "mapping": "deals",
+      "record_type": "export"
+    },
+    {
+      "file_name": "CH_1_50_Exp_feb_2025_Sheet1_part02__Sheet1_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T20:19:09.513807+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/CH_1_50_Exp_feb_2025_Sheet1_part02__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/CH_1_50_Exp_feb_2025_Sheet1_part02__Sheet1_normalized.json",
+      "summarized_at": "2026-01-12T04:48:34.137048+00:00",
+      "file_hash": "5a995641deafd5a44214be44092cd0833abf2366573ff46f4ddfcbb853f9ea11",
+      "pending_since": null,
+      "rows_inserted": 31291,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-12T05:19:22.752722+00:00"
+    },
+    {
+      "file_name": "CH_51_80_Exp_Feb_2025_Sheet1_part02__Sheet1.csv",
+      "status": "normalized",
+      "created_at": "2026-01-11T20:19:29.193003+00:00",
+      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\CH_51_80_Exp_Feb_2025_Sheet1_part02__Sheet1_normalized.csv",
+      "errors_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\errors\\CH_51_80_Exp_Feb_2025_Sheet1_part02__Sheet1_errors.csv",
+      "normalized_at": "2026-01-11T20:19:29.193998+00:00",
+      "mapping": "deals",
+      "record_type": "export"
+    },
+    {
+      "file_name": "CH_51_80_Exp_Feb_2025_Sheet1_part02__Sheet1_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T20:19:29.263471+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/CH_51_80_Exp_Feb_2025_Sheet1_part02__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/CH_51_80_Exp_Feb_2025_Sheet1_part02__Sheet1_normalized.json",
+      "summarized_at": "2026-01-12T04:25:15.584212+00:00",
+      "file_hash": "527149b0d625fb8f4e4d9ec69cf548b9e73c5a1a1c9c0ff1a22dc8b2df3b4d22",
+      "pending_since": null,
+      "rows_inserted": 22478,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-12T04:29:20.482944+00:00"
+    },
+    {
+      "file_name": "CH_81_98_Exp_Feb_2025_Sheet1_part02__Sheet1.csv",
+      "status": "normalized",
+      "created_at": "2026-01-11T20:20:14.711674+00:00",
+      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\CH_81_98_Exp_Feb_2025_Sheet1_part02__Sheet1_normalized.csv",
+      "errors_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\errors\\CH_81_98_Exp_Feb_2025_Sheet1_part02__Sheet1_errors.csv",
+      "normalized_at": "2026-01-11T20:20:14.713690+00:00",
+      "mapping": "deals",
+      "record_type": "export"
+    },
+    {
+      "file_name": "CH_81_98_Exp_Feb_2025_Sheet1_part02__Sheet1_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T20:20:14.826442+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/CH_81_98_Exp_Feb_2025_Sheet1_part02__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/CH_81_98_Exp_Feb_2025_Sheet1_part02__Sheet1_normalized.json",
+      "summarized_at": "2026-01-12T03:48:26.845304+00:00",
+      "file_hash": "70a9457936e828f502cc74498291d3ba46302cae1270dda436826e3d6ca1868b",
+      "pending_since": null,
+      "rows_inserted": 14608,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-12T03:51:51.230448+00:00"
+    },
+    {
+      "file_name": "CH 81-98 Exp Feb 2025__Sheet1_part01.xlsx",
       "status": "csv",
-      "created_at": "2025-12-30T14:44:28.375685+00:00",
+      "created_at": "2026-01-11T20:20:28.676267+00:00",
       "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\31_ALL_PORT_EXPORT_JULY_2025__Sheet1.csv"
+        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\CH_81_98_Exp_Feb_2025_Sheet1_part01__Sheet1.csv"
       ],
-      "converted_at": "2025-12-30T14:44:28.375685+00:00",
-      "file_hash": "116740eec495bc976378fa901b57d22b539e424ad4744be59758aa4f8eacbe45"
+      "converted_at": "2026-01-11T20:20:28.677266+00:00",
+      "file_hash": "772924b30a0eacaa2e0176efbd8f3a999d8daf84e600583d695c1c5c7b9000b2"
     },
     {
-      "file_name": "31 ALL PORT EXPORT MAR 2025.xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:44:28.591151+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\31_ALL_PORT_EXPORT_MAR_2025__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T14:44:28.591151+00:00",
-      "file_hash": "e1191beca899aedd5bc267cec89427ceff2313032d23c997dc228350c3d89892"
-    },
-    {
-      "file_name": "31 ALL PORT IMPORT APR 2025.xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:44:28.799850+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\31_ALL_PORT_IMPORT_APR_2025__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T14:44:28.799850+00:00",
-      "file_hash": "de27233aeb0c17644ce7a9317591ade3c22b6df429e48ce069a65b7db6fe78dd"
-    },
-    {
-      "file_name": "Animal_Feed_Products.xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:44:28.863439+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Animal_Feed_Products__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T14:44:28.863439+00:00",
-      "file_hash": "ea448c7c38a2ac178c593639d7c1f9a14e024c6cc1c8fff694c01ae675af1d46"
-    },
-    {
-      "file_name": "Animal_Feed_Wholesaler_Detailed.xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:44:28.926623+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Animal_Feed_Wholesaler_Detailed__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T14:44:28.926623+00:00",
-      "file_hash": "abe3891bf6d373e18aae8d61a0f59eac40224ff1f7e56063464fb72dc32ffbd4"
-    },
-    {
-      "file_name": "Aug24EXP1.xlsx_31.xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:44:29.118114+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Aug24EXP1_xlsx_31__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T14:44:29.118114+00:00",
-      "file_hash": "702cdc06843ff53cdd84e2bb20185407712e59cbe0d201470591c5f9b71f7efa"
-    },
-    {
-      "file_name": "ch 31 exp feb 24.xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:44:29.264567+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\ch_31_exp_feb_24__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T14:44:29.264567+00:00",
-      "file_hash": "c4622973e77911f9a9e358a07dd64702115ee0e23f52d0b85b956c6c9ffbe044"
-    },
-    {
-      "file_name": "ch 31 exp sep 24.xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:44:29.425529+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\ch_31_exp_sep_24__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T14:44:29.425529+00:00",
-      "file_hash": "8469afef63793b7b965874a7f624b04d01f7ce4f6b6c14faef13938ea1b726b2"
-    },
-    {
-      "file_name": "coffee sample).xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:44:29.579883+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\coffee_sample__Export_Records.csv"
-      ],
-      "converted_at": "2025-12-30T14:44:29.579883+00:00",
-      "file_hash": "e7e0d55e7ea7e75315135683d2e9a21e55e5ec534d203c5fbdd8f03280231908"
-    },
-    {
-      "file_name": "Dec23EXP1.xlsx_19 (1).xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:44:29.909164+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Dec23EXP1_xlsx_19_1__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T16:26:58.137750+00:00",
-      "file_hash": "ef04eb1f0ae0a947ee74ef76e1297b507d6e49d5e75a5953f226ba2fdfae3f0e"
-    },
-    {
-      "file_name": "EXP31DEC24.xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:44:30.082748+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\EXP31DEC24__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T14:44:30.082748+00:00",
-      "file_hash": "4d61a7bfddc00ed8d88434fb842da241a7de899974726f9462c28a3c4c7059c6"
-    },
-    {
-      "file_name": "export 23 april 2309.xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:44:31.492042+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\export_23_april_2309__Export_Records.csv"
-      ],
-      "converted_at": "2025-12-30T14:44:31.492042+00:00",
-      "file_hash": "4c0920c441b03dac58f635b81d19c88f011b96727b9b4486d5afecc39965b03c"
-    },
-    {
-      "file_name": "IMPORT 31 AUG 2025.xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:44:31.697526+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\IMPORT_31_AUG_2025__Import_Records.csv"
-      ],
-      "converted_at": "2025-12-30T14:44:31.697526+00:00",
-      "file_hash": "b1deb603c5d076fca1ea847e57a60ef05319497afc438f22512e09a4d68bebd4"
-    },
-    {
-      "file_name": "Nov24EXP1.xlsx_31.xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:44:31.776583+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Nov24EXP1_xlsx_31__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T16:26:58.264574+00:00",
-      "file_hash": "c3424684aa90eb7bfe63b6b750a0265885bbae93f2a25a6597d50327ab3683a7"
-    },
-    {
-      "file_name": "Trade data .xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:45:11.723192+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__argentina_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__argentina_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__bangladesh_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__bangladesh_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__bolivia_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__bolivia_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__botswana_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__botswana_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__brazil_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__brazil_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__chile_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__chile_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__colombia_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__colombia_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__costa_rica_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__costa_rica_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__dr_congo_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__dr_congo_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__ecuador_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__ecuador_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__ethiopia_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__ethiopia_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__ghana_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__ghana_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__indonesia_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__indonesia_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__ivory_coast_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__ivory_coast_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__kazakhstan_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__kazakhstan_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__kenya_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__kenya_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__lesotho_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__lesotho_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__liberia_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__liberia_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__malawi_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__malawi_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__mexico_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__mexico_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__moldova_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__moldova_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__nambia_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__nigeria_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__pakistan_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__pakistan_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__panama_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__panama_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__paraguay_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__paraguay_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__peru_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__peru_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__philippines_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__philippines_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__russia_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__russia_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__sri_lanka_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__sri_lanka_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__tanzania_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__tanzania_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__turkey_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__turkey_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__uganda_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__uganda_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__ukraine_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__ukraine_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__uruguay_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__uruguay_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__usa_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__usa_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__uzbekistan_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__uzbekistan_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__venezuela_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__venezuela_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__vietnam_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__vietnam_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__zambia_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__zambia_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__zimbabwe_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__zimbabwe_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__guyana_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__guyana_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__kosovo_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__kosovo_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__sao_tome_and_principe_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__sao_tome_and_principe_import.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__sierra_leone_export.csv",
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Trade_data__sierra_leone_import.csv"
-      ],
-      "converted_at": "2025-12-30T14:45:11.723192+00:00",
-      "file_hash": "aa5525a0ad61c64dec0c818ea2890ee2582d51d7f6e9e4e0d45b0639e7051ee5"
-    },
-    {
-      "file_name": "April24_19 (1).xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:45:12.577364+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\April24_19_1__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T16:27:01.184284+00:00",
-      "file_hash": "3c6a96eb1a6a44f7a966c5969f236781820e3ee89a2d01cad7557f076e45d6a3"
-    },
-    {
-      "file_name": "Aug24EXP1.xlsx_19 (1).xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:45:16.229610+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Aug24EXP1_xlsx_19_1__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T14:45:16.229610+00:00",
-      "file_hash": "764d3a1381fec40b3441a9f1c4049da8787fb9ab5338ed699d50f104efdd3348"
-    },
-    {
-      "file_name": "Import 74.xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:45:20.958600+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Import_74__Import_Records.csv"
-      ],
-      "converted_at": "2025-12-30T14:45:20.958600+00:00",
-      "file_hash": "bcabe1f41edb723c3e99a501592034f9c4f4cc9eeb123d170ebbd83af9743812"
-    },
-    {
-      "file_name": "indian importer exporter data final.xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:45:34.736386+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\indian_importer_exporter_data_final__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T14:45:34.736386+00:00",
-      "file_hash": "0fb5ece258daccfbcbd921c73025963e24e7b149363b4d4de85bd6eaca39969f"
-    },
-    {
-      "file_name": "International Buyer,Importer From 200 Countries Data.xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:45:40.224387+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\International_Buyer_Importer_From_200_Countries_Data__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T14:45:40.224387+00:00",
-      "file_hash": "6ed55f9942aa1594f426228c05b763a7ce5b8ad489f6a7f0952a5be0f5115829"
-    },
-    {
-      "file_name": "June_1_Export2024_19 (1).xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:45:40.974873+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\June_1_Export2024_19_1__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T16:27:03.715854+00:00",
-      "file_hash": "44850d3918c46078178d7948e0ca7c8a92b65b68178bf56da20b839c16bdedc5"
-    },
-    {
-      "file_name": "Oct23EXP2.xlsx_19 (1).xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:45:41.543941+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\Oct23EXP2_xlsx_19_1__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T16:27:06.287127+00:00",
-      "file_hash": "f0ae745f04e784bbdf3b3b407f78ab9159b8290c155dd25a97bd54bea771dc11"
-    },
-    {
-      "file_name": "71 ALL PORT  EXPORT  FEB 2025.xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:46:55.824166+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\71_ALL_PORT_EXPORT_FEB_2025__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T14:46:55.824166+00:00",
-      "file_hash": "52cc8261dcfef77fa88cf7625338814d2c07e1be8a41f0386f7e9b41663001f7"
-    },
-    {
-      "file_name": "85 ALL PORT  EXPORT  FEB 2025.xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:47:38.942944+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\85_ALL_PORT_EXPORT_FEB_2025__Export_Data.csv"
-      ],
-      "converted_at": "2025-12-30T14:47:38.942944+00:00",
-      "file_hash": "2ae02f2d0984abc75eb78dc9d4016ac660ae6f1b2f04614e9f43b71b49323fd8"
-    },
-    {
-      "file_name": "CH 1-50 Exp  feb 2025.xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:49:34.392577+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\CH_1_50_Exp_feb_2025__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T14:49:34.392577+00:00",
-      "file_hash": "37b831fe207881dc8a1bcdc5917d5e717913c79c1e7fa59c6839ebe952835124"
-    },
-    {
-      "file_name": "CH 51- 80 Exp Feb 2025.xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:51:21.525626+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\CH_51_80_Exp_Feb_2025__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T14:51:21.525626+00:00",
-      "file_hash": "97e3e158f9efcc967f0567071ba36f3e757f0743e8ccbd78275d903172397848"
-    },
-    {
-      "file_name": "CH 81-98 Exp Feb 2025.xlsx",
-      "status": "csv",
-      "created_at": "2025-12-30T14:52:57.411260+00:00",
-      "csv_outputs": [
-        "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\csv\\CH_81_98_Exp_Feb_2025__Sheet1.csv"
-      ],
-      "converted_at": "2025-12-30T14:52:57.411260+00:00",
-      "file_hash": "662563ce477c12e42a09ffaff153a31e5857278522a066edaa89d391edc7acbf"
-    },
-    {
-      "file_name": "2309_export__Export_Records.csv",
+      "file_name": "CH_1_50_Exp_feb_2025_Sheet1_part01__Sheet1.csv",
       "status": "normalized",
-      "created_at": "2025-12-30T14:53:14.595915+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\2309_export__Export_Records_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T14:53:14.595915+00:00",
+      "created_at": "2026-01-11T20:30:00.865895+00:00",
+      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\CH_1_50_Exp_feb_2025_Sheet1_part01__Sheet1_normalized.csv",
+      "errors_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\errors\\CH_1_50_Exp_feb_2025_Sheet1_part01__Sheet1_errors.csv",
+      "normalized_at": "2026-01-11T20:30:00.865895+00:00",
       "mapping": "deals",
       "record_type": "export"
     },
     {
-      "file_name": "23_import_sample_2309__Import_Records.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T14:53:16.257374+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\23_import_sample_2309__Import_Records_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T14:53:16.257374+00:00",
-      "mapping": "deals",
-      "record_type": "import"
+      "file_name": "CH_1_50_Exp_feb_2025_Sheet1_part01__Sheet1_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T20:30:00.962530+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/CH_1_50_Exp_feb_2025_Sheet1_part01__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/CH_1_50_Exp_feb_2025_Sheet1_part01__Sheet1_normalized.json",
+      "summarized_at": "2026-01-12T05:20:30.203801+00:00",
+      "file_hash": "13c9b7abd00582e73202946c6f434b599ab57ca73fcc79ecb8f1c74d9e4b163e",
+      "pending_since": null,
+      "rows_inserted": 68988,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-12T05:39:18.343471+00:00"
     },
     {
-      "file_name": "31_ALL_EXPORT_TO_WORLD_JUNE_25__Sheet1.csv",
+      "file_name": "CH_51_80_Exp_Feb_2025_Sheet1_part01__Sheet1.csv",
       "status": "normalized",
-      "created_at": "2025-12-30T14:53:16.896181+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\31_ALL_EXPORT_TO_WORLD_JUNE_25__Sheet1_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T14:53:16.896181+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "31_ALL_EXPORT_TO_WORLD_MAY_25__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T14:53:17.770439+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\31_ALL_EXPORT_TO_WORLD_MAY_25__Sheet1_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T14:53:17.770439+00:00",
+      "created_at": "2026-01-11T20:40:25.764860+00:00",
+      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\CH_51_80_Exp_Feb_2025_Sheet1_part01__Sheet1_normalized.csv",
+      "errors_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\errors\\CH_51_80_Exp_Feb_2025_Sheet1_part01__Sheet1_errors.csv",
+      "normalized_at": "2026-01-11T20:40:25.764860+00:00",
       "mapping": "deals",
       "record_type": "export"
     },
     {
-      "file_name": "31_ALL_PORT_EXPORT_JULY_2025__Sheet1.csv",
+      "file_name": "CH_51_80_Exp_Feb_2025_Sheet1_part01__Sheet1_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T20:40:25.832879+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/CH_51_80_Exp_Feb_2025_Sheet1_part01__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/CH_51_80_Exp_Feb_2025_Sheet1_part01__Sheet1_normalized.json",
+      "summarized_at": "2026-01-12T04:30:26.992889+00:00",
+      "file_hash": "8771021b3847d0b9711f1b42c67a0ce9d25d5a2f134e945ab899e3998dcba903",
+      "pending_since": null,
+      "rows_inserted": 71702,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-12T04:48:08.367706+00:00"
+    },
+    {
+      "file_name": "CH_81_98_Exp_Feb_2025_Sheet1_part01__Sheet1.csv",
       "status": "normalized",
-      "created_at": "2025-12-30T14:53:18.470072+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\31_ALL_PORT_EXPORT_JULY_2025__Sheet1_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T14:53:18.470072+00:00",
+      "created_at": "2026-01-11T20:43:39.953095+00:00",
+      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\CH_81_98_Exp_Feb_2025_Sheet1_part01__Sheet1_normalized.csv",
+      "errors_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\errors\\CH_81_98_Exp_Feb_2025_Sheet1_part01__Sheet1_errors.csv",
+      "normalized_at": "2026-01-11T20:43:39.953095+00:00",
       "mapping": "deals",
       "record_type": "export"
     },
     {
-      "file_name": "31_ALL_PORT_EXPORT_MAR_2025__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T14:53:19.181179+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\31_ALL_PORT_EXPORT_MAR_2025__Sheet1_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T14:53:19.181179+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "31_ALL_PORT_IMPORT_APR_2025__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T14:53:19.956769+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\31_ALL_PORT_IMPORT_APR_2025__Sheet1_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T14:53:19.956769+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "31_EXPORT_AUG_2025__Export_Records.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T14:53:20.344086+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\31_EXPORT_AUG_2025__Export_Records_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T14:53:20.344086+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "71_ALL_PORT_EXPORT_FEB_2025__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:10:34.010735+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\71_ALL_PORT_EXPORT_FEB_2025__Sheet1_normalized.csv",
-      "errors_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\errors\\71_ALL_PORT_EXPORT_FEB_2025__Sheet1_errors.csv",
-      "normalized_at": "2025-12-30T15:10:34.010735+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "85_ALL_PORT_EXPORT_FEB_2025__Export_Data.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:17:53.360237+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\85_ALL_PORT_EXPORT_FEB_2025__Export_Data_normalized.csv",
-      "errors_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\errors\\85_ALL_PORT_EXPORT_FEB_2025__Export_Data_errors.csv",
-      "normalized_at": "2025-12-30T15:17:53.360237+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Animal_Feed_Products__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:17:53.567567+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Animal_Feed_Products__Sheet1_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:17:53.567567+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Animal_Feed_Wholesaler_Detailed__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:17:53.624027+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Animal_Feed_Wholesaler_Detailed__Sheet1_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:17:53.624027+00:00",
-      "mapping": "products",
-      "record_type": null
-    },
-    {
-      "file_name": "Aug24EXP1_xlsx_19_1__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:18:12.512848+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Aug24EXP1_xlsx_19_1__Sheet1_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:18:12.512848+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Aug24EXP1_xlsx_31__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:18:13.128637+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Aug24EXP1_xlsx_31__Sheet1_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:18:13.128637+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "ch_31_exp_feb_24__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:03.092401+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\ch_31_exp_feb_24__Sheet1_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:03.092401+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "ch_31_exp_sep_24__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:03.367975+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\ch_31_exp_sep_24__Sheet1_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:03.367975+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "coffee_sample__Export_Records.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:03.670498+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\coffee_sample__Export_Records_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:03.670498+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "EXP31DEC24__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:04.299994+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\EXP31DEC24__Sheet1_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:04.299994+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "IMPORT_31_AUG_2025__Import_Records.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:04.706568+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\IMPORT_31_AUG_2025__Import_Records_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:04.706568+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__argentina_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:04.787466+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__argentina_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:04.787466+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__argentina_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:04.851489+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__argentina_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:04.851489+00:00",
-      "mapping": "deals",
-      "record_type": null
-    },
-    {
-      "file_name": "Trade_data__bangladesh_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:04.938504+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__bangladesh_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:04.938504+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__bangladesh_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:05.009482+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__bangladesh_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:05.009482+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__bolivia_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:05.058474+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__bolivia_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:05.058474+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__bolivia_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:05.126943+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__bolivia_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:05.126943+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__botswana_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:05.182985+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__botswana_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:05.182985+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__botswana_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:05.242737+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__botswana_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:05.242737+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__brazil_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:05.339585+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__brazil_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:05.339585+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__brazil_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:05.394568+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__brazil_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:05.394568+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__chile_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:05.469777+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__chile_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:05.469777+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__chile_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:05.532800+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__chile_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:05.532800+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__colombia_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:05.576193+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__colombia_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:05.576193+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__colombia_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:05.647467+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__colombia_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:05.647467+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__costa_rica_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:05.702960+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__costa_rica_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:05.702960+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__costa_rica_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:05.756978+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__costa_rica_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:05.756978+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__dr_congo_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:05.825164+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__dr_congo_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:05.825164+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__dr_congo_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:05.880384+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__dr_congo_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:05.880384+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__ecuador_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:05.939050+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__ecuador_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:05.939050+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__ecuador_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:06.011017+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__ecuador_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:06.011017+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__ethiopia_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:06.081465+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__ethiopia_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:06.081465+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__ethiopia_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:06.131856+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__ethiopia_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:06.131856+00:00",
-      "mapping": "deals",
-      "record_type": null
-    },
-    {
-      "file_name": "Trade_data__ghana_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:06.209759+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__ghana_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:06.211267+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__ghana_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:06.271878+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__ghana_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:06.271878+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__guyana_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:06.335884+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__guyana_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:06.335884+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__guyana_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:06.381482+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__guyana_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:06.381482+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__indonesia_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:06.445609+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__indonesia_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:06.445609+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__indonesia_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:06.526131+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__indonesia_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:06.526131+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__ivory_coast_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:06.594064+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__ivory_coast_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:06.594064+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__ivory_coast_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:06.682794+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__ivory_coast_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:06.682794+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__kazakhstan_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:06.748319+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__kazakhstan_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:06.748319+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__kazakhstan_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:06.813042+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__kazakhstan_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:06.813042+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__kenya_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:06.867679+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__kenya_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:06.867679+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__kenya_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:06.978064+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__kenya_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:06.978064+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__kosovo_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:07.040785+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__kosovo_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:07.040785+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__kosovo_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:07.096086+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__kosovo_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:07.096086+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__lesotho_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:07.173596+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__lesotho_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:07.173596+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__lesotho_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:07.243044+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__lesotho_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:07.243044+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__liberia_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:07.296824+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__liberia_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:07.296824+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__liberia_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:07.342038+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__liberia_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:07.342038+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__malawi_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:07.411649+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__malawi_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:07.411649+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__malawi_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:07.461678+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__malawi_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:07.461678+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__mexico_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:07.535917+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__mexico_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:07.535917+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__mexico_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:07.589494+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__mexico_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:07.589494+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__moldova_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:07.666274+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__moldova_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:07.666274+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__moldova_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:07.734946+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__moldova_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:07.734946+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__nambia_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:07.807376+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__nambia_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:07.807376+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__nigeria_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:07.854148+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__nigeria_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:07.854148+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__pakistan_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:07.921720+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__pakistan_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:07.921720+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__pakistan_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:07.983503+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__pakistan_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:07.983503+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__panama_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:08.039868+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__panama_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:08.039868+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__panama_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:08.112194+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__panama_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:08.112194+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__paraguay_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:08.186184+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__paraguay_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:08.186184+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__paraguay_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:08.230179+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__paraguay_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:08.230179+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__peru_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:08.299705+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__peru_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:08.299705+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__peru_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:08.379796+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__peru_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:08.379796+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__philippines_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:08.444712+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__philippines_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:08.444712+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__philippines_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:08.520325+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__philippines_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:08.520325+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__russia_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:08.589204+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__russia_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:08.589204+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__russia_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:08.647401+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__russia_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:08.647401+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__sao_tome_and_principe_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:08.728753+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__sao_tome_and_principe_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:08.728753+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__sao_tome_and_principe_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:08.788041+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__sao_tome_and_principe_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:08.788041+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__sierra_leone_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:08.852073+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__sierra_leone_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:08.852073+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__sierra_leone_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:08.910467+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__sierra_leone_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:08.910467+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__sri_lanka_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:08.979506+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__sri_lanka_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:08.979506+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__sri_lanka_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:09.060457+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__sri_lanka_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:09.060457+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__tanzania_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:09.135393+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__tanzania_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:09.135393+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__tanzania_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:09.220770+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__tanzania_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:09.220770+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__turkey_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:09.315222+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__turkey_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:09.315222+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__turkey_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:09.386529+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__turkey_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:09.386529+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__uganda_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:09.437290+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__uganda_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:09.437290+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__uganda_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:09.497427+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__uganda_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:09.497427+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__ukraine_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:09.570945+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__ukraine_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:09.570945+00:00",
-      "mapping": "deals",
-      "record_type": null
-    },
-    {
-      "file_name": "Trade_data__ukraine_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:09.625350+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__ukraine_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:09.625350+00:00",
-      "mapping": "deals",
-      "record_type": null
-    },
-    {
-      "file_name": "Trade_data__uruguay_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:09.724100+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__uruguay_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:09.724100+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__uruguay_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:09.835834+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__uruguay_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:09.835834+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__usa_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:09.889882+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__usa_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:09.889882+00:00",
-      "mapping": "deals",
-      "record_type": null
-    },
-    {
-      "file_name": "Trade_data__usa_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:09.941710+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__usa_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:09.941710+00:00",
-      "mapping": "deals",
-      "record_type": null
-    },
-    {
-      "file_name": "Trade_data__uzbekistan_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:09.991965+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__uzbekistan_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:09.991965+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__uzbekistan_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:10.059225+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__uzbekistan_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:10.059225+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__venezuela_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:10.124964+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__venezuela_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:10.124964+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__venezuela_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:10.167549+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__venezuela_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:10.167549+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__vietnam_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:10.246104+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__vietnam_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:10.246104+00:00",
-      "mapping": "deals",
-      "record_type": null
-    },
-    {
-      "file_name": "Trade_data__vietnam_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:10.321331+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__vietnam_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:10.321331+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__zambia_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:10.371155+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__zambia_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:10.371155+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__zambia_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:10.446710+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__zambia_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:10.446710+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "Trade_data__zimbabwe_export.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:10.516516+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__zimbabwe_export_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:10.516516+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Trade_data__zimbabwe_import.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:10.587433+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Trade_data__zimbabwe_import_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:10.587433+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "export_23_april_2309__Export_Records.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:29.735361+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\export_23_april_2309__Export_Records_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:29.735361+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Import_74__Import_Records.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:44.733233+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Import_74__Import_Records_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:44.733233+00:00",
-      "mapping": "deals",
-      "record_type": "import"
-    },
-    {
-      "file_name": "International_Buyer_Importer_From_200_Countries_Data__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T15:31:48.748229+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\International_Buyer_Importer_From_200_Countries_Data__Sheet1_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T15:31:48.748229+00:00",
-      "mapping": "companies",
-      "record_type": null
-    },
-    {
-      "file_name": "CH_51_80_Exp_Feb_2025__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T16:02:54.627984+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\CH_51_80_Exp_Feb_2025__Sheet1_normalized.csv",
-      "errors_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\errors\\CH_51_80_Exp_Feb_2025__Sheet1_errors.csv",
-      "normalized_at": "2025-12-30T16:02:54.627984+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "CH_81_98_Exp_Feb_2025__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T16:13:32.231852+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\CH_81_98_Exp_Feb_2025__Sheet1_normalized.csv",
-      "errors_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\errors\\CH_81_98_Exp_Feb_2025__Sheet1_errors.csv",
-      "normalized_at": "2025-12-30T16:13:32.231852+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "indian_importer_exporter_data_final__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T16:13:37.665494+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\indian_importer_exporter_data_final__Sheet1_normalized.csv",
-      "errors_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\errors\\indian_importer_exporter_data_final__Sheet1_errors.csv",
-      "normalized_at": "2025-12-30T16:13:37.665494+00:00",
-      "mapping": "companies",
-      "record_type": null
-    },
-    {
-      "file_name": "Dec23EXP1_xlsx_19_1__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T16:27:28.539726+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Dec23EXP1_xlsx_19_1__Sheet1_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T16:27:28.539726+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "Nov24EXP1_xlsx_31__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T16:27:29.018939+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Nov24EXP1_xlsx_31__Sheet1_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T16:27:29.018939+00:00",
-      "mapping": "deals",
-      "record_type": "export"
-    },
-    {
-      "file_name": "April24_19_1__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T16:27:37.798804+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\April24_19_1__Sheet1_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T16:27:37.798804+00:00",
-      "mapping": "deals",
-      "record_type": null
-    },
-    {
-      "file_name": "June_1_Export2024_19_1__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T16:27:46.116207+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\June_1_Export2024_19_1__Sheet1_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T16:27:46.116207+00:00",
-      "mapping": "deals",
-      "record_type": null
-    },
-    {
-      "file_name": "Oct23EXP2_xlsx_19_1__Sheet1.csv",
-      "status": "normalized",
-      "created_at": "2025-12-30T16:27:55.649137+00:00",
-      "normalized_path": "C:\\Users\\heyba\\OneDrive\\Desktop\\Breyus\\AI_NEW\\pipeline\\normalized\\Oct23EXP2_xlsx_19_1__Sheet1_normalized.csv",
-      "errors_path": null,
-      "normalized_at": "2025-12-30T16:27:55.649137+00:00",
-      "mapping": "deals",
-      "record_type": "export"
+      "file_name": "CH_81_98_Exp_Feb_2025_Sheet1_part01__Sheet1_normalized.csv",
+      "status": "in_db",
+      "created_at": "2026-01-11T20:43:40.014152+00:00",
+      "mapping": null,
+      "normalized_path": "/app/pipeline/normalized/CH_81_98_Exp_Feb_2025_Sheet1_part01__Sheet1_normalized.csv",
+      "summary_path": "/app/pipeline/summaries/CH_81_98_Exp_Feb_2025_Sheet1_part01__Sheet1_normalized.json",
+      "summarized_at": "2026-01-12T03:52:52.059015+00:00",
+      "file_hash": "974354929f0707a5fb239ba88544671fc903803b2cb166a783c255eb911693a2",
+      "pending_since": null,
+      "rows_inserted": 70296,
+      "rows_failed": 0,
+      "db_table": "trade_records",
+      "inserted_at": "2026-01-12T04:24:55.631335+00:00"
     }
   ],
   "summary": {
-    "total_files": 150,
-    "total_trade_records": 0,
+    "total_files": 63,
+    "total_trade_records": 451995,
     "total_companies": 0,
-    "total_products": 0,
-    "total_embedded": 0,
+    "total_products": 20,
+    "total_embedded": 130640,
     "files_by_status": {
-      "csv": 32,
-      "normalized": 118,
+      "in_db": 45,
+      "skipped_duplicate": 5,
+      "pending_db_insert": 1,
+      "csv": 6,
+      "normalized": 6,
       "raw": 0,
       "summarized": 0,
-      "skipped_duplicate": 0,
-      "pending_db_insert": 0,
-      "in_db": 0,
       "embedded": 0
     },
-    "last_updated": "2025-12-30T16:30:45.939745+00:00"
+    "last_updated": "2026-01-15T14:25:13.877343+00:00"
   }
 }

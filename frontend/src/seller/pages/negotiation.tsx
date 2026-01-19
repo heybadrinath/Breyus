@@ -2,16 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Package, DollarSign, MessageSquare, Check, X, Loader2, FileText, Clock, User } from 'lucide-react';
 import { getTradeById, submitCounterOffer, acceptTrade, rejectTrade, Trade, Incoterms } from '../../services/trade.service';
+import { socketService } from '../../services/socket.service';
+import { getMe } from '../../services/auth.service';
 import NegotiationHistory from '../../components/NegotiationHistory';
 import Sidebar from '../../components/Sidebar';
 import TradeSkeleton from '../../components/skeletons/TradeSkeleton';
 import { INCOTERM_OPTIONS, getStatusColor } from '../../constants/trade.constants';
+import SelectField from '../../components/SelectField';
+import { useNotifications } from '../../contexts/NotificationContext';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
 const SellerNegotiation: React.FC = () => {
     const { tradeId } = useParams<{ tradeId: string }>();
     const navigate = useNavigate();
+    const { showToast } = useNotifications();
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -29,6 +34,55 @@ const SellerNegotiation: React.FC = () => {
         if (tradeId) {
             fetchTrade();
         }
+    }, [tradeId]);
+
+    useEffect(() => {
+        let isMounted = true;
+        const currentTradeId = tradeId; // Issue #6 - Capture to avoid stale closure
+
+        const setupSocket = async () => {
+            if (!currentTradeId) return;
+
+            // Issue #6 - Clear existing listeners BEFORE setting up new ones
+            // This prevents listener accumulation when tradeId changes
+            socketService.offTradeUpdate();
+            socketService.offNegotiationUpdate();
+
+            try {
+                const userInfo = await getMe();
+                if (userInfo && userInfo.userId && isMounted) {
+                    socketService.connectTrade();
+                    socketService.joinTrade(userInfo.userId, currentTradeId);
+                }
+
+                socketService.onTradeUpdate((data) => {
+                    if (data.tradeId === currentTradeId && isMounted) {
+                        fetchTrade();
+                    }
+                });
+
+                socketService.onNegotiationUpdate((data) => {
+                    if (data.tradeId === currentTradeId && isMounted) {
+                        fetchTrade();
+                    }
+                });
+            } catch (err) {
+                console.error('Failed to setup trade socket:', err);
+            }
+        };
+
+        if (currentTradeId) {
+            setupSocket();
+        }
+
+        return () => {
+            isMounted = false;
+            if (currentTradeId) {
+                socketService.leaveTrade(currentTradeId);
+            }
+            socketService.offTradeUpdate();
+            socketService.offNegotiationUpdate();
+        };
     }, [tradeId]);
 
     const fetchTrade = async () => {
@@ -54,7 +108,9 @@ const SellerNegotiation: React.FC = () => {
                 setSelectedIncoterm(tradeData.buyerIncoterms.selectedIncoterm);
             }
         } catch (err: any) {
-            setError(err.message || 'Failed to load trade');
+            const errorMessage = err.message || 'Failed to load trade';
+            setError(errorMessage);
+            showToast(errorMessage, 'error'); // Issue #13 - Show error toast
         } finally {
             setLoading(false);
         }
@@ -78,7 +134,7 @@ const SellerNegotiation: React.FC = () => {
 
             await submitCounterOffer(tradeId, counterOfferData);
             await fetchTrade();
-            alert('Counter-offer submitted successfully!');
+            showToast('Counter-offer submitted successfully!', 'success');
         } catch (err: any) {
             setError(err.message || 'Failed to submit counter-offer');
         } finally {
@@ -97,7 +153,7 @@ const SellerNegotiation: React.FC = () => {
             setSubmitting(true);
             await acceptTrade(tradeId);
             await fetchTrade();
-            alert('Trade accepted successfully!');
+            showToast('Trade accepted successfully!', 'success');
         } catch (err: any) {
             setError(err.message || 'Failed to accept trade');
         } finally {
@@ -113,7 +169,7 @@ const SellerNegotiation: React.FC = () => {
             await rejectTrade(tradeId, rejectReason);
             setShowRejectModal(false);
             await fetchTrade();
-            alert('Trade rejected');
+            showToast('Trade rejected', 'info');
         } catch (err: any) {
             setError(err.message || 'Failed to reject trade');
         } finally {
@@ -355,17 +411,18 @@ const SellerNegotiation: React.FC = () => {
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 Incoterm
                                             </label>
-                                            <select
+                                            <SelectField
                                                 value={selectedIncoterm}
-                                                onChange={(e) => setSelectedIncoterm(e.target.value)}
+                                                onValueChange={(value) => setSelectedIncoterm(String(value))}
                                                 disabled={!canSubmitCounter()}
-                                                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                                                wrapperClassName="w-full"
+                                                className="disabled:bg-gray-100"
                                             >
                                                 <option value="">Select Incoterm</option>
                                                 {INCOTERM_OPTIONS.map((term) => (
                                                     <option key={term} value={term}>{term}</option>
                                                 ))}
-                                            </select>
+                                            </SelectField>
                                         </div>
 
                                         {/* Message */}

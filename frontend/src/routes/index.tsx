@@ -28,7 +28,7 @@ import Inbox from "../seller/pages/inbox";
 import { Trade } from "../seller/pages/trade";
 import SellerNegotiation from "../seller/pages/negotiation";
 import SellerSettings from "../seller/pages/settings";
-import SCOUpload from "../seller/pages/sco-upload";
+import SellerMarketplace from "../seller/pages/Marketplace";
 
 
 
@@ -46,18 +46,23 @@ import ThankYou from "../buyer/pages/purchase-request-success";
 import BuyerNegotiation from "../buyer/pages/negotiation";
 import TradeComplete from "../components/TradeComplete";
 import BuyerSettings from "../buyer/pages/settings";
-import ICPOUpload from "../buyer/pages/icpo-upload";
+import BuyerMarketplace from "../buyer/pages/Marketplace";
 
 
 
 // Buyer AI Imports
 import BuyerAi from "../buyer/pages/ai";
+import BuyerAiSelect from "../buyer/pages/ai-select";
 import BuyerAiResult from "../buyer/pages/ai-result";
 
 // Seller AI Imports
 import SellerSearchOption from "../seller/pages/SellerSearchOption";
 import SellerSearchInput from "../seller/pages/SellerSearchInput";
+import SellerAiSelect from "../seller/pages/ai-select";
 import SellerSearchResult from "../seller/pages/SellerSearchResult";
+import SellerAiLanding from "../seller/pages/ai-landing";
+import SellerAiInventory from "../seller/pages/ai-inventory";
+import SellerAiResult from "../seller/pages/ai-result";
 import Notifications from "../pages/Notifications";
 
 
@@ -133,8 +138,8 @@ const AppRoutes = () => {
         <Route path="/buyer/negotiation/:tradeId" element={<BuyerProtectedRoute><Animate page={<BuyerNegotiation />} /></BuyerProtectedRoute>} />
         <Route path="/buyer/trade-complete" element={<BuyerProtectedRoute><Animate page={<TradeComplete isSeller={false} />} /></BuyerProtectedRoute>} />
         <Route path="/buyer/settings" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<BuyerSettings />} />} /></BuyerProtectedRoute>} />
-        <Route path="/buyer/icpo-upload" element={<BuyerProtectedRoute><Animate page={<ICPOUpload />} /></BuyerProtectedRoute>} />
         <Route path="/buyer/notifications" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<Notifications />} />} /></BuyerProtectedRoute>} />
+        <Route path="/buyer/marketplace" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<BuyerMarketplace />} />} /></BuyerProtectedRoute>} />
 
 
 
@@ -153,23 +158,29 @@ const AppRoutes = () => {
         <Route path="/seller/negotiation/:tradeId" element={<SellerProtectedRoute><Animate page={<SellerNegotiation />} /></SellerProtectedRoute>} />
         <Route path="/seller/trade-complete" element={<SellerProtectedRoute><Animate page={<TradeComplete isSeller={true} />} /></SellerProtectedRoute>} />
         <Route path="/seller/settings" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<SellerSettings />} />} /></SellerProtectedRoute>} />
-        <Route path="/seller/sco-upload" element={<SellerProtectedRoute><Animate page={<SCOUpload />} /></SellerProtectedRoute>} />
         <Route path="/seller/notifications" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<Notifications />} />} /></SellerProtectedRoute>} />
+        <Route path="/seller/marketplace" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<SellerMarketplace />} />} /></SellerProtectedRoute>} />
 
 
 
 
         {/*Buyer AI Routes */}
-        <Route path="/buyer/ai" element={<BuyerProtectedRoute><Animate page={<BuyerAi />} /></BuyerProtectedRoute>} />
-        <Route path="/buyer/ai-result" element={<BuyerProtectedRoute><Animate page={<BuyerAiResult />} /></BuyerProtectedRoute>} />
+        <Route path="/buyer/ai" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<BuyerAi />} />} /></BuyerProtectedRoute>} />
+        <Route path="/buyer/ai-select" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<BuyerAiSelect />} />} /></BuyerProtectedRoute>} />
+        <Route path="/buyer/ai-result" element={<BuyerProtectedRoute><Animate page={<Layout Buyer={true} Body={<BuyerAiResult />} />} /></BuyerProtectedRoute>} />
         {/* <Route path="/buyer/ai-country" element={<BuyerProtectedRoute><Animate page={<BuyerAiCountry />} /></BuyerProtectedRoute>} /> */}
         {/* <Route path="/buyer/ai-port" element={<BuyerProtectedRoute><Animate page={<BuyerAiPort />} /></BuyerProtectedRoute>} /> */}
         {/* <Route path="/buyer/ai-product" element={<BuyerProtectedRoute><Animate page={<BuyerAiproduct />} /></BuyerProtectedRoute>} /> */}
 
         {/*Seller Ai Routes */}
-        <Route path="/seller/search-option" element={<SellerProtectedRoute><Animate page={<SellerSearchOption />} /></SellerProtectedRoute>} />
-        <Route path="/seller/search-input" element={<SellerProtectedRoute><Animate page={<SellerSearchInput />} /></SellerProtectedRoute>} />
-        <Route path="/seller/search-result" element={<SellerProtectedRoute><Animate page={<SellerSearchResult />} /></SellerProtectedRoute>} />
+        <Route path="/seller/ai" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<SellerAiLanding />} />} /></SellerProtectedRoute>} />
+        <Route path="/seller/ai-inventory" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<SellerAiInventory />} />} /></SellerProtectedRoute>} />
+        <Route path="/seller/ai-result" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<SellerAiResult />} />} /></SellerProtectedRoute>} />
+        {/* Legacy seller AI routes - kept for backward compatibility */}
+        <Route path="/seller/search-option" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<SellerSearchOption />} />} /></SellerProtectedRoute>} />
+        <Route path="/seller/search-input" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<SellerSearchInput />} />} /></SellerProtectedRoute>} />
+        <Route path="/seller/ai-select" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<SellerAiSelect />} />} /></SellerProtectedRoute>} />
+        <Route path="/seller/search-result" element={<SellerProtectedRoute><Animate page={<Layout Seller={true} Body={<SellerSearchResult />} />} /></SellerProtectedRoute>} />
 
 
         {/* Essential Error routes */}

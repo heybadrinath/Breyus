@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { MessageCircle, FlaskConical, Eye, Loader2, FileText } from "lucide-react";
-import { getUserTrades, rejectTrade, Trade } from "../../services/trade.service";
+import { getUserTrades, rejectTrade, Trade, uploadICPO } from "../../services/trade.service";
+import DocumentUploadModal from "../../components/DocumentUploadModal";
+import ViewDocumentModal from "../../components/ViewDocumentModal";
+import { createConversation } from "../../services/inbox.service";
 import TradeDetailsModal from "../../components/TradeDetailsModal";
 import QueryModal from "../../components/QueryModal";
 import ReviewTermsModal from "../../components/ReviewTermsModal";
 import TradeCancellationModal from "../../components/TradeCancellationModal";
+import { useNotifications } from "../../contexts/NotificationContext";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
@@ -119,14 +123,26 @@ const getTradeSteps = (trade: TradeWithProduct): { label: string; status: StepSt
 };
 
 // Waiting List Item - matches Figma design
-const WaitingListItem = ({ trade, onCancel, isProcessing, onViewOffer, onNavigateToNegotiation, onAskQueries, onViewQualityReport }: {
+const WaitingListItem = ({
+    trade,
+    onCancel,
+    isProcessing,
+    onViewOffer,
+    onNavigateToNegotiation,
+    onAskQueries,
+    onChatWithSeller,
+    onViewQualityReport,
+    isChatting
+}: {
     trade: TradeWithProduct;
     onCancel: (tradeId: string) => void;
     isProcessing: boolean;
     onViewOffer: (tradeId: string) => void;
     onNavigateToNegotiation: (tradeId: string) => void;
     onAskQueries: (trade: TradeWithProduct) => void;
+    onChatWithSeller: (trade: TradeWithProduct) => void;
     onViewQualityReport: (trade: TradeWithProduct) => void;
+    isChatting: boolean;
 }) => {
     const productPrice = parseFloat(trade.product?.price || '0');
     const finalPrice = parseFloat(trade.buyerOfferedPrice || trade.product?.price || '0');
@@ -240,8 +256,17 @@ const WaitingListItem = ({ trade, onCancel, isProcessing, onViewOffer, onNavigat
                         >
                             {isProcessing ? 'Processing...' : 'Cancel PR'}
                         </button>
-                        <button className="px-6 py-2 border text-sm rounded hover:bg-gray-50 flex items-center gap-2">
-                            <MessageCircle size={16} /> Chat with seller
+                        <button
+                            onClick={() => onChatWithSeller(trade)}
+                            disabled={isChatting}
+                            className="px-6 py-2 border text-sm rounded hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50"
+                        >
+                            {isChatting ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <MessageCircle size={16} />
+                            )}
+                            Chat with seller
                         </button>
                     </>
                 )}
@@ -364,6 +389,7 @@ const AcceptedListItem = ({ trade, onViewSCO, onReviewFinalTerms, onRejectTrade,
 
 export const PurchaseRequestWaitingList = () => {
     const navigate = useNavigate();
+    const { showToast } = useNotifications();
     const [trades, setTrades] = useState<TradeWithProduct[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -375,6 +401,8 @@ export const PurchaseRequestWaitingList = () => {
     const [showQueryModal, setShowQueryModal] = useState(false);
     const [queryModalProductId, setQueryModalProductId] = useState<string>('');
     const [queryModalProductName, setQueryModalProductName] = useState<string>('');
+    // Issue #20 - Use Set to track multiple concurrent chat operations
+    const [chattingTradeIds, setChattingTradeIds] = useState<Set<string>>(new Set());
 
     // Review Terms Modal state
     const [showReviewTermsModal, setShowReviewTermsModal] = useState(false);
@@ -383,6 +411,14 @@ export const PurchaseRequestWaitingList = () => {
     // Cancellation Modal state
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [cancelModalTrade, setCancelModalTrade] = useState<TradeWithProduct | null>(null);
+
+    // ICPO Upload Modal state
+    const [showICPOUploadModal, setShowICPOUploadModal] = useState(false);
+    const [icpoUploadTradeId, setIcpoUploadTradeId] = useState<string | null>(null);
+
+    // SCO View Document Modal state
+    const [viewDocModalOpen, setViewDocModalOpen] = useState(false);
+    const [viewDocInfo, setViewDocInfo] = useState<any>(null);
 
     const handleViewOffer = (tradeId: string) => {
         setSelectedTradeId(tradeId);
@@ -393,10 +429,74 @@ export const PurchaseRequestWaitingList = () => {
         navigate(`/buyer/negotiation/${tradeId}`);
     };
 
+    const resolveProductId = (trade: TradeWithProduct) =>
+        trade.product?._id || (trade.product as any)?.id || (trade as any)?.productId;
+
+    const resolveProductName = (trade: TradeWithProduct) =>
+        trade.product?.name || 'Product';
+
+    const getConversationId = (result: any) => {
+        if (!result) return undefined;
+        if (typeof result.data === 'string') return result.data;
+        if (result.data && typeof result.data === 'object') {
+            return (
+                result.data._id ||
+                result.data.conversationId ||
+                result.data.id ||
+                result.data.data?._id ||
+                result.data.data?.conversationId ||
+                result.data.data
+            );
+        }
+        return result.conversationId;
+    };
+
     const handleAskQueries = (trade: TradeWithProduct) => {
-        setQueryModalProductId(trade.product._id);
-        setQueryModalProductName(trade.product.name);
+        const productId = resolveProductId(trade);
+        if (!productId) {
+            showToast('Unable to start a query for this product.', 'error');
+            return;
+        }
+        setQueryModalProductId(productId);
+        setQueryModalProductName(resolveProductName(trade));
         setShowQueryModal(true);
+    };
+
+    const handleChatWithSeller = async (trade: TradeWithProduct) => {
+        const productId = resolveProductId(trade);
+        if (!productId) {
+            showToast('Unable to start chat for this product.', 'error');
+            return;
+        }
+        // Issue #20 - Prevent double-clicks on same trade
+        if (chattingTradeIds.has(trade._id)) {
+            return;
+        }
+        try {
+            // Issue #20 - Add to Set of chatting trades
+            setChattingTradeIds(prev => new Set(prev).add(trade._id));
+            const result = await createConversation(productId);
+            const conversationId = getConversationId(result);
+            if (conversationId) {
+                navigate(`/buyer/inbox?conversationId=${conversationId}`);
+                return;
+            }
+            if (result.message?.includes("yourself")) {
+                showToast("You can't send a message to yourself.", 'error');
+            } else {
+                showToast(result.message || 'Failed to create conversation', 'error');
+            }
+        } catch (error) {
+            console.error('Error creating conversation:', error);
+            showToast('Error creating conversation', 'error');
+        } finally {
+            // Issue #20 - Remove from Set of chatting trades
+            setChattingTradeIds(prev => {
+                const next = new Set(prev);
+                next.delete(trade._id);
+                return next;
+            });
+        }
     };
 
     const handleViewQualityReport = (trade: TradeWithProduct) => {
@@ -408,7 +508,7 @@ export const PurchaseRequestWaitingList = () => {
                 : `${BACKEND_URL}${testReports[0].startsWith('/') ? '' : '/'}${testReports[0]}`;
             window.open(reportUrl, '_blank');
         } else {
-            alert('No quality reports available for this product.');
+            showToast('No quality reports available for this product.', 'info');
         }
     };
 
@@ -419,12 +519,17 @@ export const PurchaseRequestWaitingList = () => {
 
     const handleViewSCO = (trade: TradeWithProduct) => {
         if (trade.scoDocument?.filePath) {
-            const scoUrl = trade.scoDocument.filePath.startsWith('http')
-                ? trade.scoDocument.filePath
-                : `${BACKEND_URL}${trade.scoDocument.filePath.startsWith('/') ? '' : '/'}${trade.scoDocument.filePath}`;
-            window.open(scoUrl, '_blank');
+            setViewDocInfo({
+                filePath: trade.scoDocument.filePath,
+                originalName: trade.scoDocument.originalName || 'SCO Document',
+                mimeType: trade.scoDocument.mimeType || 'application/pdf',
+                size: trade.scoDocument.size || 0,
+                uploadedAt: trade.scoDocument.uploadedAt || new Date().toISOString(),
+                status: trade.scoDocument.status || 'uploaded'
+            });
+            setViewDocModalOpen(true);
         } else {
-            alert('SCO document not available.');
+            showToast('SCO document not available.', 'info');
         }
     };
 
@@ -470,15 +575,32 @@ export const PurchaseRequestWaitingList = () => {
             await fetchTrades();
         } catch (err) {
             console.error('Failed to reject trade:', err);
-            alert('Failed to reject trade. Please try again.');
+            showToast('Failed to reject trade. Please try again.', 'error');
         } finally {
             setProcessingId(null);
         }
     };
 
     const handleProceedToPO = (tradeId: string) => {
-        // Navigate to ICPO upload page for this trade
-        navigate(`/buyer/icpo-upload?tradeId=${tradeId}`);
+        // Open ICPO upload modal
+        setIcpoUploadTradeId(tradeId);
+        setShowICPOUploadModal(true);
+    };
+
+    // Handle ICPO file upload
+    const handleICPOUpload = async (file: File, notes?: string) => {
+        if (!icpoUploadTradeId) return;
+
+        try {
+            await uploadICPO(icpoUploadTradeId, file, notes);
+            showToast('ICPO uploaded successfully! The seller will review it.', 'success');
+            setShowICPOUploadModal(false);
+            setIcpoUploadTradeId(null);
+            await fetchTrades();
+        } catch (err: any) {
+            showToast(err.message || 'Failed to upload ICPO', 'error');
+            throw err;
+        }
     };
 
     // Filter trades by status
@@ -537,7 +659,9 @@ export const PurchaseRequestWaitingList = () => {
                                 onViewOffer={handleViewOffer}
                                 onNavigateToNegotiation={handleNavigateToNegotiation}
                                 onAskQueries={handleAskQueries}
+                                onChatWithSeller={handleChatWithSeller}
                                 onViewQualityReport={handleViewQualityReport}
+                                isChatting={chattingTradeIds.has(trade._id)}
                             />
                         ))}
                     </div>
@@ -621,6 +745,32 @@ export const PurchaseRequestWaitingList = () => {
                     tradePhase={(cancelModalTrade as any).tradePhase || 'PR'}
                     productName={cancelModalTrade.product?.name || 'Unknown Product'}
                     onCancelled={handleCancellationComplete}
+                />
+            )}
+
+            {/* ICPO Upload Modal */}
+            {showICPOUploadModal && (
+                <DocumentUploadModal
+                    isOpen={showICPOUploadModal}
+                    onClose={() => {
+                        setShowICPOUploadModal(false);
+                        setIcpoUploadTradeId(null);
+                    }}
+                    onUpload={handleICPOUpload}
+                    documentType="icpo"
+                />
+            )}
+
+            {/* SCO View Document Modal */}
+            {viewDocModalOpen && viewDocInfo && (
+                <ViewDocumentModal
+                    isOpen={viewDocModalOpen}
+                    onClose={() => {
+                        setViewDocModalOpen(false);
+                        setViewDocInfo(null);
+                    }}
+                    document={viewDocInfo}
+                    documentType="sco"
                 />
             )}
         </div>

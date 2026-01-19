@@ -1,37 +1,7 @@
-import React, { ReactNode, useState } from "react";
+import React, { useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import AiAnimation from "../../assets/ai/ai-animation.svg";
-import BreyusLogo from "../../assets/Logos/full-logo.svg";
-
-const Navbar = () => {
-  const navigate = useNavigate();
-  return (
-    <div className="border-b border-gray-200 px-2 py-2 flex">
-      <div id="logo" className="my-auto">
-        <img className="h-auto w-[180px]" src={BreyusLogo} alt="Breyus" />
-      </div>
-      <div
-        id="nav"
-        className="flex w-fit justify-between my-auto mx-auto font-[500] xl:text-lg lg:text-md md:text-sm"
-      >
-        <Link className="mx-4 text-black my-auto" to={"/features"}>
-          Features
-        </Link>
-        <Link className="mx-4 text-black my-auto" to={"/impact"}>
-          Impact
-        </Link>
-        <Link className="mx-4 text-black my-auto" to={"/contact-us"}> {/* Corrected typo: conact us to contact-us */}
-          Contact Us
-        </Link>
-      </div>
-      <div className="flex my-auto">
-        <button className="px-4 py-2 mr-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100">Sign Up</button>
-        <button className="px-4 py-2 rounded-md bg-black text-white hover:bg-gray-800">Login</button>
-      </div>
-    </div>
-  );
-};
 
 const PortInputBox = ({ commodity, country }: { commodity: string; country: string }) => {
   const [port, setPort] = useState("");
@@ -52,13 +22,13 @@ const PortInputBox = ({ commodity, country }: { commodity: string; country: stri
       });
       if (!response.ok) {
         const errorText = await response.text();
-        navigate("/buyer/ai-result", { state: { result: null, error: `Backend error: ${errorText}` } });
+        navigate("/seller/search-result", { state: { result: null, error: `Backend error: ${errorText}` } });
         return;
       }
       const result = await response.json();
-      navigate("/buyer/ai-result", { state: { result, error: null } });
+      navigate("/seller/search-result", { state: { result, error: null } });
     } catch (err) {
-      navigate("/buyer/ai-result", { state: { result: null, error: `Network error: ${err}`} });
+      navigate("/seller/search-result", { state: { result: null, error: `Network error: ${err}`} });
     }
   };
 
@@ -85,8 +55,8 @@ const HomePageContent = () => {
   const navigate = useNavigate();
 
   const handleSearchBuyerForProduct = () => {
-    // Navigate to the page where user inputs commodity and country for buyer search
-    navigate("/buyer/ai");
+    // Navigate to the page where user inputs commodity and country for AI search
+    navigate("/seller/search-input");
   };
 
   const handleSearchAnyBuyer = () => {
@@ -141,16 +111,12 @@ const Section = ({ commodity, country }: { commodity: string; country: string })
 };
 
 const AnimatedBackground = () => (
-  <div className="w-fit mx-auto relative">
+  <div className="w-fit mx-auto relative z-0 opacity-20">
     <motion.img
       src={AiAnimation}
       alt="Rotating Icon"
       animate={{ rotate: 360 }}
-      transition={{
-        repeat: Infinity,
-        duration: 0,
-        ease: "linear",
-      }}
+      transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
       className="flex h-[90vh] w-[90vh] relative"
     />
   </div>
@@ -163,16 +129,15 @@ const PortPage = () => {
   // Handle cases where commodity or country might be missing (e.g., direct navigation)
   if (!commodity || !country) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center justify-center min-h-screen">  
         <p className="text-red-500">Error: Commodity or Country not provided. Please go back.</p>
-        <Link to="/" className="mt-4 text-blue-600 hover:underline">Go to Home Page</Link>
+        <Link to="/seller/search-option" className="mt-4 text-blue-600 hover:underline">Go to AI Home</Link>
       </div>
     );
   }
 
   return (
-    <div>
-      <Navbar />
+    <div className="relative min-h-screen bg-gray-50 overflow-hidden">
       <AnimatedBackground />
       <Section commodity={commodity} country={country} />
     </div>
@@ -182,8 +147,7 @@ const PortPage = () => {
 // This will be your main landing page component
 const SellerSearchOption = () => {
   return (
-    <div>
-      <Navbar />
+    <div className="relative min-h-screen bg-gray-50 overflow-hidden">
       <AnimatedBackground />
       <HomePageContent />
     </div>

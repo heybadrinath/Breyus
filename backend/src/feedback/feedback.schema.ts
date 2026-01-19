@@ -9,6 +9,9 @@ export class Feedback extends Document {
   @Prop({ type: Types.ObjectId, ref: 'Trade', required: true })
   trade: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'Product' })
+  product?: Types.ObjectId;
+
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   reviewer: Types.ObjectId; // The user who submitted the feedback
 
@@ -28,6 +31,12 @@ export class Feedback extends Document {
   @Prop({ type: String, default: '' })
   comment: string;
 
+  @Prop({ type: [String], default: [] })
+  tags?: string[];
+
+  @Prop({ type: Map, of: String, default: {} })
+  details?: Record<string, string>;
+
   @Prop({ type: Date, default: Date.now })
   createdAt: Date;
 
@@ -37,8 +46,12 @@ export class Feedback extends Document {
 
 export const FeedbackSchema = SchemaFactory.createForClass(Feedback);
 
+FeedbackSchema.set('toJSON', { flattenMaps: true });
+FeedbackSchema.set('toObject', { flattenMaps: true });
+
 // Create indexes for efficient queries
 FeedbackSchema.index({ trade: 1 });
+FeedbackSchema.index({ product: 1 });
 FeedbackSchema.index({ reviewee: 1 });
 FeedbackSchema.index({ reviewer: 1 });
 FeedbackSchema.index({ feedbackType: 1 });

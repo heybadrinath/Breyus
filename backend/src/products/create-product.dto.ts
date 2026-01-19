@@ -44,9 +44,29 @@ export class CreateProductDto {
   @IsString()
   detailedDescription: string;  // Detailed Product Description
 
+  @IsOptional()
+  @IsString()
+  application?: string;  // Practical application value
+
+  @IsOptional()
+  @IsString()
+  environmentalImpact?: string;  // Environmental impact
+
+  @IsOptional()
+  @IsString()
+  qualityAssurance?: string;  // Quality assurance notes
+
   @IsNotEmpty()
   @IsString()
-  category: string;  // Category of the product
+  category: string;  // Category of the product (name for display)
+
+  @IsOptional()
+  @IsString()
+  categoryId?: string;  // Reference to ProductCategory collection (ObjectId)
+
+  @IsOptional()
+  @IsBoolean()
+  isNicheCommodity?: boolean;  // true = niche, false = mainstream (auto-set from category)
 
   @IsNotEmpty()
   @IsString()
@@ -65,6 +85,10 @@ export class CreateProductDto {
   @IsNotEmpty()
   @IsString()
   sku: string;  // Stock Keeping Unit (SKU)
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;  // Whether the product is visible to buyers
 
   @IsOptional()
   @IsBoolean()
@@ -102,6 +126,14 @@ export class CreateProductDto {
   // Trade terms properties
   @IsOptional()
   @IsString()
+  exportLocation?: string;  // Export location for the product
+
+  @IsOptional()
+  @IsString()
+  nearestPort?: string;  // Nearest exporting port
+
+  @IsOptional()
+  @IsString()
   revenueMin?: string;  // Minimum revenue
 
   @IsOptional()
@@ -115,6 +147,18 @@ export class CreateProductDto {
   @IsOptional()
   @IsString()
   unitTrade?: string;  // Unit used for revenue (e.g., Crore)
+
+  @IsOptional()
+  @IsString()
+  paymentTerms?: string;  // Payment, bank, and insurance terms
+
+  @IsOptional()
+  @IsString()
+  logisticsTerms?: string;  // Delivery/logistics terms
+
+  @IsOptional()
+  @IsString()
+  popTerms?: string;  // Proof of product terms
 
   @IsOptional()
   @IsString()

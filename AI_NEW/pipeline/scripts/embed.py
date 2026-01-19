@@ -13,11 +13,20 @@ from __future__ import annotations
 
 import os
 import time
+from pathlib import Path
 from typing import List, Tuple
 
 import psycopg2
+from dotenv import load_dotenv
 
 from .utils import load_manifest, save_manifest, utc_now
+
+# Load .env file from AI_NEW directory
+_script_dir = Path(__file__).parent
+_ai_dir = _script_dir.parent.parent
+_env_file = _ai_dir / ".env"
+if _env_file.exists():
+    load_dotenv(_env_file)
 
 
 try:

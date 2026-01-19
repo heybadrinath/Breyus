@@ -1,4 +1,5 @@
-import { Controller, Post, Get, Res, HttpStatus, Body, Inject, forwardRef } from '@nestjs/common';
+import { Controller, Post, Get, Res, HttpStatus, Body, Inject, forwardRef, UseGuards } from '@nestjs/common';
+import { ThrottlerGuard, Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { Response } from 'express';
 import { InjectModel } from '@nestjs/mongoose';
@@ -9,7 +10,15 @@ import { UsersService } from 'src/users/users.service';
 import { ForgotPasswordDto, ResetPasswordDto, ChangePasswordDto } from './dto/password-reset.dto';
 
 
+/**
+ * Auth Controller
+ * Bug #8 Fix: Rate limiting applied to password reset endpoints
+ * - Forgot password: 3 requests per minute (prevent email spam)
+ * - Reset password: 3 requests per minute (prevent OTP brute force)
+ * - Change password: 5 requests per minute
+ */
 @Controller('auth')
+@UseGuards(ThrottlerGuard)
 export class AuthController {
     constructor(
         private readonly authService: AuthService,
@@ -18,7 +27,9 @@ export class AuthController {
         @InjectModel(User.name) private readonly userSchema: Model<User>
     ) { }
 
+    // Skip rate limiting for session validation (called frequently by frontend)
     @Get('validate-cookie')
+    @SkipThrottle()
     async validateCookie(@Res() response: Response): Promise<any> {
         const accountToken = response.req.signedCookies['account'];
 
@@ -47,7 +58,9 @@ export class AuthController {
         }
     }
 
+    // Skip rate limiting for user info (called frequently by frontend)
     @Get('me')
+    @SkipThrottle()
     async getMe(@Res() response: Response): Promise<any> {
         const accountToken = response.req.signedCookies['account'];
         if (!accountToken) {
@@ -74,11 +87,17 @@ export class AuthController {
     async logout(@Res() response: Response): Promise<any> {
         try {
             // Clear the account cookie with the same settings it was set with
+            const cookieSecure = process.env.COOKIE_SECURE === 'true'
+                || process.env.NODE_ENV === 'production';
+            const sameSite = cookieSecure
+                ? (process.env.NODE_ENV === 'production' ? 'strict' : 'none')
+                : 'lax';
+
             response.clearCookie('account', {
                 httpOnly: true,
                 signed: true,
-                secure: process.env.NODE_ENV === 'production' || true,
-                sameSite: (process.env.NODE_ENV === 'production') ? 'strict' : 'none'
+                secure: cookieSecure,
+                sameSite,
             });
             return response.status(HttpStatus.OK).json({ message: 'Logged out successfully' });
         } catch (error) {
@@ -86,7 +105,9 @@ export class AuthController {
         }
     }
 
+    // Bug #8 Fix: Strict rate limit on forgot-password to prevent email spam
     @Post('forgot-password')
+    @Throttle({ default: { limit: 3, ttl: 60000 } })
     async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto, @Res() response: Response): Promise<any> {
         try {
             const { email } = forgotPasswordDto;
@@ -121,7 +142,9 @@ export class AuthController {
         }
     }
 
+    // Bug #8 Fix: Strict rate limit on reset-password to prevent OTP brute force
     @Post('reset-password')
+    @Throttle({ default: { limit: 3, ttl: 60000 } })
     async resetPassword(@Body() resetPasswordDto: ResetPasswordDto, @Res() response: Response): Promise<any> {
         try {
             const { email, otp, newPassword } = resetPasswordDto;
@@ -164,7 +187,9 @@ export class AuthController {
         }
     }
 
+    // Bug #8 Fix: Rate limit on change-password (slightly higher since user is authenticated)
     @Post('change-password')
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     async changePassword(@Body() changePasswordDto: ChangePasswordDto, @Res() response: Response): Promise<any> {
         try {
             const accountToken = response.req.signedCookies['account'];

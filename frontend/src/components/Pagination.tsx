@@ -1,4 +1,5 @@
 import React from 'react';
+import SelectField from './SelectField';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 interface PaginationProps {
@@ -73,17 +74,17 @@ export const Pagination: React.FC<PaginationProps> = ({
                 {showEntrySelector && onEntriesChange && (
                     <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-600">Show</span>
-                        <select
+                        <SelectField
                             value={entriesPerPage}
-                            onChange={(e) => onEntriesChange(Number(e.target.value))}
-                            className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="select-field--sm"
+                            onValueChange={(value) => onEntriesChange(Number(value))}
                         >
                             {entriesOptions.map((option) => (
                                 <option key={option} value={option}>
                                     {option}
                                 </option>
                             ))}
-                        </select>
+                        </SelectField>
                         <span className="text-sm text-gray-600">entries</span>
                     </div>
                 )}

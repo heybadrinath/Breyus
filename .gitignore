@@ -29,5 +29,7 @@ yarn-error.log*
 
 #local dev
 .claude
+.playwright-mcp
+.agent
 AGENTS.md
 CLAUDE.md

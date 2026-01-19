@@ -2,6 +2,7 @@ import { X, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import React from "react";
 import { Address as AddressType } from "../../services/trade.service";
+import SelectField from "../../components/SelectField";
 
 interface AddressProps {
     handlestep: (step: number) => void;
@@ -18,6 +19,7 @@ interface AddressProps {
     onNewAddressChange: (address: AddressType) => void;
     onAddNewAddress: () => void;
     onSelectedAddressIndexChange: (index: number) => void;
+    successMessage?: string | null;
     loading?: boolean;
 }
 
@@ -35,6 +37,7 @@ export const Address: React.FC<AddressProps> = ({
     onNewAddressChange,
     onAddNewAddress,
     onSelectedAddressIndexChange,
+    successMessage,
     loading = false
 }) => {
     const handleAddAddressClick = () => {
@@ -163,14 +166,19 @@ export const Address: React.FC<AddressProps> = ({
                         >
                             <button onClick={handleClosePopup} className="absolute top-3 right-3 text-gray-400 hover:text-gray-700" aria-label="Close"> <X size={22} /> </button>
                             <h2 className="text-xl font-bold mb-4 text-center">Add new Address</h2>
+                            {successMessage && (
+                                <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+                                    {successMessage}
+                                </div>
+                            )}
                             <div className="space-y-3 text-sm flex flex-col">
                                 <div className="flex flex-col">
                                     <label className="mb-1 font-medium" htmlFor="country">Country/Region</label>
-                                    <select 
-                                        id="country" 
-                                        className="w-full px-2 py-3 bg-white border-2 rounded-lg cursor-pointer"
+                                    <SelectField
+                                        id="country"
                                         value={newAddress.country}
-                                        onChange={(e) => onNewAddressChange({...newAddress, country: e.target.value})}
+                                        onChange={(e) => onNewAddressChange({ ...newAddress, country: e.target.value })}
+                                        wrapperClassName="w-full"
                                     >
                                         <option value="India">India</option>
                                         <option value="USA">USA</option>
@@ -211,7 +219,7 @@ export const Address: React.FC<AddressProps> = ({
                                         <option value="Sri Lanka">Sri Lanka</option>
                                         <option value="Bangladesh">Bangladesh</option>
                                         <option value="Afghanistan">Afghanistan</option>
-                                    </select>
+                                    </SelectField>
                                 </div>
 
                                 <div className="flex flex-col">

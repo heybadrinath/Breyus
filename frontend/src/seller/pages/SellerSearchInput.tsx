@@ -2,33 +2,12 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import AiAnimation from "../../assets/ai/ai-animation.svg";
-import BreyusLogo from "../../assets/Logos/full-logo.svg";
-
-const Navbar = () => {
-  const navigate = useNavigate();
-  return (
-    <div className="border-b border-gray-200 px-2 py-2 flex">
-      <div id="logo" className="my-auto">
-        <img className="h-auto w-[180px]" src={BreyusLogo} alt="Breyus" />
-      </div>
-      <div
-        id="nav"
-        className="flex w-fit justify-between my-auto mx-auto font-[500] xl:text-lg lg:text-md md:text-sm"
-      >
-        <a className="mx-4 text-black my-auto" href="/features">Features</a>
-        <a className="mx-4 text-black my-auto" href="/impact">Impact</a>
-        <a className="mx-4 text-black my-auto" href="/contact">Contact Us</a>
-      </div>
-    </div>
-  );
-};
 
 const CombinedForm = () => {
   const [step, setStep] = useState(1);
   const [commodity, setCommodity] = useState("");
   const [country, setCountry] = useState("");
   const [port, setPort] = useState("");
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   // Refs for input fields to focus them automatically
@@ -74,31 +53,19 @@ const CombinedForm = () => {
   };
 
   const handleSubmit = async () => {
-    if (!commodity.trim() || !country.trim() || !port.trim()) {
-      alert("Please fill all fields before searching.");
+    if (!commodity.trim() || !country.trim()) {
+      alert("Please fill all required fields before searching.");
       return;
     }
-    setLoading(true);
-    try {
-      const response = await fetch("http://localhost:8000/aiz.px", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ commodity, country, port }),
-      });
-      if (!response.ok) {
-        const errorText = await response.text();
-        navigate("/seller/search-result", { state: { result: null, error: `Backend error: ${errorText}` } });
-        return;
+    // Navigate to results page with search parameters
+    // The results page will handle the actual API call
+    navigate("/seller/search-result", {
+      state: {
+        commodity: commodity.trim(),
+        country: country.trim(),
+        port: port.trim() || undefined,
       }
-      const result = await response.json();
-      navigate("/seller/search-result", { state: { result, error: null } });
-    } catch (err) {
-      navigate("/seller/search-result", { state: { result: null, error: `Network error: ${err}` } });
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const handleUniqueCommodity = () => {
@@ -201,9 +168,8 @@ const CombinedForm = () => {
                 <button
                   onClick={handleSubmit}
                   className="bg-black text-white text-lg px-10 py-4 rounded hover:bg-gray-800"
-                  disabled={loading}
                 >
-                  {loading ? "Searching..." : "Search"}
+                  Search
                 </button>
               </div>
             </>
@@ -245,7 +211,6 @@ const AnimatedBackground = () => (
 
 const SellerSearchInput = () => (
   <div className="relative min-h-screen bg-gray-50 overflow-hidden">
-    <Navbar />
     <AnimatedBackground />
     <CombinedForm />
   </div>

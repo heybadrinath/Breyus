@@ -7,6 +7,7 @@ Duplicates are moved to pipeline/duplicates/ for later row-level reconciliation.
 
 from __future__ import annotations
 
+import os
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,8 +15,16 @@ from typing import Optional
 
 import psycopg2
 from psycopg2.extras import DictCursor
+from dotenv import load_dotenv
 
 from .utils import compute_file_hash, ensure_dir, utc_now
+
+# Load .env file from AI_NEW directory
+_script_dir = Path(__file__).parent
+_ai_dir = _script_dir.parent.parent
+_env_file = _ai_dir / ".env"
+if _env_file.exists():
+    load_dotenv(_env_file)
 
 DUPLICATES_DIR = Path(__file__).resolve().parent.parent / "duplicates"
 

@@ -12,7 +12,7 @@ Raw Excel → CSV → Normalized → Database → Embeddings → Trade Links →
 
 **All commands must be run from `/app` directory inside Docker container:**
 ```bash
-docker-compose exec ai-server bash
+docker compose exec ai-service bash
 cd /app
 python -m pipeline.scripts.cli <command> [options]
 ```
@@ -469,7 +469,7 @@ python -m pipeline.scripts.cli compute-predictions
 
 ```bash
 # Check database record counts
-docker-compose exec postgres psql -U postgres -d breyus_ai -c "
+docker compose exec postgres psql -U postgres -d breyus_ai -c "
 SELECT
   (SELECT COUNT(*) FROM companies) as companies,
   (SELECT COUNT(*) FROM trade_records) as trade_records,
@@ -478,8 +478,42 @@ SELECT
   (SELECT COUNT(*) FROM predicted_partners) as predicted_partners;
 "
 
+# Check database size
+docker compose exec postgres psql -U postgres -d breyus_ai -c "
+SELECT pg_size_pretty(pg_database_size('breyus_ai')) as size;
+"
+
+# Check table sizes (largest first)
+docker compose exec postgres psql -U postgres -d breyus_ai -c "
+SELECT
+  relname AS table,
+  pg_size_pretty(pg_total_relation_size(relid)) AS total_size,
+  pg_size_pretty(pg_relation_size(relid)) AS data_size,
+  pg_size_pretty(pg_indexes_size(relid)) AS index_size
+FROM pg_catalog.pg_statio_user_tables
+ORDER BY pg_total_relation_size(relid) DESC;
+"
+
+# Check database activity/status
+docker compose exec postgres psql -U postgres -d breyus_ai -c "
+SELECT
+  datname,
+  numbackends AS connections,
+  xact_commit,
+  xact_rollback,
+  blks_hit,
+  blks_read,
+  tup_returned,
+  tup_fetched,
+  tup_inserted,
+  tup_updated,
+  tup_deleted
+FROM pg_stat_database
+WHERE datname = 'breyus_ai';
+"
+
 # Check import status
-docker-compose exec postgres psql -U postgres -d breyus_ai -c "
+docker compose exec postgres psql -U postgres -d breyus_ai -c "
 SELECT status, COUNT(*) as file_count, SUM(rows_imported) as total_rows
 FROM data_import_log
 GROUP BY status
@@ -596,7 +630,7 @@ find /app/raw_data -name "filename.xlsx"
 
 ### Check database connection
 ```bash
-docker-compose exec postgres pg_isready
+docker compose exec postgres pg_isready
 ```
 
 ### View manifest details
@@ -624,7 +658,7 @@ python -m pipeline.scripts.cli reset --yes      # Execute (with confirmation)
 **Ready to process data? Start here:**
 
 ```bash
-docker-compose exec ai-server bash
+docker compose exec ai-service bash
 cd /app
 python -m pipeline.scripts.cli organize
 python -m pipeline.scripts.cli run-all-pending --size small

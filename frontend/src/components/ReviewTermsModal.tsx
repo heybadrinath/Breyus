@@ -72,46 +72,55 @@ export const ReviewTermsModal: React.FC<ReviewTermsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-gray-50">
+        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
           <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-blue-600" />
-            <h2 className="text-lg font-semibold">Review Final Terms</h2>
+            <FileText className="w-5 h-5 text-[#C4A962]" />
+            <h2 className="text-lg font-bold text-gray-800">Review Final Terms</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-200 rounded-full transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-4 overflow-y-auto max-h-[60vh]">
+        <div className="p-4 overflow-y-auto flex-1">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+              <Loader2 className="w-8 h-8 animate-spin text-[#C4A962]" />
             </div>
           ) : error ? (
             <div className="text-center py-12 text-red-600">
               {error}
             </div>
           ) : trade ? (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* Product Info */}
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  {trade.product.productImages?.[0] && (
-                    <img
-                      src={`${process.env.REACT_APP_BACKEND_URL}${trade.product.productImages[0]}`}
-                      alt={trade.product.name}
-                      className="w-16 h-16 object-cover rounded"
-                    />
-                  )}
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
+                    {trade.product.productImages?.[0] ? (
+                      <img
+                        src={`${process.env.REACT_APP_BACKEND_URL}${trade.product.productImages[0]}`}
+                        alt={trade.product.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/64?text=Product';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <Package className="w-8 h-8" />
+                      </div>
+                    )}
+                  </div>
                   <div>
-                    <h3 className="font-medium">{trade.product.name}</h3>
+                    <h3 className="font-semibold text-gray-900">{trade.product.name}</h3>
                     <p className="text-sm text-gray-500">
                       Quantity: {trade.quantity} {trade.quantityUnit}
                     </p>
@@ -239,17 +248,17 @@ export const ReviewTermsModal: React.FC<ReviewTermsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-4 border-t bg-gray-50">
+        <div className="flex justify-end gap-3 p-4 border-t bg-gray-50 flex-shrink-0 rounded-b-xl">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+            className="px-5 py-2.5 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
           >
             Close
           </button>
           {trade && trade.negotiationStatus !== 'accepted' && (
             <button
               onClick={handleNavigateToNegotiation}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#1a1a2e] text-white rounded-lg hover:bg-[#16162a] transition-colors"
             >
               Go to Negotiation
               <ArrowRight className="w-4 h-4" />

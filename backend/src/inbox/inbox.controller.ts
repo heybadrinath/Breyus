@@ -1,11 +1,19 @@
-import { Controller, Post, Body, Res, HttpStatus, Get, Param } from '@nestjs/common';
+import { Controller, Post, Body, Res, HttpStatus, Get, Param, UseGuards } from '@nestjs/common';
 import { InboxService } from './inbox.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { Response } from 'express';
 import { AuthService } from 'src/auth/auth.service';
+import { AuthGuard } from 'src/auth/auth.guard';
 
-
+/**
+ * Inbox Controller
+ * All routes are protected by AuthGuard which validates:
+ * - Cookie-based JWT authentication
+ * - User existence in database
+ * - User is not suspended
+ */
 @Controller('inbox')
+@UseGuards(AuthGuard)
 export class InboxController {
     constructor(
         private readonly InboxService: InboxService,
@@ -112,6 +120,7 @@ export class InboxController {
     async sendMessage(
         @Param('conversationId') conversationId: string,
         @Body('text') text: string,
+        @Body('replyTo') replyTo: string | undefined,
         @Res() response: Response
     ) {
         const accountToken = response.req.signedCookies['account'];
@@ -141,7 +150,12 @@ export class InboxController {
             return;
         }
         try {
-            const message = await this.InboxService.sendMessage(conversationId, senderCompanyId, text);
+            const message = await this.InboxService.sendMessage(
+                conversationId,
+                senderCompanyId,
+                text,
+                replyTo,
+            );
             response.status(HttpStatus.CREATED).send(message);
         } catch (e) {
             response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR, message: "Failed to send message" });

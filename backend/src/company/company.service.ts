@@ -1,7 +1,7 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Company, DeliveryAddress, BankInfo, TradeDetails } from './company.schema';
+import { Model, Types } from 'mongoose';
+import { Company, DeliveryAddress, BankInfo, TradeDetails, KycDocument, KycDocumentType, KycDocumentStatus, BillingPreferences } from './company.schema';
 
 @Injectable()
 export class CompanyService {
@@ -114,6 +114,10 @@ export class CompanyService {
                 whatsappContact: company.whatsappContact,
                 primaryEmail: company.primaryEmail,
                 alternativeSalesEmail: company.alternativeSalesEmail,
+                // Settings page fields
+                profilePicture: company.profilePicture,
+                bannerImage: company.bannerImage,
+                billingPreferences: company.billingPreferences || { useExistingEmail: true },
             };
         } catch (error) {
             if (error instanceof HttpException) {
@@ -144,6 +148,8 @@ export class CompanyService {
                 'whatsappContact',
                 'primaryEmail',
                 'alternativeSalesEmail',
+                // Settings page fields
+                'billingPreferences',
             ];
 
             for (const field of allowedFields) {
@@ -170,12 +176,222 @@ export class CompanyService {
                 whatsappContact: company.whatsappContact,
                 primaryEmail: company.primaryEmail,
                 alternativeSalesEmail: company.alternativeSalesEmail,
+                // Settings page fields
+                profilePicture: company.profilePicture,
+                bannerImage: company.bannerImage,
+                billingPreferences: company.billingPreferences || { useExistingEmail: true },
             };
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
             }
             throw new HttpException('Failed to update company profile', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // Profile Media Methods (Settings Page)
+
+    async uploadProfilePicture(companyId: string, fileUrl: string): Promise<string> {
+        try {
+            const company = await this.companyModel.findById(companyId);
+            if (!company) {
+                throw new HttpException('Company not found', HttpStatus.NOT_FOUND);
+            }
+
+            company.profilePicture = fileUrl;
+            await company.save();
+
+            return fileUrl;
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException('Failed to upload profile picture', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async uploadBanner(companyId: string, fileUrl: string): Promise<string> {
+        try {
+            const company = await this.companyModel.findById(companyId);
+            if (!company) {
+                throw new HttpException('Company not found', HttpStatus.NOT_FOUND);
+            }
+
+            company.bannerImage = fileUrl;
+            await company.save();
+
+            return fileUrl;
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException('Failed to upload banner image', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async deleteProfilePicture(companyId: string): Promise<void> {
+        try {
+            const company = await this.companyModel.findById(companyId);
+            if (!company) {
+                throw new HttpException('Company not found', HttpStatus.NOT_FOUND);
+            }
+
+            company.profilePicture = undefined;
+            await company.save();
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException('Failed to delete profile picture', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async deleteBanner(companyId: string): Promise<void> {
+        try {
+            const company = await this.companyModel.findById(companyId);
+            if (!company) {
+                throw new HttpException('Company not found', HttpStatus.NOT_FOUND);
+            }
+
+            company.bannerImage = undefined;
+            await company.save();
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException('Failed to delete banner image', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // KYC Document Methods (Phase 4)
+
+    async getKycDocuments(companyId: string): Promise<KycDocument[]> {
+        try {
+            const company = await this.companyModel.findById(companyId);
+            if (!company) {
+                throw new HttpException('Company not found', HttpStatus.NOT_FOUND);
+            }
+
+            return company.kycDocuments || [];
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException('Failed to get KYC documents', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async addKycDocument(
+        companyId: string,
+        documentData: {
+            type: KycDocumentType;
+            customName: string;
+            filename: string;
+            originalName: string;
+            path: string;
+            mimeType: string;
+            size: number;
+        }
+    ): Promise<KycDocument> {
+        try {
+            const company = await this.companyModel.findById(companyId);
+            if (!company) {
+                throw new HttpException('Company not found', HttpStatus.NOT_FOUND);
+            }
+
+            const newDocument: KycDocument = {
+                _id: new Types.ObjectId(),
+                type: documentData.type,
+                customName: documentData.customName,
+                filename: documentData.filename,
+                originalName: documentData.originalName,
+                path: documentData.path,
+                mimeType: documentData.mimeType,
+                size: documentData.size,
+                status: KycDocumentStatus.PENDING,
+                uploadedAt: new Date(),
+            };
+
+            if (!company.kycDocuments) {
+                company.kycDocuments = [];
+            }
+            company.kycDocuments.push(newDocument);
+            await company.save();
+
+            return newDocument;
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException('Failed to add KYC document', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async deleteKycDocument(companyId: string, documentId: string): Promise<void> {
+        try {
+            const company = await this.companyModel.findById(companyId);
+            if (!company) {
+                throw new HttpException('Company not found', HttpStatus.NOT_FOUND);
+            }
+
+            const docIndex = company.kycDocuments?.findIndex(
+                (doc) => doc._id.toString() === documentId
+            );
+
+            if (docIndex === undefined || docIndex === -1) {
+                throw new HttpException('Document not found', HttpStatus.NOT_FOUND);
+            }
+
+            const document = company.kycDocuments[docIndex];
+
+            // Only allow deletion of pending or rejected documents
+            if (document.status === KycDocumentStatus.APPROVED) {
+                throw new HttpException(
+                    'Cannot delete an approved document',
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+
+            company.kycDocuments.splice(docIndex, 1);
+            await company.save();
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException('Failed to delete KYC document', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async getKycStatus(companyId: string): Promise<{
+        isKycVerified: boolean;
+        documents: KycDocument[];
+        pendingCount: number;
+        approvedCount: number;
+        rejectedCount: number;
+    }> {
+        try {
+            const company = await this.companyModel.findById(companyId);
+            if (!company) {
+                throw new HttpException('Company not found', HttpStatus.NOT_FOUND);
+            }
+
+            const documents = company.kycDocuments || [];
+            const pendingCount = documents.filter(d => d.status === KycDocumentStatus.PENDING).length;
+            const approvedCount = documents.filter(d => d.status === KycDocumentStatus.APPROVED).length;
+            const rejectedCount = documents.filter(d => d.status === KycDocumentStatus.REJECTED).length;
+
+            return {
+                isKycVerified: company.isKycVerified || false,
+                documents,
+                pendingCount,
+                approvedCount,
+                rejectedCount,
+            };
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException('Failed to get KYC status', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 } 

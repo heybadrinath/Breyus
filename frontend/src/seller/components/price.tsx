@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { ChevronDown } from "lucide-react";
+import React, { useEffect, useRef } from "react";
+import SelectField from "../../components/SelectField";
 
 interface PriceProps {
   priceData: {
@@ -27,6 +27,7 @@ interface PriceProps {
     margin: string;
   }>>;
   moq: string;
+  category: string;
 }
 
 const CURRENCY_OPTIONS = [
@@ -36,7 +37,14 @@ const CURRENCY_OPTIONS = [
   { value: "GBP", label: "GBP" },
 ];
 
-const Price: React.FC<PriceProps> = ({ priceData, setPriceData, moq }) => {
+const Price: React.FC<PriceProps> = ({ priceData, setPriceData, moq, category }) => {
+  const hasGeneratedSku = useRef(false);
+  const categoryCode = (value: string) => {
+    if (!value) return 'GEN';
+    const cleaned = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    if (!cleaned) return 'GEN';
+    return cleaned.slice(0, 4);
+  };
 
   const toggleSale = () => {
     setPriceData(prev => ({
@@ -55,24 +63,51 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData, moq }) => {
     }));
   };
 
+  useEffect(() => {
+    if (!priceData.sku && !hasGeneratedSku.current) {
+      const sku = `BRY-${categoryCode(category)}-${Math.floor(Math.random() * 9000 + 1000)}`;
+      hasGeneratedSku.current = true;
+      setPriceData(prev => ({
+        ...prev,
+        sku,
+      }));
+    }
+  }, [priceData.sku, setPriceData]);
+
+  // Helper to check if a value is a valid positive number
+  const isValidNumber = (val: string) => {
+    const num = Number(val);
+    return !isNaN(num) && val.trim() !== '';
+  };
+
   // Calculate pricing (actual price considering sale)
   useEffect(() => {
-    const newPricing = priceData.onSale && priceData.salePrice ? priceData.salePrice : priceData.price;
-    setPriceData(prev => ({
-      ...prev,
-      pricing: newPricing
-    }));
+    const priceValue = priceData.onSale && priceData.salePrice ? priceData.salePrice : priceData.price;
+    // Only set pricing if it's a valid number
+    if (isValidNumber(priceValue)) {
+      setPriceData(prev => ({
+        ...prev,
+        pricing: priceValue
+      }));
+    } else {
+      setPriceData(prev => ({
+        ...prev,
+        pricing: ''
+      }));
+    }
   }, [priceData.onSale, priceData.price, priceData.salePrice]);
 
   // Calculate sale price from discount
   useEffect(() => {
-    if (priceData.onSale && priceData.price && priceData.discount) {
+    if (priceData.onSale && isValidNumber(priceData.price) && priceData.discount) {
       const discountValue = Number(priceData.discount.replace('%', ''));
-      const salePrice = Number(priceData.price) - (discountValue / 100) * Number(priceData.price);
-      setPriceData(prev => ({
-        ...prev,
-        salePrice: String(salePrice.toFixed(2))
-      }));
+      if (!isNaN(discountValue) && discountValue > 0) {
+        const salePrice = Number(priceData.price) - (discountValue / 100) * Number(priceData.price);
+        setPriceData(prev => ({
+          ...prev,
+          salePrice: salePrice.toFixed(2)
+        }));
+      }
     } else if (!priceData.onSale) {
       setPriceData(prev => ({
         ...prev,
@@ -83,22 +118,34 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData, moq }) => {
 
   // Calculate profit
   useEffect(() => {
-    if (priceData.pricing && priceData.costOfGoods) {
+    if (isValidNumber(priceData.pricing) && isValidNumber(priceData.costOfGoods)) {
       const profit = Number(priceData.pricing) - Number(priceData.costOfGoods);
       setPriceData(prev => ({
         ...prev,
-        profit: String(profit.toFixed(2)),
+        profit: profit.toFixed(2),
+      }));
+    } else {
+      setPriceData(prev => ({
+        ...prev,
+        profit: '',
       }));
     }
   }, [priceData.pricing, priceData.costOfGoods]);
 
   // Calculate margin
   useEffect(() => {
-    if (priceData.pricing && priceData.profit && Number(priceData.pricing) > 0) {
+    if (isValidNumber(priceData.pricing) && isValidNumber(priceData.profit) && Number(priceData.pricing) > 0) {
       const margin = (Number(priceData.profit) / Number(priceData.pricing)) * 100;
+      if (!isNaN(margin)) {
+        setPriceData(prev => ({
+          ...prev,
+          margin: margin.toFixed(1) + '%',
+        }));
+      }
+    } else {
       setPriceData(prev => ({
         ...prev,
-        margin: margin.toFixed(1) + '%',
+        margin: '',
       }));
     }
   }, [priceData.pricing, priceData.profit]);
@@ -115,28 +162,30 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData, moq }) => {
           <label className="block text-sm text-gray-500 mb-2">
             Price/ Unit (Unit = Chosen unit in MOQ )
           </label>
-          <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+          <div className="flex border border-gray-300 rounded-lg overflow-visible">
             <input
-              type="text"
+              type="number"
               name="price"
               placeholder="Enter price"
               value={priceData.price}
               onChange={handleChange}
-              className="flex-1 px-4 py-3 border-0 focus:ring-2 focus:ring-[#C4A962] outline-none"
+              min="0"
+              step="0.01"
+              className="flex-1 px-4 py-3 border-0 focus:ring-2 focus:ring-[#C4A962] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
-            <div className="relative">
-              <select
-                name="currency"
-                value={priceData.currency}
-                onChange={handleChange}
-                className="h-full px-4 py-3 bg-gray-50 border-l border-gray-300 text-gray-600 focus:outline-none cursor-pointer appearance-none pr-8"
-              >
-                {CURRENCY_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-            </div>
+            <SelectField
+              name="currency"
+              value={priceData.currency}
+              onChange={handleChange}
+              wrapperClassName="h-full min-w-[80px]"
+              className="select-field--inline h-full bg-gray-50 border-l border-gray-300 text-gray-600 px-3"
+            >
+              {CURRENCY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </SelectField>
           </div>
         </div>
 
@@ -155,17 +204,19 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData, moq }) => {
       </div>
 
       {/* On Sale Toggle */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         <button
           type="button"
           onClick={toggleSale}
-          className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${
+          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#C4A962] focus:ring-offset-2 ${
             priceData.onSale ? 'bg-[#C4A962]' : 'bg-gray-300'
           }`}
+          role="switch"
+          aria-checked={priceData.onSale}
         >
           <span
-            className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${
-              priceData.onSale ? 'translate-x-7' : 'translate-x-1'
+            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              priceData.onSale ? 'translate-x-5' : 'translate-x-0'
             }`}
           />
         </button>
@@ -219,10 +270,10 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData, moq }) => {
           <input
             type="text"
             name="pricing"
-            placeholder="Effective price"
-            value={priceData.pricing}
+            placeholder="—"
+            value={priceData.pricing || '—'}
             readOnly
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none bg-gray-50"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none bg-gray-100 text-gray-600"
           />
         </div>
 
@@ -233,12 +284,14 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData, moq }) => {
         <div className="flex-1">
           <label className="block text-sm text-gray-500 mb-2">Cost of goods</label>
           <input
-            type="text"
+            type="number"
             name="costOfGoods"
             placeholder="Enter cost"
             value={priceData.costOfGoods}
             onChange={handleChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C4A962] focus:border-transparent outline-none"
+            min="0"
+            step="0.01"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C4A962] focus:border-transparent outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
         </div>
 
@@ -251,10 +304,10 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData, moq }) => {
           <input
             type="text"
             name="profit"
-            placeholder="Profit"
-            value={priceData.profit}
+            placeholder="—"
+            value={priceData.profit || '—'}
             readOnly
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none bg-gray-50"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none bg-gray-100 text-gray-600"
           />
         </div>
       </div>

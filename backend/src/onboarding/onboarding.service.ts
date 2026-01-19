@@ -130,8 +130,16 @@ export class OnboardingService {
             });
             savedUser = await User.save();
         } catch (e) {
+            // Rollback: Delete the orphan company record to maintain data integrity
+            console.error('User creation failed, rolling back company:', e.message);
+            try {
+                await this.companySchema.findByIdAndDelete(savedCompany._id);
+                console.log('Orphan company deleted successfully:', savedCompany._id);
+            } catch (rollbackError) {
+                console.error('Failed to delete orphan company:', rollbackError);
+            }
             throw new HttpException(
-                'Unable to create User Database please try again later',
+                `Unable to create User: ${e.message || 'please try again later'}`,
                 HttpStatus.INTERNAL_SERVER_ERROR
             );
         }

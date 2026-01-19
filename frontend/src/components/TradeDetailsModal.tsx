@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Package, MapPin, CreditCard, User, Building, Calendar, DollarSign, FileText, Loader2, History } from 'lucide-react';
-import { getTradeById, Trade } from '../services/trade.service';
+import { X, Package, MapPin, CreditCard, User, Building, Calendar, DollarSign, FileText, Loader2, History, AlertTriangle, MessageSquare, Send } from 'lucide-react';
+import { getTradeById, Trade, raiseDispute, getTradeDispute, addDisputeMessage, DisputeReason, DisputePriority, TradeDispute, DisputeMessage } from '../services/trade.service';
 import NegotiationHistory from './NegotiationHistory';
 import AuditHistory from './AuditHistory';
 
@@ -11,7 +11,26 @@ interface TradeDetailsModalProps {
     onNavigateToNegotiation?: () => void;
 }
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+
+// Dispute reason display names
+const DISPUTE_REASON_LABELS: Record<DisputeReason, string> = {
+    payment_issue: 'Payment Issue',
+    quality_issue: 'Quality Issue',
+    delivery_delay: 'Delivery Delay',
+    documentation_problem: 'Documentation Problem',
+    communication_issue: 'Communication Issue',
+    pricing_dispute: 'Pricing Dispute',
+    contract_breach: 'Contract Breach',
+    other: 'Other',
+};
+
+const DISPUTE_PRIORITY_LABELS: Record<DisputePriority, string> = {
+    low: 'Low',
+    medium: 'Medium',
+    high: 'High',
+    urgent: 'Urgent',
+};
 
 const TradeDetailsModal: React.FC<TradeDetailsModalProps> = ({
     tradeId,
@@ -22,11 +41,28 @@ const TradeDetailsModal: React.FC<TradeDetailsModalProps> = ({
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [trade, setTrade] = useState<Trade | null>(null);
-    const [activeTab, setActiveTab] = useState<'details' | 'history' | 'audit'>('details');
+    const [activeTab, setActiveTab] = useState<'details' | 'history' | 'audit' | 'dispute'>('details');
+
+    // Dispute states
+    const [showDisputeModal, setShowDisputeModal] = useState(false);
+    const [existingDispute, setExistingDispute] = useState<TradeDispute | null>(null);
+    const [disputeLoading, setDisputeLoading] = useState(false);
+    const [disputeError, setDisputeError] = useState<string | null>(null);
+
+    // Dispute form states
+    const [disputeReason, setDisputeReason] = useState<DisputeReason>('payment_issue');
+    const [disputeDescription, setDisputeDescription] = useState('');
+    const [disputePriority, setDisputePriority] = useState<DisputePriority>('medium');
+    const [submittingDispute, setSubmittingDispute] = useState(false);
+
+    // Dispute message states
+    const [newMessage, setNewMessage] = useState('');
+    const [sendingMessage, setSendingMessage] = useState(false);
 
     useEffect(() => {
         if (isOpen && tradeId) {
             fetchTrade();
+            fetchDispute();
         }
     }, [isOpen, tradeId]);
 
@@ -40,6 +76,82 @@ const TradeDetailsModal: React.FC<TradeDetailsModalProps> = ({
             setError(err.message || 'Failed to load trade details');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchDispute = async () => {
+        try {
+            setDisputeLoading(true);
+            setDisputeError(null);
+            const response = await getTradeDispute(tradeId);
+            setExistingDispute(response.data);
+        } catch (err: any) {
+            // Not an error if no dispute exists
+            setExistingDispute(null);
+        } finally {
+            setDisputeLoading(false);
+        }
+    };
+
+    const handleRaiseDispute = async () => {
+        if (disputeDescription.length < 20) {
+            setDisputeError('Description must be at least 20 characters');
+            return;
+        }
+
+        try {
+            setSubmittingDispute(true);
+            setDisputeError(null);
+            await raiseDispute(tradeId, {
+                reason: disputeReason,
+                description: disputeDescription,
+                priority: disputePriority,
+            });
+            setShowDisputeModal(false);
+            setDisputeDescription('');
+            setDisputeReason('payment_issue');
+            setDisputePriority('medium');
+            await fetchDispute();
+            setActiveTab('dispute');
+        } catch (err: any) {
+            setDisputeError(err.message || 'Failed to raise dispute');
+        } finally {
+            setSubmittingDispute(false);
+        }
+    };
+
+    const handleSendMessage = async () => {
+        if (!newMessage.trim()) return;
+
+        try {
+            setSendingMessage(true);
+            await addDisputeMessage(tradeId, { content: newMessage.trim() });
+            setNewMessage('');
+            await fetchDispute();
+        } catch (err: any) {
+            setDisputeError(err.message || 'Failed to send message');
+        } finally {
+            setSendingMessage(false);
+        }
+    };
+
+    const getDisputeStatusColor = (status: string) => {
+        switch (status) {
+            case 'open': return 'bg-red-100 text-red-800';
+            case 'under_review': return 'bg-amber-100 text-amber-800';
+            case 'resolved': return 'bg-green-100 text-green-800';
+            case 'closed': return 'bg-gray-100 text-gray-800';
+            default: return 'bg-gray-100 text-gray-800';
+        }
+    };
+
+    const getPriorityColor = (priority: string) => {
+        switch (priority) {
+            case 'urgent': return 'bg-red-100 text-red-800';
+            case 'high': return 'bg-amber-100 text-amber-800';
+            case 'medium': return 'bg-blue-100 text-blue-800';
+            case 'low': return 'bg-gray-100 text-gray-800';
+            default: return 'bg-gray-100 text-gray-800';
         }
     };
 
@@ -66,26 +178,26 @@ const TradeDetailsModal: React.FC<TradeDetailsModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-xl">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] shadow-xl flex flex-col overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b bg-gray-50">
-                    <h2 className="text-xl font-bold text-gray-800">Trade Details</h2>
+                <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+                    <h2 className="text-lg font-bold text-gray-800">Trade Details</h2>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                     >
                         <X className="w-5 h-5 text-gray-500" />
                     </button>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b">
+                <div className="flex border-b flex-shrink-0 bg-white">
                     <button
                         onClick={() => setActiveTab('details')}
                         className={`flex-1 py-3 text-sm font-medium transition-colors ${
                             activeTab === 'details'
-                                ? 'text-blue-600 border-b-2 border-blue-600'
+                                ? 'text-gray-900 border-b-2 border-[#C4A962]'
                                 : 'text-gray-500 hover:text-gray-700'
                         }`}
                     >
@@ -95,7 +207,7 @@ const TradeDetailsModal: React.FC<TradeDetailsModalProps> = ({
                         onClick={() => setActiveTab('history')}
                         className={`flex-1 py-3 text-sm font-medium transition-colors ${
                             activeTab === 'history'
-                                ? 'text-blue-600 border-b-2 border-blue-600'
+                                ? 'text-gray-900 border-b-2 border-[#C4A962]'
                                 : 'text-gray-500 hover:text-gray-700'
                         }`}
                     >
@@ -105,17 +217,31 @@ const TradeDetailsModal: React.FC<TradeDetailsModalProps> = ({
                         onClick={() => setActiveTab('audit')}
                         className={`flex-1 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-1 ${
                             activeTab === 'audit'
-                                ? 'text-blue-600 border-b-2 border-blue-600'
+                                ? 'text-gray-900 border-b-2 border-[#C4A962]'
                                 : 'text-gray-500 hover:text-gray-700'
                         }`}
                     >
                         <History className="w-4 h-4" />
                         Audit Trail
                     </button>
+                    <button
+                        onClick={() => setActiveTab('dispute')}
+                        className={`flex-1 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-1 ${
+                            activeTab === 'dispute'
+                                ? 'text-gray-900 border-b-2 border-[#C4A962]'
+                                : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        <AlertTriangle className="w-4 h-4" />
+                        Dispute
+                        {existingDispute && existingDispute.status !== 'closed' && (
+                            <span className="ml-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                        )}
+                    </button>
                 </div>
 
                 {/* Content */}
-                <div className="overflow-y-auto max-h-[60vh]">
+                <div className="overflow-y-auto flex-1">
                     {loading ? (
                         <div className="flex items-center justify-center p-12">
                             <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
@@ -322,27 +448,287 @@ const TradeDetailsModal: React.FC<TradeDetailsModalProps> = ({
                         <div className="p-4">
                             <AuditHistory tradeId={tradeId} />
                         </div>
+                    ) : activeTab === 'dispute' ? (
+                        <div className="p-6">
+                            {disputeLoading ? (
+                                <div className="flex items-center justify-center h-32">
+                                    <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                                </div>
+                            ) : existingDispute ? (
+                                // Show existing dispute
+                                <div className="space-y-6">
+                                    {/* Dispute Status Card */}
+                                    <div className="border rounded-lg overflow-hidden">
+                                        <div className="bg-gray-50 p-3 border-b">
+                                            <h4 className="font-medium text-gray-700 flex items-center gap-2">
+                                                <AlertTriangle className="w-4 h-4" />
+                                                Dispute #{existingDispute._id.slice(-8).toUpperCase()}
+                                            </h4>
+                                        </div>
+                                        <div className="p-4 space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDisputeStatusColor(existingDispute.status)}`}>
+                                                        {existingDispute.status.replace('_', ' ').toUpperCase()}
+                                                    </span>
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(existingDispute.priority)}`}>
+                                                        {existingDispute.priority.toUpperCase()} Priority
+                                                    </span>
+                                                </div>
+                                                <span className="text-sm text-gray-500">
+                                                    Raised on {formatDate(existingDispute.createdAt)}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-700">Reason</p>
+                                                <p className="text-gray-600">{DISPUTE_REASON_LABELS[existingDispute.reason as DisputeReason]}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-700">Description</p>
+                                                <p className="text-gray-600">{existingDispute.description}</p>
+                                            </div>
+                                            {existingDispute.assignedAdmin && (
+                                                <div>
+                                                    <p className="text-sm font-medium text-gray-700">Assigned Admin</p>
+                                                    <p className="text-gray-600">{existingDispute.assignedAdminEmail || existingDispute.assignedAdmin.email}</p>
+                                                </div>
+                                            )}
+                                            {existingDispute.resolutionNotes && (
+                                                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                                    <p className="text-sm font-medium text-green-800">Resolution</p>
+                                                    <p className="text-green-700">{existingDispute.resolutionNotes}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Messages */}
+                                    <div className="border rounded-lg overflow-hidden">
+                                        <div className="bg-gray-50 p-3 border-b">
+                                            <h4 className="font-medium text-gray-700 flex items-center gap-2">
+                                                <MessageSquare className="w-4 h-4" />
+                                                Messages
+                                            </h4>
+                                        </div>
+                                        <div className="p-4 space-y-3 max-h-64 overflow-y-auto">
+                                            {existingDispute.messages && existingDispute.messages.length > 0 ? (
+                                                existingDispute.messages.filter(m => !m.isInternal).map((msg) => (
+                                                    <div
+                                                        key={msg._id}
+                                                        className={`p-3 rounded-lg ${
+                                                            msg.senderType === 'admin'
+                                                                ? 'bg-purple-50 border border-purple-200'
+                                                                : msg.senderType === 'buyer'
+                                                                ? 'bg-blue-50 border border-blue-200'
+                                                                : 'bg-green-50 border border-green-200'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <span className="text-xs font-medium capitalize text-gray-600">
+                                                                {msg.senderType} • {msg.senderEmail || msg.sender?.mail || msg.sender?.email}
+                                                            </span>
+                                                            <span className="text-xs text-gray-400">
+                                                                {formatDate(msg.createdAt)}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-sm text-gray-700">{msg.content}</p>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <p className="text-center text-gray-500 text-sm">No messages yet</p>
+                                            )}
+                                        </div>
+
+                                        {/* Send Message */}
+                                        {existingDispute.status !== 'closed' && (
+                                            <div className="p-3 border-t bg-gray-50">
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={newMessage}
+                                                        onChange={(e) => setNewMessage(e.target.value)}
+                                                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                                        placeholder="Type a message..."
+                                                        className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#C4A962]/50"
+                                                        disabled={sendingMessage}
+                                                    />
+                                                    <button
+                                                        onClick={handleSendMessage}
+                                                        disabled={!newMessage.trim() || sendingMessage}
+                                                        className="px-3 py-2 bg-[#1a1a2e] text-white rounded-lg hover:bg-[#16162a] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                    >
+                                                        {sendingMessage ? (
+                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                        ) : (
+                                                            <Send className="w-4 h-4" />
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                // No dispute - show option to raise one
+                                <div className="text-center py-12">
+                                    <AlertTriangle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                                    <h3 className="text-lg font-medium text-gray-700 mb-2">No Dispute</h3>
+                                    <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                                        If you're experiencing issues with this trade, you can raise a dispute. Our admin team will review and help resolve it.
+                                    </p>
+                                    <button
+                                        onClick={() => setShowDisputeModal(true)}
+                                        className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium inline-flex items-center gap-2"
+                                    >
+                                        <AlertTriangle className="w-4 h-4" />
+                                        Raise a Dispute
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     ) : null}
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t bg-gray-50 flex gap-3">
+                <div className="p-4 border-t bg-gray-50 flex gap-3 flex-shrink-0 rounded-b-xl">
                     <button
                         onClick={onClose}
-                        className="flex-1 py-2 px-4 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                        className="flex-1 py-2.5 px-4 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
                     >
                         Close
                     </button>
                     {onNavigateToNegotiation && trade?.negotiationStatus !== 'accepted' && trade?.negotiationStatus !== 'rejected' && (
                         <button
                             onClick={onNavigateToNegotiation}
-                            className="flex-1 py-2 px-4 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                            className="flex-1 py-2.5 px-4 bg-[#1a1a2e] text-white rounded-lg hover:bg-[#16162a] transition-colors font-medium"
                         >
                             Go to Negotiation
                         </button>
                     )}
+                    {!existingDispute && activeTab === 'details' && (
+                        <button
+                            onClick={() => setShowDisputeModal(true)}
+                            className="py-2.5 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium inline-flex items-center gap-2"
+                        >
+                            <AlertTriangle className="w-4 h-4" />
+                            Raise Dispute
+                        </button>
+                    )}
                 </div>
             </div>
+
+            {/* Raise Dispute Modal */}
+            {showDisputeModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+                    <div className="bg-white rounded-xl w-full max-w-lg shadow-xl">
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between p-4 border-b">
+                            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                <AlertTriangle className="w-5 h-5 text-red-500" />
+                                Raise a Dispute
+                            </h3>
+                            <button
+                                onClick={() => {
+                                    setShowDisputeModal(false);
+                                    setDisputeError(null);
+                                }}
+                                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                            >
+                                <X className="w-5 h-5 text-gray-500" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 space-y-4">
+                            {disputeError && (
+                                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                                    {disputeError}
+                                </div>
+                            )}
+
+                            {/* Reason */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Reason for Dispute *
+                                </label>
+                                <select
+                                    value={disputeReason}
+                                    onChange={(e) => setDisputeReason(e.target.value as DisputeReason)}
+                                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C4A962]/50"
+                                >
+                                    {Object.entries(DISPUTE_REASON_LABELS).map(([value, label]) => (
+                                        <option key={value} value={value}>{label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Priority */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Priority
+                                </label>
+                                <select
+                                    value={disputePriority}
+                                    onChange={(e) => setDisputePriority(e.target.value as DisputePriority)}
+                                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C4A962]/50"
+                                >
+                                    {Object.entries(DISPUTE_PRIORITY_LABELS).map(([value, label]) => (
+                                        <option key={value} value={value}>{label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Description */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Description * <span className="text-gray-400">(min 20 characters)</span>
+                                </label>
+                                <textarea
+                                    value={disputeDescription}
+                                    onChange={(e) => setDisputeDescription(e.target.value)}
+                                    placeholder="Please describe the issue in detail..."
+                                    rows={4}
+                                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C4A962]/50 resize-none"
+                                />
+                                <div className="text-xs text-gray-400 mt-1 text-right">
+                                    {disputeDescription.length}/2000 characters
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="p-4 border-t bg-gray-50 flex gap-3 rounded-b-xl">
+                            <button
+                                onClick={() => {
+                                    setShowDisputeModal(false);
+                                    setDisputeError(null);
+                                }}
+                                className="flex-1 py-2.5 px-4 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                                disabled={submittingDispute}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleRaiseDispute}
+                                disabled={submittingDispute || disputeDescription.length < 20}
+                                className="flex-1 py-2.5 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                            >
+                                {submittingDispute ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Submitting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <AlertTriangle className="w-4 h-4" />
+                                        Submit Dispute
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

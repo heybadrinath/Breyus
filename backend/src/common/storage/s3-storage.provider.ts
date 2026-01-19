@@ -1,218 +1,290 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ReadStream } from 'fs';
+import { Readable } from 'stream';
 import { IStorageService } from './storage.interface';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+} from '@aws-sdk/client-s3';
 
 /**
  * S3 Storage Provider Configuration
- * Set these environment variables to use S3 storage:
+ *
+ * Works with any S3-compatible storage:
+ * - Vultr Object Storage
+ * - AWS S3
+ * - DigitalOcean Spaces
+ * - MinIO
+ * - Cloudflare R2
+ *
+ * Environment Variables:
  *
  * STORAGE_PROVIDER=s3
- * AWS_ACCESS_KEY_ID=your-access-key
- * AWS_SECRET_ACCESS_KEY=your-secret-key
- * AWS_REGION=us-east-1
- * AWS_S3_BUCKET=your-bucket-name
+ * S3_ENDPOINT=https://sgp1.vultrobjects.com   (Vultr/DO/etc) or omit for AWS
+ * S3_REGION=sgp1                               (or us-east-1 for AWS)
+ * S3_ACCESS_KEY=your-access-key
+ * S3_SECRET_KEY=your-secret-key
+ * S3_BUCKET=breyus-uploads
  */
 interface S3Config {
+  endpoint?: string; // Custom endpoint for S3-compatible storage (Vultr, DO, etc.)
+  region: string;
   accessKeyId: string;
   secretAccessKey: string;
-  region: string;
   bucket: string;
+  forcePathStyle: boolean; // Required for most S3-compatible services
 }
 
-/**
- * AWS S3 Storage Provider (Skeleton)
- *
- * This is a skeleton implementation for AWS S3 storage.
- * To use S3 storage:
- *
- * 1. Install the AWS SDK: npm install @aws-sdk/client-s3
- * 2. Set the required environment variables
- * 3. Implement the methods below
- *
- * Example implementation with @aws-sdk/client-s3:
- *
- * import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
- */
 @Injectable()
 export class S3StorageProvider implements IStorageService {
   private readonly logger = new Logger(S3StorageProvider.name);
   private readonly config: S3Config;
-  // private readonly s3Client: S3Client;
+  private readonly s3Client: S3Client;
 
   constructor() {
     // Load configuration from environment
     this.config = {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-      region: process.env.AWS_REGION || 'us-east-1',
-      bucket: process.env.AWS_S3_BUCKET || '',
+      endpoint: process.env.S3_ENDPOINT, // undefined for AWS, set for Vultr/DO/etc
+      region: process.env.S3_REGION || 'us-east-1',
+      accessKeyId: process.env.S3_ACCESS_KEY || '',
+      secretAccessKey: process.env.S3_SECRET_KEY || '',
+      bucket: process.env.S3_BUCKET || process.env.S3_BUCKET_UPLOADS || '',
+      forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true' || !!process.env.S3_ENDPOINT,
     };
 
     // Validate configuration
     if (!this.config.accessKeyId || !this.config.secretAccessKey || !this.config.bucket) {
-      this.logger.error('S3 configuration incomplete. Required: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET');
+      this.logger.error(
+        'S3 configuration incomplete. Required: S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET (or S3_BUCKET_UPLOADS)',
+      );
       throw new Error('S3 storage provider not configured. Check environment variables.');
     }
 
-    // Initialize S3 client (uncomment when implementing)
-    // this.s3Client = new S3Client({
-    //   region: this.config.region,
-    //   credentials: {
-    //     accessKeyId: this.config.accessKeyId,
-    //     secretAccessKey: this.config.secretAccessKey,
-    //   },
-    // });
+    // Initialize S3 client
+    const clientConfig: any = {
+      region: this.config.region,
+      credentials: {
+        accessKeyId: this.config.accessKeyId,
+        secretAccessKey: this.config.secretAccessKey,
+      },
+      forcePathStyle: this.config.forcePathStyle,
+    };
 
-    this.logger.log(`S3 storage provider initialized for bucket: ${this.config.bucket}`);
+    // Add custom endpoint for S3-compatible services (Vultr, DigitalOcean, etc.)
+    if (this.config.endpoint) {
+      clientConfig.endpoint = this.config.endpoint;
+    }
+
+    this.s3Client = new S3Client(clientConfig);
+
+    const providerName = this.config.endpoint ? 'S3-compatible' : 'AWS S3';
+    this.logger.log(
+      `${providerName} storage provider initialized for bucket: ${this.config.bucket}` +
+        (this.config.endpoint ? ` at ${this.config.endpoint}` : ''),
+    );
   }
 
   /**
    * Upload a file to S3
-   *
-   * Implementation example:
-   * const command = new PutObjectCommand({
-   *   Bucket: this.config.bucket,
-   *   Key: `${folder}/${uniqueFilename}`,
-   *   Body: file,
-   *   ContentType: getMimeType(filename),
-   * });
-   * await this.s3Client.send(command);
-   * return `https://${this.config.bucket}.s3.${this.config.region}.amazonaws.com/${folder}/${uniqueFilename}`;
+   * @param file - Buffer containing file data
+   * @param filename - Original filename (will be sanitized)
+   * @param folder - Folder/prefix in the bucket
+   * @returns Full URL to the uploaded file
    */
   async upload(file: Buffer, filename: string, folder: string): Promise<string> {
-    // TODO: Implement S3 upload
-    throw new Error('S3 upload not yet implemented. Please use local storage or implement this method.');
+    const uniqueFilename = `${Date.now()}-${this.sanitizeFilename(filename)}`;
+    const key = folder ? `${folder}/${uniqueFilename}` : uniqueFilename;
 
-    // Uncomment and implement:
-    // const uniqueFilename = `${Date.now()}-${this.sanitizeFilename(filename)}`;
-    // const key = `${folder}/${uniqueFilename}`;
-    //
-    // const command = new PutObjectCommand({
-    //   Bucket: this.config.bucket,
-    //   Key: key,
-    //   Body: file,
-    // });
-    //
-    // await this.s3Client.send(command);
-    //
-    // return `https://${this.config.bucket}.s3.${this.config.region}.amazonaws.com/${key}`;
+    try {
+      const command = new PutObjectCommand({
+        Bucket: this.config.bucket,
+        Key: key,
+        Body: file,
+        ContentType: this.getMimeType(filename),
+      });
+
+      await this.s3Client.send(command);
+
+      // Return the full URL
+      const url = this.buildUrl(key);
+      this.logger.debug(`File uploaded: ${url}`);
+      return url;
+    } catch (error) {
+      this.logger.error(`Failed to upload file ${filename}: ${error.message}`);
+      throw new Error(`Failed to upload file: ${error.message}`);
+    }
   }
 
   /**
    * Get the public URL for an S3 object
    */
   getUrl(path: string): string {
-    // For S3, the path IS the URL if we stored it as a full URL
-    // Or construct it from the key
-    if (path.startsWith('https://')) {
+    // If already a full URL, return as-is
+    if (path.startsWith('https://') || path.startsWith('http://')) {
       return path;
     }
-    return `https://${this.config.bucket}.s3.${this.config.region}.amazonaws.com${path}`;
+    return this.buildUrl(path);
   }
 
   /**
    * Delete a file from S3
-   *
-   * Implementation example:
-   * const command = new DeleteObjectCommand({
-   *   Bucket: this.config.bucket,
-   *   Key: this.extractKeyFromPath(path),
-   * });
-   * await this.s3Client.send(command);
    */
   async delete(path: string): Promise<void> {
-    // TODO: Implement S3 delete
-    throw new Error('S3 delete not yet implemented');
+    const key = this.extractKeyFromPath(path);
 
-    // Uncomment and implement:
-    // const key = this.extractKeyFromPath(path);
-    // const command = new DeleteObjectCommand({
-    //   Bucket: this.config.bucket,
-    //   Key: key,
-    // });
-    // await this.s3Client.send(command);
+    try {
+      const command = new DeleteObjectCommand({
+        Bucket: this.config.bucket,
+        Key: key,
+      });
+
+      await this.s3Client.send(command);
+      this.logger.debug(`File deleted: ${key}`);
+    } catch (error) {
+      this.logger.error(`Failed to delete file ${path}: ${error.message}`);
+      throw new Error(`Failed to delete file: ${error.message}`);
+    }
   }
 
   /**
    * Check if a file exists in S3
-   *
-   * Implementation example:
-   * try {
-   *   const command = new HeadObjectCommand({
-   *     Bucket: this.config.bucket,
-   *     Key: this.extractKeyFromPath(path),
-   *   });
-   *   await this.s3Client.send(command);
-   *   return true;
-   * } catch (error) {
-   *   if (error.name === 'NotFound') return false;
-   *   throw error;
-   * }
    */
   async exists(path: string): Promise<boolean> {
-    // TODO: Implement S3 exists check
-    throw new Error('S3 exists check not yet implemented');
+    const key = this.extractKeyFromPath(path);
 
-    // Uncomment and implement:
-    // try {
-    //   const key = this.extractKeyFromPath(path);
-    //   const command = new HeadObjectCommand({
-    //     Bucket: this.config.bucket,
-    //     Key: key,
-    //   });
-    //   await this.s3Client.send(command);
-    //   return true;
-    // } catch (error) {
-    //   if (error.name === 'NotFound') return false;
-    //   throw error;
-    // }
+    try {
+      const command = new HeadObjectCommand({
+        Bucket: this.config.bucket,
+        Key: key,
+      });
+
+      await this.s3Client.send(command);
+      return true;
+    } catch (error) {
+      if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+        return false;
+      }
+      this.logger.error(`Failed to check file existence ${path}: ${error.message}`);
+      throw error;
+    }
   }
 
   /**
    * Get a readable stream for an S3 object
-   *
-   * Implementation example:
-   * const command = new GetObjectCommand({
-   *   Bucket: this.config.bucket,
-   *   Key: this.extractKeyFromPath(path),
-   * });
-   * const response = await this.s3Client.send(command);
-   * return response.Body as ReadStream;
+   * Note: Returns a Readable stream (Node.js stream), not fs.ReadStream
    */
-  async getFileStream(path: string): Promise<ReadStream> {
-    // TODO: Implement S3 stream retrieval
-    throw new Error('S3 file stream not yet implemented');
+  async getFileStream(path: string): Promise<any> {
+    const key = this.extractKeyFromPath(path);
 
-    // Uncomment and implement:
-    // const key = this.extractKeyFromPath(path);
-    // const command = new GetObjectCommand({
-    //   Bucket: this.config.bucket,
-    //   Key: key,
-    // });
-    // const response = await this.s3Client.send(command);
-    // return response.Body as ReadStream;
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.config.bucket,
+        Key: key,
+      });
+
+      const response = await this.s3Client.send(command);
+
+      // S3 SDK v3 returns a Readable stream or web ReadableStream
+      if (response.Body) {
+        // Convert to Node.js Readable if needed
+        if (response.Body instanceof Readable) {
+          return response.Body;
+        }
+        // For web streams, convert to Node.js stream
+        return Readable.from(response.Body as any);
+      }
+
+      throw new Error(`File not found: ${path}`);
+    } catch (error) {
+      this.logger.error(`Failed to get file stream ${path}: ${error.message}`);
+      throw new Error(`Failed to get file: ${error.message}`);
+    }
+  }
+
+  /**
+   * Build the public URL for an S3 object
+   */
+  private buildUrl(key: string): string {
+    // Remove leading slash if present
+    const cleanKey = key.replace(/^\//, '');
+
+    if (this.config.endpoint) {
+      // For S3-compatible services (Vultr, DigitalOcean, etc.)
+      // URL format: https://endpoint/bucket/key
+      return `${this.config.endpoint}/${this.config.bucket}/${cleanKey}`;
+    }
+
+    // For AWS S3
+    // URL format: https://bucket.s3.region.amazonaws.com/key
+    return `https://${this.config.bucket}.s3.${this.config.region}.amazonaws.com/${cleanKey}`;
   }
 
   /**
    * Extract S3 key from full URL or path
    */
   private extractKeyFromPath(path: string): string {
-    if (path.startsWith('https://')) {
-      // Extract key from full S3 URL
-      const url = new URL(path);
-      return url.pathname.slice(1); // Remove leading /
+    if (path.startsWith('https://') || path.startsWith('http://')) {
+      try {
+        const url = new URL(path);
+        let pathname = url.pathname;
+
+        // For path-style URLs (endpoint/bucket/key), remove bucket prefix
+        if (this.config.endpoint && pathname.startsWith(`/${this.config.bucket}/`)) {
+          pathname = pathname.slice(this.config.bucket.length + 2);
+        }
+
+        return pathname.replace(/^\//, ''); // Remove leading slash
+      } catch {
+        // If URL parsing fails, treat as key
+        return path.replace(/^\//, '');
+      }
     }
-    // Assume it's already a key (remove leading /)
+
+    // Assume it's already a key
     return path.replace(/^\//, '');
   }
 
   /**
-   * Sanitize filename
+   * Sanitize filename to prevent directory traversal and invalid characters
    */
   private sanitizeFilename(filename: string): string {
     return filename
-      .replace(/[^a-zA-Z0-9._-]/g, '_')
-      .replace(/\.{2,}/g, '.')
-      .substring(0, 200);
+      .replace(/[^a-zA-Z0-9._-]/g, '_') // Replace invalid chars with underscore
+      .replace(/\.{2,}/g, '.') // Prevent multiple dots (path traversal)
+      .replace(/_{2,}/g, '_') // Collapse multiple underscores
+      .substring(0, 200); // Limit length
+  }
+
+  /**
+   * Get MIME type from filename extension
+   */
+  private getMimeType(filename: string): string {
+    const ext = filename.split('.').pop()?.toLowerCase();
+
+    const mimeTypes: Record<string, string> = {
+      // Images
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      gif: 'image/gif',
+      webp: 'image/webp',
+      svg: 'image/svg+xml',
+      // Documents
+      pdf: 'application/pdf',
+      doc: 'application/msword',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      xls: 'application/vnd.ms-excel',
+      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      csv: 'text/csv',
+      txt: 'text/plain',
+      // Archives
+      zip: 'application/zip',
+      // JSON
+      json: 'application/json',
+    };
+
+    return mimeTypes[ext || ''] || 'application/octet-stream';
   }
 }

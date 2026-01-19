@@ -8,12 +8,15 @@ import TradeSkeleton from '../../components/skeletons/TradeSkeleton';
 import { socketService } from '../../services/socket.service';
 import { getMe } from '../../services/auth.service';
 import { INCOTERM_OPTIONS, getStatusColor } from '../../constants/trade.constants';
+import SelectField from '../../components/SelectField';
+import { useNotifications } from '../../contexts/NotificationContext';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
 const BuyerNegotiation: React.FC = () => {
     const { tradeId } = useParams<{ tradeId: string }>();
     const navigate = useNavigate();
+    const { showToast } = useNotifications();
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -29,29 +32,35 @@ const BuyerNegotiation: React.FC = () => {
 
     useEffect(() => {
         let isMounted = true;
+        // Issue #6 - Store current tradeId to avoid stale closure issues
+        const currentTradeId = tradeId;
 
         const setupSocket = async () => {
-            if (!tradeId) return;
+            if (!currentTradeId) return;
 
             try {
+                // Issue #6 - Clear existing listeners BEFORE setting up new ones
+                // This prevents accumulation of stale listeners
+                socketService.offTradeUpdate();
+                socketService.offNegotiationUpdate();
+
                 // 1. Connect and Join Trade Room
                 const userInfo = await getMe();
-                if (userInfo && userInfo.userId) {
+                if (userInfo && userInfo.userId && isMounted) {
                     socketService.connectTrade();
-                    socketService.joinTrade(userInfo.userId, tradeId);
+                    socketService.joinTrade(userInfo.userId, currentTradeId);
                 }
 
-                // 2. Setup Listeners
+                // 2. Setup Listeners with current tradeId captured in closure
                 socketService.onTradeUpdate((data) => {
-                    if (data.tradeId === tradeId && isMounted) {
+                    if (data.tradeId === currentTradeId && isMounted) {
                         fetchTrade();
                     }
                 });
 
                 socketService.onNegotiationUpdate((data) => {
-                    if (data.tradeId === tradeId && isMounted) {
+                    if (data.tradeId === currentTradeId && isMounted) {
                         fetchTrade();
-                        // Optional: Browser notification or toast could trigger here via context
                     }
                 });
 
@@ -60,7 +69,7 @@ const BuyerNegotiation: React.FC = () => {
             }
         };
 
-        if (tradeId) {
+        if (currentTradeId) {
             fetchTrade();
             setupSocket();
         }
@@ -68,8 +77,8 @@ const BuyerNegotiation: React.FC = () => {
         return () => {
             isMounted = false;
             // Cleanup: remove listeners and leave trade
-            if (tradeId) {
-                socketService.leaveTrade(tradeId);
+            if (currentTradeId) {
+                socketService.leaveTrade(currentTradeId);
             }
             socketService.offTradeUpdate();
             socketService.offNegotiationUpdate();
@@ -99,7 +108,10 @@ const BuyerNegotiation: React.FC = () => {
                 setSelectedIncoterm(tradeData.sellerOfferedIncoterms.selectedIncoterm);
             }
         } catch (err: any) {
-            setError(err.message || 'Failed to load trade');
+            const errorMessage = err.message || 'Failed to load trade';
+            setError(errorMessage);
+            // Issue #13 - Show error toast so user knows something went wrong
+            showToast(errorMessage, 'error');
         } finally {
             setLoading(false);
         }
@@ -123,7 +135,7 @@ const BuyerNegotiation: React.FC = () => {
 
             await buyerRespondToCounter(tradeId, responseData);
             await fetchTrade();
-            alert('Response submitted successfully!');
+            showToast('Response submitted successfully!', 'success');
         } catch (err: any) {
             setError(err.message || 'Failed to submit response');
         } finally {
@@ -142,7 +154,7 @@ const BuyerNegotiation: React.FC = () => {
             setSubmitting(true);
             await acceptTrade(tradeId);
             await fetchTrade();
-            alert('Trade accepted successfully!');
+            showToast('Trade accepted successfully!', 'success');
         } catch (err: any) {
             setError(err.message || 'Failed to accept trade');
         } finally {
@@ -158,7 +170,7 @@ const BuyerNegotiation: React.FC = () => {
             await rejectTrade(tradeId, rejectReason);
             setShowRejectModal(false);
             await fetchTrade();
-            alert('Trade rejected');
+            showToast('Trade rejected', 'info');
         } catch (err: any) {
             setError(err.message || 'Failed to reject trade');
         } finally {
@@ -428,17 +440,18 @@ const BuyerNegotiation: React.FC = () => {
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                                 Incoterm
                                             </label>
-                                            <select
+                                            <SelectField
                                                 value={selectedIncoterm}
-                                                onChange={(e) => setSelectedIncoterm(e.target.value)}
+                                                onValueChange={(value) => setSelectedIncoterm(String(value))}
                                                 disabled={!canRespond()}
-                                                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                                                wrapperClassName="w-full"
+                                                className="disabled:bg-gray-100"
                                             >
                                                 <option value="">Select Incoterm</option>
                                                 {INCOTERM_OPTIONS.map((term) => (
                                                     <option key={term} value={term}>{term}</option>
                                                 ))}
-                                            </select>
+                                            </SelectField>
                                         </div>
 
                                         {/* Message */}

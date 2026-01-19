@@ -1,20 +1,56 @@
-import { Controller, Post, Get, Put, Body, Param, Query, Res, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { Controller, Post, Get, Put, Body, Param, Query, Res, UseInterceptors, UploadedFiles, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { TradeService } from './trade.service';
 import { InvoiceService } from './invoice.service';
 import { AuditService } from './audit.service';
+import { AdminDisputesService } from '../admin/disputes/admin-disputes.service';
 import { CreateTradeDto } from './dto/create-trade.dto';
 import { UploadSCODto, UploadICPODto, UploadSPADto, UploadBoLDto, UploadPaymentProofDto, AdvancePhaseDto, UpdateDocumentStatusDto, SignDocumentDto, DocumentType } from './dto/upload-document.dto';
 import { TradePaginationDto } from './dto/trade-pagination.dto';
+import { CreateDisputeDto } from '../admin/disputes/dto/create-dispute.dto';
+import { AddDisputeMessageDto } from '../admin/disputes/dto/add-dispute-message.dto';
 import { FileUploadInterceptor } from '../products/file-upload.interceptor';
+import { AuthGuard } from '../auth/auth.guard';
 
+/**
+ * Trade Controller
+ * All routes are protected by AuthGuard which validates:
+ * - Cookie-based JWT authentication
+ * - User existence in database
+ * - User is not suspended
+ */
 @Controller('trade')
+@UseGuards(AuthGuard)
 export class TradeController {
     constructor(
         private readonly tradeService: TradeService,
         private readonly invoiceService: InvoiceService,
         private readonly auditService: AuditService,
+        private readonly disputesService: AdminDisputesService,
     ) {}
+
+    /**
+     * Issue #16 - Centralized error response handler with logging
+     * Logs server errors (5xx) for debugging while preserving client-facing messages
+     */
+    private handleError(error: any, response: Response, context: string) {
+        const status = error.status || 500;
+        const message = error.message || 'Internal server error';
+
+        // Log server errors for debugging (5xx)
+        if (status >= 500) {
+            console.error(`[TradeController] ${context}:`, {
+                status,
+                message,
+                stack: error.stack?.split('\n').slice(0, 3).join('\n')
+            });
+        }
+
+        return response.status(status).json({
+            statusCode: status,
+            message
+        });
+    }
 
     @Post('create')
     async createTrade(@Body() createTradeDto: CreateTradeDto, @Res() response: Response) {
@@ -31,10 +67,7 @@ export class TradeController {
             const result = await this.tradeService.createTrade(createTradeDto, accountToken);
             return response.status(result.statusCode).json(result);
         } catch (error) {
-            return response.status(error.status || 500).json({
-                statusCode: error.status || 500,
-                message: error.message || 'Internal server error'
-            });
+            return this.handleError(error, response, 'createTrade');
         }
     }
 
@@ -175,17 +208,17 @@ export class TradeController {
             }
 
             // Validate tabType
-            const validTabTypes = ['pr', 'po', 'spa', 'ongoing'];
+            const validTabTypes = ['pr', 'po', 'spa', 'ongoing', 'history'];
             if (!validTabTypes.includes(tabType)) {
                 return response.status(400).json({
                     statusCode: 400,
-                    message: 'Invalid tab type. Must be one of: pr, po, spa, ongoing'
+                    message: 'Invalid tab type. Must be one of: pr, po, spa, ongoing, history'
                 });
             }
 
             const result = await this.tradeService.markTradesAsRead(
                 accountToken,
-                tabType as 'pr' | 'po' | 'spa' | 'ongoing'
+                tabType as 'pr' | 'po' | 'spa' | 'ongoing' | 'history'
             );
             return response.status(result.statusCode).json(result);
         } catch (error) {
@@ -449,10 +482,7 @@ export class TradeController {
             const result = await this.tradeService.uploadDocument(id, accountToken, files[0], 'sco', uploadDto);
             return response.status(result.statusCode).json(result);
         } catch (error) {
-            return response.status(error.status || 500).json({
-                statusCode: error.status || 500,
-                message: error.message || 'Internal server error'
-            });
+            return this.handleError(error, response, `uploadSCO(tradeId=${id})`);
         }
     }
 
@@ -911,7 +941,7 @@ export class TradeController {
 
     /**
      * Verify or reject a document
-     * SCO → Buyer verifies, ICPO → Seller verifies, SPA → Either party
+     * SCO → Buyer verifies, ICPO → Seller verifies
      * Payment Proof → Seller verifies, BoL → Buyer verifies
      */
     @Put(':id/verify-document')
@@ -990,6 +1020,251 @@ export class TradeController {
                 statusCode: error.status || 500,
                 message: error.message || 'Internal server error'
             });
+        }
+    }
+
+    // ========================
+    // DISPUTE ENDPOINTS (User-facing)
+    // ========================
+
+    /**
+     * Raise a dispute on a trade
+     * Either buyer or seller can raise a dispute on their trade
+     */
+    @Post(':id/dispute')
+    async raiseDispute(
+        @Param('id') id: string,
+        @Body() createDisputeDto: CreateDisputeDto,
+        @Res() response: Response
+    ) {
+        try {
+            const accountToken = response.req.signedCookies['account'];
+
+            if (!accountToken) {
+                return response.status(401).json({
+                    statusCode: 401,
+                    message: 'No valid cookie found'
+                });
+            }
+
+            // First verify the user has access to this trade
+            const tradeResult = await this.tradeService.getTradeById(id, accountToken);
+            if (tradeResult.statusCode !== 200) {
+                return response.status(tradeResult.statusCode).json(tradeResult);
+            }
+
+            // Get user info from the trade result to determine role
+            const trade = tradeResult.data as any;
+            const userInfo = await this.tradeService.getUserFromToken(accountToken);
+
+            if (!userInfo) {
+                return response.status(401).json({
+                    statusCode: 401,
+                    message: 'Invalid authentication'
+                });
+            }
+
+            // Determine if user is buyer or seller
+            const isBuyer = trade.buyer?._id?.toString() === userInfo.userId.toString() ||
+                           trade.buyer?.toString() === userInfo.userId.toString();
+            const isSeller = trade.seller?._id?.toString() === userInfo.userId.toString() ||
+                            trade.seller?.toString() === userInfo.userId.toString();
+
+            if (!isBuyer && !isSeller) {
+                return response.status(403).json({
+                    statusCode: 403,
+                    message: 'You are not authorized to raise a dispute on this trade'
+                });
+            }
+
+            const userRole = isBuyer ? 'buyer' : 'seller';
+
+            const dispute = await this.disputesService.createDispute(
+                id,
+                createDisputeDto,
+                userInfo.userId.toString(),
+                userInfo.email,
+                userRole
+            );
+
+            return response.status(201).json({
+                statusCode: 201,
+                message: 'Dispute raised successfully',
+                data: dispute
+            });
+        } catch (error) {
+            return this.handleError(error, response, `raiseDispute(tradeId=${id})`);
+        }
+    }
+
+    /**
+     * Get dispute status for a trade
+     * Returns the active or most recent dispute for this trade
+     */
+    @Get(':id/dispute')
+    async getTradeDispute(@Param('id') id: string, @Res() response: Response) {
+        try {
+            const accountToken = response.req.signedCookies['account'];
+
+            if (!accountToken) {
+                return response.status(401).json({
+                    statusCode: 401,
+                    message: 'No valid cookie found'
+                });
+            }
+
+            // First verify the user has access to this trade
+            const tradeResult = await this.tradeService.getTradeById(id, accountToken);
+            if (tradeResult.statusCode !== 200) {
+                return response.status(tradeResult.statusCode).json(tradeResult);
+            }
+
+            const dispute = await this.disputesService.getDisputeByTrade(id);
+
+            if (!dispute) {
+                return response.status(200).json({
+                    statusCode: 200,
+                    message: 'No dispute found for this trade',
+                    data: null
+                });
+            }
+
+            // Get messages (excluding internal admin messages)
+            const messages = await this.disputesService.getMessages(dispute._id.toString(), false);
+
+            return response.status(200).json({
+                statusCode: 200,
+                message: 'Dispute retrieved successfully',
+                data: {
+                    ...dispute,
+                    messages
+                }
+            });
+        } catch (error) {
+            return this.handleError(error, response, `getTradeDispute(tradeId=${id})`);
+        }
+    }
+
+    /**
+     * Add a message to a dispute
+     * Only the buyer or seller involved in the trade can add messages
+     */
+    @Post(':id/dispute/message')
+    async addDisputeMessage(
+        @Param('id') id: string,
+        @Body() messageDto: AddDisputeMessageDto,
+        @Res() response: Response
+    ) {
+        try {
+            const accountToken = response.req.signedCookies['account'];
+
+            if (!accountToken) {
+                return response.status(401).json({
+                    statusCode: 401,
+                    message: 'No valid cookie found'
+                });
+            }
+
+            // First verify the user has access to this trade
+            const tradeResult = await this.tradeService.getTradeById(id, accountToken);
+            if (tradeResult.statusCode !== 200) {
+                return response.status(tradeResult.statusCode).json(tradeResult);
+            }
+
+            // Get the dispute for this trade
+            const dispute = await this.disputesService.getDisputeByTrade(id);
+            if (!dispute) {
+                return response.status(404).json({
+                    statusCode: 404,
+                    message: 'No dispute found for this trade'
+                });
+            }
+
+            // Get user info
+            const trade = tradeResult.data as any;
+            const userInfo = await this.tradeService.getUserFromToken(accountToken);
+
+            if (!userInfo) {
+                return response.status(401).json({
+                    statusCode: 401,
+                    message: 'Invalid authentication'
+                });
+            }
+
+            // Determine if user is buyer or seller
+            const isBuyer = trade.buyer?._id?.toString() === userInfo.userId.toString() ||
+                           trade.buyer?.toString() === userInfo.userId.toString();
+            const isSeller = trade.seller?._id?.toString() === userInfo.userId.toString() ||
+                            trade.seller?.toString() === userInfo.userId.toString();
+
+            if (!isBuyer && !isSeller) {
+                return response.status(403).json({
+                    statusCode: 403,
+                    message: 'You are not authorized to add messages to this dispute'
+                });
+            }
+
+            const userRole = isBuyer ? 'buyer' : 'seller';
+
+            const message = await this.disputesService.addMessage(
+                dispute._id.toString(),
+                messageDto,
+                userInfo.userId.toString(),
+                userInfo.email,
+                userRole
+            );
+
+            return response.status(201).json({
+                statusCode: 201,
+                message: 'Message added successfully',
+                data: message
+            });
+        } catch (error) {
+            return this.handleError(error, response, `addDisputeMessage(tradeId=${id})`);
+        }
+    }
+
+    /**
+     * Get messages for a dispute
+     * Returns all non-internal messages for the dispute on this trade
+     */
+    @Get(':id/dispute/messages')
+    async getDisputeMessages(@Param('id') id: string, @Res() response: Response) {
+        try {
+            const accountToken = response.req.signedCookies['account'];
+
+            if (!accountToken) {
+                return response.status(401).json({
+                    statusCode: 401,
+                    message: 'No valid cookie found'
+                });
+            }
+
+            // First verify the user has access to this trade
+            const tradeResult = await this.tradeService.getTradeById(id, accountToken);
+            if (tradeResult.statusCode !== 200) {
+                return response.status(tradeResult.statusCode).json(tradeResult);
+            }
+
+            // Get the dispute for this trade
+            const dispute = await this.disputesService.getDisputeByTrade(id);
+            if (!dispute) {
+                return response.status(404).json({
+                    statusCode: 404,
+                    message: 'No dispute found for this trade'
+                });
+            }
+
+            // Get messages (excluding internal admin messages)
+            const messages = await this.disputesService.getMessages(dispute._id.toString(), false);
+
+            return response.status(200).json({
+                statusCode: 200,
+                message: 'Messages retrieved successfully',
+                data: messages
+            });
+        } catch (error) {
+            return this.handleError(error, response, `getDisputeMessages(tradeId=${id})`);
         }
     }
 }

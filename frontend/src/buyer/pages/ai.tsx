@@ -2,26 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import AiAnimation from "../../assets/ai/ai-animation.svg";
-import BreyusLogo from "../../assets/Logos/full-logo.svg";
 
-const Navbar = () => {
-  const navigate = useNavigate();
-  return (
-    <div className="border-b border-gray-200 px-2 py-2 flex">
-      <div id="logo" className="my-auto">
-        <img className="h-auto w-[180px]" src={BreyusLogo} alt="Breyus" />
-      </div>
-      <div
-        id="nav"
-        className="flex w-fit justify-between my-auto mx-auto font-[500] xl:text-lg lg:text-md md:text-sm"
-      >
-        <a className="mx-4 text-black my-auto" href="/features">Features</a>
-        <a className="mx-4 text-black my-auto" href="/impact">Impact</a>
-        <a className="mx-4 text-black my-auto" href="/contact">Contact Us</a>
-      </div>
-    </div>
-  );
-};
 const CombinedForm = () => {
   const [step, setStep] = useState(1);
   const [commodity, setCommodity] = useState("");
@@ -236,7 +217,6 @@ const AnimatedBackground = () => (
 
 const CombinedCommodityPage = () => (
   <div className="relative min-h-screen bg-gray-50 overflow-hidden">
-    <Navbar />
     <AnimatedBackground />
     <CombinedForm />
   </div>

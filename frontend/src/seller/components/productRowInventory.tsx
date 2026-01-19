@@ -2,23 +2,30 @@
 interface ProductRowProp {
     imageUrl?: string;
     productName?: string;
-    productDescription?: string;
     hsn?: string;
     category?: string;
     price?: string;
     currency?: string;
     onSalePrice?: string;
-    stock?: string;
-    stockUnit?: string;
+    quantity?: string;
+    unit?: string;
     moq?: string;
     moqUnit?: string;
+    sku?: string;
     status?: string;
+    isActive?: boolean;
+    isUpdatingActive?: boolean;
     onEyeClick?: () => void;
     onEditClick?: () => void;
     onDeleteClick?: () => void;
+    onToggleActive?: (nextActive: boolean) => void;
 }
 
- export const ProductRow: React.FC<ProductRowProp> = ({ imageUrl, productName, productDescription, hsn, category, price, currency, onSalePrice, stock, stockUnit, moq, moqUnit, status, onEyeClick, onEditClick, onDeleteClick }) => {
+export const ProductRow: React.FC<ProductRowProp> = ({ imageUrl, productName, hsn, category, price, currency, onSalePrice, quantity, unit, moq, moqUnit, sku, status, isActive, isUpdatingActive, onEyeClick, onEditClick, onDeleteClick, onToggleActive }) => {
+    const statusClasses = status === 'Out of Stock'
+        ? 'bg-red-100 text-red-700'
+        : 'bg-green-100 text-green-800';
+
     return (
         <tr className="hover:bg-gray-50" >
 
@@ -27,7 +34,7 @@ interface ProductRowProp {
                     <div className="h-16 w-16 flex-shrink-0">
                         <img
                             className="h-16 w-16 rounded-lg object-cover border"
-                            src={imageUrl}
+                            src={imageUrl || '/placeholder-product.svg'}
                             alt={productName}
                         />
                     </div>
@@ -35,10 +42,7 @@ interface ProductRowProp {
                         <div className="text-sm font-medium text-gray-900 line-clamp">
                             {productName}
                         </div>
-                        <div className="text-sm text-gray-500 max-w-[250px] line-clamp-1">
-                            {productDescription}
-                        </div>
-                        <div className="text-xs text-gray-400">{(hsn) ? `HSN: ${hsn}` : ''}</div>
+                        <div className="text-xs text-gray-400">{(hsn) ? `HSN Code: ${hsn}` : ''}</div>
                     </div>
                 </div>
             </td>
@@ -52,13 +56,41 @@ interface ProductRowProp {
                 <div className="text-xs text-green-600"> {(onSalePrice) ? `Sale: ${onSalePrice + ' ' + currency}` : ''}</div>
             </td>
             <td className="px-6 py-4 text-sm text-gray-900">
-                <div className="font-medium">{(stock) ? stock + ' ' + stockUnit : ''}</div>
-                <div className="text-xs text-gray-500">{(moq) ? 'MOQ: ' + moq + ' ' + moqUnit : ''}</div>
+                <div className="font-medium">{quantity || ''}</div>
+            </td>
+            <td className="px-6 py-4 text-sm text-gray-900">
+                <div className="font-medium">{unit || ''}</div>
+            </td>
+            <td className="px-6 py-4 text-sm text-gray-900">
+                <div className="font-medium">{moq ? `${moq} ${moqUnit || ''}` : ''}</div>
+            </td>
+            <td className="px-6 py-4 text-sm text-gray-900">
+                <div className="font-medium">{sku || ''}</div>
             </td>
             <td className="px-6 py-4">
-                {status && <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    {status}
-                </span>}
+                {status && (
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClasses}`}>
+                        {status}
+                    </span>
+                )}
+            {onToggleActive && (
+                    <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
+                        <input
+                            type="checkbox"
+                            checked={!!isActive}
+                            onChange={(event) => onToggleActive(event.target.checked)}
+                            disabled={isUpdatingActive}
+                            className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
+                            aria-label="Toggle product visibility"
+                            title={isActive ? 'Visible to buyers' : 'Hidden from buyers'}
+                        />
+                        <span
+                            className={`min-w-[74px] text-left inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${isActive ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}
+                        >
+                            {isActive ? 'Visible' : 'Hidden'}
+                        </span>
+                    </div>
+                )}
             </td>
             <td className="px-6 py-4 text-sm font-medium">
                 <div className="flex items-center gap-2">
