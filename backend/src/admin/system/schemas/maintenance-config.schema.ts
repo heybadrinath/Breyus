@@ -12,12 +12,6 @@ export class MaintenanceConfig extends Document {
   @Prop()
   estimatedEndTime?: Date;
 
-  @Prop()
-  scheduledStart?: Date;
-
-  @Prop()
-  scheduledEnd?: Date;
-
   @Prop({ type: [String], default: [] })
   allowedIPs: string[];
 
@@ -34,4 +28,5 @@ export class MaintenanceConfig extends Document {
   lastDisabledBy?: Types.ObjectId;
 }
 
-export const MaintenanceConfigSchema = SchemaFactory.createForClass(MaintenanceConfig);
+export const MaintenanceConfigSchema =
+  SchemaFactory.createForClass(MaintenanceConfig);

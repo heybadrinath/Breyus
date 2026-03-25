@@ -65,7 +65,10 @@ export class WsAuthService {
 
       // The signed cookie value starts with 's:' and needs to be unsigned
       if (accountToken.startsWith('s:')) {
-        const unsigned = cookieSignature.unsign(accountToken.slice(2), cookieSecret);
+        const unsigned = cookieSignature.unsign(
+          accountToken.slice(2),
+          cookieSecret,
+        );
         if (unsigned === false) {
           this.logger.warn(`Socket ${socket.id}: Invalid cookie signature`);
           return null;
@@ -86,23 +89,31 @@ export class WsAuthService {
       }
 
       if (!payload.userId || !payload.companyId) {
-        this.logger.warn(`Socket ${socket.id}: Missing userId or companyId in token`);
+        this.logger.warn(
+          `Socket ${socket.id}: Missing userId or companyId in token`,
+        );
         return null;
       }
 
       // 6. Verify user exists and is not suspended
       const user = await this.userModel.findById(payload.userId);
       if (!user) {
-        this.logger.warn(`Socket ${socket.id}: User ${payload.userId} not found`);
+        this.logger.warn(
+          `Socket ${socket.id}: User ${payload.userId} not found`,
+        );
         return null;
       }
 
       if ((user as any).isSuspended) {
-        this.logger.warn(`Socket ${socket.id}: User ${payload.userId} is suspended`);
+        this.logger.warn(
+          `Socket ${socket.id}: User ${payload.userId} is suspended`,
+        );
         return null;
       }
 
-      this.logger.log(`Socket ${socket.id} authenticated: user=${payload.userId}, company=${payload.companyId}`);
+      this.logger.log(
+        `Socket ${socket.id} authenticated: user=${payload.userId}, company=${payload.companyId}`,
+      );
 
       return {
         userId: payload.userId,
@@ -110,7 +121,9 @@ export class WsAuthService {
         user,
       };
     } catch (error) {
-      this.logger.error(`Socket ${socket.id}: Authentication error - ${error.message}`);
+      this.logger.error(
+        `Socket ${socket.id}: Authentication error - ${error.message}`,
+      );
       return null;
     }
   }

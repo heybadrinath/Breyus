@@ -1055,11 +1055,15 @@ export class DocsController {
     `;
   }
 
-  private generateSidebar(modules: Record<string, any[]>, activeSlug?: string): string {
+  private generateSidebar(
+    modules: Record<string, any[]>,
+    activeSlug?: string,
+  ): string {
     const categoryLabels = {
       core: 'Core Modules',
       business: 'Business Modules',
-      supporting: 'Supporting Modules'
+      supporting: 'Supporting Modules',
+      admin: 'Admin Portal',
     };
 
     let sidebarHtml = `
@@ -1109,11 +1113,15 @@ export class DocsController {
     return sidebarHtml;
   }
 
-  private generateHomePage(modules: Record<string, any[]>, readmeHtml: string): string {
+  private generateHomePage(
+    modules: Record<string, any[]>,
+    readmeHtml: string,
+  ): string {
     const categoryInfo = {
       core: { title: 'Core Modules', icon: 'shield' },
       business: { title: 'Business Modules', icon: 'trending-up' },
-      supporting: { title: 'Supporting Modules', icon: 'package' }
+      supporting: { title: 'Supporting Modules', icon: 'package' },
+      admin: { title: 'Admin Portal', icon: 'shield' },
     };
 
     let moduleSections = '';
@@ -1212,7 +1220,11 @@ export class DocsController {
     `;
   }
 
-  private generateModulePage(moduleInfo: any, docHtml: string, modules: Record<string, any[]>): string {
+  private generateModulePage(
+    moduleInfo: any,
+    docHtml: string,
+    modules: Record<string, any[]>,
+  ): string {
     return `
       <!DOCTYPE html>
       <html lang="en">

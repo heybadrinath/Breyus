@@ -1,15 +1,32 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { Filter, Check, X, Loader2, Eye, ArrowRight, Search, Calendar } from "lucide-react";
-import { getUserTrades, getSellerTrades, acceptTrade, rejectTrade, Trade, TradePhase } from "../services/trade.service";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { Filter, Check, X, Loader2, Eye, ArrowRight, Search, Calendar, DollarSign, Ship, Upload, Clock, CheckCircle } from "lucide-react";
+import { getUserTrades, getSellerTrades, acceptTrade, rejectTrade, Trade, TradePhase, DocumentInfo } from "../services/trade.service";
 import { validateCookie } from "../services/auth.service";
 import TradeDetailsModal from "./TradeDetailsModal";
 import TradeCancellationModal from "./TradeCancellationModal";
 import TrackTrade from "./TrackTrade";
 import { Pagination } from "./Pagination";
 import { useNotifications } from "../contexts/NotificationContext";
+import CompanyAvatar from "./ui/CompanyAvatar";
+import ClickableCompanyName from "./ui/ClickableCompanyName";
 
 type OngoingStatusFilter = 'all' | 'pending' | 'countered' | 'buyer_responded' | 'accepted';
+
+// PHASE 2 REFACTORING: Cancelled trade 2-day visibility filter
+const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
+const shouldShowCancelledTrade = (trade: any): boolean => {
+    // Always show non-cancelled trades
+    if (trade.tradePhase !== 'CANCELLED' && trade.negotiationStatus !== 'cancelled') {
+        return true;
+    }
+    // For cancelled trades, show only if cancelled within last 2 days
+    const cancelledAt = trade.cancelledAt || trade.autoCancelledAt;
+    if (!cancelledAt) return true; // No cancellation date, show it
+    const cancelledDate = new Date(cancelledAt);
+    const twoDaysAgo = new Date(Date.now() - TWO_DAYS_MS);
+    return cancelledDate > twoDaysAgo;
+};
 
 interface TradeWithExtras extends Omit<Trade, 'purchaseRequestStatus' | 'negotiationStatus'> {
     product: {
@@ -30,6 +47,9 @@ interface TradeWithExtras extends Omit<Trade, 'purchaseRequestStatus' | 'negotia
     purchaseRequestStatus?: string;
     negotiationStatus?: string;
     tradePhase?: TradePhase;
+    // Document fields for phase-specific actions
+    paymentProof?: DocumentInfo;
+    bolDocument?: DocumentInfo;
 }
 
 export const OngoingTrades = () => {
@@ -129,10 +149,23 @@ export const OngoingTrades = () => {
 
             // Filter for ongoing trades - strict phase filtering: only PAYMENT and BOL phases
             // Other phases are shown in their respective tabs (PR Status, PO Status, SPA Status)
-            const ongoingTrades = (response.data as TradeWithExtras[]).filter(
-                trade => trade.negotiationStatus === 'accepted' &&
-                         (trade.tradePhase === 'PAYMENT' || trade.tradePhase === 'BOL')
-            );
+            // PHASE 2 REFACTORING: Include cancelled trade 2-day visibility filter
+            // Cancelled trades that were in PAYMENT/BOL phase should still appear here for 2 days
+            const ongoingTrades = (response.data as TradeWithExtras[]).filter(trade => {
+                // First apply 2-day visibility filter for cancelled trades
+                if (!shouldShowCancelledTrade(trade)) return false;
+
+                // For cancelled trades, check if they were in PAYMENT or BOL phase
+                if (trade.tradePhase === 'CANCELLED' || trade.negotiationStatus === 'cancelled') {
+                    // Show cancelled trades that reached PAYMENT or BOL phase
+                    const lastPhase = (trade as any).lastActivePhase || (trade as any).phaseBeforeCancellation;
+                    return lastPhase === 'PAYMENT' || lastPhase === 'BOL';
+                }
+
+                // For active trades, only show accepted trades in PAYMENT or BOL phase
+                return trade.negotiationStatus === 'accepted' &&
+                       (trade.tradePhase === 'PAYMENT' || trade.tradePhase === 'BOL');
+            });
             setTrades(ongoingTrades);
         } catch (err) {
             setError('Failed to fetch ongoing trades');
@@ -227,6 +260,76 @@ export const OngoingTrades = () => {
     };
 
     const getStatusBadge = (trade: TradeWithExtras) => {
+        // For ongoing trades (PAYMENT/BOL), show phase-specific status
+        if (trade.tradePhase === 'PAYMENT') {
+            if (trade.paymentProof?.filePath) {
+                const status = trade.paymentProof.status;
+                if (status === 'approved') {
+                    return (
+                        <span className="flex items-center gap-1 bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">
+                            <CheckCircle size={12} />
+                            Payment Verified
+                        </span>
+                    );
+                }
+                if (status === 'rejected') {
+                    return (
+                        <span className="flex items-center gap-1 bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full">
+                            <X size={12} />
+                            Payment Rejected
+                        </span>
+                    );
+                }
+                // uploaded / pending review
+                return (
+                    <span className="flex items-center gap-1 bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
+                        <DollarSign size={12} />
+                        Payment Proof Uploaded
+                    </span>
+                );
+            }
+            return (
+                <span className="flex items-center gap-1 bg-yellow-100 text-yellow-700 text-xs px-2 py-1 rounded-full">
+                    <Clock size={12} />
+                    Awaiting Payment
+                </span>
+            );
+        }
+        if (trade.tradePhase === 'BOL') {
+            if (trade.bolDocument?.filePath) {
+                const status = trade.bolDocument.status;
+                if (status === 'approved') {
+                    return (
+                        <span className="flex items-center gap-1 bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">
+                            <CheckCircle size={12} />
+                            BoL Verified
+                        </span>
+                    );
+                }
+                if (status === 'rejected') {
+                    return (
+                        <span className="flex items-center gap-1 bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full">
+                            <X size={12} />
+                            BoL Rejected
+                        </span>
+                    );
+                }
+                return (
+                    <span className="flex items-center gap-1 bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
+                        <Ship size={12} />
+                        BoL Uploaded
+                    </span>
+                );
+            }
+            return (
+                <span className="flex items-center gap-1 bg-yellow-100 text-yellow-700 text-xs px-2 py-1 rounded-full">
+                    <Clock size={12} />
+                    Awaiting BoL
+                </span>
+            );
+        }
+
+        // Fallback for any non-PAYMENT/BOL trades
         if (trade.negotiationStatus === 'accepted' || trade.purchaseRequestStatus === 'accepted') {
             return <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">Accepted</span>;
         }
@@ -261,6 +364,171 @@ export const OngoingTrades = () => {
             return "Accept Seller's Offer";
         }
         return "Accept";
+    };
+
+    // Get a phase-specific action button for the trade
+    const getPhaseActionButton = (trade: TradeWithExtras) => {
+        const phase = trade.tradePhase;
+        if (!phase) return null;
+
+        if (phase === 'PAYMENT') {
+            if (trade.paymentProof?.filePath) {
+                const status = trade.paymentProof.status;
+                // Seller needs to verify payment proof
+                if (isActingAsSeller && (status === 'uploaded' || !status)) {
+                    return (
+                        <button
+                            onClick={() => handleTrackProgress(trade._id)}
+                            className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center gap-1.5"
+                            title="Verify Payment Proof"
+                        >
+                            <DollarSign size={14} />
+                            Verify Payment
+                        </button>
+                    );
+                }
+                // Payment was rejected - seller waiting for buyer to re-upload
+                if (isActingAsSeller && status === 'rejected') {
+                    return (
+                        <span className="text-xs text-red-600 flex items-center gap-1">
+                            <Clock size={12} />
+                            Awaiting Re-upload
+                        </span>
+                    );
+                }
+                // Buyer: payment submitted, awaiting verification
+                if (!isActingAsSeller && (status === 'uploaded' || !status)) {
+                    return (
+                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                            <Clock size={12} />
+                            Awaiting Verification
+                        </span>
+                    );
+                }
+                // Buyer: payment was rejected, needs to re-upload
+                if (!isActingAsSeller && status === 'rejected') {
+                    return (
+                        <button
+                            onClick={() => handleTrackProgress(trade._id)}
+                            className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 flex items-center gap-1.5"
+                            title="Re-upload Payment Proof"
+                        >
+                            <Upload size={14} />
+                            Re-upload Payment
+                        </button>
+                    );
+                }
+            } else {
+                // No payment proof uploaded yet
+                if (!isActingAsSeller) {
+                    // Buyer needs to upload payment proof
+                    return (
+                        <button
+                            onClick={() => handleTrackProgress(trade._id)}
+                            className="px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 flex items-center gap-1.5"
+                            title="Upload Payment Proof"
+                        >
+                            <Upload size={14} />
+                            Upload Payment
+                        </button>
+                    );
+                }
+                // Seller waiting for buyer's payment
+                return (
+                    <span className="text-xs text-gray-500 flex items-center gap-1">
+                        <Clock size={12} />
+                        Awaiting Payment
+                    </span>
+                );
+            }
+        }
+
+        if (phase === 'BOL') {
+            if (trade.bolDocument?.filePath) {
+                const status = trade.bolDocument.status;
+                // Buyer needs to verify BoL
+                if (!isActingAsSeller && (status === 'uploaded' || !status)) {
+                    return (
+                        <button
+                            onClick={() => handleTrackProgress(trade._id)}
+                            className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center gap-1.5"
+                            title="Verify Bill of Lading"
+                        >
+                            <Ship size={14} />
+                            Verify BoL
+                        </button>
+                    );
+                }
+                // BoL was rejected - buyer waiting for seller to re-upload
+                if (!isActingAsSeller && status === 'rejected') {
+                    return (
+                        <span className="text-xs text-red-600 flex items-center gap-1">
+                            <Clock size={12} />
+                            Awaiting Re-upload
+                        </span>
+                    );
+                }
+                // Seller: BoL submitted, awaiting buyer verification
+                if (isActingAsSeller && (status === 'uploaded' || !status)) {
+                    return (
+                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                            <Clock size={12} />
+                            Awaiting Verification
+                        </span>
+                    );
+                }
+                // Seller: BoL was rejected, needs to re-upload
+                if (isActingAsSeller && status === 'rejected') {
+                    return (
+                        <button
+                            onClick={() => handleTrackProgress(trade._id)}
+                            className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 flex items-center gap-1.5"
+                            title="Re-upload Bill of Lading"
+                        >
+                            <Upload size={14} />
+                            Re-upload BoL
+                        </button>
+                    );
+                }
+                // BoL approved
+                if (status === 'approved' && !isActingAsSeller) {
+                    return (
+                        <button
+                            onClick={() => handleTrackProgress(trade._id)}
+                            className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 flex items-center gap-1.5"
+                            title="Complete Trade"
+                        >
+                            <CheckCircle size={14} />
+                            Complete Trade
+                        </button>
+                    );
+                }
+            } else {
+                // No BoL uploaded yet
+                if (isActingAsSeller) {
+                    // Seller needs to upload BoL
+                    return (
+                        <button
+                            onClick={() => handleTrackProgress(trade._id)}
+                            className="px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 flex items-center gap-1.5"
+                            title="Upload Bill of Lading"
+                        >
+                            <Upload size={14} />
+                            Upload BoL
+                        </button>
+                    );
+                }
+                // Buyer waiting for seller's BoL
+                return (
+                    <span className="text-xs text-gray-500 flex items-center gap-1">
+                        <Clock size={12} />
+                        Awaiting BoL
+                    </span>
+                );
+            }
+        }
+
+        return null;
     };
 
     const totalPages = Math.ceil(filteredTrades.length / entriesPerPage);
@@ -452,11 +720,43 @@ export const OngoingTrades = () => {
                                     </button>
                                 </td>
                                 <td className="py-4 text-center">
-                                    <span className="text-sm">
-                                        {userRole === 'Seller'
-                                            ? trade.buyer?.mail || 'N/A'
-                                            : trade.seller?.mail || 'N/A'}
-                                    </span>
+                                    <div className="flex items-center justify-center gap-2">
+                                        {userRole === 'Seller' ? (
+                                            <>
+                                                <CompanyAvatar
+                                                    companyId={(trade.buyer as any)?.company?._id}
+                                                    companyName={(trade.buyer as any)?.company?.companyName || trade.buyer?.mail || 'Buyer'}
+                                                    profilePicture={(trade.buyer as any)?.company?.profilePicture}
+                                                    size="sm"
+                                                    clickable={!!(trade.buyer as any)?.company?._id}
+                                                    viewerRole="seller"
+                                                />
+                                                <ClickableCompanyName
+                                                    companyId={(trade.buyer as any)?.company?._id}
+                                                    companyName={(trade.buyer as any)?.company?.companyName || trade.buyer?.mail || 'N/A'}
+                                                    className="text-sm"
+                                                    viewerRole="seller"
+                                                />
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CompanyAvatar
+                                                    companyId={(trade.seller as any)?.company?._id}
+                                                    companyName={(trade.seller as any)?.company?.companyName || trade.seller?.mail || 'Seller'}
+                                                    profilePicture={(trade.seller as any)?.company?.profilePicture}
+                                                    size="sm"
+                                                    clickable={!!(trade.seller as any)?.company?._id}
+                                                    viewerRole="buyer"
+                                                />
+                                                <ClickableCompanyName
+                                                    companyId={(trade.seller as any)?.company?._id}
+                                                    companyName={(trade.seller as any)?.company?.companyName || trade.seller?.mail || 'N/A'}
+                                                    className="text-sm"
+                                                    viewerRole="buyer"
+                                                />
+                                            </>
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="py-4 text-center">
                                     <span className="font-medium">{trade.product?.name || 'N/A'}</span>
@@ -479,10 +779,12 @@ export const OngoingTrades = () => {
                                 </td>
                                 <td className="py-4">
                                     <div className="flex w-full justify-center gap-2 flex-wrap">
-                                        {/* Track Progress button - primary action for ongoing trades */}
+                                        {/* Phase-specific action button (Verify Payment, Upload BoL, etc.) */}
+                                        {getPhaseActionButton(trade)}
+                                        {/* Track Progress button - secondary when phase action exists */}
                                         <button
                                             onClick={() => handleTrackProgress(trade._id)}
-                                            className="px-3 py-1.5 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 flex items-center gap-1.5"
+                                            className="px-3 py-1.5 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
                                             title="Track Progress"
                                         >
                                             <Eye size={14} />

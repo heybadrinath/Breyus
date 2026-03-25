@@ -26,7 +26,8 @@ export class ScriptRunnerService {
     private configService: ConfigService,
     private activityLogService: ActivityLogService,
   ) {
-    this.scriptsPath = this.configService.get<string>('SCRIPTS_PATH') || '/opt/breyus/scripts';
+    this.scriptsPath =
+      this.configService.get<string>('SCRIPTS_PATH') || '/opt/breyus/scripts';
   }
 
   async createBackup(
@@ -38,7 +39,9 @@ export class ScriptRunnerService {
     const timestamp = new Date();
 
     try {
-      this.logger.log(`Admin ${adminEmail} initiated backup (target: ${target})`);
+      this.logger.log(
+        `Admin ${adminEmail} initiated backup (target: ${target})`,
+      );
 
       // Build backup command with target option
       let backupArgs = '--json';
@@ -52,7 +55,7 @@ export class ScriptRunnerService {
 
       const { stdout, stderr } = await execAsync(
         `${this.scriptsPath}/backup.sh ${backupArgs} 2>&1`,
-        { timeout: 300000 } // 5 minute timeout
+        { timeout: 300000 }, // 5 minute timeout
       );
 
       // Try to parse JSON output from script
@@ -126,7 +129,7 @@ export class ScriptRunnerService {
 
       const { stdout, stderr } = await execAsync(
         `${this.scriptsPath}/rotate-logs.sh --json 2>&1`,
-        { timeout: 120000 } // 2 minute timeout (log archiving can take time)
+        { timeout: 120000 }, // 2 minute timeout (log archiving can take time)
       );
 
       // Try to parse JSON output from script
@@ -141,7 +144,10 @@ export class ScriptRunnerService {
       }
 
       const result: ScriptResult = {
-        success: parsedOutput?.status === 'success' || parsedOutput?.status === 'partial' || !stderr,
+        success:
+          parsedOutput?.status === 'success' ||
+          parsedOutput?.status === 'partial' ||
+          !stderr,
         output: stdout || stderr || 'Log rotation completed successfully',
         duration: Date.now() - start,
         timestamp,
@@ -242,10 +248,12 @@ export class ScriptRunnerService {
     try {
       this.logger.log(`Admin ${adminEmail} running script: ${scriptName}`);
 
-      const safeArgs = args.map(arg => arg.replace(/[;&|`$()]/g, '')).join(' ');
+      const safeArgs = args
+        .map((arg) => arg.replace(/[;&|`$()]/g, ''))
+        .join(' ');
       const { stdout, stderr } = await execAsync(
         `${this.scriptsPath}/${scriptName} ${safeArgs} 2>&1`,
-        { timeout: 300000 }
+        { timeout: 300000 },
       );
 
       const result: ScriptResult = {

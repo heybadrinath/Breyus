@@ -125,7 +125,7 @@ export const AISearchLoading: React.FC<AISearchLoadingProps> = ({
       <div className="mt-8 px-6 py-4 bg-blue-50 rounded-lg max-w-sm text-center">
         <p className="text-sm text-blue-700">
           💡 {userRole === 'Buyer'
-            ? 'Our AI analyzes over 56 million trade records to find the best matches for you'
+            ? 'Our AI analyzes over 5.6 million trade records to find the best matches for you'
             : 'We prioritize buyers who have successfully completed trades on our platform'}
         </p>
       </div>

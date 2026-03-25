@@ -44,6 +44,7 @@ export interface Product {
   preciseDescription: string;
   sellerName: string;
   companyName: string;
+  companyId?: string;
 
   // trade terms
   exportLocation?: string;
@@ -347,6 +348,29 @@ export const getProductById = async (productId: string): Promise<ProductResponse
   }
 };
 
+/**
+ * Track a product view for analytics
+ * Called when a buyer views a product page
+ * This is a "fire and forget" call - failures are silently ignored
+ *
+ * @param productId - The product being viewed
+ */
+export const trackProductView = async (productId: string): Promise<void> => {
+  try {
+    // Fire and forget - we don't care about the response
+    await fetch(`${BACKEND_END_POINT}/${productId}/view`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    });
+  } catch (error) {
+    // Silently ignore errors - view tracking is not critical
+    console.debug('View tracking failed (non-critical):', error);
+  }
+};
+
 export const updateProduct = async (
   productId: string,
   productData: CreateProductData,
@@ -435,6 +459,61 @@ export const searchHsnCodes = async (query: string): Promise<HsnSearchResponse> 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || 'Failed to search HSN codes');
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+  }
+};
+
+// Products by Company ID (for seller profile page)
+
+export interface CompanyProductsParams {
+  companyId: string;
+  page: number;
+  limit: number;
+  search?: string;
+}
+
+export interface CompanyProductsResponse {
+  statusCode: number;
+  message: string;
+  data: any[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalProducts: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
+/**
+ * Get products by company ID
+ * Returns paginated products from a specific company
+ */
+export const getProductsByCompanyId = async (params: CompanyProductsParams): Promise<CompanyProductsResponse> => {
+  try {
+    const queryParams = new URLSearchParams();
+    queryParams.append('page', params.page.toString());
+    queryParams.append('limit', params.limit.toString());
+
+    if (params.search) {
+      queryParams.append('search', params.search);
+    }
+
+    const response = await fetch(`${BACKEND_END_POINT}/company/${params.companyId}?${queryParams.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to fetch company products');
     }
 
     return await response.json();

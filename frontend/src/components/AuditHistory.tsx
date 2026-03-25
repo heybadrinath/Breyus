@@ -6,8 +6,6 @@ import {
     X,
     RefreshCw,
     Upload,
-    ChevronDown,
-    ChevronUp,
     Filter,
     User,
     ArrowRight
@@ -123,7 +121,6 @@ const AuditHistory: React.FC<AuditHistoryProps> = ({ tradeId, onClose }) => {
     const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
     const [filterAction, setFilterAction] = useState<AuditAction | 'all'>('all');
     const [total, setTotal] = useState(0);
 
@@ -160,16 +157,6 @@ const AuditHistory: React.FC<AuditHistoryProps> = ({ tradeId, onClose }) => {
         }
     };
 
-    const toggleExpand = (logId: string) => {
-        const newExpanded = new Set(expandedLogs);
-        if (newExpanded.has(logId)) {
-            newExpanded.delete(logId);
-        } else {
-            newExpanded.add(logId);
-        }
-        setExpandedLogs(newExpanded);
-    };
-
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         return date.toLocaleString('en-US', {
@@ -187,31 +174,6 @@ const AuditHistory: React.FC<AuditHistoryProps> = ({ tradeId, onClose }) => {
             color: 'bg-gray-100 text-gray-600',
             label: action
         };
-    };
-
-    const renderStateChanges = (log: AuditLog) => {
-        if (!log.previousState && !log.newState) return null;
-
-        return (
-            <div className="mt-3 p-3 bg-gray-50 rounded-lg text-sm">
-                {log.previousState && (
-                    <div className="mb-2">
-                        <span className="font-medium text-gray-500">Previous State:</span>
-                        <pre className="mt-1 text-xs text-gray-600 overflow-x-auto">
-                            {JSON.stringify(log.previousState, null, 2)}
-                        </pre>
-                    </div>
-                )}
-                {log.newState && (
-                    <div>
-                        <span className="font-medium text-gray-500">New State:</span>
-                        <pre className="mt-1 text-xs text-gray-600 overflow-x-auto">
-                            {JSON.stringify(log.newState, null, 2)}
-                        </pre>
-                    </div>
-                )}
-            </div>
-        );
     };
 
     if (loading) {
@@ -281,10 +243,8 @@ const AuditHistory: React.FC<AuditHistoryProps> = ({ tradeId, onClose }) => {
 
                         {/* Timeline items */}
                         <div className="space-y-4">
-                            {auditLogs.map((log, index) => {
+                            {auditLogs.map((log) => {
                                 const actionDisplay = getActionDisplay(log.action);
-                                const isExpanded = expandedLogs.has(log._id);
-                                const hasDetails = log.previousState || log.newState;
 
                                 return (
                                     <div key={log._id} className="relative pl-10">
@@ -324,29 +284,6 @@ const AuditHistory: React.FC<AuditHistoryProps> = ({ tradeId, onClose }) => {
                                                 <User size={12} className="mr-1" />
                                                 {log.performedBy?.mail || 'Unknown user'}
                                             </div>
-
-                                            {/* Expand/Collapse for state changes */}
-                                            {hasDetails && (
-                                                <button
-                                                    onClick={() => toggleExpand(log._id)}
-                                                    className="mt-2 flex items-center text-xs text-blue-600 hover:text-blue-800"
-                                                >
-                                                    {isExpanded ? (
-                                                        <>
-                                                            <ChevronUp size={14} className="mr-1" />
-                                                            Hide Details
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <ChevronDown size={14} className="mr-1" />
-                                                            Show Details
-                                                        </>
-                                                    )}
-                                                </button>
-                                            )}
-
-                                            {/* Expanded state changes */}
-                                            {isExpanded && renderStateChanges(log)}
                                         </div>
                                     </div>
                                 );

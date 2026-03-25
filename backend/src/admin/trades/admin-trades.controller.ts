@@ -19,7 +19,13 @@ import { join } from 'path';
 import { AdminTradesService } from './admin-trades.service';
 import { AdminAuthGuard } from '../auth/admin-auth.guard';
 import { AdminAction } from '../common/decorators/admin-action.decorator';
-import { GetTradesQueryDto, AddTradeNoteDto, VerifyDocumentDto, ForcePhaseChangeDto } from './dto';
+import {
+  GetTradesQueryDto,
+  AddTradeNoteDto,
+  VerifyDocumentDto,
+  ForcePhaseChangeDto,
+  SendReminderDto,
+} from './dto';
 
 @Controller('admin/trades')
 @UseGuards(AdminAuthGuard)
@@ -243,7 +249,10 @@ export class AdminTradesController {
     @Param('type') type: string,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
-    const docInfo = await this.adminTradesService.getDocumentDownloadInfo(id, type);
+    const docInfo = await this.adminTradesService.getDocumentDownloadInfo(
+      id,
+      type,
+    );
 
     // Construct the full file path
     // Files are stored in uploads directory relative to project root
@@ -262,5 +271,36 @@ export class AdminTradesController {
 
     const file = createReadStream(filePath);
     return new StreamableFile(file);
+  }
+
+  // ========================
+  // STALLED TRADE REMINDER
+  // ========================
+
+  /**
+   * Send reminder email to buyer and/or seller for stalled trade
+   * POST /admin/trades/:id/send-reminder
+   */
+  @Post(':id/send-reminder')
+  @AdminAction({ action: 'trade.send_reminder', category: 'trades' })
+  async sendStalledTradeReminder(
+    @Param('id') id: string,
+    @Body() dto: SendReminderDto,
+    @Req() req: any,
+  ) {
+    const admin = req.admin;
+    const result = await this.adminTradesService.sendStalledTradeReminder(
+      id,
+      dto,
+      admin._id.toString(),
+      admin.email,
+    );
+    return {
+      statusCode: HttpStatus.OK,
+      message: result.success
+        ? `Reminder sent to ${result.sentTo.join(', ')}`
+        : 'No reminders sent',
+      data: result,
+    };
   }
 }

@@ -1,0 +1,627 @@
+---
+type: api-doc
+module: notification
+tags: [api, notification]
+---
+
+# Notification API
+
+## Overview
+The Notification API manages user notifications for trades, messages, system events, and admin actions. It provides endpoints for listing notifications, marking them as read, and managing notification preferences. All notifications are automatically deleted 30 days after being marked as read.
+
+## Base URL
+```
+/notifications
+```
+
+## Authentication
+All endpoints require authentication via signed HTTP-only cookie (`account`). The API uses an AuthGuard that validates:
+- Cookie-based JWT authentication
+- User existence in database
+- User is not suspended
+
+---
+
+## Notification Types
+
+### Trade Notifications
+
+| Type | Description |
+|------|-------------|
+| `trade_created` | New trade/purchase request created |
+| `counter_offer` | Counter-offer received in negotiation |
+| `trade_accepted` | Trade offer accepted |
+| `trade_rejected` | Trade offer rejected |
+| `document_uploaded` | Document uploaded to trade |
+| `documents_invalidated` | Trade documents invalidated |
+| `document_rejected` | Document rejected by admin |
+| `phase_advanced` | Trade moved to next phase |
+| `trade_completed` | Trade successfully completed |
+| `trade_cancelled` | Trade cancelled |
+| `trade_auto_cancelled` | Trade auto-cancelled due to rejection limits |
+| `signed_spa_required` | Signed SPA document required |
+| `last_attempt_warning` | Warning: last document upload attempt |
+| `stalled_trade_reminder` | Reminder for stalled trade |
+
+### Negotiation Notifications
+
+| Type | Description |
+|------|-------------|
+| `last_counter_warning` | Warning: last counter-offer available |
+| `final_offer_notification` | Final offer submitted (no more counters) |
+
+### Message Notifications
+
+| Type | Description |
+|------|-------------|
+| `new_message` | New message in conversation |
+
+### AI Notifications
+
+| Type | Description |
+|------|-------------|
+| `analysis_completed` | AI market analysis completed |
+
+### Account Notifications
+
+| Type | Description |
+|------|-------------|
+| `account_suspended` | Account has been suspended |
+| `account_unsuspended` | Account suspension lifted |
+| `password_reset_required` | Password reset required by admin |
+| `welcome_email` | Welcome notification after signup |
+| `onboarding_completed` | Onboarding process completed |
+
+### KYC Notifications
+
+| Type | Description |
+|------|-------------|
+| `kyc_document_approved` | KYC document approved |
+| `kyc_document_rejected` | KYC document rejected |
+| `company_kyc_verified` | Company KYC verification complete |
+
+### Dispute Notifications
+
+| Type | Description |
+|------|-------------|
+| `dispute_created` | New dispute opened |
+| `dispute_resolved` | Dispute resolved |
+| `dispute_message` | New message in dispute |
+| `dispute_assigned` | Dispute assigned to admin |
+| `dispute_status_updated` | Dispute status changed |
+
+### Wishlist/Product Notifications
+
+| Type | Description |
+|------|-------------|
+| `product_back_in_stock` | Wishlisted product back in stock |
+| `wishlist_price_dropped` | Price dropped for wishlisted product |
+| `contact_saved` | AI contact saved to wishlist |
+| `company_favourited` | Company added to favorites |
+
+---
+
+## Endpoints
+
+### 1. Get Notifications
+
+Retrieve paginated notifications for the current user with optional filtering.
+
+**Endpoint:** `GET /notifications`
+
+**Authentication:** Required (signed cookie)
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| page | number | 1 | Page number (min: 1) |
+| limit | number | 20 | Items per page (min: 1) |
+| unreadOnly | boolean | false | Filter to unread notifications only |
+| type | string | - | Filter by notification type |
+| category | string | - | Filter by category: `trade`, `message`, `system` |
+
+**Response:**
+
+**Success (200 OK):**
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "data": [
+      {
+        "_id": "64f3b2c4d5e6f7g8h9i0j2k3",
+        "userId": "64f1a0b2c3d4e5f6g7h8i9j0",
+        "type": "counter_offer",
+        "title": "New Counter-Offer Received",
+        "message": "Seller has submitted a counter-offer for your purchase request.",
+        "read": false,
+        "tradeId": "64f2a1b3c4d5e6f7g8h9i0j1",
+        "actionUrl": "/buyer/negotiation/64f2a1b3c4d5e6f7g8h9i0j1",
+        "priority": "normal",
+        "metadata": {
+          "counterAmount": 50000,
+          "currency": "USD"
+        },
+        "createdAt": "2025-01-15T14:30:00.000Z",
+        "updatedAt": "2025-01-15T14:30:00.000Z"
+      },
+      {
+        "_id": "64f3b2c4d5e6f7g8h9i0j2k4",
+        "userId": "64f1a0b2c3d4e5f6g7h8i9j0",
+        "type": "new_message",
+        "title": "New Message",
+        "message": "You have a new message from ABC Trading Co.",
+        "read": true,
+        "conversationId": "64f0a9b8c7d6e5f4g3h2i1j0",
+        "actionUrl": "/buyer/inbox",
+        "priority": "normal",
+        "createdAt": "2025-01-15T12:00:00.000Z",
+        "updatedAt": "2025-01-15T13:00:00.000Z"
+      }
+    ],
+    "total": 45,
+    "page": 1,
+    "limit": 20,
+    "totalPages": 3,
+    "hasNextPage": true,
+    "hasPrevPage": false
+  }
+}
+```
+
+---
+
+### 2. Get Recent Unread Notifications
+
+Retrieve the most recent unread notifications (for notification dropdown/bell icon).
+
+**Endpoint:** `GET /notifications/recent`
+
+**Authentication:** Required (signed cookie)
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| limit | number | 5 | Maximum notifications to return |
+
+**Response:**
+
+**Success (200 OK):**
+```json
+{
+  "statusCode": 200,
+  "data": [
+    {
+      "_id": "64f3b2c4d5e6f7g8h9i0j2k3",
+      "type": "counter_offer",
+      "title": "New Counter-Offer Received",
+      "message": "Seller has submitted a counter-offer...",
+      "read": false,
+      "actionUrl": "/buyer/negotiation/64f2a1b3c4d5e6f7g8h9i0j1",
+      "priority": "high",
+      "createdAt": "2025-01-15T14:30:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### 3. Get Unread Count
+
+Get the total count of unread notifications with optional filtering.
+
+**Endpoint:** `GET /notifications/unread-count`
+
+**Authentication:** Required (signed cookie)
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| type | string | Filter by notification type |
+| category | string | Filter by category: `trade`, `message`, `system` |
+
+**Response:**
+
+**Success (200 OK):**
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "count": 7
+  }
+}
+```
+
+---
+
+### 4. Get Unread Count Breakdown
+
+Get breakdown of unread notification counts for trade tab badges.
+
+**Endpoint:** `GET /notifications/unread-count-breakdown`
+
+**Authentication:** Required (signed cookie)
+
+**Response:**
+
+**Success (200 OK):**
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "pr": 3,
+    "po": 2,
+    "spa": 1,
+    "ongoing": 4,
+    "messages": 5,
+    "total": 15
+  }
+}
+```
+
+**Fields:**
+- `pr` - Purchase Request related notifications
+- `po` - Purchase Order related notifications
+- `spa` - SPA (Sales Purchase Agreement) related notifications
+- `ongoing` - Ongoing trade notifications
+- `messages` - Message notifications
+- `total` - Total unread count
+
+---
+
+### 5. Mark All as Read
+
+Mark all notifications as read for the current user.
+
+**Endpoint:** `PUT /notifications/mark-all-read`
+
+**Authentication:** Required (signed cookie)
+
+**Response:**
+
+**Success (200 OK):**
+```json
+{
+  "statusCode": 200,
+  "message": "All notifications marked as read"
+}
+```
+
+---
+
+### 6. Mark Single Notification as Read
+
+Mark a specific notification as read.
+
+**Endpoint:** `PUT /notifications/:id/read`
+
+**Authentication:** Required (signed cookie)
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| id | string | MongoDB ObjectId of the notification |
+
+**Response:**
+
+**Success (200 OK):**
+```json
+{
+  "statusCode": 200,
+  "message": "Notification marked as read"
+}
+```
+
+**Error (404 Not Found):**
+```json
+{
+  "statusCode": 404,
+  "message": "Notification not found"
+}
+```
+
+---
+
+### 7. Delete Read Notifications
+
+Delete all read notifications for the current user.
+
+**Endpoint:** `DELETE /notifications/read`
+
+**Authentication:** Required (signed cookie)
+
+**Response:**
+
+**Success (200 OK):**
+```json
+{
+  "statusCode": 200,
+  "message": "Read notifications deleted"
+}
+```
+
+---
+
+### 8. Delete Single Notification
+
+Delete a specific notification.
+
+**Endpoint:** `DELETE /notifications/:id`
+
+**Authentication:** Required (signed cookie)
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| id | string | MongoDB ObjectId of the notification |
+
+**Response:**
+
+**Success (200 OK):**
+```json
+{
+  "statusCode": 200,
+  "message": "Notification deleted"
+}
+```
+
+**Error (404 Not Found):**
+```json
+{
+  "statusCode": 404,
+  "message": "Notification not found"
+}
+```
+
+---
+
+## Data Models
+
+### Notification Schema
+
+```typescript
+{
+  _id: ObjectId;
+  userId: ObjectId;              // Ref: User (required, indexed)
+  type: NotificationType;        // Required, indexed
+  title: string;                 // Required
+  message: string;               // Required
+  read: boolean;                 // Default: false, indexed
+  tradeId?: ObjectId;            // Ref: Trade (optional)
+  conversationId?: ObjectId;     // Ref: Conversation (optional)
+  metadata?: Record<string, any>;// Optional additional data
+  priority: NotificationPriority;// Default: 'normal'
+  actionUrl?: string;            // Optional deep link URL
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### NotificationType
+
+```typescript
+type NotificationType =
+  // Trade lifecycle
+  | 'trade_created'
+  | 'counter_offer'
+  | 'trade_accepted'
+  | 'trade_rejected'
+  | 'document_uploaded'
+  | 'documents_invalidated'
+  | 'phase_advanced'
+  | 'trade_completed'
+  | 'trade_cancelled'
+
+  // Messages
+  | 'new_message'
+
+  // AI
+  | 'analysis_completed'
+
+  // Admin actions
+  | 'account_suspended'
+  | 'account_unsuspended'
+  | 'password_reset_required'
+
+  // KYC
+  | 'kyc_document_approved'
+  | 'kyc_document_rejected'
+  | 'company_kyc_verified'
+
+  // Disputes
+  | 'dispute_created'
+  | 'dispute_resolved'
+  | 'dispute_message'
+  | 'dispute_assigned'
+  | 'dispute_status_updated'
+
+  // Document rejection tracking
+  | 'document_rejected'
+  | 'last_attempt_warning'
+  | 'trade_auto_cancelled'
+  | 'signed_spa_required'
+
+  // Negotiation counter limits
+  | 'last_counter_warning'
+  | 'final_offer_notification'
+
+  // Welcome & onboarding
+  | 'welcome_email'
+  | 'onboarding_completed'
+
+  // Wishlist & products
+  | 'product_back_in_stock'
+  | 'wishlist_price_dropped'
+  | 'contact_saved'
+  | 'company_favourited'
+
+  // Reminders
+  | 'stalled_trade_reminder';
+```
+
+### NotificationPriority
+
+```typescript
+type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent';
+```
+
+### NotificationQueryDto
+
+```typescript
+{
+  page?: number;        // Default: 1, min: 1
+  limit?: number;       // Default: 20, min: 1
+  unreadOnly?: boolean; // Filter unread only
+  type?: NotificationType;
+  category?: 'trade' | 'message' | 'system';
+}
+```
+
+---
+
+## Database Indexes
+
+The notification collection has optimized indexes for common queries:
+
+```typescript
+// Compound indexes
+{ userId: 1, read: 1, createdAt: -1 }  // Get unread/read for user
+{ userId: 1, createdAt: -1 }           // Get all for user
+{ read: 1, createdAt: 1 }              // For cleanup jobs
+
+// TTL index for auto-expiring read notifications
+{ createdAt: 1 }, {
+  expireAfterSeconds: 30 * 24 * 60 * 60,  // 30 days
+  partialFilterExpression: { read: true }
+}
+```
+
+**Note:** Read notifications are automatically deleted 30 days after creation.
+
+---
+
+## Error Handling
+
+| Status Code | Description |
+|-------------|-------------|
+| 200 | Success |
+| 401 | Unauthorized (no valid cookie or user suspended) |
+| 404 | Notification not found |
+| 500 | Internal Server Error |
+
+**Error Response Format:**
+```json
+{
+  "statusCode": 401,
+  "message": "No valid cookie found"
+}
+```
+
+---
+
+## Example Requests
+
+### Get All Notifications (Paginated)
+```bash
+curl -X GET "http://localhost:3001/notifications?page=1&limit=10" \
+  -H "Cookie: account=s%3A<signed-token>"
+```
+
+### Get Unread Only
+```bash
+curl -X GET "http://localhost:3001/notifications?unreadOnly=true" \
+  -H "Cookie: account=s%3A<signed-token>"
+```
+
+### Get Trade Notifications Only
+```bash
+curl -X GET "http://localhost:3001/notifications?category=trade" \
+  -H "Cookie: account=s%3A<signed-token>"
+```
+
+### Get Recent Unread for Dropdown
+```bash
+curl -X GET "http://localhost:3001/notifications/recent?limit=5" \
+  -H "Cookie: account=s%3A<signed-token>"
+```
+
+### Get Unread Count
+```bash
+curl -X GET "http://localhost:3001/notifications/unread-count" \
+  -H "Cookie: account=s%3A<signed-token>"
+```
+
+### Get Badge Breakdown
+```bash
+curl -X GET "http://localhost:3001/notifications/unread-count-breakdown" \
+  -H "Cookie: account=s%3A<signed-token>"
+```
+
+### Mark All as Read
+```bash
+curl -X PUT "http://localhost:3001/notifications/mark-all-read" \
+  -H "Cookie: account=s%3A<signed-token>"
+```
+
+### Mark Single as Read
+```bash
+curl -X PUT "http://localhost:3001/notifications/64f3b2c4d5e6f7g8h9i0j2k3/read" \
+  -H "Cookie: account=s%3A<signed-token>"
+```
+
+### Delete Single Notification
+```bash
+curl -X DELETE "http://localhost:3001/notifications/64f3b2c4d5e6f7g8h9i0j2k3" \
+  -H "Cookie: account=s%3A<signed-token>"
+```
+
+### Delete All Read Notifications
+```bash
+curl -X DELETE "http://localhost:3001/notifications/read" \
+  -H "Cookie: account=s%3A<signed-token>"
+```
+
+---
+
+## Frontend Integration Notes
+
+1. **Notification Bell:** Use `/notifications/unread-count` to display badge count on the notification bell icon.
+
+2. **Dropdown Preview:** Use `/notifications/recent?limit=5` for the notification dropdown showing recent items.
+
+3. **Tab Badges:** Use `/notifications/unread-count-breakdown` to show separate badges on trade tabs (PR, PO, SPA, Ongoing).
+
+4. **Mark as Read:** Call `PUT /notifications/:id/read` when user clicks/views a notification.
+
+5. **Deep Linking:** Use the `actionUrl` field to navigate users to the relevant page when they click a notification.
+
+6. **Priority Styling:** Style notifications differently based on `priority` (urgent notifications should be more prominent).
+
+7. **Real-time Updates:** Consider implementing WebSocket connection for real-time notification updates.
+
+8. **Auto-cleanup:** Read notifications are automatically deleted after 30 days - no manual cleanup needed.
+
+9. **Categories:** Map notification types to categories for filtering:
+   - `trade`: trade_*, counter_offer, document_*, phase_*, etc.
+   - `message`: new_message, dispute_message
+   - `system`: account_*, kyc_*, welcome_*, etc.
+
+---
+
+## Related Modules
+- **Trade Module:** Generates trade lifecycle notifications
+- **Inbox Module:** Generates message notifications
+- **KYC Module:** Generates KYC status notifications
+- **Disputes Module:** Generates dispute notifications
+- **Wishlist Module:** Generates wishlist alerts
+
+## Related
+- [[api/trade]] — Trade notifications
+- [[api/inbox]] — Message notifications
+- [[MOC-API]]

@@ -16,7 +16,10 @@ import { resolve } from 'path';
 // Load environment variables
 dotenv.config({ path: resolve(__dirname, '../../.env') });
 
-const MONGODB_URI = process.env.MONGODB_URI_DEV || process.env.MONGODB_URI || 'mongodb://localhost:27017/breyus';
+const MONGODB_URI =
+  process.env.MONGODB_URI_DEV ||
+  process.env.MONGODB_URI ||
+  'mongodb://localhost:27017/breyus';
 
 interface OldCompany {
   _id: Types.ObjectId;
@@ -31,7 +34,7 @@ interface OldCompany {
 
 async function migrateCisDocuments() {
   console.log('\n🔄 CIS Document Migration Script\n');
-  console.log('=' .repeat(50));
+  console.log('='.repeat(50));
 
   try {
     // Connect to MongoDB
@@ -48,11 +51,15 @@ async function migrateCisDocuments() {
     const collection = db.collection('companies');
 
     // Find all companies with CIS documents
-    const companiesWithCis = await collection.find({
-      'tradeDetails.cisDocument': { $exists: true, $nin: [null, ''] }
-    }).toArray() as unknown as OldCompany[];
+    const companiesWithCis = (await collection
+      .find({
+        'tradeDetails.cisDocument': { $exists: true, $nin: [null, ''] },
+      })
+      .toArray()) as unknown as OldCompany[];
 
-    console.log(`📋 Found ${companiesWithCis.length} companies with CIS documents to migrate\n`);
+    console.log(
+      `📋 Found ${companiesWithCis.length} companies with CIS documents to migrate\n`,
+    );
 
     if (companiesWithCis.length === 0) {
       console.log('ℹ️  No CIS documents to migrate. Exiting.\n');
@@ -74,7 +81,7 @@ async function migrateCisDocuments() {
         // Check if already migrated (prevent duplicate migrations)
         const existingKycDocs = company.kycDocuments || [];
         const alreadyMigrated = existingKycDocs.some(
-          (doc: any) => doc.path === cisPath && doc.type === 'cis'
+          (doc: any) => doc.path === cisPath && doc.type === 'cis',
         );
 
         if (alreadyMigrated) {
@@ -98,34 +105,29 @@ async function migrateCisDocuments() {
           size: 0, // Unknown for migrated docs
           status: 'pending',
           uploadedAt: new Date(),
-          reviewNotes: 'Migrated from legacy cisDocument field'
+          reviewNotes: 'Migrated from legacy cisDocument field',
         };
 
         // Update the company document
-        await collection.updateOne(
-          { _id: company._id },
-          {
-            $push: { kycDocuments: newKycDocument },
-            $unset: { 'tradeDetails.cisDocument': '' }
-          } as any
-        );
+        await collection.updateOne({ _id: company._id }, {
+          $push: { kycDocuments: newKycDocument },
+          $unset: { 'tradeDetails.cisDocument': '' },
+        } as any);
 
         console.log(`✅ Migrated: ${company.companyName}`);
         migratedCount++;
-
       } catch (error) {
         console.error(`❌ Error migrating ${company.companyName}:`, error);
         errorCount++;
       }
     }
 
-    console.log('\n' + '=' .repeat(50));
+    console.log('\n' + '='.repeat(50));
     console.log('\n📊 Migration Summary:\n');
     console.log(`   ✅ Migrated:  ${migratedCount}`);
     console.log(`   ⏭️  Skipped:   ${skippedCount}`);
     console.log(`   ❌ Errors:    ${errorCount}`);
     console.log(`   📋 Total:     ${companiesWithCis.length}\n`);
-
   } catch (error) {
     console.error('\n❌ Migration failed:', error);
     process.exit(1);

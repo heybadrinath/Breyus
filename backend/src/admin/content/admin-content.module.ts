@@ -5,6 +5,7 @@ import { PublicContentController } from './public-content.controller';
 import { AdminAuthModule } from '../auth/admin-auth.module';
 import { ActivityLogModule } from '../activity/activity-log.module';
 import { AuthModule } from '../../auth/auth.module';
+import { MailModule } from '../../mail/mail.module';
 
 // Schemas
 import {
@@ -23,6 +24,8 @@ import {
   UnitSchema,
 } from './schemas';
 import { HSN, HSNSchema } from '../../products/schema/hsn.schema';
+import { Product, ProductSchema } from '../../products/schema/products.schema';
+import { User, UserSchema } from '../../users/user.schema';
 
 // Services
 import { CurrenciesService } from './services/currencies.service';
@@ -45,10 +48,14 @@ import { UnitsService } from './services/units.service';
       { name: HSN.name, schema: HSNSchema },
       // Commodity removed - classification merged into ProductCategory
       { name: Unit.name, schema: UnitSchema },
+      // For category rejection with product reassignment
+      { name: Product.name, schema: ProductSchema },
+      { name: User.name, schema: UserSchema },
     ]),
     forwardRef(() => AdminAuthModule),
     forwardRef(() => ActivityLogModule),
     forwardRef(() => AuthModule),
+    MailModule,
   ],
   controllers: [AdminContentController, PublicContentController],
   providers: [

@@ -33,8 +33,18 @@ import { ProductsPage } from '@/features/products/pages/ProductsPage'
 import { ProductDetailPage } from '@/features/products/pages/ProductDetailPage'
 import { AlertsPage } from '@/features/alerts/pages/AlertsPage'
 import { SecurityPage } from '@/features/security/pages/SecurityPage'
-import { BlogListPage } from '@/features/blog/pages/BlogListPage'
-import { BlogEditorPage } from '@/features/blog/pages/BlogEditorPage'
+import {
+  BlogListPage,
+  BlogEditorPage,
+  WritersPage,
+  WriterDetailPage,
+  InvitesPage,
+  CommentsPage,
+  BlogAnalyticsPage,
+  BlogUsersPage,
+  BlogUserDetailPage,
+  SubscribersPage,
+} from '@/features/blog/pages'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -105,6 +115,14 @@ function App() {
               <Route path="blog" element={<BlogListPage />} />
               <Route path="blog/new" element={<BlogEditorPage />} />
               <Route path="blog/:id/edit" element={<BlogEditorPage />} />
+              <Route path="blog/writers" element={<WritersPage />} />
+              <Route path="blog/writers/:writerId" element={<WriterDetailPage />} />
+              <Route path="blog/invites" element={<InvitesPage />} />
+              <Route path="blog/comments" element={<CommentsPage />} />
+              <Route path="blog/analytics" element={<BlogAnalyticsPage />} />
+              <Route path="blog/users" element={<BlogUsersPage />} />
+              <Route path="blog/users/:id" element={<BlogUserDetailPage />} />
+              <Route path="blog/subscribers" element={<SubscribersPage />} />
 
               {/* Alerts System (Phase 8) */}
               <Route path="alerts" element={<AlertsPage />} />

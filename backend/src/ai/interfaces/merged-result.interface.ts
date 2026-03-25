@@ -46,7 +46,11 @@ export interface EnrichedPartner {
   priceFluctuation?: number;
 
   // Source tracking
-  sourceType: 'platform_trade_history' | 'platform_and_ai' | 'platform_only' | 'ai_only';
+  sourceType:
+    | 'platform_trade_history'
+    | 'platform_and_ai'
+    | 'platform_only'
+    | 'ai_only';
 
   // Trade history (for platform_trade_history type)
   tradeCount?: number;
@@ -84,6 +88,13 @@ export interface ProductResult {
   sellerCompanyId?: string;
   sellerCountry?: string;
 
+  // Seller contact info (for consistency with EnrichedPartner)
+  contactInfo?: {
+    email?: string;
+    phone?: string;
+    address?: string;
+  };
+
   // Product images
   productImages?: string[];
 
@@ -99,6 +110,11 @@ export interface ProductResult {
   // AI match info (if in AI results)
   aiMatchScore?: number;
   aiMatchReason?: string;
+
+  // Calculated scores (matching EnrichedPartner for UI consistency)
+  probability?: number;
+  riskLevel?: 'Very Low' | 'Low' | 'Medium' | 'High' | 'Very High';
+  priceFluctuation?: number;
 }
 
 // ============================================
@@ -107,9 +123,9 @@ export interface ProductResult {
 
 export interface MergedSearchResult {
   // 3-tier results
-  tier1: (EnrichedPartner | ProductResult)[];  // Best matches
-  tier2: (EnrichedPartner | ProductResult)[];  // Secondary matches
-  tier3: EnrichedPartner[];                     // AI-only (off-platform)
+  tier1: (EnrichedPartner | ProductResult)[]; // Best matches
+  tier2: (EnrichedPartner | ProductResult)[]; // Secondary matches
+  tier3: EnrichedPartner[]; // AI-only (off-platform)
 
   // Metadata
   totalMatches: number;
@@ -126,6 +142,9 @@ export interface MergedSearchResult {
       max: number;
     };
   };
+
+  // Warning message (e.g., when country filter falls back to global results)
+  warning?: string;
 }
 
 // ============================================
@@ -166,6 +185,7 @@ export interface SellerInventoryItem {
   productImages?: string[];
   selectedIncoterm?: string;
   nearestPort?: string;
+  isNicheCommodity: boolean;
 }
 
 export interface SellerInventoryResult {

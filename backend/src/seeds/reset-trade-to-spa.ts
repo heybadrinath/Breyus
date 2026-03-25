@@ -5,7 +5,9 @@ import mongoose from 'mongoose';
  * This removes the payment proof and sets the trade phase back to PAYMENT
  */
 async function resetTradeToPayment() {
-  const mongoUri = process.env.MONGODB_URI_DEV || 'mongodb+srv://badri:mongodb@breyus.5tfwoeg.mongodb.net/breyus?retryWrites=true&w=majority';
+  const mongoUri =
+    process.env.MONGODB_URI_DEV ||
+    'mongodb+srv://badri:mongodb@breyus.5tfwoeg.mongodb.net/breyus?retryWrites=true&w=majority';
 
   try {
     console.log('Connecting to MongoDB...');
@@ -18,12 +20,15 @@ async function resetTradeToPayment() {
     // Find the most recent trade that's not completed
     const trade = await tradesCollection.findOne(
       { tradePhase: { $ne: 'COMPLETED' } },
-      { sort: { createdAt: -1 } }
+      { sort: { createdAt: -1 } },
     );
 
     if (!trade) {
       console.log('No active trade found. Looking for any trade...');
-      const anyTrade = await tradesCollection.findOne({}, { sort: { createdAt: -1 } });
+      const anyTrade = await tradesCollection.findOne(
+        {},
+        { sort: { createdAt: -1 } },
+      );
       if (!anyTrade) {
         console.log('No trades found in database');
         return;
@@ -35,7 +40,9 @@ async function resetTradeToPayment() {
       console.log('Has payment proof:', !!trade.paymentProof);
     }
 
-    const tradeId = trade?._id || (await tradesCollection.findOne({}, { sort: { createdAt: -1 } }))?._id;
+    const tradeId =
+      trade?._id ||
+      (await tradesCollection.findOne({}, { sort: { createdAt: -1 } }))?._id;
 
     if (!tradeId) {
       console.log('No trade ID found');
@@ -54,8 +61,8 @@ async function resetTradeToPayment() {
           paymentVerifiedAt: '',
           bolDocument: '',
           bolUploadedAt: '',
-        }
-      }
+        },
+      },
     );
 
     console.log('Update result:', updateResult);
@@ -66,7 +73,6 @@ async function resetTradeToPayment() {
     console.log('New phase:', updatedTrade?.tradePhase);
     console.log('Payment proof removed:', !updatedTrade?.paymentProof);
     console.log('\nYou can now test uploading payment proof again.');
-
   } catch (error) {
     console.error('Error:', error);
   } finally {

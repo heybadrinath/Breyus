@@ -2,8 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { X, Download, FileText, Upload, CheckCircle, Loader2, AlertCircle, PenTool, ExternalLink } from 'lucide-react';
 import { DocumentInfo, DocumentType } from '../services/trade.service';
 import SignatureCanvas from './SignatureCanvas';
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+import { getFileUrl } from '../utils/imageUtils';
 
 type SigningMode = 'choose' | 'in-app' | 'upload';
 
@@ -21,6 +20,7 @@ const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
     'sco': 'Soft Corporate Offer (SCO)',
     'icpo': 'Irrevocable Corporate Purchase Order (ICPO)',
     'spa': 'Sales Purchase Agreement (SPA)',
+    'signed-spa': 'Signed SPA',
     'bol': 'Bill of Lading (BoL)',
     'payment-proof': 'Payment Proof'
 };
@@ -51,7 +51,7 @@ const DocumentSigningModal: React.FC<DocumentSigningModalProps> = ({
 
     if (!isOpen) return null;
 
-    const documentUrl = document ? `${BACKEND_URL}${document.filePath.startsWith('/') ? '' : '/'}${document.filePath}` : null;
+    const documentUrl = document ? getFileUrl(document.filePath) : null;
     const displayTitle = DOCUMENT_TYPE_LABELS[documentType];
     const isPDF = document?.mimeType === 'application/pdf';
     const isImage = document?.mimeType.startsWith('image/');

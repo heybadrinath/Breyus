@@ -209,3 +209,20 @@ export interface ForcePhaseChangeResponse {
   changedAt: string
   reason: string
 }
+
+// ========================
+// Stalled Trade Reminder
+// ========================
+
+export type ReminderRecipientType = 'both' | 'buyer' | 'seller'
+
+export interface SendReminderDto {
+  recipientType: ReminderRecipientType
+  customMessage?: string
+}
+
+export interface SendReminderResponse {
+  success: boolean
+  sentTo: string[]
+  tradeId: string
+}

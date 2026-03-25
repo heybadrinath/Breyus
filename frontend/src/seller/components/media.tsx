@@ -1,5 +1,6 @@
 import React from 'react';
 import { Upload, X, FileText, Image as ImageIcon } from 'lucide-react';
+import { getFileUrl } from '../../utils/imageUtils';
 
 interface MediaUploadProps {
   productImages: File[];
@@ -25,11 +26,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
   const totalProductImages = productImages.length + existingProductImages.length;
   const totalTestReports = testReports.length + existingTestReports.length;
 
-  const getFileUrl = (filePath: string) => {
-    if (!filePath) return '';
-    if (filePath.startsWith('http')) return filePath;
-    return `${process.env.REACT_APP_BACKEND_URL}/${filePath}`;
-  };
+  // Note: getFileUrl is now imported from utils/imageUtils for consistent URL handling
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();

@@ -31,6 +31,7 @@ export interface ConversationProps {
   productName: string;     // Name of the product involved in the conversation
   companyIds: string[];    // An array of company IDs [senderCompanyId, receiverCompanyId]
   companyName: string;     // Name of the company involved in the conversation
+  profilePicture?: string | null; // Profile picture URL of the other participant
   unreadCount: number;     // Number of unread messages in the conversation
   lastMessageTime: string; // Timestamp of the last message sent in the conversation
   lastMessage: string;     // The content of the last message sent in the conversation
@@ -44,19 +45,22 @@ export interface InboxSidebarProps {
   searchQuery: string;                  // Current search query for filtering conversations
   handleSearch: (query: string) => void; // Function to handle search input changes
   onConversationSelect: (conversation: ConversationProps) => void; // Function to handle conversation selection
+  currentCompanyId?: string;            // Current user's company ID for determining other participant
   width?: number;
   onResizeStart?: (event: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 // Inbox Conversation Props Interface
 export interface InboxConversationProps {
-  name: string;            // Name of the company involved in the conversation  
-  productName: string;     // Name of the product involved in the conversation  
+  name: string;            // Name of the company involved in the conversation
+  productName: string;     // Name of the product involved in the conversation
+  companyId?: string | null; // ID of the other company (for navigation to profile)
+  profilePicture?: string | null; // Profile picture URL of the other company
   messages: Message[];     // List of messages in the conversation
   currentCompanyId: string;
   onSendMessage: (messageText: string, replyToId?: string | null) => void; // Function to send a message
   onReactMessage: (messageId: string, emoji: string) => void;
   onEditMessage: (messageId: string, text: string) => void;
   isTyping?: boolean;      // Whether the other user is typing
-  onTyping?: (isTyping: boolean) => void; // Function to emit typing indicator  
+  onTyping?: (isTyping: boolean) => void; // Function to emit typing indicator
 }

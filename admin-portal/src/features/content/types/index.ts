@@ -168,7 +168,13 @@ export interface ProductCategory {
   isMainstream?: boolean | null; // null = parent category, true/false = leaf classification
   aliases?: string[];
   hsCodePrefix?: string;
-  createdByUser?: string | { firstName: string; lastName: string; email: string };
+  createdByUser?: string | {
+    mail: string;
+    company?: {
+      companyName?: string;
+      founderName?: string;
+    };
+  };
   path?: string; // Category path for display (e.g., "Agricultural > Grains > Wheat")
 }
 

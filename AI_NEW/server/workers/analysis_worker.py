@@ -14,6 +14,9 @@ from ..db.postgres import get_db
 
 logger = logging.getLogger(__name__)
 
+# Maximum time for a single analysis job (1 hour)
+ANALYSIS_TIMEOUT_SECONDS = 3600
+
 
 async def process_single_job(job: Dict[str, Any]) -> None:
     """
@@ -43,11 +46,30 @@ async def process_single_job(job: Dict[str, Any]) -> None:
 
         async with get_db() as conn:
             analyzer = MarketAnalyzer(db=conn, redis=None)
-            result = await analyzer.run_analysis(
-                commodity=payload.get("commodity"),
-                hs_code=payload.get("hs_code"),
-                market_context=payload.get("market_context", {}),
-            )
+
+            # Add timeout to prevent hanging jobs
+            try:
+                result = await asyncio.wait_for(
+                    analyzer.run_analysis(
+                        commodity=payload.get("commodity"),
+                        hs_code=payload.get("hs_code"),
+                        market_context=payload.get("market_context", {}),
+                    ),
+                    timeout=ANALYSIS_TIMEOUT_SECONDS
+                )
+            except asyncio.TimeoutError:
+                error_msg = f"Analysis timed out after {ANALYSIS_TIMEOUT_SECONDS} seconds"
+                logger.error(
+                    "analysis job timeout",
+                    extra={
+                        "job_id": job_id,
+                        "commodity": commodity,
+                        "hs_code": hs_code,
+                        "timeout_seconds": ANALYSIS_TIMEOUT_SECONDS,
+                    },
+                )
+                await fail_analysis_job(job_id, error_msg)
+                return
 
             await postgres_cache.set_analysis_result(
                 conn,

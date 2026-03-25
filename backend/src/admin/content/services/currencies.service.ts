@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Currency } from '../schemas/currency.schema';
@@ -119,21 +123,111 @@ export class CurrenciesService {
    */
   async seedDefaultCurrencies() {
     const defaultCurrencies = [
-      { code: 'USD', name: 'US Dollar', symbol: '$', symbolPosition: 'before', decimalPlaces: 2 },
-      { code: 'EUR', name: 'Euro', symbol: '€', symbolPosition: 'before', decimalPlaces: 2 },
-      { code: 'GBP', name: 'British Pound', symbol: '£', symbolPosition: 'before', decimalPlaces: 2 },
-      { code: 'INR', name: 'Indian Rupee', symbol: '₹', symbolPosition: 'before', decimalPlaces: 2 },
-      { code: 'JPY', name: 'Japanese Yen', symbol: '¥', symbolPosition: 'before', decimalPlaces: 0 },
-      { code: 'CNY', name: 'Chinese Yuan', symbol: '¥', symbolPosition: 'before', decimalPlaces: 2 },
-      { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', symbolPosition: 'before', decimalPlaces: 2 },
-      { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', symbolPosition: 'before', decimalPlaces: 2 },
-      { code: 'CHF', name: 'Swiss Franc', symbol: 'CHF', symbolPosition: 'before', decimalPlaces: 2 },
-      { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$', symbolPosition: 'before', decimalPlaces: 2 },
-      { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ', symbolPosition: 'after', decimalPlaces: 2 },
-      { code: 'SAR', name: 'Saudi Riyal', symbol: '﷼', symbolPosition: 'after', decimalPlaces: 2 },
-      { code: 'BRL', name: 'Brazilian Real', symbol: 'R$', symbolPosition: 'before', decimalPlaces: 2 },
-      { code: 'MXN', name: 'Mexican Peso', symbol: '$', symbolPosition: 'before', decimalPlaces: 2 },
-      { code: 'ZAR', name: 'South African Rand', symbol: 'R', symbolPosition: 'before', decimalPlaces: 2 },
+      {
+        code: 'USD',
+        name: 'US Dollar',
+        symbol: '$',
+        symbolPosition: 'before',
+        decimalPlaces: 2,
+      },
+      {
+        code: 'EUR',
+        name: 'Euro',
+        symbol: '€',
+        symbolPosition: 'before',
+        decimalPlaces: 2,
+      },
+      {
+        code: 'GBP',
+        name: 'British Pound',
+        symbol: '£',
+        symbolPosition: 'before',
+        decimalPlaces: 2,
+      },
+      {
+        code: 'INR',
+        name: 'Indian Rupee',
+        symbol: '₹',
+        symbolPosition: 'before',
+        decimalPlaces: 2,
+      },
+      {
+        code: 'JPY',
+        name: 'Japanese Yen',
+        symbol: '¥',
+        symbolPosition: 'before',
+        decimalPlaces: 0,
+      },
+      {
+        code: 'CNY',
+        name: 'Chinese Yuan',
+        symbol: '¥',
+        symbolPosition: 'before',
+        decimalPlaces: 2,
+      },
+      {
+        code: 'AUD',
+        name: 'Australian Dollar',
+        symbol: 'A$',
+        symbolPosition: 'before',
+        decimalPlaces: 2,
+      },
+      {
+        code: 'CAD',
+        name: 'Canadian Dollar',
+        symbol: 'C$',
+        symbolPosition: 'before',
+        decimalPlaces: 2,
+      },
+      {
+        code: 'CHF',
+        name: 'Swiss Franc',
+        symbol: 'CHF',
+        symbolPosition: 'before',
+        decimalPlaces: 2,
+      },
+      {
+        code: 'SGD',
+        name: 'Singapore Dollar',
+        symbol: 'S$',
+        symbolPosition: 'before',
+        decimalPlaces: 2,
+      },
+      {
+        code: 'AED',
+        name: 'UAE Dirham',
+        symbol: 'د.إ',
+        symbolPosition: 'after',
+        decimalPlaces: 2,
+      },
+      {
+        code: 'SAR',
+        name: 'Saudi Riyal',
+        symbol: '﷼',
+        symbolPosition: 'after',
+        decimalPlaces: 2,
+      },
+      {
+        code: 'BRL',
+        name: 'Brazilian Real',
+        symbol: 'R$',
+        symbolPosition: 'before',
+        decimalPlaces: 2,
+      },
+      {
+        code: 'MXN',
+        name: 'Mexican Peso',
+        symbol: '$',
+        symbolPosition: 'before',
+        decimalPlaces: 2,
+      },
+      {
+        code: 'ZAR',
+        name: 'South African Rand',
+        symbol: 'R',
+        symbolPosition: 'before',
+        decimalPlaces: 2,
+      },
     ];
 
     let created = 0;

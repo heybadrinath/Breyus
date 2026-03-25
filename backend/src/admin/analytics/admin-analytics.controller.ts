@@ -118,10 +118,7 @@ export class AdminAnalyticsController {
    */
   @Post('export')
   @AdminAction({ action: 'analytics.export', category: 'analytics' })
-  async exportAnalytics(
-    @Body() dto: ExportAnalyticsDto,
-    @Res() res: Response,
-  ) {
+  async exportAnalytics(@Body() dto: ExportAnalyticsDto, @Res() res: Response) {
     const options: ExportOptions = {
       type: dto.type,
       section: dto.section,
@@ -129,7 +126,8 @@ export class AdminAnalyticsController {
       endDate: dto.endDate,
     };
 
-    const { buffer, filename, mimeType } = await this.exportService.generateExport(options);
+    const { buffer, filename, mimeType } =
+      await this.exportService.generateExport(options);
 
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

@@ -50,89 +50,132 @@ export class DashboardService {
       // Total users
       this.userModel.countDocuments().exec(),
       // Users created last month
-      this.userModel.countDocuments({
-        createdAt: { $gte: lastMonth, $lt: thisMonthStart },
-      }).exec(),
+      this.userModel
+        .countDocuments({
+          createdAt: { $gte: lastMonth, $lt: thisMonthStart },
+        })
+        .exec(),
       // Total companies
       this.companyModel.countDocuments().exec(),
       // Companies created last month
-      this.companyModel.countDocuments({
-        createdAt: { $gte: lastMonth, $lt: thisMonthStart },
-      }).exec(),
+      this.companyModel
+        .countDocuments({
+          createdAt: { $gte: lastMonth, $lt: thisMonthStart },
+        })
+        .exec(),
       // Active trades (not completed or rejected)
-      this.tradeModel.countDocuments({
-        tradePhase: { $nin: ['COMPLETED', 'CANCELLED'] },
-      }).exec(),
+      this.tradeModel
+        .countDocuments({
+          tradePhase: { $nin: ['COMPLETED', 'CANCELLED'] },
+        })
+        .exec(),
       // Active trades last month
-      this.tradeModel.countDocuments({
-        tradePhase: { $nin: ['COMPLETED', 'CANCELLED'] },
-        createdAt: { $gte: lastMonth, $lt: thisMonthStart },
-      }).exec(),
+      this.tradeModel
+        .countDocuments({
+          tradePhase: { $nin: ['COMPLETED', 'CANCELLED'] },
+          createdAt: { $gte: lastMonth, $lt: thisMonthStart },
+        })
+        .exec(),
       // Total products
       this.productModel.countDocuments().exec(),
       // Pending KYC (companies with unverified documents)
-      this.companyModel.countDocuments({
-        $or: [
-          { isVerified: false },
-          { 'documents.status': 'pending' },
-        ],
-      }).exec(),
+      this.companyModel
+        .countDocuments({
+          $or: [{ isVerified: false }, { 'documents.status': 'pending' }],
+        })
+        .exec(),
       // Stalled trades (no activity for 7+ days)
-      this.tradeModel.countDocuments({
-        tradePhase: { $nin: ['COMPLETED', 'CANCELLED'] },
-        updatedAt: { $lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-      }).exec(),
+      this.tradeModel
+        .countDocuments({
+          tradePhase: { $nin: ['COMPLETED', 'CANCELLED'] },
+          updatedAt: { $lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+        })
+        .exec(),
       // Pending disputes (open or under_review)
-      this.disputeModel.countDocuments({
-        status: { $in: ['open', 'under_review'] },
-      }).exec(),
+      this.disputeModel
+        .countDocuments({
+          status: { $in: ['open', 'under_review'] },
+        })
+        .exec(),
     ]);
 
     // Calculate monthly volume (sum of trade values completed this month)
     // Using buyerOfferedPrice as the price field with safe conversion
-    const volumeAggregation = await this.tradeModel.aggregate([
-      {
-        $match: {
-          tradePhase: 'COMPLETED',
-          updatedAt: { $gte: thisMonthStart },
+    const volumeAggregation = await this.tradeModel
+      .aggregate([
+        {
+          $match: {
+            tradePhase: 'COMPLETED',
+            updatedAt: { $gte: thisMonthStart },
+          },
         },
-      },
-      {
-        $group: {
-          _id: null,
-          total: {
-            $sum: {
-              $multiply: [
-                { $convert: { input: '$quantity', to: 'double', onError: 0, onNull: 0 } },
-                { $convert: { input: '$buyerOfferedPrice', to: 'double', onError: 0, onNull: 0 } },
-              ],
+        {
+          $group: {
+            _id: null,
+            total: {
+              $sum: {
+                $multiply: [
+                  {
+                    $convert: {
+                      input: '$quantity',
+                      to: 'double',
+                      onError: 0,
+                      onNull: 0,
+                    },
+                  },
+                  {
+                    $convert: {
+                      input: '$buyerOfferedPrice',
+                      to: 'double',
+                      onError: 0,
+                      onNull: 0,
+                    },
+                  },
+                ],
+              },
             },
           },
         },
-      },
-    ]).exec();
+      ])
+      .exec();
 
-    const lastMonthVolumeAggregation = await this.tradeModel.aggregate([
-      {
-        $match: {
-          tradePhase: 'COMPLETED',
-          updatedAt: { $gte: lastMonth, $lt: thisMonthStart },
+    const lastMonthVolumeAggregation = await this.tradeModel
+      .aggregate([
+        {
+          $match: {
+            tradePhase: 'COMPLETED',
+            updatedAt: { $gte: lastMonth, $lt: thisMonthStart },
+          },
         },
-      },
-      {
-        $group: {
-          _id: null,
-          total: {
-            $sum: {
-              $multiply: [
-                { $convert: { input: '$quantity', to: 'double', onError: 0, onNull: 0 } },
-                { $convert: { input: '$buyerOfferedPrice', to: 'double', onError: 0, onNull: 0 } },
-              ],
+        {
+          $group: {
+            _id: null,
+            total: {
+              $sum: {
+                $multiply: [
+                  {
+                    $convert: {
+                      input: '$quantity',
+                      to: 'double',
+                      onError: 0,
+                      onNull: 0,
+                    },
+                  },
+                  {
+                    $convert: {
+                      input: '$buyerOfferedPrice',
+                      to: 'double',
+                      onError: 0,
+                      onNull: 0,
+                    },
+                  },
+                ],
+              },
             },
           },
         },
-      },
-    ]).exec();
+      ])
+      .exec();
 
     const monthlyVolume = volumeAggregation[0]?.total || 0;
     const lastMonthVolume = lastMonthVolumeAggregation[0]?.total || 0;
@@ -144,23 +187,32 @@ export class DashboardService {
     };
 
     // Users created this month vs last month
-    const usersThisMonth = await this.userModel.countDocuments({
-      createdAt: { $gte: thisMonthStart },
-    }).exec();
+    const usersThisMonth = await this.userModel
+      .countDocuments({
+        createdAt: { $gte: thisMonthStart },
+      })
+      .exec();
 
     // Get users two months ago for proper comparison
-    const usersTwoMonthsAgo = await this.userModel.countDocuments({
-      createdAt: { $gte: twoMonthsAgo, $lt: lastMonth },
-    }).exec();
+    const usersTwoMonthsAgo = await this.userModel
+      .countDocuments({
+        createdAt: { $gte: twoMonthsAgo, $lt: lastMonth },
+      })
+      .exec();
 
     return {
       totalUsers,
       totalUsersChange: calculateChange(usersThisMonth, usersLastMonth),
       activeTrades,
-      activeTradesChange: calculateChange(activeTrades, activeTradesLastMonth || activeTrades),
+      activeTradesChange: calculateChange(
+        activeTrades,
+        activeTradesLastMonth || activeTrades,
+      ),
       totalCompanies,
       totalCompaniesChange: calculateChange(
-        await this.companyModel.countDocuments({ createdAt: { $gte: thisMonthStart } }).exec(),
+        await this.companyModel
+          .countDocuments({ createdAt: { $gte: thisMonthStart } })
+          .exec(),
         companiesLastMonth,
       ),
       totalProducts,
@@ -268,86 +320,108 @@ export class DashboardService {
   }
 
   async getTradesByStatus(): Promise<{ status: string; count: number }[]> {
-    const result = await this.tradeModel.aggregate([
-      {
-        $group: {
-          _id: '$tradePhase',
-          count: { $sum: 1 },
+    const result = await this.tradeModel
+      .aggregate([
+        {
+          $group: {
+            _id: '$tradePhase',
+            count: { $sum: 1 },
+          },
         },
-      },
-      {
-        $project: {
-          status: '$_id',
-          count: 1,
-          _id: 0,
+        {
+          $project: {
+            status: '$_id',
+            count: 1,
+            _id: 0,
+          },
         },
-      },
-      {
-        $sort: { count: -1 },
-      },
-    ]).exec();
+        {
+          $sort: { count: -1 },
+        },
+      ])
+      .exec();
 
     return result;
   }
 
   async getUsersByRole(): Promise<{ role: string; count: number }[]> {
-    const result = await this.userModel.aggregate([
-      {
-        $group: {
-          _id: '$role',
-          count: { $sum: 1 },
+    const result = await this.userModel
+      .aggregate([
+        {
+          $group: {
+            _id: '$role',
+            count: { $sum: 1 },
+          },
         },
-      },
-      {
-        $project: {
-          role: '$_id',
-          count: 1,
-          _id: 0,
+        {
+          $project: {
+            role: '$_id',
+            count: 1,
+            _id: 0,
+          },
         },
-      },
-    ]).exec();
+      ])
+      .exec();
 
     return result;
   }
 
-  async getTradeVolumeOverTime(days: number = 30): Promise<{ date: string; volume: number; count: number }[]> {
+  async getTradeVolumeOverTime(
+    days: number = 30,
+  ): Promise<{ date: string; volume: number; count: number }[]> {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    const result = await this.tradeModel.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: startDate },
-        },
-      },
-      {
-        $group: {
-          _id: {
-            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+    const result = await this.tradeModel
+      .aggregate([
+        {
+          $match: {
+            createdAt: { $gte: startDate },
           },
-          volume: {
-            $sum: {
-              $multiply: [
-                { $convert: { input: '$quantity', to: 'double', onError: 0, onNull: 0 } },
-                { $convert: { input: '$buyerOfferedPrice', to: 'double', onError: 0, onNull: 0 } },
-              ],
+        },
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
             },
+            volume: {
+              $sum: {
+                $multiply: [
+                  {
+                    $convert: {
+                      input: '$quantity',
+                      to: 'double',
+                      onError: 0,
+                      onNull: 0,
+                    },
+                  },
+                  {
+                    $convert: {
+                      input: '$buyerOfferedPrice',
+                      to: 'double',
+                      onError: 0,
+                      onNull: 0,
+                    },
+                  },
+                ],
+              },
+            },
+            count: { $sum: 1 },
           },
-          count: { $sum: 1 },
         },
-      },
-      {
-        $project: {
-          date: '$_id',
-          volume: 1,
-          count: 1,
-          _id: 0,
+        {
+          $project: {
+            date: '$_id',
+            volume: 1,
+            count: 1,
+            _id: 0,
+          },
         },
-      },
-      {
-        $sort: { date: 1 },
-      },
-    ]).exec();
+        {
+          $sort: { date: 1 },
+        },
+      ])
+      .exec();
 
     return result;
   }

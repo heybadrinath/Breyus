@@ -39,6 +39,7 @@ const SellerAIInventory: React.FC = () => {
   const [inventory, setInventory] = useState<SellerInventoryResult | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
   // Set initial tab based on aiMode from landing page
   const [activeTab, setActiveTab] = useState<'normal' | 'niche'>(aiMode === 'niche' ? 'niche' : 'normal');
 
@@ -61,13 +62,15 @@ const SellerAIInventory: React.FC = () => {
 
   const handleProductSelect = (productId: string) => {
     setSelectedProduct(productId === selectedProduct ? null : productId);
+    setValidationError(null); // Clear any validation error when selecting
   };
 
   const handleSearchBuyers = () => {
     if (!selectedProduct) {
-      alert("Please select a product first");
+      setValidationError("Please select a product first");
       return;
     }
+    setValidationError(null);
 
     const product = inventory?.products.find(p => p._id === selectedProduct);
 
@@ -84,15 +87,22 @@ const SellerAIInventory: React.FC = () => {
     });
   };
 
+  // Calculate counts for each tab
+  const nicheProductCount = inventory?.products.filter(p => p.isNicheCommodity).length || 0;
+  const mainstreamProductCount = inventory?.products.filter(p => !p.isNicheCommodity).length || 0;
+
   const filteredProducts = inventory?.products.filter(product => {
     const matchesSearch =
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.hsnCode.toLowerCase().includes(searchQuery.toLowerCase());
 
-    // For now, all products are in 'normal' tab
-    // Can add niche detection logic later
-    return matchesSearch;
+    // Filter by tab: 'normal' shows all/mainstream, 'niche' shows only niche products
+    const matchesTab = activeTab === 'niche'
+      ? product.isNicheCommodity === true
+      : true; // 'normal' tab shows all products
+
+    return matchesSearch && matchesTab;
   }) || [];
 
   const formatPrice = (price: string, currency: string, unit: string) => {
@@ -155,14 +165,14 @@ const SellerAIInventory: React.FC = () => {
                   : 'text-gray-400 hover:text-white'
               }`}
             >
-              Niche Commodities
+              Niche Commodities ({nicheProductCount})
             </button>
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      {/* Content - Add padding-bottom for fixed action bar on mobile */}
+      <div className="max-w-7xl mx-auto px-4 py-6 pb-28">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="w-10 h-10 text-orange-500 animate-spin mb-4" />
@@ -236,7 +246,7 @@ const SellerAIInventory: React.FC = () => {
                       key={product._id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
+                      transition={{ delay: Math.min(index * 0.03, 0.3) }}
                       onClick={() => handleProductSelect(product._id)}
                       className={`cursor-pointer transition-colors ${
                         selectedProduct === product._id
@@ -318,7 +328,12 @@ const SellerAIInventory: React.FC = () => {
             >
               <div className="max-w-7xl mx-auto flex items-center justify-between">
                 <div className="text-gray-600">
-                  {selectedProduct ? (
+                  {validationError ? (
+                    <span className="flex items-center gap-2 text-red-600">
+                      <AlertCircle className="w-5 h-5" />
+                      {validationError}
+                    </span>
+                  ) : selectedProduct ? (
                     <span className="flex items-center gap-2">
                       <CheckCircle2 className="w-5 h-5 text-green-500" />
                       1 product selected
@@ -329,11 +344,10 @@ const SellerAIInventory: React.FC = () => {
                 </div>
                 <button
                   onClick={handleSearchBuyers}
-                  disabled={!selectedProduct}
                   className={`flex items-center gap-2 px-8 py-3 rounded-lg font-medium transition-all ${
                     selectedProduct
                       ? 'bg-black text-white hover:bg-gray-800'
-                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
                   }`}
                 >
                   Search Buyers

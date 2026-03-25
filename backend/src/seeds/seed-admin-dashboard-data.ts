@@ -23,9 +23,10 @@ dotenv.config({ path: resolve(__dirname, '../../.env') });
 // CONFIGURATION
 // ============================================================================
 
-const MONGODB_URI = process.env.MONGODB_URI_DEV ||
-                    process.env.MONGODB_URI ||
-                    'mongodb://localhost:27017/breyus';
+const MONGODB_URI =
+  process.env.MONGODB_URI_DEV ||
+  process.env.MONGODB_URI ||
+  'mongodb://localhost:27017/breyus';
 
 // ============================================================================
 // SEED DATA DEFINITIONS
@@ -33,26 +34,122 @@ const MONGODB_URI = process.env.MONGODB_URI_DEV ||
 
 // Admin activity categories and actions
 const ADMIN_ACTIVITIES = [
-  { action: 'LOGIN', actionCategory: 'auth', description: 'Admin logged in successfully' },
-  { action: 'VIEW_USER', actionCategory: 'users', description: 'Viewed user profile details', targetType: 'user' },
-  { action: 'SUSPEND_USER', actionCategory: 'users', description: 'Suspended user account for policy violation', targetType: 'user' },
-  { action: 'UNSUSPEND_USER', actionCategory: 'users', description: 'Reactivated user account', targetType: 'user' },
-  { action: 'VIEW_COMPANY', actionCategory: 'companies', description: 'Viewed company profile', targetType: 'company' },
-  { action: 'VERIFY_COMPANY', actionCategory: 'companies', description: 'Verified company KYC documents', targetType: 'company' },
-  { action: 'APPROVE_KYC', actionCategory: 'kyc', description: 'Approved KYC document submission', targetType: 'company' },
-  { action: 'REJECT_KYC', actionCategory: 'kyc', description: 'Rejected KYC document - unclear image', targetType: 'company' },
-  { action: 'VIEW_TRADE', actionCategory: 'trades', description: 'Viewed trade details', targetType: 'trade' },
-  { action: 'ADD_TRADE_NOTE', actionCategory: 'trades', description: 'Added internal note to trade', targetType: 'trade' },
-  { action: 'FORCE_PHASE_CHANGE', actionCategory: 'trades', description: 'Force advanced trade phase', targetType: 'trade' },
-  { action: 'VERIFY_DOCUMENT', actionCategory: 'trades', description: 'Verified trade document', targetType: 'trade' },
-  { action: 'SYSTEM_HEALTH_CHECK', actionCategory: 'system', description: 'Performed system health check' },
-  { action: 'VIEW_ANALYTICS', actionCategory: 'system', description: 'Viewed platform analytics' },
-  { action: 'BLOCK_IP', actionCategory: 'security', description: 'Blocked suspicious IP address', targetType: 'ip' },
-  { action: 'UNBLOCK_IP', actionCategory: 'security', description: 'Unblocked IP address', targetType: 'ip' },
-  { action: 'VIEW_FAILED_LOGINS', actionCategory: 'security', description: 'Reviewed failed login attempts' },
-  { action: 'EXPORT_DATA', actionCategory: 'users', description: 'Exported user data for compliance', targetType: 'user' },
-  { action: 'VIEW_DISPUTE', actionCategory: 'disputes', description: 'Reviewed trade dispute', targetType: 'dispute' },
-  { action: 'RESOLVE_DISPUTE', actionCategory: 'disputes', description: 'Resolved trade dispute in favor of buyer', targetType: 'dispute' },
+  {
+    action: 'LOGIN',
+    actionCategory: 'auth',
+    description: 'Admin logged in successfully',
+  },
+  {
+    action: 'VIEW_USER',
+    actionCategory: 'users',
+    description: 'Viewed user profile details',
+    targetType: 'user',
+  },
+  {
+    action: 'SUSPEND_USER',
+    actionCategory: 'users',
+    description: 'Suspended user account for policy violation',
+    targetType: 'user',
+  },
+  {
+    action: 'UNSUSPEND_USER',
+    actionCategory: 'users',
+    description: 'Reactivated user account',
+    targetType: 'user',
+  },
+  {
+    action: 'VIEW_COMPANY',
+    actionCategory: 'companies',
+    description: 'Viewed company profile',
+    targetType: 'company',
+  },
+  {
+    action: 'VERIFY_COMPANY',
+    actionCategory: 'companies',
+    description: 'Verified company KYC documents',
+    targetType: 'company',
+  },
+  {
+    action: 'APPROVE_KYC',
+    actionCategory: 'kyc',
+    description: 'Approved KYC document submission',
+    targetType: 'company',
+  },
+  {
+    action: 'REJECT_KYC',
+    actionCategory: 'kyc',
+    description: 'Rejected KYC document - unclear image',
+    targetType: 'company',
+  },
+  {
+    action: 'VIEW_TRADE',
+    actionCategory: 'trades',
+    description: 'Viewed trade details',
+    targetType: 'trade',
+  },
+  {
+    action: 'ADD_TRADE_NOTE',
+    actionCategory: 'trades',
+    description: 'Added internal note to trade',
+    targetType: 'trade',
+  },
+  {
+    action: 'FORCE_PHASE_CHANGE',
+    actionCategory: 'trades',
+    description: 'Force advanced trade phase',
+    targetType: 'trade',
+  },
+  {
+    action: 'VERIFY_DOCUMENT',
+    actionCategory: 'trades',
+    description: 'Verified trade document',
+    targetType: 'trade',
+  },
+  {
+    action: 'SYSTEM_HEALTH_CHECK',
+    actionCategory: 'system',
+    description: 'Performed system health check',
+  },
+  {
+    action: 'VIEW_ANALYTICS',
+    actionCategory: 'system',
+    description: 'Viewed platform analytics',
+  },
+  {
+    action: 'BLOCK_IP',
+    actionCategory: 'security',
+    description: 'Blocked suspicious IP address',
+    targetType: 'ip',
+  },
+  {
+    action: 'UNBLOCK_IP',
+    actionCategory: 'security',
+    description: 'Unblocked IP address',
+    targetType: 'ip',
+  },
+  {
+    action: 'VIEW_FAILED_LOGINS',
+    actionCategory: 'security',
+    description: 'Reviewed failed login attempts',
+  },
+  {
+    action: 'EXPORT_DATA',
+    actionCategory: 'users',
+    description: 'Exported user data for compliance',
+    targetType: 'user',
+  },
+  {
+    action: 'VIEW_DISPUTE',
+    actionCategory: 'disputes',
+    description: 'Reviewed trade dispute',
+    targetType: 'dispute',
+  },
+  {
+    action: 'RESOLVE_DISPUTE',
+    actionCategory: 'disputes',
+    description: 'Resolved trade dispute in favor of buyer',
+    targetType: 'dispute',
+  },
 ];
 
 // KYC document types and sample data
@@ -106,7 +203,12 @@ function getRandomDate(maxDaysAgo: number = 30): Date {
   const daysBack = Math.floor(Math.random() * maxDaysAgo);
   const date = new Date();
   date.setDate(date.getDate() - daysBack);
-  date.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60), 0, 0);
+  date.setHours(
+    Math.floor(Math.random() * 24),
+    Math.floor(Math.random() * 60),
+    0,
+    0,
+  );
   return date;
 }
 
@@ -137,8 +239,25 @@ function getWeightedReason(): string {
 }
 
 function generateFakeEmail(): string {
-  const names = ['john', 'jane', 'admin', 'test', 'user', 'alex', 'sarah', 'mike', 'emma', 'david'];
-  const domains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'example.com', 'test.org'];
+  const names = [
+    'john',
+    'jane',
+    'admin',
+    'test',
+    'user',
+    'alex',
+    'sarah',
+    'mike',
+    'emma',
+    'david',
+  ];
+  const domains = [
+    'gmail.com',
+    'yahoo.com',
+    'hotmail.com',
+    'example.com',
+    'test.org',
+  ];
   const name = names[Math.floor(Math.random() * names.length)];
   const num = Math.floor(Math.random() * 1000);
   const domain = domains[Math.floor(Math.random() * domains.length)];
@@ -196,15 +315,20 @@ async function seedAdminDashboardData() {
     console.log('Step 2: Creating admin activity logs...');
 
     // Check for existing seed data
-    const existingActivities = await activityLogsCollection.countDocuments({ _seedData: true });
+    const existingActivities = await activityLogsCollection.countDocuments({
+      _seedData: true,
+    });
     if (existingActivities > 0) {
-      console.log(`  Found ${existingActivities} existing seeded activities. Skipping...`);
+      console.log(
+        `  Found ${existingActivities} existing seeded activities. Skipping...`,
+      );
     } else {
       const activitiesToInsert: any[] = [];
 
       // Create 50 activity entries spread over the last 7 days
       for (let i = 0; i < 50; i++) {
-        const activity = ADMIN_ACTIVITIES[Math.floor(Math.random() * ADMIN_ACTIVITIES.length)];
+        const activity =
+          ADMIN_ACTIVITIES[Math.floor(Math.random() * ADMIN_ACTIVITIES.length)];
         const timestamp = getRecentDate(168); // Last 7 days
 
         activitiesToInsert.push({
@@ -218,7 +342,8 @@ async function seedAdminDashboardData() {
           createdAt: timestamp,
           updatedAt: timestamp,
           metadata: {
-            ipAddress: SUSPICIOUS_IPS[Math.floor(Math.random() * SUSPICIOUS_IPS.length)],
+            ipAddress:
+              SUSPICIOUS_IPS[Math.floor(Math.random() * SUSPICIOUS_IPS.length)],
             userAgent: USER_AGENTS[0],
           },
           _seedData: true,
@@ -226,9 +351,12 @@ async function seedAdminDashboardData() {
       }
 
       // Sort by timestamp (newest first)
-      activitiesToInsert.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      activitiesToInsert.sort(
+        (a, b) => b.timestamp.getTime() - a.timestamp.getTime(),
+      );
 
-      const activityResult = await activityLogsCollection.insertMany(activitiesToInsert);
+      const activityResult =
+        await activityLogsCollection.insertMany(activitiesToInsert);
       console.log(`  Created ${activityResult.insertedCount} activity logs`);
     }
     console.log('');
@@ -281,8 +409,8 @@ async function seedAdminDashboardData() {
               $set: {
                 kycDocuments,
                 isKycVerified: false,
-              }
-            }
+              },
+            },
           );
           kycUpdated++;
         }
@@ -302,7 +430,7 @@ async function seedAdminDashboardData() {
     const activeTrades = await tradesCollection
       .find({
         tradePhase: { $nin: ['COMPLETED', 'CANCELLED'] },
-        _stalledSeed: { $ne: true }
+        _stalledSeed: { $ne: true },
       })
       .limit(5)
       .toArray();
@@ -315,7 +443,9 @@ async function seedAdminDashboardData() {
       for (let i = 0; i < Math.min(3, activeTrades.length); i++) {
         const trade = activeTrades[i];
         const stalledDate = new Date();
-        stalledDate.setDate(stalledDate.getDate() - (8 + Math.floor(Math.random() * 14))); // 8-22 days ago
+        stalledDate.setDate(
+          stalledDate.getDate() - (8 + Math.floor(Math.random() * 14)),
+        ); // 8-22 days ago
 
         await tradesCollection.updateOne(
           { _id: trade._id },
@@ -324,8 +454,8 @@ async function seedAdminDashboardData() {
               updatedAt: stalledDate,
               lastPhaseChangeAt: stalledDate,
               _stalledSeed: true,
-            }
-          }
+            },
+          },
         );
         stalledCount++;
       }
@@ -340,9 +470,13 @@ async function seedAdminDashboardData() {
 
     console.log('Step 5: Creating failed login attempts...');
 
-    const existingFailedLogins = await failedLoginsCollection.countDocuments({ _seedData: true });
+    const existingFailedLogins = await failedLoginsCollection.countDocuments({
+      _seedData: true,
+    });
     if (existingFailedLogins > 0) {
-      console.log(`  Found ${existingFailedLogins} existing seeded failed logins. Skipping...`);
+      console.log(
+        `  Found ${existingFailedLogins} existing seeded failed logins. Skipping...`,
+      );
     } else {
       const failedLoginsToInsert: any[] = [];
 
@@ -353,8 +487,10 @@ async function seedAdminDashboardData() {
 
         failedLoginsToInsert.push({
           email: generateFakeEmail(),
-          ipAddress: SUSPICIOUS_IPS[Math.floor(Math.random() * SUSPICIOUS_IPS.length)],
-          userAgent: USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+          ipAddress:
+            SUSPICIOUS_IPS[Math.floor(Math.random() * SUSPICIOUS_IPS.length)],
+          userAgent:
+            USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
           attemptedAt,
           reason: getWeightedReason(),
           createdAt: attemptedAt,
@@ -363,8 +499,11 @@ async function seedAdminDashboardData() {
         });
       }
 
-      const failedResult = await failedLoginsCollection.insertMany(failedLoginsToInsert);
-      console.log(`  Created ${failedResult.insertedCount} failed login attempts`);
+      const failedResult =
+        await failedLoginsCollection.insertMany(failedLoginsToInsert);
+      console.log(
+        `  Created ${failedResult.insertedCount} failed login attempts`,
+      );
     }
     console.log('');
 
@@ -374,9 +513,13 @@ async function seedAdminDashboardData() {
 
     console.log('Step 6: Creating blocked IPs...');
 
-    const existingBlockedIps = await blockedIpsCollection.countDocuments({ _seedData: true });
+    const existingBlockedIps = await blockedIpsCollection.countDocuments({
+      _seedData: true,
+    });
     if (existingBlockedIps > 0) {
-      console.log(`  Found ${existingBlockedIps} existing seeded blocked IPs. Skipping...`);
+      console.log(
+        `  Found ${existingBlockedIps} existing seeded blocked IPs. Skipping...`,
+      );
     } else {
       const blockedIpsToInsert: any[] = [];
       const blockedReasons = [
@@ -390,7 +533,10 @@ async function seedAdminDashboardData() {
       // Create 5 blocked IPs
       for (let i = 0; i < 5; i++) {
         const blockedAt = getRandomDate(30);
-        const expiresAt = i < 3 ? null : new Date(blockedAt.getTime() + (7 * 24 * 60 * 60 * 1000)); // Some permanent, some temporary
+        const expiresAt =
+          i < 3
+            ? null
+            : new Date(blockedAt.getTime() + 7 * 24 * 60 * 60 * 1000); // Some permanent, some temporary
 
         blockedIpsToInsert.push({
           ipAddress: `185.220.100.${10 + i}`,
@@ -406,11 +552,16 @@ async function seedAdminDashboardData() {
       }
 
       try {
-        const blockedResult = await blockedIpsCollection.insertMany(blockedIpsToInsert, { ordered: false });
+        const blockedResult = await blockedIpsCollection.insertMany(
+          blockedIpsToInsert,
+          { ordered: false },
+        );
         console.log(`  Created ${blockedResult.insertedCount} blocked IPs`);
       } catch (err: any) {
         if (err.code === 11000) {
-          console.log('  Some blocked IPs already exist (duplicate keys). Skipped duplicates.');
+          console.log(
+            '  Some blocked IPs already exist (duplicate keys). Skipped duplicates.',
+          );
         } else {
           throw err;
         }
@@ -428,14 +579,22 @@ async function seedAdminDashboardData() {
     console.log('');
 
     // Get counts
-    const activityCount = await activityLogsCollection.countDocuments({ _seedData: true });
-    const pendingKycCount = await companiesCollection.countDocuments({ 'kycDocuments.status': 'pending' });
+    const activityCount = await activityLogsCollection.countDocuments({
+      _seedData: true,
+    });
+    const pendingKycCount = await companiesCollection.countDocuments({
+      'kycDocuments.status': 'pending',
+    });
     const stalledTradeCount = await tradesCollection.countDocuments({
       tradePhase: { $nin: ['COMPLETED', 'CANCELLED'] },
       updatedAt: { $lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
     });
-    const failedLoginCount = await failedLoginsCollection.countDocuments({ _seedData: true });
-    const blockedIpCount = await blockedIpsCollection.countDocuments({ _seedData: true });
+    const failedLoginCount = await failedLoginsCollection.countDocuments({
+      _seedData: true,
+    });
+    const blockedIpCount = await blockedIpsCollection.countDocuments({
+      _seedData: true,
+    });
 
     console.log('  Data created:');
     console.log(`    Admin Activity Logs: ${activityCount}`);
@@ -452,7 +611,6 @@ async function seedAdminDashboardData() {
     console.log('='.repeat(60));
     console.log('  SUCCESS!');
     console.log('='.repeat(60));
-
   } catch (error) {
     console.error('');
     console.error('ERROR during seeding:', error);

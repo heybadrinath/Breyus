@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Loader2, Edit2, Check, X, CheckCircle } from "lucide-react";
+import { Loader2, Edit2, Check, X, CheckCircle, Eye } from "lucide-react";
 import { CompanyProfile, updateCompanyProfile } from "../../services/company.service";
 import ContactInfoSection from "./ContactInfoSection";
 import BankInfoSection from "./BankInfoSection";
 import ProfileHeader from "./ProfileHeader";
+import ProfilePreviewModal from "./ProfilePreviewModal";
 
 interface MyDetailsTabProps {
     profile: CompanyProfile | null;
@@ -16,6 +17,7 @@ const MyDetailsTab: React.FC<MyDetailsTabProps> = ({ profile, userEmail, onUpdat
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [showPreviewModal, setShowPreviewModal] = useState(false);
 
     const [formData, setFormData] = useState({
         companyName: profile?.companyName || '',
@@ -83,6 +85,13 @@ const MyDetailsTab: React.FC<MyDetailsTabProps> = ({ profile, userEmail, onUpdat
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xl font-bold text-gray-800">Account Overview</h3>
+                    <button
+                        onClick={() => setShowPreviewModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    >
+                        <Eye className="w-4 h-4" />
+                        Preview Profile
+                    </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -258,6 +267,14 @@ const MyDetailsTab: React.FC<MyDetailsTabProps> = ({ profile, userEmail, onUpdat
 
             {/* Bank Information Section */}
             <BankInfoSection profile={profile} onUpdate={onUpdate} />
+
+            {/* Profile Preview Modal */}
+            <ProfilePreviewModal
+                isOpen={showPreviewModal}
+                onClose={() => setShowPreviewModal(false)}
+                profile={profile}
+                userEmail={userEmail}
+            />
         </div>
     );
 };

@@ -7,7 +7,10 @@ import { Company, CompanySchema } from '../../company/company.schema';
 import { Trade, TradeSchema } from '../../trade/schema/trade.schema';
 import { Product, ProductSchema } from '../../products/schema/products.schema';
 import { Wishlist, WishlistSchema } from '../../wishlist/wishlist.schema';
-import { Notification, NotificationSchema } from '../../notification/schema/notification.schema';
+import {
+  Notification,
+  NotificationSchema,
+} from '../../notification/schema/notification.schema';
 import { AdminAuthModule } from '../auth/admin-auth.module';
 import { ActivityLogModule } from '../activity/activity-log.module';
 import { MailModule } from '../../mail/mail.module';

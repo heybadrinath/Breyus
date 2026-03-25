@@ -15,7 +15,9 @@ import { TradeGateway } from '../trade/trade.gateway';
 import { WsAuthService } from './ws-auth.service';
 
 const corsOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)
+  ? process.env.CORS_ORIGIN.split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean)
   : [];
 const corsOrigin = corsOrigins.length > 0 ? corsOrigins : true;
 
@@ -70,7 +72,8 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private readonly logger = new Logger(InboxGateway.name);
   private connectedUsers: Map<string, Set<string>> = new Map(); // companyId -> Set of socketIds
-  private activeConversations: Map<string, Map<string, Set<string>>> = new Map(); // conversationId -> companyId -> socketIds
+  private activeConversations: Map<string, Map<string, Set<string>>> =
+    new Map(); // conversationId -> companyId -> socketIds
 
   constructor(
     private readonly inboxService: InboxService,
@@ -90,8 +93,12 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const auth = await this.wsAuthService.validateSocket(client);
 
     if (!auth) {
-      this.logger.warn(`Client ${client.id} failed authentication - disconnecting`);
-      client.emit('auth-error', { message: 'Authentication failed. Please log in again.' });
+      this.logger.warn(
+        `Client ${client.id} failed authentication - disconnecting`,
+      );
+      client.emit('auth-error', {
+        message: 'Authentication failed. Please log in again.',
+      });
       client.disconnect(true);
       return;
     }
@@ -101,7 +108,9 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.data.userId = auth.userId;
     client.data.companyId = auth.companyId;
 
-    this.logger.log(`Client ${client.id} authenticated as user=${auth.userId}, company=${auth.companyId}`);
+    this.logger.log(
+      `Client ${client.id} authenticated as user=${auth.userId}, company=${auth.companyId}`,
+    );
   }
 
   handleDisconnect(client: Socket) {
@@ -125,7 +134,9 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Use authenticated companyId from socket, NOT from payload
     const companyId = client.data.companyId;
     if (!companyId) {
-      this.logger.warn(`Socket ${client.id} attempted join-conversation without auth`);
+      this.logger.warn(
+        `Socket ${client.id} attempted join-conversation without auth`,
+      );
       return { success: false, error: 'Not authenticated' };
     }
 
@@ -212,11 +223,14 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
 
       // Get receiver info for emission logic
-      const receiverObj = message.receiver as any;
-      const receiverId = receiverObj?._id?.toString() || receiverObj?.toString() || '';
+      const receiverObj = message.receiver;
+      const receiverId =
+        receiverObj?._id?.toString() || receiverObj?.toString() || '';
 
       // Check if receiver is currently viewing this conversation
-      const isReceiverActive = (this.activeConversations.get(conversationId)?.get(receiverId)?.size || 0) > 0;
+      const isReceiverActive =
+        (this.activeConversations.get(conversationId)?.get(receiverId)?.size ||
+          0) > 0;
 
       // Broadcast to all users in the conversation room
       const room = `conversation-${conversationId}`;
@@ -231,8 +245,10 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (!isReceiverActive) {
         const receiverSockets = this.connectedUsers.get(receiverId);
         if (receiverSockets && receiverSockets.size > 0) {
-          console.log(`[InboxGateway] Receiver not active in conversation, emitting to ${receiverSockets.size} sockets for company ${receiverId}`);
-          receiverSockets.forEach(socketId => {
+          console.log(
+            `[InboxGateway] Receiver not active in conversation, emitting to ${receiverSockets.size} sockets for company ${receiverId}`,
+          );
+          receiverSockets.forEach((socketId) => {
             this.server.to(socketId).emit('message-received', {
               conversationId,
               message,
@@ -244,50 +260,72 @@ export class InboxGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Send notification if receiver is not active in this conversation
       try {
         // Extract sender company name from populated message
-        const senderObj = message.sender as any;
+        const senderObj = message.sender;
         const senderName = senderObj?.companyName || 'Someone';
 
-        console.log(`[InboxGateway] receiverId: ${receiverId}, senderName: ${senderName}, isReceiverActive: ${isReceiverActive}`);
+        console.log(
+          `[InboxGateway] receiverId: ${receiverId}, senderName: ${senderName}, isReceiverActive: ${isReceiverActive}`,
+        );
 
         if (!isReceiverActive) {
-          console.log(`[InboxGateway] Receiver ${receiverId} is NOT active in conversation ${conversationId}, creating notification...`);
+          console.log(
+            `[InboxGateway] Receiver ${receiverId} is NOT active in conversation ${conversationId}, creating notification...`,
+          );
           // Get all users for the receiver company
           const users = await this.inboxService.getUsersByCompany(receiverId);
-          console.log(`[InboxGateway] Found ${users.length} users for company ${receiverId}`);
+          console.log(
+            `[InboxGateway] Found ${users.length} users for company ${receiverId}`,
+          );
 
           for (const user of users) {
-            const messagePreview = text.length > 50 ? `${text.substring(0, 50)}...` : text;
+            const messagePreview =
+              text.length > 50 ? `${text.substring(0, 50)}...` : text;
             const recipientRole = user.role === 'Buyer' ? 'buyer' : 'seller';
-            const inboxPath = recipientRole === 'seller' ? '/seller/Inbox' : '/buyer/inbox';
-            const notification = await this.notificationService.createNotification({
-              userId: user._id.toString(),
-              type: 'new_message',
-              title: `Message from ${senderName}`,
-              message: messagePreview,
-              priority: 'normal',
-              conversationId: conversationId,
-              actionUrl: `${inboxPath}?conversationId=${conversationId}`,
-              metadata: {
-                conversationId,
-                senderId: companyId,
-                senderName,
-                messagePreview,
-              }
-            });
-            console.log(`[InboxGateway] Created notification for user ${user._id.toString()}`);
+            const inboxPath =
+              recipientRole === 'seller' ? '/seller/Inbox' : '/buyer/inbox';
+            const notification =
+              await this.notificationService.createNotification({
+                userId: user._id.toString(),
+                type: 'new_message',
+                title: `Message from ${senderName}`,
+                message: messagePreview,
+                priority: 'normal',
+                conversationId: conversationId,
+                actionUrl: `${inboxPath}?conversationId=${conversationId}`,
+                metadata: {
+                  conversationId,
+                  senderId: companyId,
+                  senderName,
+                  messagePreview,
+                },
+              });
+            console.log(
+              `[InboxGateway] Created notification for user ${user._id.toString()}`,
+            );
 
-            const unreadCount = await this.notificationService.getUnreadCount(user._id.toString());
-            console.log(`[InboxGateway] User ${user._id.toString()} has ${unreadCount} unread notifications`);
+            // Get full breakdown for tab badges
+            const unreadCounts =
+              await this.notificationService.getUnreadCountBreakdown(
+                user._id.toString(),
+              );
+            console.log(
+              `[InboxGateway] User ${user._id.toString()} has ${unreadCounts.total} unread notifications`,
+            );
 
             // Only emit via trade gateway (removed notifyCompany to avoid duplicate toasts)
-            console.log(`[InboxGateway] Emitting notification via tradeGateway for user ${user._id.toString()}`);
+            console.log(
+              `[InboxGateway] Emitting notification via tradeGateway for user ${user._id.toString()}`,
+            );
             this.tradeGateway.emitNotificationCreated(user._id.toString(), {
               notification,
-              unreadCount,
+              unreadCount: unreadCounts.total, // Backward compatible
+              unreadCounts, // New granular breakdown
             });
           }
         } else {
-          console.log(`[InboxGateway] Receiver ${receiverId} IS active in conversation ${conversationId}, skipping notification`);
+          console.log(
+            `[InboxGateway] Receiver ${receiverId} IS active in conversation ${conversationId}, skipping notification`,
+          );
         }
       } catch (err) {
         console.error('Failed to create message notification:', err);

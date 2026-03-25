@@ -114,25 +114,31 @@ export class AdminProductsService {
       nicheProducts,
     ] = await Promise.all([
       this.productModel.countDocuments().exec(),
-      this.productModel.countDocuments({ isActive: true, isDeactivated: { $ne: true } }).exec(),
+      this.productModel
+        .countDocuments({ isActive: true, isDeactivated: { $ne: true } })
+        .exec(),
       this.productModel.countDocuments({ isDeactivated: true }).exec(),
       this.productModel.countDocuments({ isFeatured: true }).exec(),
       this.productModel.countDocuments({ isNicheCommodity: true }).exec(),
     ]);
 
     // Get products by category
-    const byCategory = await this.productModel.aggregate([
-      { $group: { _id: '$category', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 10 },
-    ]).exec();
+    const byCategory = await this.productModel
+      .aggregate([
+        { $group: { _id: '$category', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 10 },
+      ])
+      .exec();
 
     // Get products created in last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const recentProducts = await this.productModel.countDocuments({
-      createdAt: { $gte: thirtyDaysAgo },
-    }).exec();
+    const recentProducts = await this.productModel
+      .countDocuments({
+        createdAt: { $gte: thirtyDaysAgo },
+      })
+      .exec();
 
     return {
       total: totalProducts,
@@ -199,7 +205,11 @@ export class AdminProductsService {
   /**
    * Reactivate a product
    */
-  async reactivateProduct(productId: string, adminId: string, adminEmail: string) {
+  async reactivateProduct(
+    productId: string,
+    adminId: string,
+    adminEmail: string,
+  ) {
     const product = await this.productModel.findById(productId).exec();
     if (!product) {
       throw new NotFoundException('Product not found');
@@ -296,7 +306,11 @@ export class AdminProductsService {
   /**
    * Unfeature a product
    */
-  async unfeatureProduct(productId: string, adminId: string, adminEmail: string) {
+  async unfeatureProduct(
+    productId: string,
+    adminId: string,
+    adminEmail: string,
+  ) {
     const product = await this.productModel.findById(productId).exec();
     if (!product) {
       throw new NotFoundException('Product not found');

@@ -3,69 +3,69 @@ import { Document, Types } from 'mongoose';
 
 // All possible audit actions
 export type AuditAction =
-    | 'trade_created'
-    | 'counter_offer'
-    | 'buyer_response'
-    | 'accepted'
-    | 'rejected'
-    | 'cancelled'
-    | 'document_uploaded'
-    | 'document_replaced'
-    | 'document_verified'
-    | 'document_rejected'
-    | 'phase_advanced'
-    | 'trade_completed'
-    | 'signature_added';
+  | 'trade_created'
+  | 'counter_offer'
+  | 'buyer_response'
+  | 'accepted'
+  | 'rejected'
+  | 'cancelled'
+  | 'document_uploaded'
+  | 'document_replaced'
+  | 'document_verified'
+  | 'document_rejected'
+  | 'phase_advanced'
+  | 'trade_completed'
+  | 'signature_added';
 
 // Audit Log Schema definition
 @Schema({ timestamps: true })
 export class AuditLog extends Document {
-    @Prop({ type: Types.ObjectId, ref: 'Trade', required: true, index: true })
-    trade: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'Trade', required: true, index: true })
+  trade: Types.ObjectId;
 
-    @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-    performedBy: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  performedBy: Types.ObjectId;
 
-    @Prop({
-        required: true,
-        enum: [
-            'trade_created',
-            'counter_offer',
-            'buyer_response',
-            'accepted',
-            'rejected',
-            'cancelled',
-            'document_uploaded',
-            'document_replaced',
-            'document_verified',
-            'document_rejected',
-            'phase_advanced',
-            'trade_completed',
-            'signature_added'
-        ]
-    })
-    action: AuditAction;
+  @Prop({
+    required: true,
+    enum: [
+      'trade_created',
+      'counter_offer',
+      'buyer_response',
+      'accepted',
+      'rejected',
+      'cancelled',
+      'document_uploaded',
+      'document_replaced',
+      'document_verified',
+      'document_rejected',
+      'phase_advanced',
+      'trade_completed',
+      'signature_added',
+    ],
+  })
+  action: AuditAction;
 
-    @Prop({ type: Object })
-    previousState?: Record<string, any>;
+  @Prop({ type: Object })
+  previousState?: Record<string, any>;
 
-    @Prop({ type: Object })
-    newState?: Record<string, any>;
+  @Prop({ type: Object })
+  newState?: Record<string, any>;
 
-    @Prop()
-    details?: string;
+  @Prop()
+  details?: string;
 
-    @Prop()
-    documentType?: string;
+  @Prop()
+  documentType?: string;
 
-    @Prop()
-    ipAddress?: string;
+  @Prop()
+  ipAddress?: string;
 
-    @Prop()
-    userAgent?: string;
+  @Prop()
+  userAgent?: string;
 
-    @Prop({ default: Date.now })
-    createdAt: Date;
+  @Prop({ default: Date.now })
+  createdAt: Date;
 }
 
 export const AuditLogSchema = SchemaFactory.createForClass(AuditLog);

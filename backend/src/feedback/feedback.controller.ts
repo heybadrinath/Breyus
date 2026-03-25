@@ -10,7 +10,10 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { FeedbackService } from './feedback.service';
-import { CreateFeedbackDto, UpdateFeedbackDto } from './dto/create-feedback.dto';
+import {
+  CreateFeedbackDto,
+  UpdateFeedbackDto,
+} from './dto/create-feedback.dto';
 import { FeedbackType } from './feedback.schema';
 
 @Controller('feedback')
@@ -228,9 +231,8 @@ export class FeedbackController {
         });
       }
 
-      const result = await this.feedbackService.getSellerFeedbackDashboard(
-        accountToken,
-      );
+      const result =
+        await this.feedbackService.getSellerFeedbackDashboard(accountToken);
 
       return response.status(HttpStatus.OK).json({
         statusCode: HttpStatus.OK,

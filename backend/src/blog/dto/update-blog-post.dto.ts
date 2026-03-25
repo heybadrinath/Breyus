@@ -5,66 +5,18 @@ import {
   IsEnum,
   MaxLength,
   MinLength,
-  ValidateNested,
   IsNumber,
   Min,
   Max,
+  IsBoolean,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-import { BlockType } from '../schemas/blog-post.schema';
-
-/**
- * DTO for block content (same as create)
- */
-class BlockMetaDto {
-  @IsOptional()
-  @IsString()
-  alt?: string;
-
-  @IsOptional()
-  @IsString()
-  caption?: string;
-
-  @IsOptional()
-  @IsString()
-  language?: string;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  items?: string[];
-}
-
-class BlockContentDto {
-  @IsString()
-  id: string;
-
-  @IsEnum([
-    'paragraph',
-    'heading1',
-    'heading2',
-    'heading3',
-    'bulletList',
-    'numberedList',
-    'image',
-    'quote',
-    'divider',
-    'code',
-  ])
-  type: BlockType;
-
-  @IsString()
-  content: string;
-
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => BlockMetaDto)
-  meta?: BlockMetaDto;
-}
+import { BlogStatus, BlogAccessLevel } from '../schemas/blog-post.schema';
+import { IsTiptapDocument } from '../validators/tiptap.validator';
 
 /**
  * DTO for updating an existing blog post
  * All fields are optional for partial updates
+ * Supports Tiptap JSON content format
  */
 export class UpdateBlogPostDto {
   @IsOptional()
@@ -80,10 +32,8 @@ export class UpdateBlogPostDto {
   slug?: string;
 
   @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => BlockContentDto)
-  content?: BlockContentDto[];
+  @IsTiptapDocument({ message: 'Invalid Tiptap content structure' })
+  tiptapContent?: Record<string, any>; // Tiptap JSON document - validated for proper structure
 
   @IsOptional()
   @IsString()
@@ -95,8 +45,20 @@ export class UpdateBlogPostDto {
   featuredImage?: string;
 
   @IsOptional()
-  @IsEnum(['draft', 'published'])
-  status?: 'draft' | 'published';
+  @IsEnum([
+    'draft',
+    'submitted',
+    'in_review',
+    'revision_requested',
+    'approved',
+    'published',
+    'rejected',
+  ])
+  status?: BlogStatus;
+
+  @IsOptional()
+  @IsEnum(['public', 'member_only'])
+  accessLevel?: BlogAccessLevel;
 
   @IsOptional()
   @IsArray()
@@ -118,4 +80,37 @@ export class UpdateBlogPostDto {
   @Min(1)
   @Max(120)
   readTimeMinutes?: number;
+
+  // SEO fields
+  @IsOptional()
+  @IsString()
+  @MaxLength(70)
+  metaTitle?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  metaDescription?: string;
+
+  // Featured/pinned status
+  @IsOptional()
+  @IsBoolean()
+  isFeatured?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isPinned?: boolean;
+
+  // Writer fields (set by system, but can be updated by admin)
+  @IsOptional()
+  @IsString()
+  writerDisplayName?: string;
+
+  @IsOptional()
+  @IsString()
+  writerBio?: string;
+
+  @IsOptional()
+  @IsString()
+  writerAvatar?: string;
 }

@@ -18,6 +18,11 @@ from .ai_client_base import AIClientBase
 
 logger = logging.getLogger(__name__)
 
+
+class InvalidGeminiResponseError(ValueError):
+    """Raised when Gemini returns incomplete or schema-invalid payloads."""
+
+
 def _analysis_string_schema() -> dict:
     return {"type": "string", "maxLength": 280}
 
@@ -163,88 +168,123 @@ class GeminiClient(AIClientBase):
 
         last_exc: Exception | None = None
         max_attempts = max(1, len(self.api_keys))
-        for attempt in range(max_attempts):
-            try:
+        for _ in range(max_attempts):
+            rotated_in_error = False
+            for response_attempt in range(2):
                 start = time.perf_counter()
-                response = await asyncio.to_thread(
-                    self.client.models.generate_content,
-                    model=self.model,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        temperature=0.2,
-                        max_output_tokens=4096,
-                        response_mime_type="application/json",
-                        response_schema=ANALYSIS_RESPONSE_SCHEMA,
-                    ),
-                )
+                try:
+                    response = await asyncio.to_thread(
+                        self.client.models.generate_content,
+                        model=self.model,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            temperature=0.2,
+                            max_output_tokens=4096,
+                            response_mime_type="application/json",
+                            response_schema=ANALYSIS_RESPONSE_SCHEMA,
+                        ),
+                    )
 
-                content = getattr(response, "text", None) or ""
-                if getattr(response, "candidates", None):
-                    try:
-                        parts = response.candidates[0].content.parts
-                        parts_text = "".join(
-                            part.text for part in parts
-                            if getattr(part, "text", None)
+                    content = getattr(response, "text", None) or ""
+                    if getattr(response, "candidates", None):
+                        try:
+                            parts = response.candidates[0].content.parts
+                            parts_text = "".join(
+                                part.text for part in parts
+                                if getattr(part, "text", None)
+                            )
+                            if parts_text and (not content or len(parts_text) > len(content)):
+                                content = parts_text
+                        except (AttributeError, IndexError, TypeError):
+                            pass
+
+                    parsed = None
+                    parsed_response = getattr(response, "parsed", None)
+                    if parsed_response is not None:
+                        if hasattr(parsed_response, "model_dump"):
+                            parsed_response = parsed_response.model_dump()
+                        if isinstance(parsed_response, dict):
+                            parsed = parsed_response
+
+                    if parsed is None:
+                        parsed = self._parse_market_analysis(content)
+
+                    finish_reason = self._extract_finish_reason(response)
+                    if finish_reason and finish_reason not in {"STOP", "FINISH_REASON_STOP"}:
+                        raise InvalidGeminiResponseError(
+                            f"Gemini candidate incomplete finish_reason={finish_reason}"
                         )
-                        if parts_text and (not content or len(parts_text) > len(content)):
-                            content = parts_text
-                    except (AttributeError, IndexError, TypeError):
-                        pass
 
-                parsed = None
-                parsed_response = getattr(response, "parsed", None)
-                if parsed_response is not None:
-                    if hasattr(parsed_response, "model_dump"):
-                        parsed_response = parsed_response.model_dump()
-                    if isinstance(parsed_response, dict):
-                        parsed = parsed_response
+                    parsed = self._sanitize_analysis_payload(parsed, content, commodity)
+                    if not self._is_valid_analysis_payload(parsed):
+                        raise InvalidGeminiResponseError("Gemini returned invalid analysis schema")
 
-                if parsed is None:
-                    parsed = self._parse_market_analysis(content)
-                else:
-                    parsed.setdefault("raw_text", None)
-                duration_ms = int((time.perf_counter() - start) * 1000)
-
-                logger.info(
-                    "Gemini market analysis completed",
-                    extra={
-                        "commodity": commodity,
-                        "model": settings.GEMINI_MODEL,
-                        "provider": "gemini",
-                        "duration_ms": duration_ms,
-                        "details": {
-                            "prompt_chars": prompt_chars,
-                            "response_chars": len(content or ""),
-                            "key_index": self._key_index,
-                            "key_count": len(self.api_keys),
+                    duration_ms = int((time.perf_counter() - start) * 1000)
+                    logger.info(
+                        "Gemini market analysis completed",
+                        extra={
+                            "commodity": commodity,
+                            "model": settings.GEMINI_MODEL,
+                            "provider": "gemini",
+                            "duration_ms": duration_ms,
+                            "details": {
+                                "prompt_chars": prompt_chars,
+                                "response_chars": len(content or ""),
+                                "key_index": self._key_index,
+                                "key_count": len(self.api_keys),
+                                "response_attempt": response_attempt + 1,
+                            },
                         },
-                    },
-                )
-
-                return parsed
-
-            except Exception as exc:
-                last_exc = exc
-                duration_ms = int((time.perf_counter() - start) * 1000) if "start" in locals() else None
-                should_rotate = self._should_rotate_key(exc)
-                logger.warning(
-                    "Gemini API error",
-                    exc_info=exc,
-                    extra={
-                        "commodity": commodity,
-                        "provider": "gemini",
-                        "model": settings.GEMINI_MODEL,
-                        "duration_ms": duration_ms,
-                        "details": {
-                            "key_index": self._key_index,
-                            "key_count": len(self.api_keys),
-                            "rotate": should_rotate,
+                    )
+                    return parsed
+                except InvalidGeminiResponseError as exc:
+                    last_exc = exc
+                    duration_ms = int((time.perf_counter() - start) * 1000)
+                    logger.warning(
+                        "Gemini API returned invalid structured response",
+                        extra={
+                            "commodity": commodity,
+                            "provider": "gemini",
+                            "model": settings.GEMINI_MODEL,
+                            "duration_ms": duration_ms,
+                            "details": {
+                                "key_index": self._key_index,
+                                "key_count": len(self.api_keys),
+                                "response_attempt": response_attempt + 1,
+                            },
                         },
-                    },
-                )
-                if should_rotate and self._rotate_key():
-                    continue
-                break
+                    )
+                    if response_attempt == 0:
+                        continue
+                except Exception as exc:
+                    last_exc = exc
+                    duration_ms = int((time.perf_counter() - start) * 1000)
+                    should_rotate = self._should_rotate_key(exc)
+                    logger.warning(
+                        "Gemini API error",
+                        exc_info=exc,
+                        extra={
+                            "commodity": commodity,
+                            "provider": "gemini",
+                            "model": settings.GEMINI_MODEL,
+                            "duration_ms": duration_ms,
+                            "details": {
+                                "key_index": self._key_index,
+                                "key_count": len(self.api_keys),
+                                "rotate": should_rotate,
+                            },
+                        },
+                    )
+                    if should_rotate and self._rotate_key():
+                        rotated_in_error = True
+                        break
+                    break
+
+            if rotated_in_error:
+                continue
+            if self._rotate_key():
+                continue
+            break
 
         if last_exc:
             logger.error(
@@ -259,7 +299,11 @@ class GeminiClient(AIClientBase):
                     },
                 },
             )
-        return self._get_fallback_analysis(commodity)
+        return self._sanitize_analysis_payload(
+            self._get_fallback_analysis(commodity),
+            None,
+            commodity,
+        )
 
     def _should_rotate_key(self, exc: Exception) -> bool:
         message = str(exc).lower()
@@ -291,6 +335,97 @@ class GeminiClient(AIClientBase):
             },
         )
         return True
+
+    def _extract_finish_reason(self, response: Any) -> Optional[str]:
+        candidates = getattr(response, "candidates", None) or []
+        if not candidates:
+            return None
+        candidate = candidates[0]
+        reason = getattr(candidate, "finish_reason", None)
+        if reason is None:
+            return None
+        if hasattr(reason, "name"):
+            return str(reason.name).upper()
+        return str(reason).upper()
+
+    def _is_valid_analysis_payload(self, payload: Dict[str, Any]) -> bool:
+        required = (
+            "market",
+            "supply_chain",
+            "ground_check",
+            "futures",
+            "demand_forecast",
+            "price_forecast",
+            "summary",
+            "recommendations",
+        )
+        if not isinstance(payload, dict):
+            return False
+        if not all(key in payload for key in required):
+            return False
+        if not isinstance(payload.get("market"), dict):
+            return False
+        if not isinstance(payload.get("supply_chain"), dict):
+            return False
+        if not isinstance(payload.get("ground_check"), dict):
+            return False
+        if not isinstance(payload.get("futures"), dict):
+            return False
+        if not isinstance(payload.get("recommendations"), list):
+            return False
+        summary = payload.get("summary")
+        if not isinstance(summary, str) or not summary.strip():
+            return False
+        return True
+
+    def _sanitize_analysis_payload(
+        self,
+        payload: Optional[Dict[str, Any]],
+        raw_text: Optional[str],
+        commodity: str,
+    ) -> Dict[str, Any]:
+        fallback = self._get_fallback_analysis(commodity)
+        safe: Dict[str, Any] = dict(fallback)
+        payload = payload or {}
+
+        for key in ("market", "supply_chain", "ground_check", "futures"):
+            value = payload.get(key)
+            safe[key] = value if isinstance(value, dict) and value else fallback[key]
+
+        demand_value = payload.get("demand_forecast")
+        safe["demand_forecast"] = (
+            demand_value
+            if isinstance(demand_value, (list, dict))
+            else []
+        )
+        price_value = payload.get("price_forecast")
+        safe["price_forecast"] = price_value if isinstance(price_value, dict) else {}
+
+        summary = payload.get("summary")
+        if isinstance(summary, str):
+            summary = summary.strip()
+        else:
+            summary = ""
+        if (
+            not summary
+            or summary.startswith("{")
+            or summary.startswith("[")
+        ):
+            summary = fallback["summary"]
+        safe["summary"] = summary
+
+        recommendations = payload.get("recommendations")
+        if isinstance(recommendations, list):
+            safe["recommendations"] = [
+                str(item).strip() for item in recommendations if str(item).strip()
+            ]
+        else:
+            safe["recommendations"] = fallback["recommendations"]
+        if not safe["recommendations"]:
+            safe["recommendations"] = fallback["recommendations"]
+
+        safe["raw_text"] = raw_text or payload.get("raw_text")
+        return safe
 
     def _parse_market_analysis(self, content: str) -> Dict[str, Any]:
         """
@@ -427,7 +562,7 @@ class GeminiClient(AIClientBase):
                     parsed_forecast = _parse_demand_line(line)
                     if parsed_forecast:
                         country, values = parsed_forecast
-                    parsed["demand_forecast"][country] = values
+                        parsed["demand_forecast"][country] = values
                 elif current_section == "price":
                     parsed_prices = _parse_price_line(line)
                     if parsed_prices:

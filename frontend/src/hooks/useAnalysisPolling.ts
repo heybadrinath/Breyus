@@ -12,6 +12,23 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { getAnalysisResults } from '../services/ai.service';
 import { AnalysisResult, AnalysisStatus } from '../types/aiTypes';
 
+// ═══════════════════════════════════════════════════════════════
+// CONFIGURATION CONSTANTS
+// These can be adjusted based on server performance and requirements
+// ═══════════════════════════════════════════════════════════════
+
+/** Default polling interval in milliseconds */
+export const DEFAULT_POLLING_INTERVAL_MS = 3000;
+
+/** Default maximum number of polls before timeout (100 * 3s = 5 minutes) */
+export const DEFAULT_MAX_POLLS = 100;
+
+/** Default maximum automatic retries on transient errors */
+export const DEFAULT_MAX_RETRIES = 0;
+
+/** Estimated duration for analysis in seconds (for progress estimation) */
+export const ESTIMATED_ANALYSIS_DURATION_SECONDS = 90;
+
 interface UseAnalysisPollingResult {
   status: 'idle' | 'pending' | 'completed' | 'failed' | 'timeout';
   progress: number;
@@ -40,9 +57,9 @@ export const useAnalysisPolling = (
   options: UseAnalysisPollingOptions = {}
 ): UseAnalysisPollingResult => {
   const {
-    pollingInterval = 3000,
-    maxPolls = 100,
-    maxRetries = 0,
+    pollingInterval = DEFAULT_POLLING_INTERVAL_MS,
+    maxPolls = DEFAULT_MAX_POLLS,
+    maxRetries = DEFAULT_MAX_RETRIES,
     onComplete,
     onError,
     onTimeout,
@@ -61,6 +78,8 @@ export const useAnalysisPolling = (
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const jobIdRef = useRef<string | null>(null);
   const startTimeRef = useRef<number | null>(null);
+  // Track server-provided progress to prioritize it over local estimates
+  const serverProgressRef = useRef<number | null>(null);
 
   // Calculate estimated remaining time
   const estimatedTotalSeconds = (maxPolls * pollingInterval) / 1000;
@@ -89,6 +108,7 @@ export const useAnalysisPolling = (
     pollCountRef.current = 0;
     jobIdRef.current = null;
     startTimeRef.current = null;
+    serverProgressRef.current = null;
   }, [stopPolling]);
 
   const poll = useCallback(async () => {
@@ -97,16 +117,13 @@ export const useAnalysisPolling = (
     try {
       pollCountRef.current += 1;
 
-      // Update progress based on poll count with easing (faster at start, slower near end)
-      const rawProgress = pollCountRef.current / maxPolls;
-      const easedProgress = 1 - Math.pow(1 - rawProgress, 2); // Quadratic ease-out
-      setProgress(Math.min(95, Math.round(easedProgress * 100)));
-
       const response = await getAnalysisResults(jobIdRef.current);
       const data = response.data;
 
-      // Update progress from server if available (overrides estimate)
+      // Prioritize server-provided progress over local estimates
       if (data.progress !== undefined && data.progress > 0) {
+        serverProgressRef.current = data.progress;
+        // Server progress takes precedence - update immediately
         setProgress(data.progress);
       }
 
@@ -140,9 +157,23 @@ export const useAnalysisPolling = (
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to fetch results';
+      const lowerErrorMsg = errorMsg.toLowerCase();
 
-      // Auto-retry on network errors if retries remaining
-      if (retryCount < maxRetries && (errorMsg.includes('network') || errorMsg.includes('timeout'))) {
+      // Auto-retry on transient errors if retries remaining
+      // Covers: network errors, timeouts, server errors (500, 502, 503, 504), fetch failures
+      const isTransientError =
+        lowerErrorMsg.includes('network') ||
+        lowerErrorMsg.includes('timeout') ||
+        lowerErrorMsg.includes('fetch') ||
+        lowerErrorMsg.includes('failed to') ||
+        lowerErrorMsg.includes('connection') ||
+        lowerErrorMsg.includes('503') ||
+        lowerErrorMsg.includes('502') ||
+        lowerErrorMsg.includes('504') ||
+        lowerErrorMsg.includes('500') ||
+        err instanceof TypeError; // fetch network errors often throw TypeError
+
+      if (retryCount < maxRetries && isTransientError) {
         setRetryCount(prev => prev + 1);
         return; // Don't stop polling, will retry on next interval
       }
@@ -157,17 +188,33 @@ export const useAnalysisPolling = (
   const startPolling = useCallback((jobId: string) => {
     // Reset state
     reset();
+    serverProgressRef.current = null;
 
     jobIdRef.current = jobId;
     startTimeRef.current = Date.now();
     setStatus('pending');
     setIsPolling(true);
 
-    // Start elapsed time tracker
+    // Start with initial progress to show immediate feedback
+    setProgress(5);
+
+    // Start elapsed time tracker with smooth progress estimation
+    // Only use time-based estimate when server doesn't provide progress
     timerRef.current = setInterval(() => {
       if (startTimeRef.current) {
         const elapsed = Math.round((Date.now() - startTimeRef.current) / 1000);
         setElapsedSeconds(elapsed);
+
+        // Only use time-based progress if server hasn't provided progress yet
+        // This prevents jitter between server and local estimates
+        if (serverProgressRef.current === null) {
+          // Use smooth logarithmic curve with configurable estimated duration
+          // Analysis typically takes 30-120 seconds depending on commodity
+          const timeProgress = Math.min(85, Math.round((1 - Math.exp(-elapsed / (ESTIMATED_ANALYSIS_DURATION_SECONDS / 2.5))) * 90));
+
+          // Smooth update - only increase, never decrease
+          setProgress(prev => Math.max(prev, timeProgress));
+        }
       }
     }, 1000);
 

@@ -1,4 +1,12 @@
-import { IsOptional, IsString, IsBoolean, IsNumber, IsEnum, Min, Max } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsBoolean,
+  IsNumber,
+  IsEnum,
+  Min,
+  Max,
+} from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 export class GetCompaniesQueryDto {
@@ -32,6 +40,11 @@ export class GetCompaniesQueryDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   hasKycDocuments?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  gstPendingManualReview?: boolean;
 
   @IsOptional()
   @IsString()

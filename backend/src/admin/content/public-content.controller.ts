@@ -44,7 +44,9 @@ export class PublicContentController {
    */
   @Get('currencies')
   async getActiveCurrencies() {
-    const result = await this.currenciesService.getCurrencies({ isActive: true });
+    const result = await this.currenciesService.getCurrencies({
+      isActive: true,
+    });
     return {
       statusCode: HttpStatus.OK,
       message: 'Currencies retrieved successfully',
@@ -58,7 +60,15 @@ export class PublicContentController {
    */
   @Get('countries')
   async getActiveCountries(
-    @Query('continent') continent?: 'Africa' | 'Asia' | 'Europe' | 'North America' | 'South America' | 'Oceania' | 'Antarctica',
+    @Query('continent')
+    continent?:
+      | 'Africa'
+      | 'Asia'
+      | 'Europe'
+      | 'North America'
+      | 'South America'
+      | 'Oceania'
+      | 'Antarctica',
   ) {
     const result = await this.countriesService.getCountries({
       isActive: true,
@@ -119,7 +129,9 @@ export class PublicContentController {
    */
   @Get('categories')
   async getCategories() {
-    const result = await this.categoriesService.getCategories({ isActive: true });
+    const result = await this.categoriesService.getCategories({
+      isActive: true,
+    });
     return {
       statusCode: HttpStatus.OK,
       message: 'Categories retrieved successfully',
@@ -229,7 +241,8 @@ export class PublicContentController {
   @UseGuards(AuthGuard)
   async getCategoriesGrouped(@Req() req: any) {
     const userId = req.user?.userId || req.user?._id;
-    const result = await this.categoriesService.getCategoriesGroupedByClassification(userId);
+    const result =
+      await this.categoriesService.getCategoriesGroupedByClassification(userId);
     return {
       statusCode: HttpStatus.OK,
       message: 'Categories grouped by classification retrieved successfully',
@@ -245,10 +258,7 @@ export class PublicContentController {
    */
   @Post('categories/suggest')
   @UseGuards(AuthGuard)
-  async suggestNewCategory(
-    @Body() dto: SuggestCategoryDto,
-    @Req() req: any,
-  ) {
+  async suggestNewCategory(@Body() dto: SuggestCategoryDto, @Req() req: any) {
     const userId = req.user?.userId || req.user?._id;
     if (!userId) {
       return {
@@ -260,7 +270,8 @@ export class PublicContentController {
     const result = await this.categoriesService.addUserCategory(dto, userId);
     return {
       statusCode: HttpStatus.CREATED,
-      message: 'Category suggestion submitted successfully. It will be available after admin approval.',
+      message:
+        'Category suggestion submitted successfully. It will be available after admin approval.',
       data: result,
     };
   }
@@ -276,6 +287,28 @@ export class PublicContentController {
       statusCode: HttpStatus.OK,
       message: 'Commodity stats retrieved successfully',
       data: result,
+    };
+  }
+
+  // ==========================================================
+  // INTERNAL ENDPOINTS (Service-to-Service Communication)
+  // ==========================================================
+
+  /**
+   * Internal endpoint for AI server to fetch commodity classifications
+   * GET /public/content/internal/commodities
+   * No authentication required (internal use only)
+   *
+   * Returns commodities grouped by mainstream/niche classification
+   * with aliases for fuzzy matching support.
+   */
+  @Get('internal/commodities')
+  async getInternalCommodities() {
+    const data = await this.categoriesService.getCommoditiesForAI();
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Commodities retrieved for AI classification',
+      data,
     };
   }
 }

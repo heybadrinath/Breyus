@@ -282,3 +282,77 @@ export function useCommodityClassificationStats() {
     staleTime: 1000 * 60,
   })
 }
+
+// ==========================================================
+// PENDING CATEGORY REJECTION HOOKS
+// ==========================================================
+
+// Get pending categories with linked product details
+export interface PendingCategoryDetailed extends ProductCategory {
+  linkedProducts: Array<{
+    _id: string
+    name: string
+    user?: {
+      mail?: string
+      company?: {
+        companyName?: string
+        founderName?: string
+      }
+    }
+  }>
+  linkedProductCount: number
+}
+
+export function usePendingCategoriesDetailed() {
+  return useQuery({
+    queryKey: ['admin', 'content', 'categories', 'pending-detailed'],
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<{
+        categories: PendingCategoryDetailed[]
+        total: number
+      }>>('/admin/content/categories/pending-detailed')
+      return data.data
+    },
+    staleTime: 1000 * 30, // 30 seconds (frequent updates for pending items)
+  })
+}
+
+// Reject a pending category with product reassignment
+export interface RejectCategoryData {
+  categoryId: string
+  replacementCategoryId: string
+  rejectionReason?: string
+}
+
+export interface RejectCategoryResult {
+  rejected: boolean
+  categoryName: string
+  replacementCategory: {
+    _id: string
+    name: string
+    path: string
+  }
+  affectedProductCount: number
+  affectedProducts: Array<{ _id: string; name: string }>
+}
+
+export function useRejectCategory() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: RejectCategoryData) => {
+      const response = await api.post<ApiResponse<RejectCategoryResult>>(
+        `/admin/content/categories/${data.categoryId}/reject`,
+        {
+          replacementCategoryId: data.replacementCategoryId,
+          rejectionReason: data.rejectionReason,
+        }
+      )
+      return response.data
+    },
+    onSuccess: () => {
+      // Invalidate pending categories and tree
+      queryClient.invalidateQueries({ queryKey: ['admin', 'content', 'categories'] })
+    },
+  })
+}

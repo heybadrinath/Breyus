@@ -3,15 +3,15 @@ import { forwardRef, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './user.schema';
 import { AuthModule } from 'src/auth/auth.module';
-import {MailModule} from 'src/mail/mail.module';
+import { MailModule } from 'src/mail/mail.module';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
-  forwardRef(() =>AuthModule),
-
-],
+  imports: [
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    forwardRef(() => AuthModule),
+  ],
   providers: [UsersService],
   controllers: [UsersController],
   exports: [UsersService],

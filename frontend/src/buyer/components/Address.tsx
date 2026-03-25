@@ -162,16 +162,16 @@ export const Address: React.FC<AddressProps> = ({
                             animate={{ y: "0", opacity: 1 }}
                             exit={{ y: "100vh", opacity: 0 }}
                             transition={{ type: "spring", stiffness: 100, damping: 20 }}
-                            className="bg-white rounded-lg shadow-xl max-w-3xl w-full p-6 relative flex flex-col"
+                            className="bg-white rounded-lg shadow-xl max-w-3xl w-full p-6 relative flex flex-col max-h-[90vh]"
                         >
-                            <button onClick={handleClosePopup} className="absolute top-3 right-3 text-gray-400 hover:text-gray-700" aria-label="Close"> <X size={22} /> </button>
-                            <h2 className="text-xl font-bold mb-4 text-center">Add new Address</h2>
+                            <button onClick={handleClosePopup} className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 z-10" aria-label="Close"> <X size={22} /> </button>
+                            <h2 className="text-xl font-bold mb-4 text-center flex-shrink-0">Add new Address</h2>
                             {successMessage && (
-                                <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+                                <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700 flex-shrink-0">
                                     {successMessage}
                                 </div>
                             )}
-                            <div className="space-y-3 text-sm flex flex-col">
+                            <div className="space-y-3 text-sm flex flex-col overflow-y-auto flex-1 pr-2">
                                 <div className="flex flex-col">
                                     <label className="mb-1 font-medium" htmlFor="country">Country/Region</label>
                                     <SelectField
@@ -313,12 +313,12 @@ export const Address: React.FC<AddressProps> = ({
                                 </div>
                             </div>
 
-                            <button 
+                            <button
                                 onClick={handleSaveAddress}
                                 disabled={loading}
-                                className={`px-3 py-2 rounded-lg mt-4 ml-auto ${
-                                    loading 
-                                        ? 'bg-gray-400 text-white cursor-not-allowed' 
+                                className={`px-3 py-2 rounded-lg mt-4 ml-auto flex-shrink-0 ${
+                                    loading
+                                        ? 'bg-gray-400 text-white cursor-not-allowed'
                                         : 'bg-black text-white hover:bg-gray-800'
                                 }`}
                             >

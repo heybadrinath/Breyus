@@ -20,7 +20,11 @@ export class LocalStorageProvider implements IStorageService {
   /**
    * Upload a file to local storage
    */
-  async upload(file: Buffer, filename: string, folder: string): Promise<string> {
+  async upload(
+    file: Buffer,
+    filename: string,
+    folder: string,
+  ): Promise<string> {
     // Create unique filename with timestamp
     const uniqueFilename = `${Date.now()}-${this.sanitizeFilename(filename)}`;
 
@@ -52,7 +56,10 @@ export class LocalStorageProvider implements IStorageService {
    */
   async delete(storagePath: string): Promise<void> {
     // Convert relative path to absolute
-    const absolutePath = path.join(process.cwd(), storagePath.replace(/^\//, ''));
+    const absolutePath = path.join(
+      process.cwd(),
+      storagePath.replace(/^\//, ''),
+    );
 
     if (await this.exists(storagePath)) {
       await fs.promises.unlink(absolutePath);
@@ -63,7 +70,10 @@ export class LocalStorageProvider implements IStorageService {
    * Check if a file exists
    */
   async exists(storagePath: string): Promise<boolean> {
-    const absolutePath = path.join(process.cwd(), storagePath.replace(/^\//, ''));
+    const absolutePath = path.join(
+      process.cwd(),
+      storagePath.replace(/^\//, ''),
+    );
     try {
       await fs.promises.access(absolutePath);
       return true;
@@ -76,7 +86,10 @@ export class LocalStorageProvider implements IStorageService {
    * Get a readable stream for a file
    */
   async getFileStream(storagePath: string): Promise<fs.ReadStream> {
-    const absolutePath = path.join(process.cwd(), storagePath.replace(/^\//, ''));
+    const absolutePath = path.join(
+      process.cwd(),
+      storagePath.replace(/^\//, ''),
+    );
 
     // Check if file exists
     if (!(await this.exists(storagePath))) {

@@ -131,3 +131,47 @@ export function useCompanyPageStats() {
     staleTime: 1000 * 60, // 1 minute
   })
 }
+
+// Approve GST manually (for Indian companies when Cashfree API failed)
+export function useApproveGst() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
+      const response = await api.post<Company>(`/admin/companies/${id}/gst/approve`, { notes })
+      return response.data
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'companies'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'company', variables.id] })
+    },
+  })
+}
+
+// Clear GST pending manual review flag
+export function useClearGstFlag() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await api.post<Company>(`/admin/companies/${id}/gst/clear-flag`)
+      return response.data
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'companies'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'company', id] })
+    },
+  })
+}
+
+// Get count of companies with pending GST manual review
+export function useGstPendingCount() {
+  return useQuery({
+    queryKey: ['admin', 'companies', 'gst-pending-count'],
+    queryFn: async () => {
+      const response = await api.get<{ data: { count: number } }>('/admin/companies/gst/pending-count')
+      return response.data.data.count
+    },
+    staleTime: 1000 * 30, // 30 seconds
+  })
+}

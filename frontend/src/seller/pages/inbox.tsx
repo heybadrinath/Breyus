@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import InboxSidebar from '../../components/InboxSidebar';
 import InboxConversation from '../../components/InboxConversation';
 import { ConversationProps, Message } from '../../types/inboxTypes';
@@ -23,6 +24,7 @@ const SellerInbox = () => {
     const selectedConversationIdRef = useRef<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const isResizingRef = useRef(false);
+    const location = useLocation();
 
     // Fetch conversations
     const fetchConversations = useCallback(async () => {
@@ -56,6 +58,19 @@ const SellerInbox = () => {
     useEffect(() => {
         selectedConversationIdRef.current = selectedConversationId;
     }, [selectedConversationId]);
+
+    // Select conversation from URL if present (for chat redirects)
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const urlConversationId = params.get('conversationId');
+        if (urlConversationId && conversations.length > 0) {
+            const conv = conversations.find(c => c.id === urlConversationId);
+            if (conv) {
+                setSelectedConversation(conv);
+                setSelectedConversationId(conv.id);
+            }
+        }
+    }, [location.search, conversations]);
 
     useEffect(() => {
         const handleMouseMove = (event: MouseEvent) => {
@@ -321,6 +336,7 @@ const SellerInbox = () => {
                     searchQuery={searchQuery}
                     handleSearch={handleSearch}
                     onConversationSelect={handleConversationSelect}
+                    currentCompanyId={currentCompanyId}
                     width={sidebarWidth}
                     onResizeStart={handleResizeStart}
                 />
@@ -328,6 +344,8 @@ const SellerInbox = () => {
                     <InboxConversation
                         name={selectedConversation.companyName}
                         productName={selectedConversation.productName}
+                        companyId={selectedConversation.companyIds?.find(id => id !== currentCompanyId)}
+                        profilePicture={selectedConversation.profilePicture}
                         messages={messages}
                         currentCompanyId={currentCompanyId}
                         onSendMessage={handleSendMessage}

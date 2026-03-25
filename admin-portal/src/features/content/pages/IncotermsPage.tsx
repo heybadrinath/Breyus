@@ -225,6 +225,9 @@ export function IncotermsPage() {
           <p className="text-muted-foreground">
             {data?.total || 0} international trade terms • Incoterms 2020
           </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Users can select an Incoterm type but cannot modify cost allocations. Only admins can edit.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           {/* View as User button */}

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ReturnModelType } from '@typegoose/typegoose';
 import { Wishlist } from './wishlist.schema';
@@ -23,7 +27,8 @@ export interface SaveContactDto {
 @Injectable()
 export class WishlistService {
   constructor(
-    @InjectModel(Wishlist.name) private readonly wishlistSchema: ReturnModelType<typeof Wishlist>,
+    @InjectModel(Wishlist.name)
+    private readonly wishlistSchema: ReturnModelType<typeof Wishlist>,
   ) {}
 
   async addToWishlist(userId: string, productId: string) {
@@ -60,7 +65,11 @@ export class WishlistService {
 
   async getUserWishlist(userId: string) {
     const wishlistItems = await this.wishlistSchema
-      .find({ user: new Types.ObjectId(userId) })
+      .find({
+        user: new Types.ObjectId(userId),
+        sourceType: 'product', // Only get product wishlists
+        product: { $exists: true },
+      })
       .populate({
         path: 'product',
         model: 'Product',
@@ -71,34 +80,61 @@ export class WishlistService {
           populate: {
             path: 'company',
             model: 'Company',
-            select: 'companyName'
-          }
-        }
+            select: 'companyName',
+          },
+        },
       })
+      .sort({ dateAdded: -1 })
       .lean()
       .exec();
 
-    return wishlistItems.map(item => {
-      const product = item.product as any;
-      let sellerName = 'Unknown Seller';
-      let companyName = 'Unknown Company';
-      let user: any = undefined;
-      if (product && typeof product === 'object' && product !== null && product.userId) {
-        user = product.userId;
-      }
-      if (user && typeof user.mail === 'string') {
-        sellerName = user.mail;
-        if (user.company && typeof user.company === 'object' && typeof user.company.companyName === 'string') {
-          companyName = user.company.companyName;
+    return wishlistItems
+      .filter((item) => item.product) // Filter out items where product is null/deleted
+      .map((item) => {
+        const product = item.product as any;
+        let sellerName = 'Unknown Seller';
+        let companyName = 'Unknown Company';
+        let user: any = undefined;
+        if (
+          product &&
+          typeof product === 'object' &&
+          product !== null &&
+          product.userId
+        ) {
+          user = product.userId;
         }
-      }
-      return {
-        ...(product || {}),
-        id: product?._id?.toString?.() || product?._id || '',
-        companyName,
-        sellerName,
-      };
-    });
+        if (user && typeof user.mail === 'string') {
+          sellerName = user.mail;
+          if (
+            user.company &&
+            typeof user.company === 'object' &&
+            typeof user.company.companyName === 'string'
+          ) {
+            companyName = user.company.companyName;
+          }
+        }
+        return {
+          id: product?._id?.toString?.() || product?._id || '',
+          name: product?.name || 'Unnamed Product',
+          description: product?.description || '',
+          price: product?.price || 0,
+          salePrice: product?.salePrice,
+          currency: product?.currency || 'USD',
+          onSale: product?.onSale || false,
+          productImages: product?.productImages || [],
+          images: product?.productImages || [],
+          primaryImage: product?.productImages?.[0] || '',
+          category: product?.category || '',
+          stock: product?.stock || 0,
+          stockUnit: product?.stockUnit || '',
+          moq: product?.moq || '',
+          moqUnit: product?.moqUnit || '',
+          isFeatured: product?.isFeatured || false,
+          companyName,
+          sellerName,
+          dateAdded: item.dateAdded,
+        };
+      });
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -118,7 +154,9 @@ export class WishlistService {
     if (contact.email) {
       existingQuery.savedContactEmail = contact.email.toLowerCase();
     } else if (contact.name && contact.country) {
-      existingQuery.savedContactName = { $regex: new RegExp(`^${contact.name}$`, 'i') };
+      existingQuery.savedContactName = {
+        $regex: new RegExp(`^${contact.name}$`, 'i'),
+      };
       existingQuery.savedContactCountry = contact.country;
     }
 
@@ -212,5 +250,104 @@ export class WishlistService {
     }
 
     return result;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // FAVOURITE COMPANIES (platform companies favourited by buyers)
+  // ═══════════════════════════════════════════════════════════════
+
+  /**
+   * Add a company to favourites
+   */
+  async addFavouriteCompany(userId: string, companyId: string, notes?: string) {
+    // Check if already favourited
+    const exists = await this.wishlistSchema.findOne({
+      user: new Types.ObjectId(userId),
+      company: new Types.ObjectId(companyId),
+      sourceType: 'company',
+    });
+
+    if (exists) {
+      throw new ConflictException('Company already in favourites');
+    }
+
+    const favourite = await this.wishlistSchema.create({
+      user: new Types.ObjectId(userId),
+      company: new Types.ObjectId(companyId),
+      sourceType: 'company',
+      notes,
+      dateAdded: new Date(),
+    });
+
+    return favourite;
+  }
+
+  /**
+   * Remove a company from favourites
+   */
+  async removeFavouriteCompany(userId: string, companyId: string) {
+    const result = await this.wishlistSchema.deleteOne({
+      user: new Types.ObjectId(userId),
+      company: new Types.ObjectId(companyId),
+      sourceType: 'company',
+    });
+
+    if (result.deletedCount === 0) {
+      throw new NotFoundException('Favourite company not found');
+    }
+
+    return { message: 'Company removed from favourites' };
+  }
+
+  /**
+   * Get all favourite companies for a user
+   */
+  async getFavouriteCompanies(userId: string) {
+    const favourites = await this.wishlistSchema
+      .find({
+        user: new Types.ObjectId(userId),
+        sourceType: 'company',
+      })
+      .populate({
+        path: 'company',
+        model: 'Company',
+        select:
+          'companyName companyAddress profilePicture bannerImage isKycVerified primaryEmail',
+      })
+      .sort({ dateAdded: -1 })
+      .lean()
+      .exec();
+
+    return favourites.map((item: any) => {
+      const company = item.company;
+      return {
+        id: item._id.toString(),
+        companyId: company?._id?.toString() || '',
+        companyName: company?.companyName || 'Unknown Company',
+        companyAddress: company?.companyAddress || '',
+        profilePicture: company?.profilePicture || '',
+        bannerImage: company?.bannerImage || '',
+        isKycVerified: company?.isKycVerified || false,
+        primaryEmail: company?.primaryEmail || '',
+        notes: item.notes || '',
+        dateAdded: item.dateAdded,
+      };
+    });
+  }
+
+  /**
+   * Check if a company is favourited by the user
+   */
+  async isFavouriteCompany(
+    userId: string,
+    companyId: string,
+  ): Promise<boolean> {
+    const exists = await this.wishlistSchema.findOne({
+      user: new Types.ObjectId(userId),
+      company: new Types.ObjectId(companyId),
+      sourceType: 'company',
+    });
+
+    return !!exists;
   }
 }

@@ -12,18 +12,18 @@ import { Company, CompanySchema } from '../company/company.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: HSN.name, schema: HSNSchema },]),
-    MongooseModule.forFeature([{name: Product.name, schema: ProductSchema}]),
-    MongooseModule.forFeature([{name: User.name, schema: UserSchema}]),
-    MongooseModule.forFeature([{name: Company.name, schema: CompanySchema}]),
+    MongooseModule.forFeature([{ name: HSN.name, schema: HSNSchema }]),
+    MongooseModule.forFeature([{ name: Product.name, schema: ProductSchema }]),
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    MongooseModule.forFeature([{ name: Company.name, schema: CompanySchema }]),
     JwtModule.register({
       secret: process.env.JWT_SECRET_KEY || 'your-secret-key',
       signOptions: { expiresIn: '1h' },
     }),
-    AuthModule
+    AuthModule,
   ],
   providers: [ProductsService, FileUploadInterceptor],
   controllers: [ProductsController],
   exports: [MongooseModule, ProductsService],
 })
-export class ProductsModule { }
+export class ProductsModule {}

@@ -2,8 +2,15 @@ import React, { useState } from 'react';
 import { X, Download, FileText, CheckCircle, XCircle, Loader2, AlertCircle, ExternalLink, History, ChevronDown, ChevronUp } from 'lucide-react';
 import { DocumentInfo, DocumentType, DocumentStatus } from '../services/trade.service';
 import DocumentVersionHistory from './DocumentVersionHistory';
+import { getFileUrl } from '../utils/imageUtils';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+// PHASE 2 REFACTORING: Rejection tracking info for document verification
+interface RejectionTrackingInfo {
+    rejectionCount: number;
+    maxAttempts: number;
+    remainingAttempts: number;
+    isLastAttempt: boolean;
+}
 
 interface ViewDocumentModalProps {
     isOpen: boolean;
@@ -15,12 +22,15 @@ interface ViewDocumentModalProps {
     canVerify?: boolean;
     canRejectSPA?: boolean; // Special flag for SPA rejection (since SPA uses signatures, not approval)
     onVerify?: (status: 'approved' | 'rejected', notes?: string) => Promise<void>;
+    // PHASE 2: Rejection tracking to show user the consequences of rejection
+    rejectionTracking?: RejectionTrackingInfo;
 }
 
 const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
     'sco': 'Soft Corporate Offer (SCO)',
     'icpo': 'Irrevocable Corporate Purchase Order (ICPO)',
     'spa': 'Sales Purchase Agreement (SPA)',
+    'signed-spa': 'Signed SPA',
     'bol': 'Bill of Lading (BoL)',
     'payment-proof': 'Payment Proof'
 };
@@ -41,7 +51,8 @@ const ViewDocumentModal: React.FC<ViewDocumentModalProps> = ({
     title,
     canVerify = false,
     canRejectSPA = false,
-    onVerify
+    onVerify,
+    rejectionTracking
 }) => {
     const [verifying, setVerifying] = useState(false);
     const [verificationNotes, setVerificationNotes] = useState('');
@@ -50,7 +61,7 @@ const ViewDocumentModal: React.FC<ViewDocumentModalProps> = ({
 
     if (!isOpen || !document) return null;
 
-    const documentUrl = `${BACKEND_URL}${document.filePath.startsWith('/') ? '' : '/'}${document.filePath}`;
+    const documentUrl = getFileUrl(document.filePath);
     const displayTitle = title || DOCUMENT_TYPE_LABELS[documentType];
     const statusInfo = STATUS_COLORS[document.status] || STATUS_COLORS.uploaded;
     const isPDF = document.mimeType === 'application/pdf';
@@ -217,14 +228,50 @@ const ViewDocumentModal: React.FC<ViewDocumentModalProps> = ({
                 {canVerify && (document.status === 'uploaded' || document.status === 'pending') && (
                     <div className="p-4 border-t">
                         <div className="space-y-3">
+                            {/* PHASE 2: Show rejection tracking warning */}
+                            {rejectionTracking && (
+                                <div className={`rounded-lg p-3 ${
+                                    rejectionTracking.remainingAttempts <= 1
+                                        ? 'bg-red-50 border border-red-200'
+                                        : 'bg-amber-50 border border-amber-200'
+                                }`}>
+                                    <div className="flex items-start gap-2">
+                                        <AlertCircle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                                            rejectionTracking.remainingAttempts <= 1 ? 'text-red-500' : 'text-amber-500'
+                                        }`} />
+                                        <div className="text-sm">
+                                            <p className={`font-medium ${
+                                                rejectionTracking.remainingAttempts <= 1 ? 'text-red-700' : 'text-amber-700'
+                                            }`}>
+                                                {rejectionTracking.remainingAttempts <= 1
+                                                    ? '⚠️ Final Attempt Warning'
+                                                    : 'Document Rejection Tracking'}
+                                            </p>
+                                            <p className={`mt-1 ${
+                                                rejectionTracking.remainingAttempts <= 1 ? 'text-red-600' : 'text-amber-600'
+                                            }`}>
+                                                {rejectionTracking.rejectionCount === 0
+                                                    ? `The uploader has ${rejectionTracking.maxAttempts} total attempts to upload this document.`
+                                                    : `Already rejected ${rejectionTracking.rejectionCount} time(s). ${rejectionTracking.remainingAttempts} attempt(s) remaining.`}
+                                            </p>
+                                            {rejectionTracking.remainingAttempts <= 1 && (
+                                                <p className="mt-1 text-red-700 font-semibold">
+                                                    If rejected again, the trade will be automatically cancelled!
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div>
                                 <label className="block text-xs font-semibold text-gray-600 mb-2">
-                                    Approval notes (optional)
+                                    {rejectionTracking ? 'Rejection reason (required if rejecting)' : 'Approval notes (optional)'}
                                 </label>
                                 <textarea
                                     value={verificationNotes}
                                     onChange={(e) => setVerificationNotes(e.target.value)}
-                                    placeholder="Add a short note for the other party..."
+                                    placeholder={rejectionTracking ? "Please explain why this document is being rejected..." : "Add a short note for the other party..."}
                                     rows={2}
                                     disabled={verifying}
                                     className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-gray-400 focus:ring-1 focus:ring-gray-300 resize-none disabled:bg-gray-100"
@@ -242,7 +289,11 @@ const ViewDocumentModal: React.FC<ViewDocumentModalProps> = ({
                                 <button
                                     onClick={() => handleVerify('rejected')}
                                     disabled={verifying}
-                                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 flex items-center justify-center gap-2"
+                                    className={`flex-1 rounded-lg px-3 py-2 text-sm disabled:opacity-50 flex items-center justify-center gap-2 ${
+                                        (rejectionTracking?.remainingAttempts ?? 999) <= 1
+                                            ? 'border-2 border-red-400 text-red-600 hover:bg-red-50'
+                                            : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                    }`}
                                 >
                                     {verifying ? (
                                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -272,8 +323,9 @@ const ViewDocumentModal: React.FC<ViewDocumentModalProps> = ({
                     </div>
                 )}
 
-                {/* SPA Rejection Section - Either party can reject SPA */}
-                {canRejectSPA && documentType === 'spa' && document.status !== 'rejected' && (
+                {/* SPA Rejection Section - Only show if canVerify section is NOT already showing */}
+                {canRejectSPA && documentType === 'spa' && document.status !== 'rejected' &&
+                 !(canVerify && (document.status === 'uploaded' || document.status === 'pending')) && (
                     <div className="p-4 border-t">
                         <div className="space-y-3">
                             <p className="text-sm text-gray-600">

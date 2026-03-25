@@ -13,6 +13,7 @@ interface BadgeCounts {
     po?: number;
     spa?: number;
     ongoing?: number;
+    history?: number;
 }
 
 export const Trade = () => {
@@ -55,7 +56,7 @@ export const Trade = () => {
 
     // Handle tab change - mark trades as read for that tab
     const handleTabChange = useCallback(async (tabId: number, tabKey: string) => {
-        const validTabTypes = ['pr', 'po', 'spa', 'ongoing'];
+        const validTabTypes = ['pr', 'po', 'spa', 'ongoing', 'history'];
         if (validTabTypes.includes(tabKey)) {
             // Issue #7 - Track optimistic update
             optimisticUpdateRef.current.add(tabKey);

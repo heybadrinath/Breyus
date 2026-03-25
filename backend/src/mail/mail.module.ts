@@ -6,6 +6,6 @@ import { RedisProvider } from './redis.provider';
 @Module({
   providers: [RedisProvider, MailService],
   exports: [MailService],
-  controllers: [MailController]
+  controllers: [MailController],
 })
 export class MailModule {}

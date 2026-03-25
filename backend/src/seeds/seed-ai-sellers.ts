@@ -81,8 +81,18 @@ const seedSellers = [
     city: 'Singapore',
     port: 'Port of Singapore',
     products: [
-      { name: 'Premium Thai Jasmine Rice', hsCode: '1006', category: 'Rice', price: 850 },
-      { name: 'Basmati Long Grain Rice', hsCode: '1006', category: 'Rice', price: 1200 },
+      {
+        name: 'Premium Thai Jasmine Rice',
+        hsCode: '1006',
+        category: 'Rice',
+        price: 850,
+      },
+      {
+        name: 'Basmati Long Grain Rice',
+        hsCode: '1006',
+        category: 'Rice',
+        price: 1200,
+      },
     ],
   },
   {
@@ -93,8 +103,18 @@ const seedSellers = [
     city: 'Singapore',
     port: 'Port of Singapore',
     products: [
-      { name: 'Vietnamese Broken Rice Grade A', hsCode: '1006', category: 'Rice', price: 450 },
-      { name: 'Iron Ore Pellets 65% Fe', hsCode: '2601', category: 'Iron Ore', price: 120 },
+      {
+        name: 'Vietnamese Broken Rice Grade A',
+        hsCode: '1006',
+        category: 'Rice',
+        price: 450,
+      },
+      {
+        name: 'Iron Ore Pellets 65% Fe',
+        hsCode: '2601',
+        category: 'Iron Ore',
+        price: 120,
+      },
     ],
   },
   {
@@ -105,8 +125,18 @@ const seedSellers = [
     city: 'Singapore',
     port: 'Port of Singapore',
     products: [
-      { name: 'Raw Cane Sugar ICUMSA 150', hsCode: '1701', category: 'Sugar', price: 520 },
-      { name: 'Refined White Sugar ICUMSA 45', hsCode: '1701', category: 'Sugar', price: 680 },
+      {
+        name: 'Raw Cane Sugar ICUMSA 150',
+        hsCode: '1701',
+        category: 'Sugar',
+        price: 520,
+      },
+      {
+        name: 'Refined White Sugar ICUMSA 45',
+        hsCode: '1701',
+        category: 'Sugar',
+        price: 680,
+      },
     ],
   },
   // India exporters
@@ -118,9 +148,24 @@ const seedSellers = [
     city: 'Mumbai',
     port: 'Jawaharlal Nehru Port',
     products: [
-      { name: 'Indian Sona Masoori Rice', hsCode: '1006', category: 'Rice', price: 720 },
-      { name: 'Arabica Coffee Beans AA Grade', hsCode: '0901', category: 'Coffee', price: 3500 },
-      { name: 'Robusta Coffee Green Beans', hsCode: '0901', category: 'Coffee', price: 2200 },
+      {
+        name: 'Indian Sona Masoori Rice',
+        hsCode: '1006',
+        category: 'Rice',
+        price: 720,
+      },
+      {
+        name: 'Arabica Coffee Beans AA Grade',
+        hsCode: '0901',
+        category: 'Coffee',
+        price: 3500,
+      },
+      {
+        name: 'Robusta Coffee Green Beans',
+        hsCode: '0901',
+        category: 'Coffee',
+        price: 2200,
+      },
     ],
   },
   {
@@ -131,8 +176,18 @@ const seedSellers = [
     city: 'Chennai',
     port: 'Chennai Port',
     products: [
-      { name: 'Iron Ore Fines 62% Fe', hsCode: '2601', category: 'Iron Ore', price: 95 },
-      { name: 'Manganese Ore 42% Mn', hsCode: '2602', category: 'Manganese Ore', price: 280 },
+      {
+        name: 'Iron Ore Fines 62% Fe',
+        hsCode: '2601',
+        category: 'Iron Ore',
+        price: 95,
+      },
+      {
+        name: 'Manganese Ore 42% Mn',
+        hsCode: '2602',
+        category: 'Manganese Ore',
+        price: 280,
+      },
     ],
   },
   // Brazil exporters
@@ -144,9 +199,24 @@ const seedSellers = [
     city: 'Santos',
     port: 'Port of Santos',
     products: [
-      { name: 'Brazilian Santos Coffee Beans', hsCode: '0901', category: 'Coffee', price: 4200 },
-      { name: 'Raw Cane Sugar VHP', hsCode: '1701', category: 'Sugar', price: 480 },
-      { name: 'Soybean Meal 46% Protein', hsCode: '2304', category: 'Soybeans', price: 420 },
+      {
+        name: 'Brazilian Santos Coffee Beans',
+        hsCode: '0901',
+        category: 'Coffee',
+        price: 4200,
+      },
+      {
+        name: 'Raw Cane Sugar VHP',
+        hsCode: '1701',
+        category: 'Sugar',
+        price: 480,
+      },
+      {
+        name: 'Soybean Meal 46% Protein',
+        hsCode: '2304',
+        category: 'Soybeans',
+        price: 420,
+      },
     ],
   },
   // Vietnam exporters
@@ -158,22 +228,47 @@ const seedSellers = [
     city: 'Ho Chi Minh City',
     port: 'Cat Lai Port',
     products: [
-      { name: 'Vietnamese Jasmine Rice ST25', hsCode: '1006', category: 'Rice', price: 680 },
-      { name: 'Vietnamese White Rice 5% Broken', hsCode: '1006', category: 'Rice', price: 480 },
-      { name: 'Robusta Coffee Grade 1', hsCode: '0901', category: 'Coffee', price: 1900 },
+      {
+        name: 'Vietnamese Jasmine Rice ST25',
+        hsCode: '1006',
+        category: 'Rice',
+        price: 680,
+      },
+      {
+        name: 'Vietnamese White Rice 5% Broken',
+        hsCode: '1006',
+        category: 'Rice',
+        price: 480,
+      },
+      {
+        name: 'Robusta Coffee Grade 1',
+        hsCode: '0901',
+        category: 'Coffee',
+        price: 1900,
+      },
     ],
   },
   // Australia exporters
   {
     companyName: 'PILBARA MINERALS TRADING PTY',
     email: 'sales@pilbaraminerals.au',
-    founderName: 'Michael O\'Brien',
+    founderName: "Michael O'Brien",
     country: 'Australia',
     city: 'Perth',
     port: 'Port Hedland',
     products: [
-      { name: 'Pilbara Iron Ore Lump 62.5% Fe', hsCode: '2601', category: 'Iron Ore', price: 140 },
-      { name: 'Iron Ore Fines 58% Fe', hsCode: '2601', category: 'Iron Ore', price: 88 },
+      {
+        name: 'Pilbara Iron Ore Lump 62.5% Fe',
+        hsCode: '2601',
+        category: 'Iron Ore',
+        price: 140,
+      },
+      {
+        name: 'Iron Ore Fines 58% Fe',
+        hsCode: '2601',
+        category: 'Iron Ore',
+        price: 88,
+      },
     ],
   },
   // Thailand exporters
@@ -185,9 +280,24 @@ const seedSellers = [
     city: 'Bangkok',
     port: 'Laem Chabang Port',
     products: [
-      { name: 'Thai Hom Mali Rice Premium', hsCode: '1006', category: 'Rice', price: 920 },
-      { name: 'Thai Parboiled Rice', hsCode: '1006', category: 'Rice', price: 580 },
-      { name: 'Tapioca Starch Native', hsCode: '1108', category: 'Starch', price: 450 },
+      {
+        name: 'Thai Hom Mali Rice Premium',
+        hsCode: '1006',
+        category: 'Rice',
+        price: 920,
+      },
+      {
+        name: 'Thai Parboiled Rice',
+        hsCode: '1006',
+        category: 'Rice',
+        price: 580,
+      },
+      {
+        name: 'Tapioca Starch Native',
+        hsCode: '1108',
+        category: 'Starch',
+        price: 450,
+      },
     ],
   },
   // Colombia exporters
@@ -199,8 +309,18 @@ const seedSellers = [
     city: 'Medellin',
     port: 'Port of Buenaventura',
     products: [
-      { name: 'Colombian Supremo Coffee Beans', hsCode: '0901', category: 'Coffee', price: 4800 },
-      { name: 'Colombian Excelso Coffee', hsCode: '0901', category: 'Coffee', price: 4200 },
+      {
+        name: 'Colombian Supremo Coffee Beans',
+        hsCode: '0901',
+        category: 'Coffee',
+        price: 4800,
+      },
+      {
+        name: 'Colombian Excelso Coffee',
+        hsCode: '0901',
+        category: 'Coffee',
+        price: 4200,
+      },
     ],
   },
 ];
@@ -223,7 +343,7 @@ async function seed() {
   for (const seller of seedSellers) {
     // Check if company already exists
     const existingCompany = await companyModel.findOne({
-      companyName: { $regex: new RegExp(`^${seller.companyName}$`, 'i') }
+      companyName: { $regex: new RegExp(`^${seller.companyName}$`, 'i') },
     });
 
     if (existingCompany) {
@@ -232,7 +352,9 @@ async function seed() {
     }
 
     // Check if user email exists
-    const existingUser = await userModel.findOne({ mail: seller.email.toLowerCase() });
+    const existingUser = await userModel.findOne({
+      mail: seller.email.toLowerCase(),
+    });
     if (existingUser) {
       console.log(`[SKIP] User email already exists: ${seller.email}`);
       continue;
@@ -251,20 +373,22 @@ async function seed() {
       websiteUrl: `https://${seller.companyName.toLowerCase().replace(/\s+/g, '')}.com`,
       exportedBefore: true,
       referrel: 'AI Seed Data',
-      mainLineBusiness: seller.products.map(p => p.category),
+      mainLineBusiness: seller.products.map((p) => p.category),
       meanMonthlyRevenue: '100000 - 500000',
       users: [],
       onboardingProgress: 100,
       isOnboardingCompleted: true,
-      deliveryAddresses: [{
-        fullName: seller.founderName,
-        mobileNumber: '+1234567890',
-        pincode: '100000',
-        streetName: 'Industrial Zone',
-        city: seller.city,
-        state: seller.city,
-        country: seller.country,
-      }],
+      deliveryAddresses: [
+        {
+          fullName: seller.founderName,
+          mobileNumber: '+1234567890',
+          pincode: '100000',
+          streetName: 'Industrial Zone',
+          city: seller.city,
+          state: seller.city,
+          country: seller.country,
+        },
+      ],
       bankInfo: {},
       tradeDetails: {
         agreedToTerms: true,
@@ -290,7 +414,7 @@ async function seed() {
     // Update company with user reference
     await companyModel.updateOne(
       { _id: company._id },
-      { $push: { users: user._id } }
+      { $push: { users: user._id } },
     );
 
     // Create products
@@ -309,7 +433,12 @@ async function seed() {
         currency: 'USD',
         sku: `SKU-${product.hsCode}-${Date.now()}`,
         isActive: true,
-        tags: [product.category.toLowerCase(), seller.country.toLowerCase(), 'export', 'commodity'],
+        tags: [
+          product.category.toLowerCase(),
+          seller.country.toLowerCase(),
+          'export',
+          'commodity',
+        ],
         exportLocation: seller.country,
         nearestPort: seller.port,
         selectedIncoterm: 'FOB',
@@ -320,7 +449,9 @@ async function seed() {
       });
 
       productsCreated++;
-      console.log(`  [CREATE] Product: ${product.name} (HS: ${product.hsCode})`);
+      console.log(
+        `  [CREATE] Product: ${product.name} (HS: ${product.hsCode})`,
+      );
     }
   }
 

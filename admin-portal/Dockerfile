@@ -11,10 +11,14 @@ ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
 
 # Copy package files
-COPY package*.json ./
+COPY package.json ./
 
 # Install dependencies
-RUN npm ci --silent
+# Fix for Rollup native binary issue on Alpine Linux:
+# 1. Remove lockfile to force fresh dependency resolution for this platform
+# 2. Use npm install to properly resolve @rollup/rollup-linux-x64-musl
+RUN npm install --silent && \
+    npm rebuild
 
 # Copy source code
 COPY . .

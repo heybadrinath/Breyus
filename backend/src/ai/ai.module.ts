@@ -9,6 +9,7 @@ import { PlatformAwarenessService } from './platform-awareness.service';
 // CommoditiesModule removed - commodity search now uses categories with isMainstream filter
 import { AuthModule } from '../auth/auth.module';
 import { AdminContentModule } from '../admin/content/admin-content.module';
+import { NotificationModule } from '../notification/notification.module';
 import { Product, ProductSchema } from '../products/schema/products.schema';
 import { Trade, TradeSchema } from '../trade/schema/trade.schema';
 import { User, UserSchema } from '../users/user.schema';
@@ -38,13 +39,10 @@ import { Company, CompanySchema } from '../company/company.schema';
     }),
     AuthModule,
     AdminContentModule,
+    NotificationModule,
   ],
   controllers: [AIController],
-  providers: [
-    AIService,
-    AIHttpService,
-    PlatformAwarenessService,
-  ],
+  providers: [AIService, AIHttpService, PlatformAwarenessService],
   exports: [AIService, AIHttpService],
 })
 export class AIModule {}

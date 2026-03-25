@@ -600,7 +600,7 @@ class MarketAnalyzer:
         historical = [round(v, 2) for v in volumes]
         projections = predict_linear(historical, periods_ahead=3)
         return {
-            "timeline": labels or ["Page A", "Page B", "Page C", "Page D", "Page E", "Page F", "Page G"],
+            "timeline": labels or [],  # Return empty array if no data - don't use placeholders
             "historical": historical,
             "projected": [round(v, 2) for v in projections],
         }
@@ -611,7 +611,7 @@ class MarketAnalyzer:
         high = [round(p * (1 + volatility / 100), 2) for p in prices]
         low = [round(p * (1 - volatility / 100), 2) for p in prices]
         return {
-            "timeline": labels or ["Page A", "Page B", "Page C", "Page D", "Page E", "Page F", "Page G"],
+            "timeline": labels or [],  # Return empty array if no data - don't use placeholders
             "prices": [round(p, 2) for p in prices],
             "volatility_high": high,
             "volatility_low": low,

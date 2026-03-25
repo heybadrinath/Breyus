@@ -23,7 +23,9 @@ export class CreateCategoryDto {
   @IsString()
   @MinLength(1)
   @MaxLength(100)
-  @Matches(/^[a-z0-9-]+$/, { message: 'Slug must be lowercase alphanumeric with hyphens' })
+  @Matches(/^[a-z0-9-]+$/, {
+    message: 'Slug must be lowercase alphanumeric with hyphens',
+  })
   slug?: string; // Auto-generated if not provided
 
   @IsOptional()
@@ -67,7 +69,9 @@ export class UpdateCategoryDto {
   @IsString()
   @MinLength(1)
   @MaxLength(100)
-  @Matches(/^[a-z0-9-]+$/, { message: 'Slug must be lowercase alphanumeric with hyphens' })
+  @Matches(/^[a-z0-9-]+$/, {
+    message: 'Slug must be lowercase alphanumeric with hyphens',
+  })
   slug?: string;
 
   @IsOptional()
@@ -180,6 +184,20 @@ export class SuggestCategoryDto {
 export class ToggleMainstreamDto {
   @IsBoolean()
   isMainstream: boolean;
+}
+
+/**
+ * DTO for admin to reject a user-submitted category
+ * Requires reassignment to an existing approved category
+ */
+export class RejectCategoryDto {
+  @IsMongoId()
+  replacementCategoryId: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  rejectionReason?: string;
 }
 
 /**

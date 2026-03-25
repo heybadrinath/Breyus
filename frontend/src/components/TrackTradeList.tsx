@@ -3,8 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import { Package, Loader2, Eye, ArrowRight, Clock } from 'lucide-react';
 import { getUserTrades, getSellerTrades, Trade, TradePhase } from '../services/trade.service';
 import TrackTrade from './TrackTrade';
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+import { getImageUrl } from '../utils/imageUtils';
+import CompanyAvatar from './ui/CompanyAvatar';
+import ClickableCompanyName from './ui/ClickableCompanyName';
 
 interface TrackTradeListProps {
     isSeller: boolean;
@@ -18,7 +19,8 @@ const PHASE_LABELS: Record<TradePhase, string> = {
     'SPA': 'Awaiting SPA',
     'PAYMENT': 'Awaiting Payment',
     'BOL': 'Awaiting BoL',
-    'COMPLETED': 'Completed'
+    'COMPLETED': 'Completed',
+    'CANCELLED': 'Cancelled'
 };
 
 const TrackTradeList: React.FC<TrackTradeListProps> = ({ isSeller, initialTradeId }) => {
@@ -156,11 +158,11 @@ const TrackTradeList: React.FC<TrackTradeListProps> = ({ isSeller, initialTradeI
                                 <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                                     {trade.product?.productImages?.[0] ? (
                                         <img
-                                            src={`${BACKEND_URL}${trade.product.productImages[0]}`}
+                                            src={getImageUrl(trade.product.productImages[0])}
                                             alt={trade.product.name}
                                             className="w-full h-full object-cover"
                                             onError={(e) => {
-                                                (e.target as HTMLImageElement).src = '/placeholder-product.png';
+                                                (e.target as HTMLImageElement).src = '/placeholder-product.svg';
                                             }}
                                         />
                                     ) : (
@@ -183,8 +185,28 @@ const TrackTradeList: React.FC<TrackTradeListProps> = ({ isSeller, initialTradeI
                                             {trade.buyerOfferedPrice || trade.product?.price} {trade.product?.currency}
                                         </span>
                                     </div>
-                                    <div className="text-xs text-gray-400 mt-1">
-                                        {isSeller ? `Buyer: ${trade.buyer?.mail}` : `Seller: ${trade.seller?.mail}`}
+                                    <div className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                                        {isSeller ? (
+                                            <>
+                                                Buyer:{' '}
+                                                <ClickableCompanyName
+                                                    companyId={(trade.buyer as any)?.company?._id}
+                                                    companyName={(trade.buyer as any)?.company?.companyName || trade.buyer?.mail || 'N/A'}
+                                                    className="text-xs"
+                                                    viewerRole="seller"
+                                                />
+                                            </>
+                                        ) : (
+                                            <>
+                                                Seller:{' '}
+                                                <ClickableCompanyName
+                                                    companyId={(trade.seller as any)?.company?._id}
+                                                    companyName={(trade.seller as any)?.company?.companyName || trade.seller?.mail || 'N/A'}
+                                                    className="text-xs"
+                                                    viewerRole="buyer"
+                                                />
+                                            </>
+                                        )}
                                     </div>
                                 </div>
 

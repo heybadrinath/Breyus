@@ -3,7 +3,10 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AlertsController } from './alerts.controller';
 import { AlertsService } from './alerts.service';
 import { AlertRule, AlertRuleSchema } from './schemas/alert-rule.schema';
-import { AlertHistory, AlertHistorySchema } from './schemas/alert-history.schema';
+import {
+  AlertHistory,
+  AlertHistorySchema,
+} from './schemas/alert-history.schema';
 import { AdminAuthModule } from '../auth/admin-auth.module';
 import { MailModule } from '../../mail/mail.module';
 

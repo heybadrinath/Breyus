@@ -16,16 +16,17 @@ import {
     FileText,
     ShoppingBag,
     ExternalLink,
-    User
+    User,
+    ChevronDown,
+    Download
 } from 'lucide-react';
-import { getUserTrades, getSellerTrades, Trade, downloadInvoice } from '../services/trade.service';
+import { getUserTrades, getSellerTrades, Trade, downloadInvoice, downloadPurchaseRequest, downloadPurchaseOrder } from '../services/trade.service';
 import TradeDetailsModal from './TradeDetailsModal';
 import FeedbackModal, { FeedbackType, FeedbackData } from './FeedbackModal';
 import QueryModal from './QueryModal';
 import { createFeedback, getMyFeedback, hasUserLeftFeedback, updateFeedback } from '../services/feedback.service';
 import { useNotifications } from '../contexts/NotificationContext';
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+import { getImageUrl } from '../utils/imageUtils';
 
 interface TradeHistoryProps {
     isSeller: boolean;
@@ -39,7 +40,7 @@ interface TradeWithExtras extends Trade {
     orderNumber?: string;
 }
 
-type FilterStatus = 'all' | 'rejected' | 'completed';
+type FilterStatus = 'all' | 'rejected' | 'completed' | 'cancelled';
 
 const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
     const navigate = useNavigate();
@@ -78,8 +79,11 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
     // Expanded trade cards
     const [expandedTradeId, setExpandedTradeId] = useState<string | null>(null);
 
-    // Invoice download state
+    // Document download states
     const [downloadingInvoice, setDownloadingInvoice] = useState<string | null>(null);
+    const [downloadingPR, setDownloadingPR] = useState<string | null>(null);
+    const [downloadingPO, setDownloadingPO] = useState<string | null>(null);
+    const [documentsDropdownOpen, setDocumentsDropdownOpen] = useState<string | null>(null);
 
     useEffect(() => {
         fetchTrades();
@@ -97,10 +101,12 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
             const response = isSeller ? await getSellerTrades() : await getUserTrades();
             const allTrades = response.data as TradeWithExtras[];
 
-            // Filter for completed/rejected trades (history only)
+            // Filter for completed/rejected/cancelled trades (history only)
             const historicalTrades = allTrades.filter(trade =>
                 trade.negotiationStatus === 'rejected' ||
-                trade.tradePhase === 'COMPLETED'
+                trade.negotiationStatus === 'cancelled' ||
+                trade.tradePhase === 'COMPLETED' ||
+                trade.tradePhase === 'CANCELLED'
             );
 
             setTrades(historicalTrades);
@@ -154,6 +160,11 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
                 result = result.filter(trade => trade.tradePhase === 'COMPLETED');
             } else if (statusFilter === 'rejected') {
                 result = result.filter(trade => trade.negotiationStatus === 'rejected');
+            } else if (statusFilter === 'cancelled') {
+                result = result.filter(trade =>
+                    trade.negotiationStatus === 'cancelled' ||
+                    trade.tradePhase === 'CANCELLED'
+                );
             }
         }
 
@@ -265,6 +276,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
 
     const handleDownloadInvoice = async (tradeId: string) => {
         setDownloadingInvoice(tradeId);
+        setDocumentsDropdownOpen(null);
         try {
             await downloadInvoice(tradeId);
         } catch (err) {
@@ -275,9 +287,35 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
         }
     };
 
+    const handleDownloadPR = async (tradeId: string) => {
+        setDownloadingPR(tradeId);
+        setDocumentsDropdownOpen(null);
+        try {
+            await downloadPurchaseRequest(tradeId);
+        } catch (err) {
+            console.error('Failed to download purchase request:', err);
+            showToast('Failed to download purchase request. Please try again.', 'error');
+        } finally {
+            setDownloadingPR(null);
+        }
+    };
+
+    const handleDownloadPO = async (tradeId: string) => {
+        setDownloadingPO(tradeId);
+        setDocumentsDropdownOpen(null);
+        try {
+            await downloadPurchaseOrder(tradeId);
+        } catch (err) {
+            console.error('Failed to download purchase order:', err);
+            showToast('Failed to download purchase order. Please try again.', 'error');
+        } finally {
+            setDownloadingPO(null);
+        }
+    };
+
     const calculateTotalAmount = (trade: TradeWithExtras) => {
-        const price = parseFloat(trade.buyerOfferedPrice || trade.product?.price || '0');
-        const qty = parseFloat(trade.quantity || '1');
+        const price = parseFloat(String(trade.buyerOfferedPrice || trade.product?.price || '0'));
+        const qty = parseFloat(String(trade.quantity || '1'));
         return (price * qty).toFixed(2);
     };
 
@@ -345,15 +383,15 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
                         </div>
 
                         {/* Status Filter */}
-                        <div className="flex gap-2">
-                            {(['all', 'rejected', 'completed'] as FilterStatus[]).map((status) => (
+                        <div className="flex gap-2 flex-wrap">
+                            {(['all', 'completed', 'rejected', 'cancelled'] as FilterStatus[]).map((status) => (
                                 <button
                                     key={status}
                                     onClick={() => setStatusFilter(status)}
                                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                                         statusFilter === status
-                                            ? 'bg-black text-white'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            ? status === 'cancelled' ? 'bg-red-600 text-white' : 'bg-black text-white'
+                                            : status === 'cancelled' ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                     }`}
                                 >
                                     {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -387,6 +425,7 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
                         {filteredTrades.map((trade) => {
                             const isCompleted = trade.tradePhase === 'COMPLETED';
                             const isRejected = trade.negotiationStatus === 'rejected';
+                            const isCancelled = trade.tradePhase === 'CANCELLED' || trade.negotiationStatus === 'cancelled';
                             const isExpanded = expandedTradeId === trade._id;
                             const hasLeftSellerFeedback = feedbackLeft[trade._id]?.seller || false;
                             const hasLeftDeliveryFeedback = feedbackLeft[trade._id]?.delivery || false;
@@ -427,18 +466,73 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
                                                         <Eye size={14} /> View order details
                                                     </button>
                                                     <span className="text-gray-600">|</span>
-                                                    <button
-                                                        onClick={() => handleDownloadInvoice(trade._id)}
-                                                        disabled={downloadingInvoice === trade._id}
-                                                        className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 disabled:opacity-50"
-                                                    >
-                                                        {downloadingInvoice === trade._id ? (
-                                                            <Loader2 size={14} className="animate-spin" />
-                                                        ) : (
+                                                    {/* Documents Dropdown */}
+                                                    <div className="relative">
+                                                        <button
+                                                            onClick={() => setDocumentsDropdownOpen(
+                                                                documentsDropdownOpen === trade._id ? null : trade._id
+                                                            )}
+                                                            className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                                                        >
                                                             <FileText size={14} />
+                                                            Documents
+                                                            <ChevronDown size={12} className={`transition-transform ${documentsDropdownOpen === trade._id ? 'rotate-180' : ''}`} />
+                                                        </button>
+                                                        {documentsDropdownOpen === trade._id && (
+                                                            <>
+                                                                {/* Backdrop to close dropdown on click outside */}
+                                                                <div
+                                                                    className="fixed inset-0 z-10"
+                                                                    onClick={() => setDocumentsDropdownOpen(null)}
+                                                                />
+                                                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-20 py-1">
+                                                                    {/* Download PR - Always available */}
+                                                                    <button
+                                                                        onClick={() => handleDownloadPR(trade._id)}
+                                                                        disabled={downloadingPR === trade._id}
+                                                                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 disabled:opacity-50"
+                                                                    >
+                                                                        {downloadingPR === trade._id ? (
+                                                                            <Loader2 size={14} className="animate-spin" />
+                                                                        ) : (
+                                                                            <Download size={14} />
+                                                                        )}
+                                                                        Purchase Request
+                                                                    </button>
+                                                                    {/* Download PO - Only if accepted */}
+                                                                    {(trade.negotiationStatus === 'accepted' || trade.tradePhase === 'COMPLETED') && (
+                                                                        <button
+                                                                            onClick={() => handleDownloadPO(trade._id)}
+                                                                            disabled={downloadingPO === trade._id}
+                                                                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 disabled:opacity-50"
+                                                                        >
+                                                                            {downloadingPO === trade._id ? (
+                                                                                <Loader2 size={14} className="animate-spin" />
+                                                                            ) : (
+                                                                                <Download size={14} />
+                                                                            )}
+                                                                            Purchase Order
+                                                                        </button>
+                                                                    )}
+                                                                    {/* Download Invoice - Only if completed */}
+                                                                    {trade.tradePhase === 'COMPLETED' && (
+                                                                        <button
+                                                                            onClick={() => handleDownloadInvoice(trade._id)}
+                                                                            disabled={downloadingInvoice === trade._id}
+                                                                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 disabled:opacity-50"
+                                                                        >
+                                                                            {downloadingInvoice === trade._id ? (
+                                                                                <Loader2 size={14} className="animate-spin" />
+                                                                            ) : (
+                                                                                <Download size={14} />
+                                                                            )}
+                                                                            Invoice
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </>
                                                         )}
-                                                        Invoice
-                                                    </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -458,12 +552,25 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
                                                         </span>
                                                     </div>
                                                 )}
-                                                {isRejected && (
+                                                {isRejected && !isCancelled && (
                                                     <div className="flex items-center gap-2 text-red-600 mb-3">
                                                         <XCircle className="w-5 h-5" />
                                                         <span className="font-medium">
                                                             Rejected {trade.rejectedAt ? formatLongDate(trade.rejectedAt) : ''}
                                                         </span>
+                                                    </div>
+                                                )}
+                                                {isCancelled && (
+                                                    <div className="flex items-center gap-2 text-orange-600 mb-3">
+                                                        <XCircle className="w-5 h-5" />
+                                                        <span className="font-medium">
+                                                            Cancelled {(trade as any).cancelledAt ? formatLongDate((trade as any).cancelledAt) : (trade as any).autoCancelledAt ? formatLongDate((trade as any).autoCancelledAt) : ''}
+                                                        </span>
+                                                        {(trade as any).cancellationReason && (
+                                                            <span className="text-sm text-orange-500">
+                                                                - {(trade as any).cancellationReason}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 )}
 
@@ -473,11 +580,11 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
                                                     <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                                                         {trade.product?.productImages?.[0] ? (
                                                             <img
-                                                                src={`${BACKEND_URL}${trade.product.productImages[0]}`}
+                                                                src={getImageUrl(trade.product.productImages[0])}
                                                                 alt={trade.product.name}
                                                                 className="w-full h-full object-cover"
                                                                 onError={(e) => {
-                                                                    (e.target as HTMLImageElement).src = '/placeholder-product.png';
+                                                                    (e.target as HTMLImageElement).src = '/placeholder-product.svg';
                                                                 }}
                                                             />
                                                         ) : (
@@ -522,8 +629,8 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
                                                 </div>
                                             </div>
 
-                                            {/* Right: Action Buttons (for completed trades, buyer only) */}
-                                            {isCompleted && !isSeller && (
+                                            {/* Right: Action Buttons (for completed trades, buyer only - not for cancelled) */}
+                                            {isCompleted && !isSeller && !isCancelled && (
                                                 <div className="w-52 flex flex-col gap-2 border-l pl-4">
                                                     <button
                                                         onClick={() => handleAskProductDoubt(trade.product._id, trade.product?.name || 'Product')}
@@ -546,8 +653,8 @@ const TradeHistory: React.FC<TradeHistoryProps> = ({ isSeller }) => {
                                                 </div>
                                             )}
 
-                                            {/* Minimal View Action (for rejected trades or seller view) */}
-                                            {(isRejected || isSeller) && (
+                                            {/* Minimal View Action (for rejected/cancelled trades or seller view) */}
+                                            {(isRejected || isCancelled || isSeller) && (
                                                 <div className="flex items-start">
                                                     <button
                                                         onClick={() => handleViewDetails(trade._id)}

@@ -1,4 +1,13 @@
-import { IsOptional, IsString, IsInt, Min, Max, IsDateString, IsEnum, IsBoolean } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsInt,
+  Min,
+  Max,
+  IsDateString,
+  IsEnum,
+  IsBoolean,
+} from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { FailedLoginReason } from '../schemas/failed-login-attempt.schema';
 

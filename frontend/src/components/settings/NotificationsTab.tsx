@@ -1,5 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { Loader2, Bell, Mail, Zap, Sparkles } from "lucide-react";
+import {
+    Loader2,
+    Bell,
+    Mail,
+    Zap,
+    Sparkles,
+    TrendingUp,
+    MessageSquare,
+    FileText,
+    AlertTriangle,
+    ChevronDown
+} from "lucide-react";
 import {
     NotificationPreferences,
     getNotificationPreferences,
@@ -8,6 +19,54 @@ import {
     getAINotificationPreferences,
     updateAINotificationPreferences
 } from "../../services/auth.service";
+
+// Types for grouped notifications
+type TriState = 'all-on' | 'all-off' | 'mixed';
+
+interface NotificationGroupConfig {
+    id: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    iconColor: string;
+    description: string;
+    items: (keyof NotificationPreferences['email'])[];
+}
+
+// Group configuration for organized notification display
+const NOTIFICATION_GROUPS: NotificationGroupConfig[] = [
+    {
+        id: 'trade-status',
+        label: 'Trade Status',
+        icon: TrendingUp,
+        iconColor: 'text-green-500',
+        description: 'Notifications about trade lifecycle events',
+        items: ['tradeCreated', 'tradeAccepted', 'tradeRejected', 'tradeCancelled', 'tradeCompleted']
+    },
+    {
+        id: 'negotiations',
+        label: 'Negotiations',
+        icon: MessageSquare,
+        iconColor: 'text-blue-500',
+        description: 'Counter-offer and negotiation updates',
+        items: ['counterOffer']
+    },
+    {
+        id: 'documents',
+        label: 'Documents',
+        icon: FileText,
+        iconColor: 'text-purple-500',
+        description: 'Document upload and phase advancement notifications',
+        items: ['documentUploaded', 'documentsInvalidated', 'phaseAdvanced']
+    },
+    {
+        id: 'alerts-warnings',
+        label: 'Alerts & Warnings',
+        icon: AlertTriangle,
+        iconColor: 'text-amber-500',
+        description: 'Important alerts about rejections and auto-cancellations',
+        items: ['documentRejected', 'lastAttemptWarning', 'tradeAutoCancelled', 'signedSpaRequired']
+    }
+];
 
 // Default preferences when loading fails
 const defaultPreferences: NotificationPreferences = {
@@ -21,6 +80,11 @@ const defaultPreferences: NotificationPreferences = {
         phaseAdvanced: true,
         tradeCompleted: true,
         tradeCancelled: true,
+        // PHASE 2 REFACTORING: Document rejection tracking notifications
+        documentRejected: true,
+        lastAttemptWarning: true,
+        tradeAutoCancelled: true,
+        signedSpaRequired: true,
     },
     realtime: {
         tradeCreated: true,
@@ -32,6 +96,11 @@ const defaultPreferences: NotificationPreferences = {
         phaseAdvanced: true,
         tradeCompleted: true,
         tradeCancelled: true,
+        // PHASE 2 REFACTORING: Document rejection tracking notifications
+        documentRejected: true,
+        lastAttemptWarning: true,
+        tradeAutoCancelled: true,
+        signedSpaRequired: true,
     },
 };
 
@@ -82,6 +151,27 @@ const notificationEvents = [
         label: 'Trade Cancelled',
         description: 'When your trade is cancelled by the counterparty',
     },
+    // PHASE 2 REFACTORING: Document rejection tracking notifications
+    {
+        key: 'documentRejected' as const,
+        label: 'Document Rejected',
+        description: 'When your uploaded document is rejected and needs revision',
+    },
+    {
+        key: 'lastAttemptWarning' as const,
+        label: 'Final Attempt Warning',
+        description: 'When you have one last attempt to upload a valid document',
+    },
+    {
+        key: 'tradeAutoCancelled' as const,
+        label: 'Trade Auto-Cancelled',
+        description: 'When a trade is automatically cancelled due to document rejection limits',
+    },
+    {
+        key: 'signedSpaRequired' as const,
+        label: 'Signed SPA Required',
+        description: 'When you need to upload a signed copy of the SPA document',
+    },
 ];
 
 interface ToggleSwitchProps {
@@ -107,6 +197,137 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ enabled, onChange, disabled
     </button>
 );
 
+// Tri-state toggle for group master controls
+interface TriStateToggleProps {
+    state: TriState;
+    onChange: () => void;
+    disabled?: boolean;
+}
+
+const TriStateToggle: React.FC<TriStateToggleProps> = ({ state, onChange, disabled }) => {
+    const isOn = state === 'all-on';
+    const isMixed = state === 'mixed';
+
+    return (
+        <button
+            type="button"
+            onClick={() => !disabled && onChange()}
+            disabled={disabled}
+            aria-checked={isMixed ? 'mixed' : isOn}
+            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                isOn || isMixed ? 'bg-blue-600' : 'bg-gray-200'
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+            <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out flex items-center justify-center ${
+                    isOn ? 'translate-x-5' : isMixed ? 'translate-x-2.5' : 'translate-x-0'
+                }`}
+            >
+                {isMixed && <span className="w-2 h-0.5 bg-blue-600 rounded-full" />}
+            </span>
+        </button>
+    );
+};
+
+// Collapsible notification group component
+interface NotificationGroupProps {
+    config: NotificationGroupConfig;
+    category: 'email' | 'realtime';
+    preferences: Record<string, boolean>;
+    isExpanded: boolean;
+    onToggleExpand: () => void;
+    onMasterToggle: () => void;
+    onItemToggle: (key: string) => void;
+    disabled?: boolean;
+}
+
+const NotificationGroup: React.FC<NotificationGroupProps> = ({
+    config,
+    category,
+    preferences,
+    isExpanded,
+    onToggleExpand,
+    onMasterToggle,
+    onItemToggle,
+    disabled
+}) => {
+    const Icon = config.icon;
+
+    // Compute tri-state based on group items
+    const values = config.items.map(key => preferences[key]);
+    const allOn = values.every(v => v === true);
+    const allOff = values.every(v => v === false);
+    const triState: TriState = allOn ? 'all-on' : allOff ? 'all-off' : 'mixed';
+
+    // Get event info helper
+    const getEventInfo = (key: string) => {
+        return notificationEvents.find(e => e.key === key) || { label: key, description: '' };
+    };
+
+    return (
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+            {/* Header - always visible */}
+            <div className="bg-gray-50 p-4">
+                <div className="flex items-center justify-between">
+                    <button
+                        onClick={onToggleExpand}
+                        className="flex items-center gap-3 flex-1 text-left"
+                    >
+                        <Icon className={`h-5 w-5 ${config.iconColor}`} />
+                        <div className="flex-1">
+                            <h5 className="font-medium text-gray-800">{config.label}</h5>
+                            <p className="text-sm text-gray-500">{config.description}</p>
+                        </div>
+                        <ChevronDown
+                            className={`h-5 w-5 text-gray-400 transition-transform duration-200 ${
+                                isExpanded ? 'rotate-180' : ''
+                            }`}
+                        />
+                    </button>
+                    <div className="ml-4">
+                        <TriStateToggle
+                            state={triState}
+                            onChange={onMasterToggle}
+                            disabled={disabled}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Expandable content */}
+            <div
+                className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                    isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+                }`}
+            >
+                <div className="p-4 pt-0 space-y-3">
+                    {config.items.map((key, index) => {
+                        const event = getEventInfo(key);
+                        return (
+                            <div
+                                key={`${category}-${key}`}
+                                className={`flex items-center justify-between py-3 pl-8 ${
+                                    index === 0 ? '' : 'border-t border-gray-100'
+                                }`}
+                            >
+                                <div>
+                                    <p className="font-medium text-gray-700">{event.label}</p>
+                                    <p className="text-sm text-gray-500">{event.description}</p>
+                                </div>
+                                <ToggleSwitch
+                                    enabled={preferences[key]}
+                                    onChange={() => onItemToggle(key)}
+                                    disabled={disabled}
+                                />
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 interface NotificationsTabProps {
     userEmail: string;
 }
@@ -124,6 +345,28 @@ const NotificationsTab: React.FC<NotificationsTabProps> = ({ userEmail }) => {
     const [aiPreferences, setAiPreferences] = useState<AINotificationPreferences>({ useExistingEmail: true });
     const [aiEmail, setAiEmail] = useState('');
     const [isSavingAi, setIsSavingAi] = useState(false);
+
+    // Track expanded groups per section (email/realtime)
+    const [expandedGroups, setExpandedGroups] = useState<{
+        email: Set<string>;
+        realtime: Set<string>;
+    }>({
+        email: new Set(),
+        realtime: new Set()
+    });
+
+    // Toggle group expansion state
+    const toggleGroupExpansion = (section: 'email' | 'realtime', groupId: string) => {
+        setExpandedGroups(prev => {
+            const sectionSet = new Set(prev[section]);
+            if (sectionSet.has(groupId)) {
+                sectionSet.delete(groupId);
+            } else {
+                sectionSet.add(groupId);
+            }
+            return { ...prev, [section]: sectionSet };
+        });
+    };
 
     useEffect(() => {
         fetchPreferences();
@@ -197,6 +440,29 @@ const NotificationsTab: React.FC<NotificationsTabProps> = ({ userEmail }) => {
                     Object.keys(prev[category]).map(key => [key, false])
                 ) as NotificationPreferences['email'],
             };
+            setHasChanges(JSON.stringify(newPrefs) !== JSON.stringify(originalPreferences));
+            return newPrefs;
+        });
+        setSuccessMessage(null);
+    };
+
+    // Handle master toggle for a group (tri-state behavior)
+    const handleMasterToggle = (
+        category: 'email' | 'realtime',
+        groupItems: (keyof NotificationPreferences['email'])[]
+    ) => {
+        setPreferences(prev => {
+            const values = groupItems.map(key => prev[category][key]);
+            const allOff = values.every(v => v === false);
+            // If all off, turn all on; otherwise turn all off
+            const newValue = allOff;
+
+            const newCategoryPrefs = { ...prev[category] };
+            groupItems.forEach(key => {
+                newCategoryPrefs[key] = newValue;
+            });
+
+            const newPrefs = { ...prev, [category]: newCategoryPrefs };
             setHasChanges(JSON.stringify(newPrefs) !== JSON.stringify(originalPreferences));
             return newPrefs;
         });
@@ -305,19 +571,19 @@ const NotificationsTab: React.FC<NotificationsTabProps> = ({ userEmail }) => {
                 <p className="text-gray-500 text-sm mb-4">
                     Receive email notifications when important events occur in your trades.
                 </p>
-                <div className="space-y-4">
-                    {notificationEvents.map(event => (
-                        <div key={`email-${event.key}`} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                            <div>
-                                <p className="font-medium text-gray-700">{event.label}</p>
-                                <p className="text-sm text-gray-500">{event.description}</p>
-                            </div>
-                            <ToggleSwitch
-                                enabled={preferences.email[event.key]}
-                                onChange={() => handleToggle('email', event.key)}
-                                disabled={isSaving}
-                            />
-                        </div>
+                <div className="space-y-3">
+                    {NOTIFICATION_GROUPS.map(group => (
+                        <NotificationGroup
+                            key={`email-${group.id}`}
+                            config={group}
+                            category="email"
+                            preferences={preferences.email}
+                            isExpanded={expandedGroups.email.has(group.id)}
+                            onToggleExpand={() => toggleGroupExpansion('email', group.id)}
+                            onMasterToggle={() => handleMasterToggle('email', group.items)}
+                            onItemToggle={(key) => handleToggle('email', key as keyof NotificationPreferences['email'])}
+                            disabled={isSaving}
+                        />
                     ))}
                 </div>
             </div>
@@ -348,19 +614,19 @@ const NotificationsTab: React.FC<NotificationsTabProps> = ({ userEmail }) => {
                 <p className="text-gray-500 text-sm mb-4">
                     Get instant in-app notifications for real-time updates on your trades.
                 </p>
-                <div className="space-y-4">
-                    {notificationEvents.map(event => (
-                        <div key={`realtime-${event.key}`} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                            <div>
-                                <p className="font-medium text-gray-700">{event.label}</p>
-                                <p className="text-sm text-gray-500">{event.description}</p>
-                            </div>
-                            <ToggleSwitch
-                                enabled={preferences.realtime[event.key]}
-                                onChange={() => handleToggle('realtime', event.key)}
-                                disabled={isSaving}
-                            />
-                        </div>
+                <div className="space-y-3">
+                    {NOTIFICATION_GROUPS.map(group => (
+                        <NotificationGroup
+                            key={`realtime-${group.id}`}
+                            config={group}
+                            category="realtime"
+                            preferences={preferences.realtime}
+                            isExpanded={expandedGroups.realtime.has(group.id)}
+                            onToggleExpand={() => toggleGroupExpansion('realtime', group.id)}
+                            onMasterToggle={() => handleMasterToggle('realtime', group.items)}
+                            onItemToggle={(key) => handleToggle('realtime', key as keyof NotificationPreferences['realtime'])}
+                            disabled={isSaving}
+                        />
                     ))}
                 </div>
             </div>

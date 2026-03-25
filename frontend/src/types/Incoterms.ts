@@ -38,6 +38,15 @@ export interface IncotermsState {
     defaults: Record<IncotermType, IncotermRowData>;
 }
 
+/**
+ * Simplified Incoterm selection type.
+ * Used when only the selected Incoterm type is needed (user selection).
+ * Cost allocations are auto-filled from admin-defined defaults on the backend.
+ */
+export interface IncotermSelection {
+    selectedIncoterm: IncotermType | '';
+}
+
 // Initialize the default values for each incoterm
 export const defaultIncotermValues: Record<IncotermType, IncotermRowData> = {
     EXW: {

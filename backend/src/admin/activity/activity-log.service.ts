@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { AdminActivityLog, ActivityMetadata } from './schemas/admin-activity-log.schema';
+import {
+  AdminActivityLog,
+  ActivityMetadata,
+} from './schemas/admin-activity-log.schema';
 
 export interface LogActivityParams {
   adminId: Types.ObjectId;
@@ -22,7 +25,8 @@ export class ActivityLogService {
   private readonly logger = new Logger(ActivityLogService.name);
 
   constructor(
-    @InjectModel(AdminActivityLog.name) private activityLogModel: Model<AdminActivityLog>,
+    @InjectModel(AdminActivityLog.name)
+    private activityLogModel: Model<AdminActivityLog>,
   ) {}
 
   /**
@@ -48,7 +52,10 @@ export class ActivityLogService {
       return activityLog.save();
     } catch (error) {
       // Log errors but don't fail the main operation
-      this.logger.error(`Failed to log activity: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to log activity: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -65,7 +72,12 @@ export class ActivityLogService {
     targetType?: string;
     startDate?: Date;
     endDate?: Date;
-  }): Promise<{ data: AdminActivityLog[]; total: number; page: number; totalPages: number }> {
+  }): Promise<{
+    data: AdminActivityLog[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
     const {
       page = 1,
       limit = 20,
@@ -74,7 +86,7 @@ export class ActivityLogService {
       action,
       targetType,
       startDate,
-      endDate
+      endDate,
     } = params;
 
     const query: any = {};
@@ -147,29 +159,31 @@ export class ActivityLogService {
     startDate: Date,
     endDate: Date,
   ): Promise<{ category: string; count: number }[]> {
-    return this.activityLogModel.aggregate([
-      {
-        $match: {
-          timestamp: { $gte: startDate, $lte: endDate },
+    return this.activityLogModel
+      .aggregate([
+        {
+          $match: {
+            timestamp: { $gte: startDate, $lte: endDate },
+          },
         },
-      },
-      {
-        $group: {
-          _id: '$actionCategory',
-          count: { $sum: 1 },
+        {
+          $group: {
+            _id: '$actionCategory',
+            count: { $sum: 1 },
+          },
         },
-      },
-      {
-        $project: {
-          category: '$_id',
-          count: 1,
-          _id: 0,
+        {
+          $project: {
+            category: '$_id',
+            count: 1,
+            _id: 0,
+          },
         },
-      },
-      {
-        $sort: { count: -1 },
-      },
-    ]).exec();
+        {
+          $sort: { count: -1 },
+        },
+      ])
+      .exec();
   }
 
   /**

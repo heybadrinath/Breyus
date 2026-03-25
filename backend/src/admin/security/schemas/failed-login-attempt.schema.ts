@@ -31,7 +31,8 @@ export class FailedLoginAttempt extends Document {
   updatedAt: Date;
 }
 
-export const FailedLoginAttemptSchema = SchemaFactory.createForClass(FailedLoginAttempt);
+export const FailedLoginAttemptSchema =
+  SchemaFactory.createForClass(FailedLoginAttempt);
 
 // Create indexes
 FailedLoginAttemptSchema.index({ email: 1 });
@@ -40,4 +41,7 @@ FailedLoginAttemptSchema.index({ attemptedAt: -1 });
 FailedLoginAttemptSchema.index({ reason: 1 });
 
 // TTL index - auto-delete records after 30 days
-FailedLoginAttemptSchema.index({ attemptedAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
+FailedLoginAttemptSchema.index(
+  { attemptedAt: 1 },
+  { expireAfterSeconds: 30 * 24 * 60 * 60 },
+);

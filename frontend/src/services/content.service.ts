@@ -37,11 +37,12 @@ export type Continent = 'Africa' | 'Asia' | 'Europe' | 'North America' | 'South 
 
 export interface Country {
   _id: string;
-  code: string;
+  isoCode: string;
+  isoCode3?: string;
   name: string;
   continent: Continent;
   currencyCode?: string;
-  flag?: string;
+  flagEmoji?: string;
   isActive: boolean;
 }
 
@@ -72,9 +73,11 @@ export interface Incoterm {
   code: IncotermCode;
   name: string;
   description: string;
-  riskTransferPoint: string;
-  costResponsibility: Record<string, 'Buyer' | 'Seller'>;
-  applicableModes: string[];
+  riskTransferPoint?: string;
+  riskTransferDescription?: string;
+  transportMode?: string;
+  costAllocation: Record<string, 'Buyer' | 'Seller'>;
+  applicableModes?: string[];
 }
 
 export interface CategoryNode {
@@ -315,7 +318,7 @@ export function formatUnitOption(unit: Unit): string {
  * @returns Formatted string with flag emoji
  */
 export function formatCountryOption(country: Country): string {
-  const flag = country.flag || '';
+  const flag = country.flagEmoji || '';
   return `${flag} ${country.name}`.trim();
 }
 

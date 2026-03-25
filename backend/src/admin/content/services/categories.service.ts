@@ -3,10 +3,15 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { ProductCategory } from '../schemas/product-category.schema';
+import { Product } from '../../../products/schema/products.schema';
+import { User } from '../../../users/user.schema';
+import { MailService } from '../../../mail/mail.service';
+import { emailTemplates } from '../../../mail/templates/email.templates';
 import {
   CreateCategoryDto,
   UpdateCategoryDto,
@@ -15,13 +20,26 @@ import {
   SuggestCategoryDto,
   ToggleMainstreamDto,
   ApproveCategoryDto,
+  RejectCategoryDto,
 } from '../dto';
+import {
+  commodityHierarchy,
+  CommoditySeedItem,
+  commodityStats,
+} from '../../../seeds/seed-commodities-enhanced';
 
 @Injectable()
 export class CategoriesService {
+  private readonly logger = new Logger(CategoriesService.name);
+
   constructor(
     @InjectModel(ProductCategory.name)
     private readonly categoryModel: Model<ProductCategory>,
+    @InjectModel(Product.name)
+    private readonly productModel: Model<Product>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<User>,
+    private readonly mailService: MailService,
   ) {}
 
   /**
@@ -169,7 +187,9 @@ export class CategoriesService {
       isDeleted: { $ne: true },
     });
     if (existing) {
-      throw new ConflictException(`Category with slug '${slug}' already exists`);
+      throw new ConflictException(
+        `Category with slug '${slug}' already exists`,
+      );
     }
 
     // Determine level
@@ -179,8 +199,8 @@ export class CategoriesService {
       if (!parent || parent.isDeleted) {
         throw new BadRequestException('Parent category not found');
       }
-      if (parent.level >= 2) {
-        throw new BadRequestException('Maximum category depth is 3 levels');
+      if (parent.level >= 4) {
+        throw new BadRequestException('Maximum category depth is 5 levels');
       }
       level = parent.level + 1;
     }
@@ -230,7 +250,9 @@ export class CategoriesService {
         isDeleted: { $ne: true },
       });
       if (existing) {
-        throw new ConflictException(`Category with slug '${dto.slug}' already exists`);
+        throw new ConflictException(
+          `Category with slug '${dto.slug}' already exists`,
+        );
       }
     }
 
@@ -249,13 +271,17 @@ export class CategoriesService {
 
         // Check if trying to move to self or child
         if (dto.parent === id) {
-          throw new BadRequestException('Cannot set category as its own parent');
+          throw new BadRequestException(
+            'Cannot set category as its own parent',
+          );
         }
 
         // Check depth constraint
         const childDepth = await this.getMaxChildDepth(id);
-        if (newParent.level + 1 + childDepth > 2) {
-          throw new BadRequestException('Moving would exceed maximum depth of 3 levels');
+        if (newParent.level + 1 + childDepth > 4) {
+          throw new BadRequestException(
+            'Moving would exceed maximum depth of 5 levels',
+          );
         }
 
         category.parent = new Types.ObjectId(dto.parent);
@@ -273,9 +299,11 @@ export class CategoriesService {
     if (dto.isActive !== undefined) category.isActive = dto.isActive;
 
     // Mainstream/Niche classification fields
-    if (dto.isMainstream !== undefined) category.isMainstream = dto.isMainstream;
+    if (dto.isMainstream !== undefined)
+      category.isMainstream = dto.isMainstream;
     if (dto.aliases !== undefined) category.aliases = dto.aliases;
-    if (dto.hsCodePrefix !== undefined) category.hsCodePrefix = dto.hsCodePrefix;
+    if (dto.hsCodePrefix !== undefined)
+      category.hsCodePrefix = dto.hsCodePrefix;
 
     await category.save();
     return this.getCategoryById(id);
@@ -332,7 +360,9 @@ export class CategoriesService {
       isDeleted: { $ne: true },
     });
     if (hasChildren) {
-      throw new BadRequestException('Cannot delete category with children. Delete children first.');
+      throw new BadRequestException(
+        'Cannot delete category with children. Delete children first.',
+      );
     }
 
     category.isDeleted = true;
@@ -385,7 +415,7 @@ export class CategoriesService {
 
     if (hasChildren) {
       throw new BadRequestException(
-        'Cannot set mainstream status on parent categories. Only leaf categories can be classified.'
+        'Cannot set mainstream status on parent categories. Only leaf categories can be classified.',
       );
     }
 
@@ -420,7 +450,7 @@ export class CategoriesService {
           path: path.join(' > '),
           isPending: false, // Approved categories are not pending
         };
-      })
+      }),
     );
 
     // If userId provided, also include their pending (unapproved) categories
@@ -445,7 +475,7 @@ export class CategoriesService {
             isPending: true, // Mark as pending approval
             isMainstream: false, // Pending categories are always niche until approved
           };
-        })
+        }),
       );
     }
 
@@ -453,8 +483,12 @@ export class CategoriesService {
     const allCategories = [...withPaths, ...userPendingCategories];
 
     // Group by classification
-    const mainstream = allCategories.filter((cat) => cat.isMainstream === true && !cat.isPending);
-    const niche = allCategories.filter((cat) => cat.isMainstream === false || cat.isPending);
+    const mainstream = allCategories.filter(
+      (cat) => cat.isMainstream === true && !cat.isPending,
+    );
+    const niche = allCategories.filter(
+      (cat) => cat.isMainstream === false || cat.isPending,
+    );
 
     return { mainstream, niche };
   }
@@ -493,7 +527,7 @@ export class CategoriesService {
     });
     if (existing) {
       throw new ConflictException(
-        `A category with similar name already exists: "${existing.name}"`
+        `A category with similar name already exists: "${existing.name}"`,
       );
     }
 
@@ -506,8 +540,8 @@ export class CategoriesService {
       if (!parent || parent.isDeleted) {
         throw new BadRequestException('Parent category not found');
       }
-      if (parent.level >= 2) {
-        throw new BadRequestException('Maximum category depth is 3 levels');
+      if (parent.level >= 4) {
+        throw new BadRequestException('Maximum category depth is 5 levels');
       }
       level = parent.level + 1;
       parentId = new Types.ObjectId(dto.parentId);
@@ -551,7 +585,9 @@ export class CategoriesService {
     }
 
     if (!category.createdByUser) {
-      throw new BadRequestException('This category was not submitted by a user');
+      throw new BadRequestException(
+        'This category was not submitted by a user',
+      );
     }
 
     if (category.isActive) {
@@ -572,7 +608,9 @@ export class CategoriesService {
           category.parent = null;
           category.level = 0;
         } else {
-          const parentCategory = await this.categoryModel.findById(dto.parentId);
+          const parentCategory = await this.categoryModel.findById(
+            dto.parentId,
+          );
           if (!parentCategory || parentCategory.isDeleted) {
             throw new BadRequestException('Parent category not found');
           }
@@ -584,7 +622,10 @@ export class CategoriesService {
       // Update classification if provided (default is niche/false if not specified)
       if (dto.isMainstream !== undefined) {
         category.isMainstream = dto.isMainstream;
-      } else if (category.isMainstream === undefined || category.isMainstream === null) {
+      } else if (
+        category.isMainstream === undefined ||
+        category.isMainstream === null
+      ) {
         // Default to niche if not already set
         category.isMainstream = false;
       }
@@ -600,7 +641,10 @@ export class CategoriesService {
       }
     } else {
       // No DTO provided, ensure isMainstream has a value (default to niche)
-      if (category.isMainstream === undefined || category.isMainstream === null) {
+      if (
+        category.isMainstream === undefined ||
+        category.isMainstream === null
+      ) {
         category.isMainstream = false;
       }
     }
@@ -622,7 +666,14 @@ export class CategoriesService {
         isDeleted: { $ne: true },
       })
       .populate('parent', 'name slug')
-      .populate('createdByUser', 'firstName lastName email')
+      .populate({
+        path: 'createdByUser',
+        select: 'mail company',
+        populate: {
+          path: 'company',
+          select: 'companyName founderName',
+        },
+      })
       .sort({ createdAt: -1 })
       .lean();
 
@@ -630,6 +681,264 @@ export class CategoriesService {
       categories: pendingCategories,
       total: pendingCategories.length,
     };
+  }
+
+  /**
+   * Get pending user-submitted categories with linked product details
+   * Returns products that are using each pending category
+   */
+  async getPendingUserCategoriesDetailed() {
+    const pendingCategories = await this.categoryModel
+      .find({
+        createdByUser: { $exists: true, $ne: null },
+        isActive: false,
+        isDeleted: { $ne: true },
+      })
+      .populate('parent', 'name slug')
+      .populate({
+        path: 'createdByUser',
+        select: 'mail company',
+        populate: {
+          path: 'company',
+          select: 'companyName founderName',
+        },
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // For each pending category, find linked products
+    const categoriesWithProducts = await Promise.all(
+      pendingCategories.map(async (category) => {
+        const linkedProducts = await this.productModel
+          .find({
+            categoryId: category._id.toString(),
+            isDeleted: { $ne: true },
+          })
+          .select('_id name userId')
+          .populate({
+            path: 'userId',
+            select: 'mail company',
+            populate: {
+              path: 'company',
+              select: 'companyName founderName',
+            },
+          })
+          .lean();
+
+        return {
+          ...category,
+          linkedProducts: linkedProducts.map((p) => ({
+            _id: p._id,
+            name: p.name,
+            user: p.userId,
+          })),
+          linkedProductCount: linkedProducts.length,
+        };
+      }),
+    );
+
+    return {
+      categories: categoriesWithProducts,
+      total: categoriesWithProducts.length,
+    };
+  }
+
+  /**
+   * Reject a user-submitted category with product reassignment
+   * - Validates pending category exists
+   * - Validates replacement category is a leaf (isMainstream !== null)
+   * - Updates all products using the pending category
+   * - Soft-deletes the pending category
+   * - Sends email notification to the user
+   */
+  async rejectPendingCategory(id: string, dto: RejectCategoryDto) {
+    // 1. Validate pending category exists
+    const pendingCategory = await this.categoryModel.findById(id);
+    if (!pendingCategory || pendingCategory.isDeleted) {
+      throw new NotFoundException('Category not found');
+    }
+
+    if (!pendingCategory.createdByUser) {
+      throw new BadRequestException(
+        'This category was not submitted by a user',
+      );
+    }
+
+    if (pendingCategory.isActive) {
+      throw new BadRequestException(
+        'This category is already approved, cannot reject',
+      );
+    }
+
+    // 2. Validate replacement category exists and is a leaf
+    const replacementCategory = await this.categoryModel.findById(
+      dto.replacementCategoryId,
+    );
+    if (!replacementCategory || replacementCategory.isDeleted) {
+      throw new NotFoundException('Replacement category not found');
+    }
+
+    if (
+      replacementCategory.isMainstream === null ||
+      replacementCategory.isMainstream === undefined
+    ) {
+      throw new BadRequestException(
+        'Replacement category must be a leaf category (with mainstream/niche classification)',
+      );
+    }
+
+    if (!replacementCategory.isActive) {
+      throw new BadRequestException(
+        'Replacement category must be an approved (active) category',
+      );
+    }
+
+    // 3. Find all products using this pending category
+    const affectedProducts = await this.productModel
+      .find({
+        categoryId: id,
+        isDeleted: { $ne: true },
+      })
+      .lean();
+
+    // 4. Update products to use replacement category
+    const updateResult = await this.productModel.updateMany(
+      { categoryId: id },
+      {
+        $set: {
+          categoryId: dto.replacementCategoryId,
+          category: replacementCategory.name,
+          isNicheCommodity: !replacementCategory.isMainstream, // niche = true if isMainstream = false
+        },
+      },
+    );
+
+    // 5. Get user who created the pending category (populate company for name)
+    const userId = pendingCategory.createdByUser.toString();
+    const user = (await this.userModel
+      .findById(userId)
+      .populate('company', 'companyName founderName')
+      .lean()) as any;
+
+    // 6. Soft-delete the pending category
+    pendingCategory.isDeleted = true;
+    pendingCategory.deletedAt = new Date();
+    await pendingCategory.save();
+
+    // 7. Get replacement category path for email
+    const replacementPath = await this.getCategoryPath(
+      dto.replacementCategoryId,
+    );
+
+    // 8. Send email notification to user (for each affected product)
+    if (user && affectedProducts.length > 0) {
+      // User schema uses 'mail' for email, and name comes from Company
+      const company = user.company;
+      const userName = company?.founderName || company?.companyName || 'User';
+      const userEmail = user.mail;
+
+      // Send email for the first product (or all if needed)
+      // Using the first product name as representative
+      const firstProductName = affectedProducts[0]?.name || 'Your product';
+
+      try {
+        const emailHtml = emailTemplates.categoryRejection(
+          userName,
+          pendingCategory.name,
+          replacementPath.join(' > '),
+          firstProductName,
+          dto.rejectionReason,
+        );
+
+        await this.mailService.sendTradeNotificationEmail(
+          userEmail,
+          'Category Suggestion Not Approved',
+          emailHtml,
+        );
+
+        this.logger.log(`Category rejection email sent to ${userEmail}`);
+      } catch (error) {
+        this.logger.error(`Failed to send category rejection email: ${error}`);
+        // Don't throw - rejection still succeeded
+      }
+    }
+
+    return {
+      rejected: true,
+      categoryName: pendingCategory.name,
+      replacementCategory: {
+        _id: replacementCategory._id,
+        name: replacementCategory.name,
+        path: replacementPath.join(' > '),
+      },
+      affectedProductCount: updateResult.modifiedCount,
+      affectedProducts: affectedProducts.map((p) => ({
+        _id: p._id,
+        name: p.name,
+      })),
+    };
+  }
+
+  /**
+   * Get commodities for AI server classification
+   * Returns a lightweight format optimized for the AI classifier
+   * This is used by the internal endpoint for service-to-service communication
+   */
+  async getCommoditiesForAI(): Promise<{
+    mainstream: Array<{
+      name: string;
+      aliases: string[];
+      hsCodePrefix?: string;
+      category?: string;
+    }>;
+    niche: Array<{
+      name: string;
+      aliases: string[];
+      hsCodePrefix?: string;
+      category?: string;
+    }>;
+  }> {
+    const categories = await this.categoryModel
+      .find({
+        isDeleted: { $ne: true },
+        isActive: true,
+        isMainstream: { $ne: null },
+      })
+      .populate('parent', 'name')
+      .select('name aliases hsCodePrefix parent isMainstream')
+      .sort({ name: 1 })
+      .lean();
+
+    const mainstream: Array<{
+      name: string;
+      aliases: string[];
+      hsCodePrefix?: string;
+      category?: string;
+    }> = [];
+    const niche: Array<{
+      name: string;
+      aliases: string[];
+      hsCodePrefix?: string;
+      category?: string;
+    }> = [];
+
+    for (const cat of categories) {
+      const parentDoc = cat.parent as { name?: string } | null;
+      const entry = {
+        name: cat.name,
+        aliases: cat.aliases || [],
+        hsCodePrefix: cat.hsCodePrefix || undefined,
+        category: parentDoc?.name || undefined,
+      };
+
+      if (cat.isMainstream) {
+        mainstream.push(entry);
+      } else {
+        niche.push(entry);
+      }
+    }
+
+    return { mainstream, niche };
   }
 
   /**
@@ -642,7 +951,9 @@ export class CategoriesService {
         $group: {
           _id: null,
           total: { $sum: 1 },
-          mainstream: { $sum: { $cond: [{ $eq: ['$isMainstream', true] }, 1, 0] } },
+          mainstream: {
+            $sum: { $cond: [{ $eq: ['$isMainstream', true] }, 1, 0] },
+          },
           niche: { $sum: { $cond: [{ $eq: ['$isMainstream', false] }, 1, 0] } },
           active: { $sum: { $cond: ['$isActive', 1, 0] } },
           inactive: { $sum: { $cond: [{ $eq: ['$isActive', false] }, 1, 0] } },
@@ -667,422 +978,57 @@ export class CategoriesService {
   }
 
   /**
-   * Seed default categories with full hierarchy (3 levels)
+   * Seed default categories with full hierarchy (4 levels)
+   * Uses enhanced commodity data from seed-commodities-enhanced.ts
+   *
+   * Structure:
+   * - Level 0: Root Category (isMainstream: null)
+   * - Level 1: Sub-category (isMainstream: null)
+   * - Level 2: Mainstream Commodity (isMainstream: true) - can also have children
+   * - Level 3: Niche Variety (isMainstream: false)
+   *
+   * @param options.reset - If true, deletes ALL existing categories first (fresh start)
+   * @param options.updateExisting - If true, updates existing categories with new data (aliases, HS codes)
    */
-  async seedDefaultCategories() {
-    // Define full category hierarchy
-    const categoryHierarchy = [
-      {
-        name: 'Agricultural Products',
-        slug: 'agricultural-products',
-        order: 1,
-        children: [
-          {
-            name: 'Grains & Cereals',
-            slug: 'grains-cereals',
-            order: 1,
-            children: [
-              { name: 'Wheat', slug: 'wheat', order: 1 },
-              { name: 'Rice', slug: 'rice', order: 2 },
-              { name: 'Corn/Maize', slug: 'corn-maize', order: 3 },
-              { name: 'Barley', slug: 'barley', order: 4 },
-              { name: 'Oats', slug: 'oats', order: 5 },
-              { name: 'Sorghum', slug: 'sorghum', order: 6 },
-            ],
-          },
-          {
-            name: 'Oilseeds & Pulses',
-            slug: 'oilseeds-pulses',
-            order: 2,
-            children: [
-              { name: 'Soybeans', slug: 'soybeans', order: 1 },
-              { name: 'Sunflower Seeds', slug: 'sunflower-seeds', order: 2 },
-              { name: 'Rapeseed/Canola', slug: 'rapeseed-canola', order: 3 },
-              { name: 'Lentils', slug: 'lentils', order: 4 },
-              { name: 'Chickpeas', slug: 'chickpeas', order: 5 },
-              { name: 'Peanuts/Groundnuts', slug: 'peanuts-groundnuts', order: 6 },
-            ],
-          },
-          {
-            name: 'Fruits & Vegetables',
-            slug: 'fruits-vegetables',
-            order: 3,
-            children: [
-              { name: 'Citrus Fruits', slug: 'citrus-fruits', order: 1 },
-              { name: 'Tropical Fruits', slug: 'tropical-fruits', order: 2 },
-              { name: 'Root Vegetables', slug: 'root-vegetables', order: 3 },
-              { name: 'Leafy Greens', slug: 'leafy-greens', order: 4 },
-            ],
-          },
-          {
-            name: 'Plantation Crops',
-            slug: 'plantation-crops',
-            order: 4,
-            children: [
-              { name: 'Coffee', slug: 'coffee', order: 1 },
-              { name: 'Tea', slug: 'tea', order: 2 },
-              { name: 'Cocoa', slug: 'cocoa', order: 3 },
-              { name: 'Rubber', slug: 'rubber', order: 4 },
-              { name: 'Cotton', slug: 'cotton', order: 5 },
-              { name: 'Sugarcane', slug: 'sugarcane', order: 6 },
-            ],
-          },
-          {
-            name: 'Spices & Herbs',
-            slug: 'spices-herbs',
-            order: 5,
-            children: [
-              { name: 'Black Pepper', slug: 'black-pepper', order: 1 },
-              { name: 'Turmeric', slug: 'turmeric', order: 2 },
-              { name: 'Cardamom', slug: 'cardamom', order: 3 },
-              { name: 'Cinnamon', slug: 'cinnamon', order: 4 },
-              { name: 'Cumin', slug: 'cumin', order: 5 },
-            ],
-          },
-        ],
-      },
-      {
-        name: 'Chemicals',
-        slug: 'chemicals',
-        order: 2,
-        children: [
-          {
-            name: 'Fertilizers',
-            slug: 'fertilizers',
-            order: 1,
-            children: [
-              { name: 'Urea', slug: 'urea', order: 1 },
-              { name: 'DAP (Diammonium Phosphate)', slug: 'dap', order: 2 },
-              { name: 'NPK Fertilizers', slug: 'npk-fertilizers', order: 3 },
-              { name: 'Potash', slug: 'potash', order: 4 },
-              { name: 'Ammonium Nitrate', slug: 'ammonium-nitrate', order: 5 },
-            ],
-          },
-          {
-            name: 'Industrial Chemicals',
-            slug: 'industrial-chemicals',
-            order: 2,
-            children: [
-              { name: 'Caustic Soda', slug: 'caustic-soda', order: 1 },
-              { name: 'Soda Ash', slug: 'soda-ash', order: 2 },
-              { name: 'Sulfuric Acid', slug: 'sulfuric-acid', order: 3 },
-              { name: 'Phosphoric Acid', slug: 'phosphoric-acid', order: 4 },
-            ],
-          },
-          {
-            name: 'Petrochemicals',
-            slug: 'petrochemicals',
-            order: 3,
-            children: [
-              { name: 'Polyethylene', slug: 'polyethylene', order: 1 },
-              { name: 'Polypropylene', slug: 'polypropylene', order: 2 },
-              { name: 'PVC', slug: 'pvc', order: 3 },
-              { name: 'Methanol', slug: 'methanol', order: 4 },
-            ],
-          },
-          {
-            name: 'Agrochemicals',
-            slug: 'agrochemicals',
-            order: 4,
-            children: [
-              { name: 'Pesticides', slug: 'pesticides', order: 1 },
-              { name: 'Herbicides', slug: 'herbicides', order: 2 },
-              { name: 'Fungicides', slug: 'fungicides', order: 3 },
-            ],
-          },
-        ],
-      },
-      {
-        name: 'Metals & Minerals',
-        slug: 'metals-minerals',
-        order: 3,
-        children: [
-          {
-            name: 'Ferrous Metals',
-            slug: 'ferrous-metals',
-            order: 1,
-            children: [
-              { name: 'Iron Ore', slug: 'iron-ore', order: 1 },
-              { name: 'Steel Billets', slug: 'steel-billets', order: 2 },
-              { name: 'Hot Rolled Coils', slug: 'hot-rolled-coils', order: 3 },
-              { name: 'Cold Rolled Coils', slug: 'cold-rolled-coils', order: 4 },
-              { name: 'Steel Scrap', slug: 'steel-scrap', order: 5 },
-            ],
-          },
-          {
-            name: 'Non-Ferrous Metals',
-            slug: 'non-ferrous-metals',
-            order: 2,
-            children: [
-              { name: 'Copper', slug: 'copper', order: 1 },
-              { name: 'Aluminum', slug: 'aluminum', order: 2 },
-              { name: 'Zinc', slug: 'zinc', order: 3 },
-              { name: 'Lead', slug: 'lead', order: 4 },
-              { name: 'Nickel', slug: 'nickel', order: 5 },
-              { name: 'Tin', slug: 'tin', order: 6 },
-            ],
-          },
-          {
-            name: 'Precious Metals',
-            slug: 'precious-metals',
-            order: 3,
-            children: [
-              { name: 'Gold', slug: 'gold', order: 1 },
-              { name: 'Silver', slug: 'silver', order: 2 },
-              { name: 'Platinum', slug: 'platinum', order: 3 },
-            ],
-          },
-          {
-            name: 'Industrial Minerals',
-            slug: 'industrial-minerals',
-            order: 4,
-            children: [
-              { name: 'Coal', slug: 'coal', order: 1 },
-              { name: 'Bauxite', slug: 'bauxite', order: 2 },
-              { name: 'Limestone', slug: 'limestone', order: 3 },
-              { name: 'Gypsum', slug: 'gypsum', order: 4 },
-              { name: 'Silica Sand', slug: 'silica-sand', order: 5 },
-            ],
-          },
-        ],
-      },
-      {
-        name: 'Textiles',
-        slug: 'textiles',
-        order: 4,
-        children: [
-          {
-            name: 'Natural Fibers',
-            slug: 'natural-fibers',
-            order: 1,
-            children: [
-              { name: 'Cotton Fiber', slug: 'cotton-fiber', order: 1 },
-              { name: 'Wool', slug: 'wool', order: 2 },
-              { name: 'Silk', slug: 'silk', order: 3 },
-              { name: 'Jute', slug: 'jute', order: 4 },
-              { name: 'Linen/Flax', slug: 'linen-flax', order: 5 },
-            ],
-          },
-          {
-            name: 'Synthetic Fibers',
-            slug: 'synthetic-fibers',
-            order: 2,
-            children: [
-              { name: 'Polyester', slug: 'polyester', order: 1 },
-              { name: 'Nylon', slug: 'nylon', order: 2 },
-              { name: 'Acrylic', slug: 'acrylic', order: 3 },
-              { name: 'Viscose/Rayon', slug: 'viscose-rayon', order: 4 },
-            ],
-          },
-          {
-            name: 'Yarns & Threads',
-            slug: 'yarns-threads',
-            order: 3,
-            children: [
-              { name: 'Cotton Yarn', slug: 'cotton-yarn', order: 1 },
-              { name: 'Blended Yarn', slug: 'blended-yarn', order: 2 },
-              { name: 'Sewing Thread', slug: 'sewing-thread', order: 3 },
-            ],
-          },
-          {
-            name: 'Fabrics',
-            slug: 'fabrics',
-            order: 4,
-            children: [
-              { name: 'Woven Fabrics', slug: 'woven-fabrics', order: 1 },
-              { name: 'Knitted Fabrics', slug: 'knitted-fabrics', order: 2 },
-              { name: 'Non-Woven Fabrics', slug: 'non-woven-fabrics', order: 3 },
-              { name: 'Denim', slug: 'denim', order: 4 },
-            ],
-          },
-        ],
-      },
-      {
-        name: 'Machinery & Equipment',
-        slug: 'machinery-equipment',
-        order: 5,
-        children: [
-          {
-            name: 'Agricultural Machinery',
-            slug: 'agricultural-machinery',
-            order: 1,
-            children: [
-              { name: 'Tractors', slug: 'tractors', order: 1 },
-              { name: 'Harvesters', slug: 'harvesters', order: 2 },
-              { name: 'Irrigation Equipment', slug: 'irrigation-equipment', order: 3 },
-              { name: 'Planting Equipment', slug: 'planting-equipment', order: 4 },
-            ],
-          },
-          {
-            name: 'Industrial Machinery',
-            slug: 'industrial-machinery',
-            order: 2,
-            children: [
-              { name: 'Pumps', slug: 'pumps', order: 1 },
-              { name: 'Compressors', slug: 'compressors', order: 2 },
-              { name: 'Generators', slug: 'generators', order: 3 },
-              { name: 'Motors', slug: 'motors', order: 4 },
-            ],
-          },
-          {
-            name: 'Construction Equipment',
-            slug: 'construction-equipment',
-            order: 3,
-            children: [
-              { name: 'Excavators', slug: 'excavators', order: 1 },
-              { name: 'Cranes', slug: 'cranes', order: 2 },
-              { name: 'Concrete Mixers', slug: 'concrete-mixers', order: 3 },
-            ],
-          },
-          {
-            name: 'Processing Equipment',
-            slug: 'processing-equipment',
-            order: 4,
-            children: [
-              { name: 'Food Processing', slug: 'food-processing-equipment', order: 1 },
-              { name: 'Textile Machinery', slug: 'textile-machinery', order: 2 },
-              { name: 'Packaging Machinery', slug: 'packaging-machinery', order: 3 },
-            ],
-          },
-        ],
-      },
-      {
-        name: 'Food & Beverages',
-        slug: 'food-beverages',
-        order: 6,
-        children: [
-          {
-            name: 'Edible Oils',
-            slug: 'edible-oils',
-            order: 1,
-            children: [
-              { name: 'Palm Oil', slug: 'palm-oil', order: 1 },
-              { name: 'Soybean Oil', slug: 'soybean-oil', order: 2 },
-              { name: 'Sunflower Oil', slug: 'sunflower-oil', order: 3 },
-              { name: 'Olive Oil', slug: 'olive-oil', order: 4 },
-              { name: 'Coconut Oil', slug: 'coconut-oil', order: 5 },
-            ],
-          },
-          {
-            name: 'Sugar & Sweeteners',
-            slug: 'sugar-sweeteners',
-            order: 2,
-            children: [
-              { name: 'Raw Sugar', slug: 'raw-sugar', order: 1 },
-              { name: 'Refined Sugar', slug: 'refined-sugar', order: 2 },
-              { name: 'Molasses', slug: 'molasses', order: 3 },
-            ],
-          },
-          {
-            name: 'Dairy Products',
-            slug: 'dairy-products',
-            order: 3,
-            children: [
-              { name: 'Milk Powder', slug: 'milk-powder', order: 1 },
-              { name: 'Butter', slug: 'butter', order: 2 },
-              { name: 'Cheese', slug: 'cheese', order: 3 },
-              { name: 'Whey', slug: 'whey', order: 4 },
-            ],
-          },
-          {
-            name: 'Meat & Seafood',
-            slug: 'meat-seafood',
-            order: 4,
-            children: [
-              { name: 'Beef', slug: 'beef', order: 1 },
-              { name: 'Poultry', slug: 'poultry', order: 2 },
-              { name: 'Pork', slug: 'pork', order: 3 },
-              { name: 'Fish & Seafood', slug: 'fish-seafood', order: 4 },
-            ],
-          },
-          {
-            name: 'Beverages',
-            slug: 'beverages',
-            order: 5,
-            children: [
-              { name: 'Fruit Juices', slug: 'fruit-juices', order: 1 },
-              { name: 'Mineral Water', slug: 'mineral-water', order: 2 },
-              { name: 'Alcoholic Beverages', slug: 'alcoholic-beverages', order: 3 },
-            ],
-          },
-        ],
-      },
-      {
-        name: 'Energy & Fuels',
-        slug: 'energy-fuels',
-        order: 7,
-        children: [
-          {
-            name: 'Crude Oil & Petroleum',
-            slug: 'crude-oil-petroleum',
-            order: 1,
-            children: [
-              { name: 'Crude Oil', slug: 'crude-oil', order: 1 },
-              { name: 'Diesel', slug: 'diesel', order: 2 },
-              { name: 'Gasoline', slug: 'gasoline', order: 3 },
-              { name: 'Jet Fuel', slug: 'jet-fuel', order: 4 },
-              { name: 'Fuel Oil', slug: 'fuel-oil', order: 5 },
-            ],
-          },
-          {
-            name: 'Natural Gas & LNG',
-            slug: 'natural-gas-lng',
-            order: 2,
-            children: [
-              { name: 'Natural Gas', slug: 'natural-gas', order: 1 },
-              { name: 'LNG', slug: 'lng', order: 2 },
-              { name: 'LPG', slug: 'lpg', order: 3 },
-            ],
-          },
-          {
-            name: 'Renewable Energy',
-            slug: 'renewable-energy',
-            order: 3,
-            children: [
-              { name: 'Biofuels', slug: 'biofuels', order: 1 },
-              { name: 'Ethanol', slug: 'ethanol', order: 2 },
-              { name: 'Biodiesel', slug: 'biodiesel', order: 3 },
-            ],
-          },
-        ],
-      },
-      {
-        name: 'Construction Materials',
-        slug: 'construction-materials',
-        order: 8,
-        children: [
-          {
-            name: 'Cement & Concrete',
-            slug: 'cement-concrete',
-            order: 1,
-            children: [
-              { name: 'Portland Cement', slug: 'portland-cement', order: 1 },
-              { name: 'Clinite', slug: 'clinker', order: 2 },
-              { name: 'Ready-Mix Concrete', slug: 'ready-mix-concrete', order: 3 },
-            ],
-          },
-          {
-            name: 'Building Materials',
-            slug: 'building-materials',
-            order: 2,
-            children: [
-              { name: 'Bricks & Blocks', slug: 'bricks-blocks', order: 1 },
-              { name: 'Tiles', slug: 'tiles', order: 2 },
-              { name: 'Glass', slug: 'glass', order: 3 },
-              { name: 'Timber/Lumber', slug: 'timber-lumber', order: 4 },
-              { name: 'Plywood', slug: 'plywood', order: 5 },
-            ],
-          },
-        ],
-      },
-    ];
+  async seedDefaultCategories(options?: {
+    reset?: boolean;
+    updateExisting?: boolean;
+  }) {
+    const { reset = false, updateExisting = false } = options || {};
+    this.logger.log(
+      `Starting enhanced commodity seed with ${commodityStats.total} commodities (${commodityStats.mainstream} mainstream, ${commodityStats.niche} niche, ${commodityStats.folders} folders)`,
+    );
+    this.logger.log(`Options: reset=${reset}, updateExisting=${updateExisting}`);
 
     let created = 0;
     let skipped = 0;
+    let updated = 0;
+    let deleted = 0;
+
+    // If reset is true, delete ALL existing categories first
+    if (reset) {
+      this.logger.warn('RESET MODE: Deleting all existing categories...');
+
+      // Check if any products reference categories
+      const productsWithCategories = await this.productModel.countDocuments({
+        categoryId: { $exists: true, $ne: null },
+      });
+
+      if (productsWithCategories > 0) {
+        this.logger.warn(
+          `Warning: ${productsWithCategories} products have category references. They will need re-assignment.`,
+        );
+      }
+
+      // Hard delete all categories (not soft delete)
+      const deleteResult = await this.categoryModel.deleteMany({});
+      deleted = deleteResult.deletedCount;
+      this.logger.log(`Deleted ${deleted} existing categories`);
+    }
 
     // Helper function to create category and its children recursively
     const createCategoryWithChildren = async (
-      cat: any,
+      cat: CommoditySeedItem,
       parentId: Types.ObjectId | null,
       level: number,
     ) => {
@@ -1094,8 +1040,23 @@ export class CategoriesService {
 
       let categoryId: Types.ObjectId;
 
-      // Determine if this is a leaf category (no children)
+      // Determine isMainstream value:
+      // - If explicitly set in the data, use that value
+      // - If not set and is a leaf (no children), default to true (mainstream)
+      // - If not set and has children, default to null (folder)
       const isLeafCategory = !cat.children || cat.children.length === 0;
+      let isMainstream: boolean | null;
+
+      if (cat.isMainstream !== undefined) {
+        // Use explicit value from seed data
+        isMainstream = cat.isMainstream;
+      } else if (isLeafCategory) {
+        // Default leaf categories to mainstream
+        isMainstream = true;
+      } else {
+        // Default parent categories to null (folder)
+        isMainstream = null;
+      }
 
       if (!exists) {
         const newCat = await this.categoryModel.create({
@@ -1106,16 +1067,64 @@ export class CategoriesService {
           parent: parentId,
           isActive: true,
           isDeleted: false,
-          // Set isMainstream for leaf categories (level 2), null for parent categories
-          isMainstream: isLeafCategory ? true : null, // Default seeded categories to mainstream
+          isMainstream,
           aliases: cat.aliases || [],
           hsCodePrefix: cat.hsCodePrefix,
         });
-        categoryId = newCat._id as Types.ObjectId;
+        categoryId = newCat._id;
         created++;
       } else {
-        categoryId = exists._id as Types.ObjectId;
-        skipped++;
+        categoryId = exists._id;
+
+        // If updateExisting is true, update the category with new seed data
+        if (updateExisting) {
+          const updateData: any = {};
+          let hasChanges = false;
+
+          // Update name if different
+          if (exists.name !== cat.name) {
+            updateData.name = cat.name;
+            hasChanges = true;
+          }
+
+          // Update isMainstream if different
+          if (exists.isMainstream !== isMainstream) {
+            updateData.isMainstream = isMainstream;
+            hasChanges = true;
+          }
+
+          // Update aliases (merge new aliases)
+          const existingAliases = exists.aliases || [];
+          const newAliases = cat.aliases || [];
+          const mergedAliases = [
+            ...new Set([...existingAliases, ...newAliases]),
+          ];
+          if (mergedAliases.length !== existingAliases.length) {
+            updateData.aliases = mergedAliases;
+            hasChanges = true;
+          }
+
+          // Update hsCodePrefix if not set or different
+          if (cat.hsCodePrefix && exists.hsCodePrefix !== cat.hsCodePrefix) {
+            updateData.hsCodePrefix = cat.hsCodePrefix;
+            hasChanges = true;
+          }
+
+          // Update order if different
+          if (exists.order !== cat.order) {
+            updateData.order = cat.order;
+            hasChanges = true;
+          }
+
+          if (hasChanges) {
+            await this.categoryModel.updateOne({ _id: exists._id }, updateData);
+            updated++;
+          } else {
+            skipped++;
+          }
+        } else {
+          skipped++;
+        }
       }
 
       // Create children recursively
@@ -1127,13 +1136,30 @@ export class CategoriesService {
     };
 
     // Create all root categories and their children
-    for (const rootCat of categoryHierarchy) {
+    for (const rootCat of commodityHierarchy) {
       await createCategoryWithChildren(rootCat, null, 0);
     }
 
-    const total = await this.categoryModel.countDocuments({ isDeleted: { $ne: true } });
+    const total = await this.categoryModel.countDocuments({
+      isDeleted: { $ne: true },
+    });
 
-    return { created, skipped, total };
+    // Get updated stats
+    const stats = await this.getCommodityStats();
+
+    this.logger.log(
+      `Seed complete: ${created} created, ${updated} updated, ${skipped} skipped, ${deleted} deleted, ${total} total`,
+    );
+
+    return {
+      created,
+      updated,
+      skipped,
+      deleted,
+      total,
+      stats,
+      expectedFromSeed: commodityStats,
+    };
   }
 
   /**
@@ -1168,7 +1194,7 @@ export class CategoriesService {
       },
       {
         $set: { isMainstream: true },
-      }
+      },
     );
 
     // Get updated stats

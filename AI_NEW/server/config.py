@@ -35,8 +35,8 @@ class Settings(BaseSettings):
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
-    REDIS_JOB_TTL_SEC: int = Field(default=900, description="Job status TTL (15m)")
-    REDIS_CACHE_TTL_SEC: int = Field(default=900, description="Cache TTL (15m)")
+    REDIS_JOB_TTL_SEC: int = Field(default=86400, description="Job status TTL (24h)")
+    REDIS_CACHE_TTL_SEC: int = Field(default=3600, description="Cache TTL (1h)")
 
     # LLM (Anthropic)
     ANTHROPIC_API_KEY: str = ""

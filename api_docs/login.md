@@ -3,10 +3,17 @@
 ## Overview
 The Login API handles user authentication through a two-factor flow: email/password verification followed by OTP validation. It manages session creation via signed HTTP-only cookies.
 
+**Note:** There is a testing bypass currently in place that returns a token directly without OTP verification for development convenience. In production, the full two-step flow should be restored.
+
 ## Base URL
 ```
 /login
 ```
+
+## Rate Limiting
+The Login module uses rate limiting (ThrottlerGuard) to prevent brute force attacks:
+- **Login:** 5 attempts per minute
+- **OTP Validation:** 3 attempts per minute (stricter to prevent brute force)
 
 ---
 
@@ -14,11 +21,13 @@ The Login API handles user authentication through a two-factor flow: email/passw
 
 ### 1. Login with Email and Password
 
-Initiates the login process by verifying credentials and sending an OTP to the user's email.
+Initiates the login process by verifying credentials. Currently returns a token directly (testing bypass), but the standard flow sends an OTP to the user's email.
 
 **Endpoint:** `POST /login`
 
 **Authentication:** Not required
+
+**Rate Limiting:** 5 requests per minute
 
 **Request Body:**
 ```json
@@ -36,9 +45,22 @@ Initiates the login process by verifying credentials and sending an OTP to the u
 
 **Response:**
 
-**Success (200 OK):**
+**Success (200 OK) - Testing Bypass Active:**
+```json
+{
+  "AccountToken": "string",
+  "role": "Buyer" | "Seller" | "Seller and Buyer"
+}
+```
+
+**Success (200 OK) - Standard Flow (OTP sent):**
 ```json
 true
+```
+
+**Set-Cookie Header (Testing Bypass):**
+```
+account=<JWT_TOKEN>; HttpOnly; Secure; SameSite=Strict/None; Max-Age=<configured_expiry>; Signed
 ```
 
 **Error Responses:**
@@ -55,6 +77,22 @@ or
 {
   "statusCode": 400,
   "message": "Incorrect password. Please try again."
+}
+```
+
+**403 Forbidden:**
+```json
+{
+  "statusCode": 403,
+  "message": "Your account has been suspended. Please contact support."
+}
+```
+
+**429 Too Many Requests:**
+```json
+{
+  "statusCode": 429,
+  "message": "ThrottlerException: Too Many Requests"
 }
 ```
 
@@ -75,11 +113,10 @@ or
 
 **Implementation Notes:**
 - Validates user exists in database by email
+- Checks if user account is suspended (returns 403 if suspended)
 - Verifies password using bcrypt comparison
-- Generates 6-digit OTP
-- Stores OTP in Redis with 10-minute TTL
-- Sends OTP via email (Sendinblue/SMTP)
-- Returns `true` on successful OTP transmission
+- **Testing Bypass:** Currently sets cookie directly and returns token without OTP
+- **Standard Flow:** Generates 6-digit OTP, stores in Redis with 10-minute TTL, sends via email
 
 ---
 
@@ -90,6 +127,8 @@ Validates the OTP and creates an authenticated session by setting a cookie.
 **Endpoint:** `POST /login/validate-otp`
 
 **Authentication:** Not required
+
+**Rate Limiting:** 3 requests per minute
 
 **Request Body:**
 ```json
@@ -125,10 +164,10 @@ account=<JWT_TOKEN>; HttpOnly; Secure; SameSite=Strict/None; Max-Age=<configured
 |---------|-------|
 | Name | `account` |
 | HttpOnly | `true` (prevents JavaScript access) |
-| MaxAge | Value from `COOKIE_EXPIRY_LOGIN` env variable (default: 3,600,000 ms = 1 hour) |
+| MaxAge | Value from `COOKIE_EXPIRY_LOGIN` env variable (default: 86,400,000 ms = 24 hours) |
 | Signed | `true` (cookie signature verification) |
-| Secure | `true` in production or always `true` |
-| SameSite | `strict` in production, `none` in development |
+| Secure | `true` in production or when `COOKIE_SECURE=true` |
+| SameSite | `strict` in production, `none` when secure in dev, `lax` otherwise |
 
 **Error Responses:**
 
@@ -144,6 +183,14 @@ or
 {
   "statusCode": 400,
   "message": "Invalid or expired OTP. Please check your code and try again."
+}
+```
+
+**429 Too Many Requests:**
+```json
+{
+  "statusCode": 429,
+  "message": "ThrottlerException: Too Many Requests"
 }
 ```
 
@@ -186,39 +233,62 @@ or
 
 ## Authentication Flow
 
+### Standard Two-Factor Flow
 ```
-┌─────────┐      ┌──────────┐      ┌───────────┐      ┌─────────────┐      ┌──────────┐
-│  User   │      │ Frontend │      │ Login API │      │ Mail Service│      │ Database │
-└────┬────┘      └────┬─────┘      └─────┬─────┘      └──────┬──────┘      └────┬─────┘
-     │                │                   │                   │                  │
-     │ Enter email    │                   │                   │                  │
-     │ & password     │                   │                   │                  │
-     │───────────────>│                   │                   │                  │
-     │                │ POST /login       │                   │                  │
-     │                │──────────────────>│                   │                  │
-     │                │                   │ Validate creds    │                  │
-     │                │                   │─────────────────────────────────────>│
-     │                │                   │<─────────────────────────────────────│
-     │                │                   │ Valid             │                  │
-     │                │                   │                   │                  │
-     │                │                   │ Generate & store OTP                 │
-     │                │                   │──────────────────>│                  │
-     │                │                   │                   │                  │
-     │<───────────────────────────────────────────────────────│ Email with OTP   │
-     │                │                   │                   │                  │
-     │                │<──────────────────│ true              │                  │
-     │                │                   │                   │                  │
-     │ Enter OTP      │                   │                   │                  │
-     │───────────────>│                   │                   │                  │
-     │                │ POST /validate-otp│                   │                  │
-     │                │──────────────────>│                   │                  │
-     │                │                   │ Validate OTP      │                  │
-     │                │                   │──────────────────>│                  │
-     │                │                   │<──────────────────│ Valid            │
-     │                │                   │                   │                  │
-     │                │                   │ Generate JWT      │                  │
-     │                │<──────────────────│ + Set Cookie      │                  │
-     │                │                   │                   │                  │
++----------+      +----------+      +-----------+      +-------------+      +----------+
+|   User   |      | Frontend |      | Login API |      | Mail Service|      | Database |
++----+-----+      +----+-----+      +-----+-----+      +------+------+      +----+-----+
+     |                |                   |                   |                  |
+     | Enter email    |                   |                   |                  |
+     | & password     |                   |                   |                  |
+     |--------------->|                   |                   |                  |
+     |                | POST /login       |                   |                  |
+     |                |------------------>|                   |                  |
+     |                |                   | Validate creds    |                  |
+     |                |                   |---------------------------------------->|
+     |                |                   |<----------------------------------------|
+     |                |                   | Valid             |                  |
+     |                |                   |                   |                  |
+     |                |                   | Generate & store OTP                 |
+     |                |                   |------------------>|                  |
+     |                |                   |                   |                  |
+     |<-----------------------------------------------+-------| Email with OTP   |
+     |                |                   |                   |                  |
+     |                |<------------------|  true             |                  |
+     |                |                   |                   |                  |
+     | Enter OTP      |                   |                   |                  |
+     |--------------->|                   |                   |                  |
+     |                | POST /validate-otp|                   |                  |
+     |                |------------------>|                   |                  |
+     |                |                   | Validate OTP      |                  |
+     |                |                   |------------------>|                  |
+     |                |                   |<------------------| Valid            |
+     |                |                   |                   |                  |
+     |                |                   | Generate JWT      |                  |
+     |                |<------------------| + Set Cookie      |                  |
+     |                |                   |                   |                  |
+```
+
+### Testing Bypass Flow (Current)
+```
++----------+      +----------+      +-----------+      +----------+
+|   User   |      | Frontend |      | Login API |      | Database |
++----+-----+      +----+-----+      +-----+-----+      +----+-----+
+     |                |                   |                  |
+     | Enter email    |                   |                  |
+     | & password     |                   |                  |
+     |--------------->|                   |                  |
+     |                | POST /login       |                  |
+     |                |------------------>|                  |
+     |                |                   | Validate creds   |
+     |                |                   |----------------->|
+     |                |                   |<-----------------|
+     |                |                   | Valid            |
+     |                |                   |                  |
+     |                |                   | Generate JWT     |
+     |                |<------------------| + Set Cookie     |
+     |                |                   | (No OTP needed)  |
+     |                |                   |                  |
 ```
 
 ---
@@ -244,6 +314,8 @@ or
 | 400 | "No account found with this email. Please sign up first." | Email not registered |
 | 400 | "Incorrect password. Please try again." | Wrong password |
 | 400 | "Invalid or expired OTP. Please check your code and try again." | OTP validation failed |
+| 403 | "Your account has been suspended. Please contact support." | User account is suspended |
+| 429 | "ThrottlerException: Too Many Requests" | Rate limit exceeded |
 | 500 | "Failed to send otp!" | Email service error |
 | 500 | "An unexpected error occurred. Please try again." | Unexpected server error |
 
@@ -252,23 +324,28 @@ or
 ## Security Considerations
 
 1. **Password Verification:** Uses bcrypt for secure password comparison
-2. **OTP Security:**
+2. **Account Suspension:** Suspended users are blocked from logging in
+3. **OTP Security:**
    - 6-digit numeric codes
    - 10-minute expiration
    - Stored in Redis with TTL
    - Single-use validation
-3. **Cookie Security:**
+4. **Cookie Security:**
    - HTTP-only (prevents XSS access)
    - Signed (prevents tampering)
    - Secure flag in production
    - SameSite attribute for CSRF protection
-4. **Error Messages:** Specific but not revealing internal details
+5. **Rate Limiting:**
+   - 5 login attempts per minute
+   - 3 OTP validation attempts per minute
+   - Prevents brute force attacks
+6. **Error Messages:** Specific but not revealing internal details
 
 ---
 
 ## Frontend Integration Notes
 
-1. **Two-Step Authentication Process:**
+1. **Two-Step Authentication Process (Standard):**
    ```typescript
    // Step 1: Submit credentials
    const loginResponse = await fetch('/login', {
@@ -290,18 +367,37 @@ or
    // Redirect based on role
    ```
 
-2. **Cookie Handling:**
+2. **Testing Bypass Flow (Current):**
+   ```typescript
+   // Single step - credentials only
+   const loginResponse = await fetch('/login', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({ mail: email, password }),
+     credentials: 'include'
+   });
+
+   const { AccountToken, role } = await loginResponse.json();
+   // Cookie is automatically set, redirect based on role
+   ```
+
+3. **Cookie Handling:**
    - The `account` cookie is automatically set by the browser
    - Include `credentials: 'include'` in fetch requests
    - Cookie is sent automatically in subsequent same-origin requests
 
-3. **Session Persistence:**
-   - Session duration controlled by cookie's `MaxAge` (default: 1 hour)
+4. **Session Persistence:**
+   - Session duration controlled by cookie's `MaxAge` (default: 24 hours)
    - Use `/auth/validate-cookie` to check session validity
 
-4. **Error Display:**
+5. **Error Display:**
    - Show specific validation errors from DTO validation
    - Display backend error messages directly to users
+   - Handle 403 (suspended) specially with contact support message
+
+6. **Rate Limit Handling:**
+   - Handle 429 responses by showing "too many attempts" message
+   - Suggest user wait 1 minute before retrying
 
 ---
 
@@ -311,6 +407,7 @@ or
 ```bash
 curl -X POST http://localhost:3001/login \
   -H "Content-Type: application/json" \
+  -c cookies.txt \
   -d '{
     "mail": "user@example.com",
     "password": "SecurePass@123"

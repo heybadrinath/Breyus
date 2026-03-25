@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Loader2, FileText, ArrowRight, DollarSign, MapPin, CreditCard, Package } from 'lucide-react';
 import { getTradeById, Trade, getNegotiationHistory } from '../services/trade.service';
 import { useNavigate } from 'react-router-dom';
+import { getImageUrl } from '../utils/imageUtils';
 
 interface ReviewTermsModalProps {
   isOpen: boolean;
@@ -61,9 +62,13 @@ export const ReviewTermsModal: React.FC<ReviewTermsModalProps> = ({
     onClose();
   };
 
-  const formatCurrency = (amount?: string, currency?: string) => {
-    if (!amount) return 'N/A';
-    return `${currency || 'USD'} ${parseFloat(amount).toLocaleString()}`;
+  const formatCurrency = (amount?: string | number, currency?: string) => {
+    // Handle undefined, null, empty string, or 0
+    if (amount === undefined || amount === null || amount === '') return 'N/A';
+    // Convert to number for formatting
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    if (isNaN(numAmount)) return 'N/A';
+    return `${currency || 'USD'} ${numAmount.toLocaleString()}`;
   };
 
   const formatIncoterms = (incoterms?: { selectedIncoterm?: string; selectedIncotermData?: Record<string, 'Buyer' | 'Seller'> }) => {
@@ -106,7 +111,7 @@ export const ReviewTermsModal: React.FC<ReviewTermsModalProps> = ({
                   <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
                     {trade.product.productImages?.[0] ? (
                       <img
-                        src={`${process.env.REACT_APP_BACKEND_URL}${trade.product.productImages[0]}`}
+                        src={getImageUrl(trade.product.productImages[0])}
                         alt={trade.product.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {

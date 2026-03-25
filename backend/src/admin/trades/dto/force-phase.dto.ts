@@ -1,4 +1,11 @@
-import { IsString, IsIn, IsBoolean, IsOptional, MinLength, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsIn,
+  IsBoolean,
+  IsOptional,
+  MinLength,
+  MaxLength,
+} from 'class-validator';
 
 /**
  * Valid trade phases that admin can force-change to
@@ -27,7 +34,9 @@ export class ForcePhaseChangeDto {
   newPhase: TradePhase;
 
   @IsString()
-  @MinLength(10, { message: 'Reason must be at least 10 characters (be descriptive)' })
+  @MinLength(10, {
+    message: 'Reason must be at least 10 characters (be descriptive)',
+  })
   @MaxLength(500, { message: 'Reason cannot exceed 500 characters' })
   reason: string;
 

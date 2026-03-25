@@ -53,7 +53,8 @@ export class AdminActivityLog extends Document {
   updatedAt: Date;
 }
 
-export const AdminActivityLogSchema = SchemaFactory.createForClass(AdminActivityLog);
+export const AdminActivityLogSchema =
+  SchemaFactory.createForClass(AdminActivityLog);
 
 // Create indexes for efficient querying
 AdminActivityLogSchema.index({ adminId: 1 });

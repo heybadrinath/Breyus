@@ -40,7 +40,6 @@ import {
   Download,
   FileText,
   Zap,
-  Calendar as CalendarIcon,
   Plus,
   X,
   Clock,
@@ -69,8 +68,6 @@ import {
   useMaintenance,
   useSSLCertificates,
   useQuickActions,
-  useScheduleMaintenance,
-  useCancelScheduledMaintenance,
   useEnhancedDatabaseStats,
   useContainerLogs,
   useContainerDetails,
@@ -126,8 +123,6 @@ export function SystemHealthPage() {
   const { data: sslCerts, isLoading: sslLoading } = useSSLCertificates()
   const { data: dbStats } = useEnhancedDatabaseStats()
   const { rotateLogs, runHealthCheck } = useQuickActions()
-  const scheduleMutation = useScheduleMaintenance()
-  const cancelScheduleMutation = useCancelScheduledMaintenance()
   const { restartContainer, stopContainer, startContainer } = useContainerActions()
 
   // Backup management
@@ -140,9 +135,6 @@ export function SystemHealthPage() {
   const [estimatedEndTime, setEstimatedEndTime] = useState<Date | undefined>()
   const [bypassIPs, setBypassIPs] = useState<string[]>([])
   const [newIP, setNewIP] = useState('')
-  const [scheduledStart, setScheduledStart] = useState<Date | undefined>()
-  const [scheduledEnd, setScheduledEnd] = useState<Date | undefined>()
-  const [showScheduleForm, setShowScheduleForm] = useState(false)
 
   // Logs modal state
   const [selectedContainerForLogs, setSelectedContainerForLogs] = useState<string | null>(null)
@@ -256,25 +248,6 @@ export function SystemHealthPage() {
 
   const handleRemoveBypassIP = (ip: string) => {
     setBypassIPs(bypassIPs.filter(i => i !== ip))
-  }
-
-  const handleScheduleMaintenance = async () => {
-    if (scheduledStart && scheduledEnd) {
-      try {
-        await scheduleMutation.mutateAsync({
-          scheduledStart: scheduledStart.toISOString(),
-          scheduledEnd: scheduledEnd.toISOString(),
-          message: maintenanceMessage,
-          allowedIPs: bypassIPs,
-        })
-        setShowScheduleForm(false)
-        setScheduledStart(undefined)
-        setScheduledEnd(undefined)
-        toast({ title: 'Maintenance window scheduled' })
-      } catch (error) {
-        toast({ title: 'Failed to schedule maintenance', variant: 'destructive' })
-      }
-    }
   }
 
   const handleQuickAction = async (action: 'backup' | 'logs' | 'health') => {
@@ -700,78 +673,6 @@ export function SystemHealthPage() {
                       </button>
                     </Badge>
                   ))}
-                </div>
-              )}
-            </div>
-
-            {/* Scheduled Maintenance */}
-            <div className="border-t pt-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <CalendarIcon className="h-4 w-4" />
-                  <span className="font-medium">Schedule Future Maintenance</span>
-                </div>
-                {maintenance?.scheduledStart ? (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => cancelScheduleMutation.mutateAsync()}
-                    disabled={cancelScheduleMutation.isPending}
-                  >
-                    Cancel Scheduled
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowScheduleForm(!showScheduleForm)}
-                  >
-                    {showScheduleForm ? 'Cancel' : 'Schedule'}
-                  </Button>
-                )}
-              </div>
-
-              {maintenance?.scheduledStart && (
-                <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                  <p className="font-medium text-blue-600 dark:text-blue-400">Scheduled Maintenance Window</p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    From: {format(new Date(maintenance.scheduledStart), 'PPP HH:mm')}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    To: {format(new Date(maintenance.scheduledEnd!), 'PPP HH:mm')}
-                  </p>
-                </div>
-              )}
-
-              {showScheduleForm && !maintenance?.scheduledStart && (
-                <div className="space-y-4 p-4 border rounded-lg">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="scheduled-start">Start Time</Label>
-                      <Input
-                        id="scheduled-start"
-                        type="datetime-local"
-                        value={scheduledStart ? format(scheduledStart, "yyyy-MM-dd'T'HH:mm") : ''}
-                        onChange={(e) => setScheduledStart(e.target.value ? new Date(e.target.value) : undefined)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="scheduled-end">End Time</Label>
-                      <Input
-                        id="scheduled-end"
-                        type="datetime-local"
-                        value={scheduledEnd ? format(scheduledEnd, "yyyy-MM-dd'T'HH:mm") : ''}
-                        onChange={(e) => setScheduledEnd(e.target.value ? new Date(e.target.value) : undefined)}
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    className="w-full"
-                    onClick={handleScheduleMaintenance}
-                    disabled={!scheduledStart || !scheduledEnd || scheduleMutation.isPending}
-                  >
-                    {scheduleMutation.isPending ? 'Scheduling...' : 'Schedule Maintenance'}
-                  </Button>
                 </div>
               )}
             </div>

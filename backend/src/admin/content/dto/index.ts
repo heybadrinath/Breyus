@@ -49,6 +49,7 @@ export {
   SuggestCategoryDto,
   ToggleMainstreamDto,
   ApproveCategoryDto,
+  RejectCategoryDto,
 } from './category/category.dto';
 
 // Incoterm DTOs

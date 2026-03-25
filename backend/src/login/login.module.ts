@@ -11,10 +11,10 @@ import { MailModule } from 'src/mail/mail.module';
   providers: [LoginService],
   imports: [
     MongooseModule.forFeature([{ name: Company.name, schema: CompanySchema }]),
-    MongooseModule.forFeature([{name: User.name, schema: UserSchema}]),
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     AuthModule,
-    MailModule
+    MailModule,
   ],
-  controllers: [LoginController]
+  controllers: [LoginController],
 })
-export class LoginModule { }
+export class LoginModule {}

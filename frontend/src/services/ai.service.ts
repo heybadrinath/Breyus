@@ -22,6 +22,31 @@ import {
   CommodityOption,
 } from '../types/aiTypes';
 
+// Helper function to provide user-friendly error messages
+const getReadableErrorMessage = (error: unknown, context: string): string => {
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    // Network/connection errors
+    if (msg.includes('fetch') || msg.includes('network') || msg.includes('connection')) {
+      return `Unable to connect to the server. Please check your internet connection and try again.`;
+    }
+    // Timeout errors
+    if (msg.includes('timeout')) {
+      return `The request timed out. The server may be busy. Please try again in a moment.`;
+    }
+    // Server errors
+    if (msg.includes('500') || msg.includes('internal')) {
+      return `The server encountered an error. Please try again later.`;
+    }
+    if (msg.includes('503') || msg.includes('unavailable')) {
+      return `The AI service is temporarily unavailable. Please try again in a few minutes.`;
+    }
+    // Return original message if it's already user-friendly
+    return error.message;
+  }
+  return `${context} failed. Please try again.`;
+};
+
 const AI_ENDPOINT = process.env.REACT_APP_BACKEND_URL + '/ai';
 const COMMODITIES_ENDPOINT = process.env.REACT_APP_BACKEND_URL + '/commodities';
 
@@ -51,7 +76,7 @@ export const aiSearch = async (input: AISearchInput): Promise<APIResponse<Merged
 
     return await response.json();
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+    throw new Error(getReadableErrorMessage(error, 'AI search'));
   }
 };
 
@@ -83,7 +108,7 @@ export const searchCommodities = async (
 
     return await response.json();
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+    throw new Error(getReadableErrorMessage(error, 'Commodity search'));
   }
 };
 
@@ -107,7 +132,7 @@ export const getHsChapters = async (): Promise<APIResponse<HSChapter[]>> => {
 
     return await response.json();
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+    throw new Error(getReadableErrorMessage(error, 'Request'));
   }
 };
 
@@ -131,7 +156,7 @@ export const getCommoditiesByChapter = async (chapter: number): Promise<APIRespo
 
     return await response.json();
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+    throw new Error(getReadableErrorMessage(error, 'Request'));
   }
 };
 
@@ -159,7 +184,7 @@ export const classifyCommodity = async (
 
     return await response.json();
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+    throw new Error(getReadableErrorMessage(error, 'Request'));
   }
 };
 
@@ -183,7 +208,7 @@ export const getMainstreamCommodities = async (): Promise<APIResponse<CommodityO
 
     return await response.json();
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+    throw new Error(getReadableErrorMessage(error, 'Request'));
   }
 };
 
@@ -215,7 +240,7 @@ export const startAnalysis = async (
 
     return await response.json();
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+    throw new Error(getReadableErrorMessage(error, 'Request'));
   }
 };
 
@@ -241,7 +266,7 @@ export const getAnalysisResults = async (
 
     return await response.json();
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+    throw new Error(getReadableErrorMessage(error, 'Request'));
   }
 };
 
@@ -272,7 +297,7 @@ export const calculateGravityScore = async (
 
     return await response.json();
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+    throw new Error(getReadableErrorMessage(error, 'Request'));
   }
 };
 
@@ -300,7 +325,7 @@ export const checkAIHealth = async (): Promise<APIResponse<{ status: string; mes
 
     return await response.json();
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+    throw new Error(getReadableErrorMessage(error, 'Request'));
   }
 };
 
@@ -329,7 +354,7 @@ export const getSellerInventory = async (): Promise<APIResponse<SellerInventoryR
 
     return await response.json();
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+    throw new Error(getReadableErrorMessage(error, 'Request'));
   }
 };
 
@@ -356,7 +381,7 @@ export const searchBuyersForProduct = async (
 
     return await response.json();
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+    throw new Error(getReadableErrorMessage(error, 'Request'));
   }
 };
 
@@ -368,6 +393,8 @@ const WISHLIST_ENDPOINT = process.env.REACT_APP_BACKEND_URL + '/wishlist';
 
 /**
  * Save an AI contact to wishlist
+ * Note: Backend SaveContactDto expects simple field names (name, email, etc.)
+ * which are then mapped to database field names (savedContactName, etc.) by the service
  */
 export const saveAIContact = async (contact: SavedContact): Promise<APIResponse<any>> => {
   try {
@@ -377,16 +404,15 @@ export const saveAIContact = async (contact: SavedContact): Promise<APIResponse<
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        sourceType: 'ai_contact',
-        savedContactName: contact.name,
-        savedContactEmail: contact.email,
-        savedContactPhone: contact.phone,
-        savedContactCountry: contact.country,
-        savedContactAddress: contact.address,
-        savedCommodity: contact.commodity,
-        savedHsCode: contact.hsCode,
-        savedMatchScore: contact.matchScore,
-        savedContactRole: contact.role,
+        name: contact.name,
+        email: contact.email,
+        phone: contact.phone,
+        country: contact.country,
+        address: contact.address,
+        commodity: contact.commodity,
+        hsCode: contact.hsCode,
+        matchScore: contact.matchScore,
+        role: contact.role,
         notes: contact.notes,
       }),
       credentials: 'include',
@@ -399,7 +425,7 @@ export const saveAIContact = async (contact: SavedContact): Promise<APIResponse<
 
     return await response.json();
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+    throw new Error(getReadableErrorMessage(error, 'Request'));
   }
 };
 
@@ -423,7 +449,7 @@ export const getSavedContacts = async (): Promise<APIResponse<SavedContact[]>> =
 
     return await response.json();
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+    throw new Error(getReadableErrorMessage(error, 'Request'));
   }
 };
 
@@ -447,6 +473,34 @@ export const removeSavedContact = async (contactId: string): Promise<APIResponse
 
     return await response.json();
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'An unknown error occurred');
+    throw new Error(getReadableErrorMessage(error, 'Request'));
+  }
+};
+
+/**
+ * Update notes for a saved contact
+ */
+export const updateContactNotes = async (
+  contactId: string,
+  notes: string
+): Promise<APIResponse<SavedContact>> => {
+  try {
+    const response = await fetch(`${WISHLIST_ENDPOINT}/contact/${contactId}/notes`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ notes }),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to update contact notes');
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(getReadableErrorMessage(error, 'Request'));
   }
 };

@@ -6,6 +6,7 @@ import { SearchHeader } from '../../components/Header';
 import Pagination from '../../components/Pagination';
 import CategoryFilterDropdown from '../../components/CategoryFilterDropdown';
 import { getProductsWithPagination, PaginationParams, Product } from '../../services/products.service';
+import { getImageUrl, getFileUrl } from '../../utils/imageUtils';
 
 type SortOption = 'newest' | 'oldest' | 'price_low' | 'price_high' | 'name_az' | 'name_za';
 
@@ -78,11 +79,11 @@ const Homepage: React.FC = () => {
         tags: item.tags || [],
         stock: parseInt(item.stock) || 0,
         stockUnit: item.stockUnit,
-        // Fix image URLs by adding backend URL prefix
-        productImage: item.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${item.productImages[0]}` : '',
-        images: item.productImages ? item.productImages.map((img: string) => `${process.env.REACT_APP_BACKEND_URL}/${img}`) : [],
-        primaryImage: item.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${item.productImages[0]}` : '',
-        testReport: item.testReport ? `${process.env.REACT_APP_BACKEND_URL}/${item.testReport}` : '',
+        // Fix image URLs using centralized utility for local/Docker/production support
+        productImage: getImageUrl(item.productImages?.[0], ''),
+        images: item.productImages ? item.productImages.map((img: string) => getImageUrl(img, '')) : [],
+        primaryImage: getImageUrl(item.productImages?.[0], ''),
+        testReport: getFileUrl(item.testReport),
         createdAt: new Date(item.createdAt),
         updatedAt: new Date(item.updatedAt),
         moq: item.moq,

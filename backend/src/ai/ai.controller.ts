@@ -81,12 +81,14 @@ export class AIController {
    * POST /ai/analysis/start
    *
    * Returns jobId for polling
+   * User is tracked for notification when analysis completes
    */
   @Post('analysis/start')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.ACCEPTED)
-  async startAnalysis(@Body() input: MarketAnalysisDto) {
-    const result = await this.aiService.startAnalysis(input);
+  async startAnalysis(@Body() input: MarketAnalysisDto, @Request() req: any) {
+    const userId = req.user?._id?.toString();
+    const result = await this.aiService.startAnalysis(input, userId);
 
     return {
       statusCode: HttpStatus.ACCEPTED,
@@ -98,11 +100,14 @@ export class AIController {
   /**
    * Poll for analysis results
    * GET /ai/analysis/:jobId
+   *
+   * When analysis completes, a notification is sent to the user
    */
   @Get('analysis/:jobId')
   @UseGuards(AuthGuard)
-  async getAnalysisResults(@Param('jobId') jobId: string) {
-    const result = await this.aiService.getAnalysisResults(jobId);
+  async getAnalysisResults(@Param('jobId') jobId: string, @Request() req: any) {
+    const userId = req.user?._id?.toString();
+    const result = await this.aiService.getAnalysisResults(jobId, userId);
 
     return {
       statusCode: HttpStatus.OK,
@@ -170,7 +175,10 @@ export class AIController {
   @Post('search/from-product')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.OK)
-  async searchFromProduct(@Body() input: SearchFromProductDto, @Request() req: any) {
+  async searchFromProduct(
+    @Body() input: SearchFromProductDto,
+    @Request() req: any,
+  ) {
     const user = req.user;
 
     // Verify user is a seller (allow both 'Seller' and 'Seller and Buyer' roles)

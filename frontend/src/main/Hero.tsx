@@ -35,6 +35,7 @@ const Navbar = () => {
                 <a className="mx-4 text-black my-auto" href='#impact'>Impact</a>
                 <Link className="mx-4 text-black my-auto" to={'https://calendly.com/breyuscrew/30min'}>Schedule</Link>
                 <a className="mx-4 text-black my-auto" href="#contact-us">Contact Us</a>
+                <Link className="mx-4 text-black my-auto hover:text-[#867C5B] transition-colors" to={'/blog'}>Blog</Link>
             </div>
             <div id="login-signup-btn" className="flex">
                 <Button onClick={() => navigate("/onboarding")} className=" md:text-sm md:px-6">Sign Up</Button>

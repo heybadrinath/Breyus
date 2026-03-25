@@ -1,7 +1,8 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { X, Upload, FileText, Image, Loader2, Check, AlertCircle } from 'lucide-react';
 
-export type DocumentType = 'sco' | 'icpo' | 'spa' | 'bol' | 'payment-proof';
+// PHASE 2 REFACTORING: Added 'signed-spa' type
+export type DocumentType = 'sco' | 'icpo' | 'spa' | 'signed-spa' | 'bol' | 'payment-proof';
 
 interface DocumentUploadModalProps {
     isOpen: boolean;
@@ -25,7 +26,12 @@ const DOCUMENT_TYPE_INFO: Record<DocumentType, { title: string; description: str
     },
     'spa': {
         title: 'Upload Sales Purchase Agreement (SPA)',
-        description: 'Upload the signed SPA document for this trade.'
+        description: 'Upload the SPA document for this trade.'
+    },
+    // PHASE 2 REFACTORING: Added signed-spa type
+    'signed-spa': {
+        title: 'Upload Your Signed SPA',
+        description: 'Upload your signed copy of the Sales Purchase Agreement. The seller\'s SPA has been approved - please review, sign, and upload your executed copy.'
     },
     'bol': {
         title: 'Upload Bill of Lading (BoL)',

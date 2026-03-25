@@ -19,30 +19,43 @@ export class ExportService {
   async generateCsv(companyId: string, dateRange: DateRange): Promise<string> {
     try {
       // Fetch all analytics data
-      const [salesMetrics, countrySales, topProducts, timeSeries] = await Promise.all([
-        this.analyticsService.getSalesMetricsData(companyId, dateRange),
-        this.analyticsService.getCountrySalesData(companyId, dateRange),
-        this.analyticsService.getTopProductsData(companyId, dateRange),
-        this.analyticsService.getTimeSeriesData(companyId, dateRange),
-      ]);
+      const [salesMetrics, countrySales, topProducts, timeSeries] =
+        await Promise.all([
+          this.analyticsService.getSalesMetricsData(companyId, dateRange),
+          this.analyticsService.getCountrySalesData(companyId, dateRange),
+          this.analyticsService.getTopProductsData(companyId, dateRange),
+          this.analyticsService.getTimeSeriesData(companyId, dateRange),
+        ]);
 
       const lines: string[] = [];
 
       // Header
       lines.push('Breyus Analytics Report');
       lines.push(`Generated: ${new Date().toISOString()}`);
-      lines.push(`Period: ${dateRange.startDate.toISOString().split('T')[0]} to ${dateRange.endDate.toISOString().split('T')[0]}`);
+      lines.push(
+        `Period: ${dateRange.startDate.toISOString().split('T')[0]} to ${dateRange.endDate.toISOString().split('T')[0]}`,
+      );
       lines.push(`Currency: ${salesMetrics.currency}`);
       lines.push('');
 
       // Summary Metrics Section
       lines.push('=== SUMMARY METRICS ===');
       lines.push('Metric,Value,Change vs Previous Period');
-      lines.push(`Total Sales,${salesMetrics.totalSales},${salesMetrics.comparison.salesChange}%`);
-      lines.push(`Total Volume,${salesMetrics.totalVolume},${salesMetrics.comparison.volumeChange}%`);
-      lines.push(`Total Revenue,${salesMetrics.totalRevenue},${salesMetrics.comparison.revenueChange}%`);
-      lines.push(`Average Order Value,${salesMetrics.averageOrderValue},${salesMetrics.comparison.averageOrderChange}%`);
-      lines.push(`Total Customers,${salesMetrics.totalCustomers},${salesMetrics.comparison.customersChange}%`);
+      lines.push(
+        `Total Sales,${salesMetrics.totalSales},${salesMetrics.comparison.salesChange}%`,
+      );
+      lines.push(
+        `Total Volume,${salesMetrics.totalVolume},${salesMetrics.comparison.volumeChange}%`,
+      );
+      lines.push(
+        `Total Revenue,${salesMetrics.totalRevenue},${salesMetrics.comparison.revenueChange}%`,
+      );
+      lines.push(
+        `Average Order Value,${salesMetrics.averageOrderValue},${salesMetrics.comparison.averageOrderChange}%`,
+      );
+      lines.push(
+        `Total Customers,${salesMetrics.totalCustomers},${salesMetrics.comparison.customersChange}%`,
+      );
       lines.push(`New Customers,${salesMetrics.newCustomers},-`);
       lines.push(`Returning Customers,${salesMetrics.returningCustomers},-`);
       lines.push('');
@@ -51,7 +64,9 @@ export class ExportService {
       lines.push('=== TOP PRODUCTS ===');
       lines.push('Product Name,Trade Count,Total Value');
       for (const product of topProducts) {
-        lines.push(`"${product.productName}",${product.tradeCount},${product.totalValue}`);
+        lines.push(
+          `"${product.productName}",${product.tradeCount},${product.totalValue}`,
+        );
       }
       lines.push('');
 
@@ -59,7 +74,9 @@ export class ExportService {
       lines.push('=== SALES BY COUNTRY ===');
       lines.push('Country,Sales Count,Value,Percentage');
       for (const country of countrySales) {
-        lines.push(`"${country.country}",${country.sales},"${country.value}",${country.percentage}`);
+        lines.push(
+          `"${country.country}",${country.sales},"${country.value}",${country.percentage}`,
+        );
       }
       lines.push('');
 
@@ -81,18 +98,26 @@ export class ExportService {
    * Generate PDF export of analytics data
    * Returns HTML that can be converted to PDF on the client side
    */
-  async generatePdfHtml(companyId: string, dateRange: DateRange): Promise<string> {
+  async generatePdfHtml(
+    companyId: string,
+    dateRange: DateRange,
+  ): Promise<string> {
     try {
       // Fetch all analytics data
-      const [salesMetrics, countrySales, topProducts, timeSeries] = await Promise.all([
-        this.analyticsService.getSalesMetricsData(companyId, dateRange),
-        this.analyticsService.getCountrySalesData(companyId, dateRange),
-        this.analyticsService.getTopProductsData(companyId, dateRange),
-        this.analyticsService.getTimeSeriesData(companyId, dateRange),
-      ]);
+      const [salesMetrics, countrySales, topProducts, timeSeries] =
+        await Promise.all([
+          this.analyticsService.getSalesMetricsData(companyId, dateRange),
+          this.analyticsService.getCountrySalesData(companyId, dateRange),
+          this.analyticsService.getTopProductsData(companyId, dateRange),
+          this.analyticsService.getTimeSeriesData(companyId, dateRange),
+        ]);
 
-      const currencySymbol = salesMetrics.currency === 'INR' ? '₹' :
-                             salesMetrics.currency === 'EUR' ? '€' : '$';
+      const currencySymbol =
+        salesMetrics.currency === 'INR'
+          ? '₹'
+          : salesMetrics.currency === 'EUR'
+            ? '€'
+            : '$';
 
       const html = `
 <!DOCTYPE html>
@@ -252,13 +277,17 @@ export class ExportService {
         </tr>
       </thead>
       <tbody>
-        ${topProducts.map(p => `
+        ${topProducts
+          .map(
+            (p) => `
           <tr>
             <td>${p.productName}</td>
             <td>${p.tradeCount}</td>
             <td>${currencySymbol}${p.totalValue.toLocaleString()}</td>
           </tr>
-        `).join('')}
+        `,
+          )
+          .join('')}
         ${topProducts.length === 0 ? '<tr><td colspan="3" style="text-align: center; color: #9CA3AF;">No data available</td></tr>' : ''}
       </tbody>
     </table>
@@ -276,14 +305,18 @@ export class ExportService {
         </tr>
       </thead>
       <tbody>
-        ${countrySales.map(c => `
+        ${countrySales
+          .map(
+            (c) => `
           <tr>
             <td>${c.country}</td>
             <td>${c.sales}</td>
             <td>${c.value}</td>
             <td>${c.percentage}</td>
           </tr>
-        `).join('')}
+        `,
+          )
+          .join('')}
         ${countrySales.length === 0 ? '<tr><td colspan="4" style="text-align: center; color: #9CA3AF;">No data available</td></tr>' : ''}
       </tbody>
     </table>
@@ -300,13 +333,17 @@ export class ExportService {
         </tr>
       </thead>
       <tbody>
-        ${timeSeries.map(t => `
+        ${timeSeries
+          .map(
+            (t) => `
           <tr>
             <td>${t.date}</td>
             <td>${currencySymbol}${t.revenue.toLocaleString()}</td>
             <td>${t.volume.toLocaleString()}</td>
           </tr>
-        `).join('')}
+        `,
+          )
+          .join('')}
         ${timeSeries.length === 0 ? '<tr><td colspan="3" style="text-align: center; color: #9CA3AF;">No data available</td></tr>' : ''}
       </tbody>
     </table>

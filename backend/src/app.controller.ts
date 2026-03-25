@@ -10,7 +10,7 @@ export class AppController {
     private readonly systemService: SystemService,
   ) {}
 
-   @Get('health')
+  @Get('health')
   healthCheck() {
     return {
       appName: process.env.APP_NAME || 'Breyus',
@@ -18,7 +18,7 @@ export class AppController {
       timestamp: new Date().toISOString(),
       service: 'Breyus Backend API',
       version: process.env.VERSION || '1.0.0',
-    
+
       environment: process.env.NODE_ENV || 'development',
       uptime: process.uptime(),
       memoryUsage: process.memoryUsage(),
@@ -50,9 +50,7 @@ export class AppController {
 
   @Get()
   getRoot(@Res() res: Response) {
-    res
-      .status(403)
-      .send(`
+    res.status(403).send(`
         <!DOCTYPE html>
         <html>
           <head><title>Invalid API Access</title></head>
@@ -63,5 +61,4 @@ export class AppController {
         </html>
       `);
   }
-
 }

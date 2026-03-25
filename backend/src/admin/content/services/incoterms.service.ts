@@ -49,7 +49,7 @@ const DEFAULT_INCOTERMS: IncotermDefinition[] = [
     code: 'FCA',
     name: 'Free Carrier',
     description:
-      'The seller delivers goods to the carrier or another person nominated by the buyer at the seller\'s premises or another named place.',
+      "The seller delivers goods to the carrier or another person nominated by the buyer at the seller's premises or another named place.",
     riskTransferDescription:
       'Risk transfers when goods are handed over to the carrier at the named place.',
     transportMode: 'any',
@@ -95,7 +95,7 @@ const DEFAULT_INCOTERMS: IncotermDefinition[] = [
     description:
       'The seller delivers goods on board the vessel at the named port of shipment. Risk passes when goods are on board.',
     riskTransferDescription:
-      'Risk transfers when goods pass over the ship\'s rail at the port of shipment.',
+      "Risk transfers when goods pass over the ship's rail at the port of shipment.",
     transportMode: 'sea_inland',
     costAllocation: {
       commercialInvoice: 'Seller',
@@ -205,7 +205,7 @@ const DEFAULT_INCOTERMS: IncotermDefinition[] = [
     description:
       'The seller delivers goods when they are placed at the disposal of the buyer on the arriving means of transport, ready for unloading at the named destination.',
     riskTransferDescription:
-      'Risk transfers when goods are at buyer\'s disposal on the arriving transport at the named destination.',
+      "Risk transfers when goods are at buyer's disposal on the arriving transport at the named destination.",
     transportMode: 'any',
     costAllocation: {
       commercialInvoice: 'Seller',
@@ -227,7 +227,7 @@ const DEFAULT_INCOTERMS: IncotermDefinition[] = [
     description:
       'The seller delivers goods when they are unloaded from the arriving means of transport and placed at the disposal of the buyer at the named destination.',
     riskTransferDescription:
-      'Risk transfers when goods are unloaded and placed at buyer\'s disposal at the named destination.',
+      "Risk transfers when goods are unloaded and placed at buyer's disposal at the named destination.",
     transportMode: 'any',
     costAllocation: {
       commercialInvoice: 'Seller',
@@ -249,7 +249,7 @@ const DEFAULT_INCOTERMS: IncotermDefinition[] = [
     description:
       'The seller delivers goods cleared for import at the named destination. The seller bears all costs and risks including import duties and taxes.',
     riskTransferDescription:
-      'Risk transfers when goods are placed at buyer\'s disposal, cleared for import, at the named destination.',
+      "Risk transfers when goods are placed at buyer's disposal, cleared for import, at the named destination.",
     transportMode: 'any',
     costAllocation: {
       commercialInvoice: 'Seller',
@@ -300,14 +300,20 @@ export class IncotermsService {
   async getIncotermByCode(code: string): Promise<Incoterm> {
     const upperCode = code.toUpperCase();
 
-    if (!INCOTERM_CODES.includes(upperCode as typeof INCOTERM_CODES[number])) {
+    if (
+      !INCOTERM_CODES.includes(upperCode as (typeof INCOTERM_CODES)[number])
+    ) {
       throw new NotFoundException(`Invalid incoterm code: ${code}`);
     }
 
-    const incoterm = await this.incotermModel.findOne({ code: upperCode }).exec();
+    const incoterm = await this.incotermModel
+      .findOne({ code: upperCode })
+      .exec();
 
     if (!incoterm) {
-      throw new NotFoundException(`Incoterm ${code} not found. Please seed the database first.`);
+      throw new NotFoundException(
+        `Incoterm ${code} not found. Please seed the database first.`,
+      );
     }
 
     return incoterm;
@@ -322,20 +328,20 @@ export class IncotermsService {
   ): Promise<Incoterm> {
     const upperCode = code.toUpperCase();
 
-    if (!INCOTERM_CODES.includes(upperCode as typeof INCOTERM_CODES[number])) {
+    if (
+      !INCOTERM_CODES.includes(upperCode as (typeof INCOTERM_CODES)[number])
+    ) {
       throw new NotFoundException(`Invalid incoterm code: ${code}`);
     }
 
     const incoterm = await this.incotermModel
-      .findOneAndUpdate(
-        { code: upperCode },
-        { $set: dto },
-        { new: true },
-      )
+      .findOneAndUpdate({ code: upperCode }, { $set: dto }, { new: true })
       .exec();
 
     if (!incoterm) {
-      throw new NotFoundException(`Incoterm ${code} not found. Please seed the database first.`);
+      throw new NotFoundException(
+        `Incoterm ${code} not found. Please seed the database first.`,
+      );
     }
 
     return incoterm;
@@ -350,7 +356,9 @@ export class IncotermsService {
     let skipped = 0;
 
     for (const incoterm of DEFAULT_INCOTERMS) {
-      const exists = await this.incotermModel.findOne({ code: incoterm.code }).exec();
+      const exists = await this.incotermModel
+        .findOne({ code: incoterm.code })
+        .exec();
 
       if (exists) {
         skipped++;

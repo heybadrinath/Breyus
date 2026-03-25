@@ -36,7 +36,10 @@ export class AlertsController {
    */
   @Get('rules')
   async getRules(@Query() query: GetAlertRulesQueryDto) {
-    const rules = await this.alertsService.getRules(query.eventType, query.isEnabled);
+    const rules = await this.alertsService.getRules(
+      query.eventType,
+      query.isEnabled,
+    );
     return {
       statusCode: HttpStatus.OK,
       message: 'Alert rules retrieved successfully',

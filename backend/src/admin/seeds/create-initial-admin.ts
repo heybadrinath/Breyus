@@ -18,17 +18,33 @@ import * as readline from 'readline';
 // Load environment variables
 dotenv.config();
 
-const MONGODB_URI = process.env.MONGODB_URI_DEV || process.env.MONGODB_URI_PROD || 'mongodb://localhost:27017/breyus';
+const MONGODB_URI =
+  process.env.MONGODB_URI_DEV ||
+  process.env.MONGODB_URI_PROD ||
+  'mongodb://localhost:27017/breyus';
 
-const AdminUserSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-  password: { type: String, required: true },
-  name: { type: String, required: true },
-  role: { type: String, enum: ['super_admin', 'admin', 'viewer'], default: 'super_admin' },
-  lastLogin: { type: Date },
-  failedLoginAttempts: { type: Number, default: 0 },
-  lockUntil: { type: Date },
-}, { timestamps: true, collection: 'adminusers' });
+const AdminUserSchema = new mongoose.Schema(
+  {
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+    password: { type: String, required: true },
+    name: { type: String, required: true },
+    role: {
+      type: String,
+      enum: ['super_admin', 'admin', 'viewer'],
+      default: 'super_admin',
+    },
+    lastLogin: { type: Date },
+    failedLoginAttempts: { type: Number, default: 0 },
+    lockUntil: { type: Date },
+  },
+  { timestamps: true, collection: 'adminusers' },
+);
 
 const AdminUser = mongoose.model('AdminUser', AdminUserSchema);
 
@@ -64,14 +80,20 @@ async function createInitialAdmin() {
       console.log(`  Email: ${existingAdmin.email}`);
       console.log(`  Name: ${existingAdmin.name}`);
       console.log(`  Role: ${existingAdmin.role}`);
-      console.log('\nTo create another admin, please use the admin portal interface.');
+      console.log(
+        '\nTo create another admin, please use the admin portal interface.',
+      );
       await mongoose.disconnect();
       process.exit(0);
     }
 
     // Get admin details
-    const email = await askQuestion('Enter admin email [admin@breyus.com]: ') || 'admin@breyus.com';
-    const name = await askQuestion('Enter admin name [System Admin]: ') || 'System Admin';
+    const email =
+      (await askQuestion('Enter admin email [admin@breyus.com]: ')) ||
+      'admin@breyus.com';
+    const name =
+      (await askQuestion('Enter admin name [System Admin]: ')) ||
+      'System Admin';
     const password = await askQuestion('Enter admin password (min 8 chars): ');
 
     if (!password || password.length < 8) {

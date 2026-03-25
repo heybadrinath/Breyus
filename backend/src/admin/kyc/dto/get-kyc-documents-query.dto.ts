@@ -1,4 +1,11 @@
-import { IsOptional, IsString, IsNumber, IsEnum, Min, Max } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsEnum,
+  Min,
+  Max,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class GetKycDocumentsQueryDto {
@@ -24,7 +31,13 @@ export class GetKycDocumentsQueryDto {
   status?: string;
 
   @IsOptional()
-  @IsEnum(['cis', 'passport', 'tax_certificate', 'business_registration', 'other'])
+  @IsEnum([
+    'cis',
+    'passport',
+    'tax_certificate',
+    'business_registration',
+    'other',
+  ])
   documentType?: string;
 
   @IsOptional()

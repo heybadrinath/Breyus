@@ -1,7 +1,7 @@
 # Inbox / Messaging API
 
 ## Overview
-The Inbox API manages conversations and messages between buyers and sellers. It provides functionality for creating conversations, sending messages, retrieving message history, and marking messages as read.
+The Inbox API manages conversations and messages between buyers and sellers. It provides functionality for creating conversations, sending messages, retrieving message history, and marking messages as read. The module includes both REST API endpoints and WebSocket support for real-time messaging.
 
 ## Base URL
 ```
@@ -9,7 +9,10 @@ The Inbox API manages conversations and messages between buyers and sellers. It 
 ```
 
 ## Authentication
-All endpoints require authentication via signed cookie.
+All endpoints require authentication via signed cookie. Protected by AuthGuard which validates:
+- Cookie-based JWT authentication
+- User existence in database
+- User is not suspended
 
 ---
 
@@ -25,27 +28,27 @@ sequenceDiagram
     Buyer->>InboxAPI: Create Conversation
     InboxAPI->>Database: Store conversation
     InboxAPI-->>Buyer: Conversation ID
-    
+
     Buyer->>InboxAPI: Send Message
     InboxAPI->>Database: Store message
-    InboxAPI-->>Seller: Notify (future)
-    
+    InboxAPI-->>Seller: Real-time notification
+
     Seller->>InboxAPI: Get Conversations
     InboxAPI-->>Seller: List with unread count
-    
+
     Seller->>InboxAPI: Get Messages
     InboxAPI-->>Seller: Message history
-    
+
     Seller->>InboxAPI: Send Reply
     InboxAPI->>Database: Store message
-    
+
     Seller->>InboxAPI: Mark as Read
     InboxAPI->>Database: Update read status
 ```
 
 ---
 
-## Endpoints
+## REST API Endpoints
 
 ### 1. Create Conversation
 
@@ -58,17 +61,18 @@ Creates a new conversation between companies (typically buyer and seller).
 **Request Body:**
 ```json
 {
-  "receiverCompanyId": "string",  // MongoDB ObjectId of the receiving company
-  "context": "string",            // Optional: Context (e.g., "trade", "product_inquiry")
-  "contextId": "string"           // Optional: Related entity ID (productId, tradeId, etc.)
+  "product": "string",         // Optional: MongoDB ObjectId of the product (for product inquiries)
+  "targetCompanyId": "string"  // Optional: MongoDB ObjectId of the target company (for direct conversations)
 }
 ```
+
+**Note:** At least one of `product` or `targetCompanyId` must be provided.
 
 **Response:**
 
 **Success (201 Created):**
 ```json
-"string"  // Conversation ID (MongoDB ObjectId)
+"507f1f77bcf86cd799439011"  // Conversation ID (MongoDB ObjectId)
 ```
 
 **Error Responses:**
@@ -77,13 +81,13 @@ Creates a new conversation between companies (typically buyer and seller).
 ```json
 {
   "statusCode": 400,
-  "message": "error message"
+  "message": "Failed to Create Conversation"
 }
 ```
 *Possible reasons:*
 - Conversation already exists between these companies
-- Invalid receiverCompanyId
-- Missing required fields
+- Invalid targetCompanyId or product ID
+- Neither product nor targetCompanyId provided
 
 **401 Unauthorized:**
 ```json
@@ -104,6 +108,7 @@ or
 - `senderCompanyId` is automatically extracted from JWT token
 - Prevents duplicate conversations between same companies
 - Returns the conversation ID for immediate use
+- Supports two modes: product-based (existing flow) or direct company-to-company
 
 ---
 
@@ -123,28 +128,30 @@ Retrieves all conversations for the authenticated user's company.
 ```json
 [
   {
-    "_id": "string",
+    "_id": "507f1f77bcf86cd799439011",
     "participants": ["companyId1", "companyId2"],
-    "context": "string",
-    "contextId": "string",
-    "lastMessage": "string",
-    "lastMessageTimestamp": "2024-01-01T00:00:00.000Z",
-    "unreadCount": {
-      "companyId1": 0,
-      "companyId2": 3
-    },
+    "product": "productId",
+    "messages": ["messageId1", "messageId2"],
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z",
-    // Populated participant details
     "participantDetails": [
       {
-        "_id": "string",
-        "companyName": "string",
-        "role": "Buyer" | "Seller" | "Seller and Buyer"
+        "_id": "companyId1",
+        "companyName": "Company A",
+        "role": "Buyer"
+      },
+      {
+        "_id": "companyId2",
+        "companyName": "Company B",
+        "role": "Seller"
       }
-    ]
+    ],
+    "lastMessage": {
+      "text": "Hello, I'm interested...",
+      "createdAt": "2024-01-01T12:00:00.000Z"
+    },
+    "unreadCount": 3
   }
-  // ... more conversations
 ]
 ```
 
@@ -157,11 +164,18 @@ Retrieves all conversations for the authenticated user's company.
   "message": "No valid cookie found"
 }
 ```
+or
+```json
+{
+  "statusCode": 401,
+  "message": "Invalid token"
+}
+```
 
 **Implementation Notes:**
 - Returns conversations where user's company is a participant
-- Sorted by `lastMessageTimestamp` (most recent first)
-- Includes unread message count per participant
+- Sorted by most recent activity
+- Includes unread message count for the current user's company
 - Populates participant company details
 
 ---
@@ -188,20 +202,30 @@ GET /inbox/507f1f77bcf86cd799439011/messages
 ```json
 [
   {
-    "_id": "string",
-    "conversationId": "string",
-    "senderCompanyId": "string",
-    "text": "string",
-    "readBy": ["companyId1"],
-    "createdAt": "2024-01-01T00:00:00.000Z",
+    "_id": "507f1f77bcf86cd799439011",
+    "text": "Hello, I'm interested in this product.",
     "sender": {
-      // Populated sender company details
-      "_id": "string",
-      "companyName": "string",
-      "role": "string"
-    }
+      "_id": "companyId1",
+      "companyName": "Company A"
+    },
+    "receiver": {
+      "_id": "companyId2",
+      "companyName": "Company B"
+    },
+    "readBy": ["companyId1"],
+    "replyTo": null,
+    "reactions": [
+      {
+        "user": "companyId2",
+        "emoji": "thumbsup",
+        "reactedAt": "2024-01-01T12:30:00.000Z"
+      }
+    ],
+    "editedAt": null,
+    "attachments": [],
+    "createdAt": "2024-01-01T12:00:00.000Z",
+    "updatedAt": "2024-01-01T12:00:00.000Z"
   }
-  // ... more messages, ordered chronologically
 ]
 ```
 
@@ -233,7 +257,7 @@ or
 **Implementation Notes:**
 - Verifies user's company is a participant in the conversation
 - Messages ordered chronologically (oldest first)
-- Sender company details are populated
+- Sender and receiver company details are populated
 - All messages in the conversation are returned
 
 ---
@@ -252,7 +276,8 @@ Sends a message in a conversation.
 **Request Body:**
 ```json
 {
-  "text": "string"  // Message text content
+  "text": "string",     // Required: Message text content
+  "replyTo": "string"   // Optional: MongoDB ObjectId of message being replied to
 }
 ```
 
@@ -260,7 +285,8 @@ Sends a message in a conversation.
 ```
 POST /inbox/507f1f77bcf86cd799439011/send-message
 {
-  "text": "Hello, I'm interested in this product."
+  "text": "Hello, I'm interested in this product.",
+  "replyTo": "507f1f77bcf86cd799439012"
 }
 ```
 
@@ -269,12 +295,21 @@ POST /inbox/507f1f77bcf86cd799439011/send-message
 **Success (201 Created):**
 ```json
 {
-  "_id": "string",
-  "conversationId": "string",
-  "senderCompanyId": "string",
-  "text": "string",
-  "readBy": ["senderCompanyId"],
-  "createdAt": "2024-01-01T00:00:00.000Z"
+  "_id": "507f1f77bcf86cd799439011",
+  "text": "Hello, I'm interested in this product.",
+  "sender": {
+    "_id": "companyId1",
+    "companyName": "Company A"
+  },
+  "receiver": {
+    "_id": "companyId2",
+    "companyName": "Company B"
+  },
+  "readBy": ["companyId1"],
+  "replyTo": "507f1f77bcf86cd799439012",
+  "reactions": [],
+  "attachments": [],
+  "createdAt": "2024-01-01T12:00:00.000Z"
 }
 ```
 
@@ -306,8 +341,8 @@ or
 **Implementation Notes:**
 - Automatically extracts `senderCompanyId` from JWT token
 - Message is marked as read by sender automatically
-- Updates conversation's `lastMessage` and `lastMessageTimestamp`
-- Increments unread count for other participants
+- Updates conversation with the new message
+- Supports reply threading via `replyTo` field
 
 ---
 
@@ -365,249 +400,40 @@ or
 
 **Implementation Notes:**
 - Adds user's companyId to `readBy` array of all unread messages
-- Updates conversation's unread count for the user's company
+- Resets unread count for the user's company
 - Idempotent operation (safe to call multiple times)
-
----
-
-## Data Models
-
-### Conversation Schema
-```typescript
-{
-  _id: ObjectId;
-  participants: ObjectId[];           // Array of company IDs
-  context?: string;                   // e.g., "trade", "product_inquiry"
-  contextId?: ObjectId;              // Related entity ID
-  lastMessage?: string;              // Text of last message
-  lastMessageTimestamp?: Date;       // When last message was sent
-  unreadCount: {
-    [companyId: string]: number;    // Unread count per participant
-  };
-  createdAt: Date;
-  updatedAt: Date;
-}
-```
-
-### Message Schema
-```typescript
-{
-  _id: ObjectId;
-  conversationId: ObjectId;          // Ref: Conversation
-  senderCompanyId: ObjectId;         // Ref: Company
-  text: string;                      // Message content
-  readBy: ObjectId[];                // Array of company IDs who read the message
-  createdAt: Date;
-}
-```
-
----
-
-## Frontend Integration Notes
-
-### 1. Conversation List (Inbox)
-
-**Display:**
-```jsx
-<ConversationList>
-  {conversations.map(conv => (
-    <ConversationItem key={conv._id}>
-      <Avatar company={getOtherParticipant(conv)} />
-      <ConversationInfo>
-        <CompanyName>{getOtherParticipant(conv).companyName}</CompanyName>
-        <LastMessage>{conv.lastMessage}</LastMessage>
-        <Timestamp>{formatTime(conv.lastMessageTimestamp)}</Timestamp>
-      </ConversationInfo>
-      {conv.unreadCount[myCompanyId] > 0 && (
-        <UnreadBadge>{conv.unreadCount[myCompanyId]}</UnreadBadge>
-      )}
-    </ConversationItem>
-  ))}
-</ConversationList>
-```
-
-**Features:**
-- Sort by `lastMessageTimestamp` (most recent first)
-- Show unread count badge
-- Highlight unread conversations
-- Display last message preview
-- Show other participant's company name
-- Click to open conversation
-
-### 2. Message Thread
-
-**Display:**
-```jsx
-<MessageThread>
-  {messages.map(msg => (
-    <Message 
-      key={msg._id}
-      isOwn={msg.senderCompanyId === myCompanyId}
-    >
-      <MessageBubble>
-        <Text>{msg.text}</Text>
-        <Timestamp>{formatTime(msg.createdAt)}</Timestamp>
-        {msg.readBy.length > 1 && <ReadReceipt />}
-      </MessageBubble>
-    </Message>
-  ))}
-</MessageThread>
-
-<MessageInput onSend={sendMessage} />
-```
-
-**Features:**
-- Auto-scroll to bottom on new messages
-- Different styling for own vs other's messages
-- Show read receipts
-- Display timestamps
-- Loading states while sending
-
-### 3. Creating Conversations
-
-**From Product Page:**
-```javascript
-const contactSeller = async (productId, sellerId) => {
-  // Check if conversation exists
-  const existing = conversations.find(c => 
-    c.participants.includes(sellerId)
-  );
-  
-  if (existing) {
-    navigateTo(`/inbox/${existing._id}`);
-  } else {
-    const convId = await createConversation({
-      receiverCompanyId: sellerId,
-      context: 'product_inquiry',
-      contextId: productId
-    });
-    navigateTo(`/inbox/${convId}`);
-  }
-};
-```
-
-**From Trade:**
-```javascript
-const messageSeller = async (trade) => {
-  const convId = await createConversation({
-    receiverCompanyId: trade.seller.company._id,
-    context: 'trade',
-    contextId: trade._id
-  });
-  navigateTo(`/inbox/${convId}`);
-};
-```
-
-### 4. Real-time Updates (Future Enhancement)
-
-**WebSocket Integration:**
-```javascript
-// Subscribe to conversation updates
-socket.on('new_message', (message) => {
-  if (message.conversationId === currentConversationId) {
-    appendMessage(message);
-    markAsRead(message.conversationId);
-  } else {
-    updateUnreadCount(message.conversationId);
-  }
-});
-
-// Send message via WebSocket
-const sendMessage = (text) => {
-  socket.emit('send_message', {
-    conversationId,
-    text
-  });
-};
-```
-
-### 5. Unread Count Display
-
-**Global Unread Count:**
-```javascript
-const totalUnread = conversations.reduce((sum, conv) => 
-  sum + (conv.unreadCount[myCompanyId] || 0), 0
-);
-
-// Display in navigation
-<InboxIcon badge={totalUnread > 0 ? totalUnread : null} />
-```
-
-### 6. Mark as Read Strategy
-
-**Option 1: On Conversation Open**
-```javascript
-useEffect(() => {
-  if (conversationId && messages.length > 0) {
-    markAsRead(conversationId);
-  }
-}, [conversationId, messages]);
-```
-
-**Option 2: On Scroll to Bottom**
-```javascript
-const handleScroll = (e) => {
-  const { scrollTop, scrollHeight, clientHeight } = e.target;
-  if (scrollTop + clientHeight >= scrollHeight - 10) {
-    markAsRead(conversationId);
-  }
-};
-```
-
-### 7. Message Polling (Until WebSockets)
-
-```javascript
-useEffect(() => {
-  if (!conversationId) return;
-  
-  const interval = setInterval(() => {
-    fetchMessages(conversationId);
-  }, 3000); // Poll every 3 seconds
-  
-  return () => clearInterval(interval);
-}, [conversationId]);
-```
-
----
-
-## Best Practices
-
-1. **Performance:**
-   - Paginate message history for long conversations
-   - Implement virtual scrolling for large message lists
-   - Cache conversation list locally
-
-2. **User Experience:**
-   - Show typing indicators (future)
-   - Display "sending..." state for messages
-   - Optimistic message rendering
-   - Auto-scroll to bottom on new messages
-
-3. **Notifications:**
-   - Browser notifications for new messages
-   - Update document title with unread count
-   - Play sound on new message (with user preference)
-
-4. **Error Handling:**
-   - Retry failed message sends
-   - Show error state for failed messages
-   - Offline message queuing
 
 ---
 
 ## WebSocket Gateway
 
-The Inbox module includes a WebSocket gateway for real-time messaging capabilities.
+The Inbox module includes a WebSocket gateway for real-time messaging capabilities with authenticated connections.
 
 ### Connection
 
 **Namespace:** `/inbox`
 
-**CORS:** Configured via `CORS_ORIGIN` environment variable (default: `*`)
+**CORS:** Configured via `CORS_ORIGIN` environment variable
+
+**Authentication:** JWT cookie-based authentication is validated on connection. Unauthenticated connections are immediately disconnected with an `auth-error` event.
+
+```javascript
+import { io } from 'socket.io-client';
+
+const socket = io(`${BACKEND_URL}/inbox`, {
+  withCredentials: true,  // Required for cookie auth
+});
+
+// Handle authentication errors
+socket.on('auth-error', (data) => {
+  console.error('Auth failed:', data.message);
+  // Redirect to login
+});
+```
 
 ### WebSocket Events
 
-#### Client → Server Events
+#### Client -> Server Events
 
 ##### 1. join-conversation
 Join a conversation room to receive real-time updates.
@@ -615,10 +441,11 @@ Join a conversation room to receive real-time updates.
 **Payload:**
 ```json
 {
-  "conversationId": "string",
-  "companyId": "string"
+  "conversationId": "string"
 }
 ```
+
+**Note:** `companyId` is extracted from the authenticated socket, not from payload.
 
 **Response:**
 ```json
@@ -628,14 +455,23 @@ Join a conversation room to receive real-time updates.
 }
 ```
 
+**Error Response:**
+```json
+{
+  "success": false,
+  "error": "Not authenticated"
+}
+```
+
+---
+
 ##### 2. leave-conversation
 Leave a conversation room.
 
 **Payload:**
 ```json
 {
-  "conversationId": "string",
-  "companyId": "string"
+  "conversationId": "string"
 }
 ```
 
@@ -645,6 +481,8 @@ Leave a conversation room.
   "success": true
 }
 ```
+
+---
 
 ##### 3. send-message
 Send a message via WebSocket (real-time).
@@ -653,8 +491,8 @@ Send a message via WebSocket (real-time).
 ```json
 {
   "conversationId": "string",
-  "companyId": "string",
-  "text": "string"
+  "text": "string",
+  "replyTo": "string | null"  // Optional: message ID being replied to
 }
 ```
 
@@ -662,9 +500,28 @@ Send a message via WebSocket (real-time).
 ```json
 {
   "success": true,
-  "message": { /* message object */ }
+  "message": {
+    "_id": "string",
+    "text": "string",
+    "sender": { "_id": "string", "companyName": "string" },
+    "receiver": { "_id": "string", "companyName": "string" },
+    "readBy": ["string"],
+    "replyTo": "string | null",
+    "reactions": [],
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
 }
 ```
+
+**Error Response:**
+```json
+{
+  "success": false,
+  "error": "Not authenticated"
+}
+```
+
+---
 
 ##### 4. mark-read
 Mark messages as read via WebSocket.
@@ -672,8 +529,7 @@ Mark messages as read via WebSocket.
 **Payload:**
 ```json
 {
-  "conversationId": "string",
-  "companyId": "string"
+  "conversationId": "string"
 }
 ```
 
@@ -684,6 +540,8 @@ Mark messages as read via WebSocket.
 }
 ```
 
+---
+
 ##### 5. typing
 Send typing indicator to other participants.
 
@@ -691,7 +549,6 @@ Send typing indicator to other participants.
 ```json
 {
   "conversationId": "string",
-  "companyId": "string",
   "isTyping": true | false
 }
 ```
@@ -703,7 +560,75 @@ Send typing indicator to other participants.
 }
 ```
 
-#### Server → Client Events
+---
+
+##### 6. edit-message
+Edit an existing message.
+
+**Payload:**
+```json
+{
+  "conversationId": "string",
+  "messageId": "string",
+  "text": "string"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": {
+    "_id": "string",
+    "text": "string (updated)",
+    "editedAt": "2024-01-01T12:30:00.000Z",
+    "editedBy": "companyId"
+  }
+}
+```
+
+**Error Response:**
+```json
+{
+  "success": false,
+  "error": "Cannot edit message - not the sender"
+}
+```
+
+---
+
+##### 7. toggle-reaction
+Add or remove a reaction to a message.
+
+**Payload:**
+```json
+{
+  "conversationId": "string",
+  "messageId": "string",
+  "emoji": "string"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": {
+    "_id": "string",
+    "reactions": [
+      {
+        "user": "companyId",
+        "emoji": "thumbsup",
+        "reactedAt": "2024-01-01T12:30:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+---
+
+#### Server -> Client Events
 
 ##### 1. message-received
 Emitted when a new message is sent to the conversation.
@@ -714,14 +639,18 @@ Emitted when a new message is sent to the conversation.
   "conversationId": "string",
   "message": {
     "_id": "string",
-    "conversationId": "string",
-    "senderCompanyId": "string",
     "text": "string",
+    "sender": { "_id": "string", "companyName": "string" },
+    "receiver": { "_id": "string", "companyName": "string" },
     "readBy": ["string"],
+    "replyTo": "string | null",
+    "reactions": [],
     "createdAt": "2024-01-01T00:00:00.000Z"
   }
 }
 ```
+
+---
 
 ##### 2. messages-marked-read
 Emitted when messages are marked as read.
@@ -733,6 +662,8 @@ Emitted when messages are marked as read.
   "companyId": "string"
 }
 ```
+
+---
 
 ##### 3. user-typing
 Emitted when another user is typing.
@@ -746,27 +677,72 @@ Emitted when another user is typing.
 }
 ```
 
-### WebSocket Frontend Integration
+---
+
+##### 4. message-updated
+Emitted when a message is edited or a reaction is toggled.
+
+**Payload:**
+```json
+{
+  "conversationId": "string",
+  "message": {
+    "_id": "string",
+    "text": "string",
+    "editedAt": "2024-01-01T12:30:00.000Z",
+    "reactions": []
+  }
+}
+```
+
+---
+
+##### 5. auth-error
+Emitted when socket authentication fails.
+
+**Payload:**
+```json
+{
+  "message": "Authentication failed. Please log in again."
+}
+```
+
+---
+
+## WebSocket Frontend Integration
 
 ```javascript
 import { io } from 'socket.io-client';
 
-// Connect to WebSocket
+// Connect to WebSocket with credentials
 const socket = io(`${BACKEND_URL}/inbox`, {
   withCredentials: true,
 });
 
+// Handle authentication errors
+socket.on('auth-error', (data) => {
+  console.error('Auth failed:', data.message);
+  window.location.href = '/login';
+});
+
 // Join conversation
 socket.emit('join-conversation', {
-  conversationId: 'conv123',
-  companyId: 'company123'
+  conversationId: 'conv123'
+}, (response) => {
+  if (response.success) {
+    console.log('Joined room:', response.room);
+  }
 });
 
 // Send message
 socket.emit('send-message', {
   conversationId: 'conv123',
-  companyId: 'company123',
-  text: 'Hello!'
+  text: 'Hello!',
+  replyTo: null
+}, (response) => {
+  if (response.success) {
+    console.log('Message sent:', response.message);
+  }
 });
 
 // Listen for new messages
@@ -784,25 +760,46 @@ socket.on('user-typing', (data) => {
   }
 });
 
+// Listen for message updates (edits, reactions)
+socket.on('message-updated', (data) => {
+  console.log('Message updated:', data.message);
+  // Update message in UI
+});
+
 // Send typing indicator
 const handleTyping = (isTyping) => {
   socket.emit('typing', {
     conversationId: 'conv123',
-    companyId: 'company123',
     isTyping
   });
 };
 
+// Edit message
+socket.emit('edit-message', {
+  conversationId: 'conv123',
+  messageId: 'msg123',
+  text: 'Updated message text'
+}, (response) => {
+  if (response.success) {
+    console.log('Message edited');
+  }
+});
+
+// Toggle reaction
+socket.emit('toggle-reaction', {
+  conversationId: 'conv123',
+  messageId: 'msg123',
+  emoji: 'thumbsup'
+});
+
 // Mark as read
 socket.emit('mark-read', {
-  conversationId: 'conv123',
-  companyId: 'company123'
+  conversationId: 'conv123'
 });
 
 // Leave conversation
 socket.emit('leave-conversation', {
-  conversationId: 'conv123',
-  companyId: 'company123'
+  conversationId: 'conv123'
 });
 
 // Disconnect
@@ -811,29 +808,151 @@ socket.disconnect();
 
 ---
 
-## Future Enhancements
+## Data Models
 
-1. **Real-time Messaging:**
-   - ✅ WebSocket integration for instant delivery (implemented)
-   - ✅ Typing indicators (implemented)
-   - Online/offline status
+### Conversation Schema
+```typescript
+{
+  _id: ObjectId;
+  participants: ObjectId[];           // Array of company IDs
+  product?: ObjectId;                 // Ref: Product (optional)
+  messages: ObjectId[];               // Ref: Message array
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
 
-2. **Rich Messages:**
-   - File attachments
-   - Image sharing
-   - Product/trade references
-   - Emoji support
+### Message Schema
+```typescript
+{
+  _id: ObjectId;
+  text: string;                       // Message content
+  sender: ObjectId;                   // Ref: Company
+  receiver: ObjectId;                 // Ref: Company
+  readBy: ObjectId[];                 // Companies who read this message
+  replyTo?: ObjectId;                 // Ref: Message (for threading)
+  reactions: {                        // Emoji reactions
+    user: ObjectId;                   // Ref: Company
+    emoji: string;
+    reactedAt: Date;
+  }[];
+  editedAt?: Date;                    // When message was last edited
+  editedBy?: ObjectId;                // Ref: Company who edited
+  attachments: {                      // File attachments
+    filePath: string;
+    fileName: string;
+    mimeType: string;
+  }[];
+  senderDeleted: boolean;             // Soft-delete if sender company deleted
+  senderDeletedAt?: Date;
+  receiverDeleted: boolean;           // Soft-delete if receiver company deleted
+  receiverDeletedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
 
-3. **Message Management:**
-   - Delete messages
-   - Edit sent messages
-   - Search messages
-   - Pin conversations
+---
 
-4. **Notifications:**
-   - Email notifications for messages
-   - Push notifications
-   - Configurable notification preferences
+## Frontend Integration Notes
+
+### 1. Conversation List (Inbox)
+
+**Display:**
+```jsx
+<ConversationList>
+  {conversations.map(conv => (
+    <ConversationItem key={conv._id}>
+      <Avatar company={getOtherParticipant(conv)} />
+      <ConversationInfo>
+        <CompanyName>{getOtherParticipant(conv).companyName}</CompanyName>
+        <LastMessage>{conv.lastMessage?.text}</LastMessage>
+        <Timestamp>{formatTime(conv.lastMessage?.createdAt)}</Timestamp>
+      </ConversationInfo>
+      {conv.unreadCount > 0 && (
+        <UnreadBadge>{conv.unreadCount}</UnreadBadge>
+      )}
+    </ConversationItem>
+  ))}
+</ConversationList>
+```
+
+### 2. Message Thread
+
+**Display:**
+```jsx
+<MessageThread>
+  {messages.map(msg => (
+    <Message
+      key={msg._id}
+      isOwn={msg.sender._id === myCompanyId}
+    >
+      {msg.replyTo && <ReplyPreview message={msg.replyTo} />}
+      <MessageBubble>
+        <Text>{msg.text}</Text>
+        <Timestamp>{formatTime(msg.createdAt)}</Timestamp>
+        {msg.editedAt && <EditedLabel>edited</EditedLabel>}
+        {msg.readBy.length > 1 && <ReadReceipt />}
+      </MessageBubble>
+      <Reactions reactions={msg.reactions} />
+    </Message>
+  ))}
+</MessageThread>
+
+<MessageInput onSend={sendMessage} />
+```
+
+### 3. Creating Conversations
+
+**From Product Page:**
+```javascript
+const contactSeller = async (productId) => {
+  // Check if conversation exists
+  const existing = conversations.find(c =>
+    c.product === productId
+  );
+
+  if (existing) {
+    navigateTo(`/inbox/${existing._id}`);
+  } else {
+    const convId = await createConversation({ product: productId });
+    navigateTo(`/inbox/${convId}`);
+  }
+};
+```
+
+**Direct Company Contact:**
+```javascript
+const contactCompany = async (companyId) => {
+  const convId = await createConversation({ targetCompanyId: companyId });
+  navigateTo(`/inbox/${convId}`);
+};
+```
+
+---
+
+## Best Practices
+
+1. **Performance:**
+   - Paginate message history for long conversations
+   - Implement virtual scrolling for large message lists
+   - Cache conversation list locally
+
+2. **User Experience:**
+   - Show typing indicators in real-time
+   - Display "sending..." state for messages
+   - Optimistic message rendering
+   - Auto-scroll to bottom on new messages
+
+3. **Notifications:**
+   - Browser notifications for new messages
+   - Update document title with unread count
+   - Play sound on new message (with user preference)
+
+4. **Error Handling:**
+   - Retry failed message sends
+   - Show error state for failed messages
+   - Offline message queuing
 
 ---
 
@@ -842,3 +961,4 @@ socket.disconnect();
 - **Products Module:** Conversations for product inquiries
 - **Company Module:** Participants are companies
 - **Auth Module:** User/company authentication
+- **Notification Module:** Message notifications

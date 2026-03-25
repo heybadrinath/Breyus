@@ -13,8 +13,8 @@ ENV REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --silent
+# Install dependencies (using npm install to handle package.json/lock file sync)
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .

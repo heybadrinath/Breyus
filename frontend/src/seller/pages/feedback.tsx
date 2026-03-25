@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AlertCircle, Loader2, Package, Star, Truck, User } from "lucide-react";
 import { Feedback as FeedbackEntry, FeedbackType, getSellerFeedbackDashboard, ProductSummary } from "../../services/feedback.service";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+import { getImageUrl } from "../../utils/imageUtils";
 
 type DashboardData = {
     summary: {
@@ -219,11 +218,11 @@ export const Feedback = () => {
                                         <div className="w-16 h-16 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center">
                                             {productItem.product.productImages?.[0] ? (
                                                 <img
-                                                    src={`${BACKEND_URL}${productItem.product.productImages[0]}`}
+                                                    src={getImageUrl(productItem.product.productImages[0])}
                                                     alt={productItem.product.name || 'Product'}
                                                     className="w-full h-full object-cover"
                                                     onError={(e) => {
-                                                        (e.target as HTMLImageElement).src = '/placeholder-product.png';
+                                                        (e.target as HTMLImageElement).src = '/placeholder-product.svg';
                                                     }}
                                                 />
                                             ) : (

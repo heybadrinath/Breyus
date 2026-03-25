@@ -1,4 +1,14 @@
-import { IsString, IsNumber, IsEnum, Min, Max, IsOptional, IsMongoId, IsArray, IsObject } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsEnum,
+  Min,
+  Max,
+  IsOptional,
+  IsMongoId,
+  IsArray,
+  IsObject,
+} from 'class-validator';
 import { FeedbackType } from '../feedback.schema';
 
 export class CreateFeedbackDto {

@@ -1,0 +1,61 @@
+/* Breyus Colored Folders — domain identification */
+
+/* API docs — Blue */
+.nav-folder-title[data-path="api"] .nav-folder-title-content::before {
+  content: "📡 ";
+}
+.nav-folder-title[data-path="api"] { color: #60A5FA !important; }
+
+/* AI docs — Orange */
+.nav-folder-title[data-path="ai"] .nav-folder-title-content::before {
+  content: "🧠 ";
+}
+.nav-folder-title[data-path="ai"] { color: #FB923C !important; }
+
+/* Changelog — Green */
+.nav-folder-title[data-path="changelog"] .nav-folder-title-content::before {
+  content: "📋 ";
+}
+.nav-folder-title[data-path="changelog"] { color: #4ADE80 !important; }
+
+/* Decisions — Magenta */
+.nav-folder-title[data-path="decisions"] .nav-folder-title-content::before {
+  content: "⚖️ ";
+}
+.nav-folder-title[data-path="decisions"] { color: #F472B6 !important; }
+
+/* Operations — Yellow */
+.nav-folder-title[data-path="operations"] .nav-folder-title-content::before {
+  content: "⚙️ ";
+}
+.nav-folder-title[data-path="operations"] { color: #FACC15 !important; }
+
+/* Product — Cyan */
+.nav-folder-title[data-path="product"] .nav-folder-title-content::before {
+  content: "📦 ";
+}
+.nav-folder-title[data-path="product"] { color: #22D3EE !important; }
+
+/* Development — Purple */
+.nav-folder-title[data-path="development"] .nav-folder-title-content::before {
+  content: "🔧 ";
+}
+.nav-folder-title[data-path="development"] { color: #A78BFA !important; }
+
+/* Templates — Gray */
+.nav-folder-title[data-path="templates"] .nav-folder-title-content::before {
+  content: "📝 ";
+}
+.nav-folder-title[data-path="templates"] { color: #9CA3AF !important; }
+
+/* Daily Notes — Teal */
+.nav-folder-title[data-path="daily-notes"] .nav-folder-title-content::before {
+  content: "📅 ";
+}
+.nav-folder-title[data-path="daily-notes"] { color: #2DD4BF !important; }
+
+/* Figma — Pink */
+.nav-folder-title[data-path="figma"] .nav-folder-title-content::before {
+  content: "🎨 ";
+}
+.nav-folder-title[data-path="figma"] { color: #EC4899 !important; }

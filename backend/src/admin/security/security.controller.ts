@@ -12,7 +12,11 @@ import {
 import { SecurityService } from './security.service';
 import { AdminAuthGuard } from '../auth/admin-auth.guard';
 import { AdminAction } from '../activity/admin-action.decorator';
-import { BlockIPDto, GetBlockedIPsQueryDto, GetFailedLoginsQueryDto } from './dto';
+import {
+  BlockIPDto,
+  GetBlockedIPsQueryDto,
+  GetFailedLoginsQueryDto,
+} from './dto';
 
 @Controller('admin/security')
 @UseGuards(AdminAuthGuard)

@@ -166,3 +166,63 @@ export const getCurrentCompanyId = async () => {
     return { status: 'error', message: 'Failed to fetch companyId' };
   }
 };
+
+/**
+ * Create a direct conversation with a company (without a product)
+ * Used when initiating chat from seller profile page
+ */
+export const createConversationByCompany = async (targetCompanyId: string) => {
+  try {
+    const backendUri = process.env.REACT_APP_BACKEND_URL;
+    if (!backendUri) {
+      throw new Error('Backend URL is not defined in the environment variables');
+    }
+
+    const response = await fetch(`${backendUri}/inbox/create-conversation`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ targetCompanyId }),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to create conversation');
+    }
+
+    const responseData = await response.json();
+    let conversationId: string | undefined;
+    if (typeof responseData === 'string') {
+      conversationId = responseData;
+    } else if (responseData && typeof responseData === 'object') {
+      conversationId =
+        responseData._id ||
+        responseData.conversationId ||
+        responseData.id ||
+        responseData.data?._id ||
+        responseData.data?.conversationId ||
+        responseData.data;
+    }
+    return {
+      status: 'success',
+      data: conversationId ?? responseData,
+      conversationId,
+    };
+  } catch (error) {
+    console.error('Error creating conversation by company:', error);
+
+    let conversationId = undefined;
+    let message = error instanceof Error ? error.message : 'An unknown error occurred';
+    if (message.startsWith('Conversation already exists:')) {
+      conversationId = message.split(':')[1];
+      message = 'Conversation already exists';
+    }
+    return {
+      status: 'error',
+      message,
+      conversationId,
+    };
+  }
+};

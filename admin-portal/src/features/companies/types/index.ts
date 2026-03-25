@@ -4,6 +4,7 @@ export interface Company {
   companyAddress?: string
   companyMobile?: string
   taxId?: string
+  country?: string
   founderName?: string
   websiteUrl?: string
   role: 'Buyer' | 'Seller' | 'Seller and Buyer'
@@ -20,6 +21,17 @@ export interface Company {
   alternativeSalesEmail?: string
   createdAt: string
   updatedAt: string
+  // GST Verification (for Indian companies)
+  gstVerified?: boolean
+  gstVerifiedAt?: string
+  gstPendingManualReview?: boolean
+  gstVerificationData?: {
+    legalName: string
+    tradeName?: string
+    status: string
+    registrationDate?: string
+    stateJurisdiction?: string
+  }
   // Added by service
   userCount?: number
   documentCount?: number
@@ -69,6 +81,7 @@ export interface CompaniesQueryParams {
   role?: string
   isKycVerified?: boolean
   hasKycDocuments?: boolean
+  gstPendingManualReview?: boolean
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
 }

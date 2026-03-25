@@ -5,8 +5,28 @@ import axios, { AxiosInstance } from 'axios';
 /**
  * Commodity Price Types
  */
-export type CommodityCategory = 'Energy' | 'Metals' | 'Agricultural' | 'Precious Metals';
-export type Exchange = 'CME' | 'NYMEX' | 'LME' | 'COMEX' | 'CBOT' | 'ICE' | 'MCX' | 'ALPHA_VANTAGE';
+export type CommodityCategory =
+  | 'Energy'
+  | 'Metals'
+  | 'Agricultural'
+  | 'Precious Metals';
+export type Exchange =
+  | 'CME'
+  | 'NYMEX'
+  | 'LME'
+  | 'COMEX'
+  | 'CBOT'
+  | 'ICE'
+  | 'MCX'
+  | 'ALPHA_VANTAGE';
+
+/**
+ * Historical price data point for sparklines and charts
+ */
+export interface PriceHistoryPoint {
+  date: string; // ISO date string (YYYY-MM-DD)
+  value: number;
+}
 
 export interface CommodityPrice {
   _id: string;
@@ -22,6 +42,10 @@ export interface CommodityPrice {
   fetchedAt: string;
   delayMinutes: number;
   isActive: boolean;
+  // NEW: Historical data for sparklines and charts
+  priceHistory: PriceHistoryPoint[]; // Last 7 days for sparkline
+  weekHigh: number; // 7-day high
+  weekLow: number; // 7-day low
 }
 
 export interface CommodityPriceSummary {
@@ -29,10 +53,10 @@ export interface CommodityPriceSummary {
   lastUpdated: string | null;
   delayMinutes: number;
   totalCount: number;
-  nextRefreshAt: string | null;    // When the next refresh will be allowed
-  refreshIntervalHours: number;     // How often data refreshes (12 hours)
-  dataSource: string;               // "Alpha Vantage" or "Unavailable"
-  isLoading: boolean;               // Whether a refresh is in progress
+  nextRefreshAt: string | null; // When the next refresh will be allowed
+  refreshIntervalHours: number; // How often data refreshes (12 hours)
+  dataSource: string; // "Alpha Vantage" or "Unavailable"
+  isLoading: boolean; // Whether a refresh is in progress
 }
 
 /**
@@ -82,27 +106,90 @@ export class CommoditiesService implements OnModuleInit {
   // Minimum 12 hours between refreshes, stale override at 24 hours
   private readonly TOTAL_COMMODITIES = 12;
   private readonly API_CALLS_PER_DAY = 25;
-  private readonly REFRESHES_PER_DAY = Math.floor(this.API_CALLS_PER_DAY / this.TOTAL_COMMODITIES); // = 2
-  private readonly MIN_REFRESH_INTERVAL_MS = (24 / this.REFRESHES_PER_DAY) * 60 * 60 * 1000; // 12 hours
+  private readonly REFRESHES_PER_DAY = Math.floor(
+    this.API_CALLS_PER_DAY / this.TOTAL_COMMODITIES,
+  ); // = 2
+  private readonly MIN_REFRESH_INTERVAL_MS =
+    (24 / this.REFRESHES_PER_DAY) * 60 * 60 * 1000; // 12 hours
   private readonly STALE_DATA_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours - always refresh if older
 
   // Commodity configurations for Alpha Vantage
   private readonly commodityConfigs: CommodityConfig[] = [
     // Energy
-    { function: 'WTI', symbol: 'CL', name: 'Crude Oil WTI', category: 'Energy', unit: 'per bbl' },
-    { function: 'BRENT', symbol: 'BZ', name: 'Brent Crude', category: 'Energy', unit: 'per bbl' },
-    { function: 'NATURAL_GAS', symbol: 'NG', name: 'Natural Gas', category: 'Energy', unit: 'per MMBtu' },
+    {
+      function: 'WTI',
+      symbol: 'CL',
+      name: 'Crude Oil WTI',
+      category: 'Energy',
+      unit: 'per bbl',
+    },
+    {
+      function: 'BRENT',
+      symbol: 'BZ',
+      name: 'Brent Crude',
+      category: 'Energy',
+      unit: 'per bbl',
+    },
+    {
+      function: 'NATURAL_GAS',
+      symbol: 'NG',
+      name: 'Natural Gas',
+      category: 'Energy',
+      unit: 'per MMBtu',
+    },
 
     // Industrial Metals
-    { function: 'COPPER', symbol: 'HG', name: 'Copper', category: 'Metals', unit: 'per lb' },
-    { function: 'ALUMINUM', symbol: 'ALI', name: 'Aluminum', category: 'Metals', unit: 'per MT' },
+    {
+      function: 'COPPER',
+      symbol: 'HG',
+      name: 'Copper',
+      category: 'Metals',
+      unit: 'per lb',
+    },
+    {
+      function: 'ALUMINUM',
+      symbol: 'ALI',
+      name: 'Aluminum',
+      category: 'Metals',
+      unit: 'per MT',
+    },
 
     // Agricultural
-    { function: 'WHEAT', symbol: 'ZW', name: 'Wheat', category: 'Agricultural', unit: 'per bu' },
-    { function: 'CORN', symbol: 'ZC', name: 'Corn', category: 'Agricultural', unit: 'per bu' },
-    { function: 'COTTON', symbol: 'CT', name: 'Cotton', category: 'Agricultural', unit: 'per lb' },
-    { function: 'SUGAR', symbol: 'SB', name: 'Sugar #11', category: 'Agricultural', unit: 'per lb' },
-    { function: 'COFFEE', symbol: 'KC', name: 'Coffee', category: 'Agricultural', unit: 'per lb' },
+    {
+      function: 'WHEAT',
+      symbol: 'ZW',
+      name: 'Wheat',
+      category: 'Agricultural',
+      unit: 'per bu',
+    },
+    {
+      function: 'CORN',
+      symbol: 'ZC',
+      name: 'Corn',
+      category: 'Agricultural',
+      unit: 'per bu',
+    },
+    {
+      function: 'COTTON',
+      symbol: 'CT',
+      name: 'Cotton',
+      category: 'Agricultural',
+      unit: 'per lb',
+    },
+    {
+      function: 'SUGAR',
+      symbol: 'SB',
+      name: 'Sugar #11',
+      category: 'Agricultural',
+      unit: 'per lb',
+    },
+    {
+      function: 'COFFEE',
+      symbol: 'KC',
+      name: 'Coffee',
+      category: 'Agricultural',
+      unit: 'per lb',
+    },
   ];
 
   // Precious metals (separate endpoints)
@@ -122,12 +209,16 @@ export class CommoditiesService implements OnModuleInit {
     if (!this.apiKey) {
       this.logger.warn(
         'ALPHA_VANTAGE_API_KEY not configured. Using fallback mock data. ' +
-        'Get a free API key at https://www.alphavantage.co/support/#api-key'
+          'Get a free API key at https://www.alphavantage.co/support/#api-key',
       );
     } else {
       this.logger.log('Alpha Vantage API configured. Lazy-refresh enabled.');
-      this.logger.log(`Refresh interval: ${this.MIN_REFRESH_INTERVAL_MS / (60 * 60 * 1000)} hours`);
-      this.logger.log(`Stale threshold: ${this.STALE_DATA_THRESHOLD_MS / (60 * 60 * 1000)} hours`);
+      this.logger.log(
+        `Refresh interval: ${this.MIN_REFRESH_INTERVAL_MS / (60 * 60 * 1000)} hours`,
+      );
+      this.logger.log(
+        `Stale threshold: ${this.STALE_DATA_THRESHOLD_MS / (60 * 60 * 1000)} hours`,
+      );
     }
   }
 
@@ -137,9 +228,13 @@ export class CommoditiesService implements OnModuleInit {
    */
   async onModuleInit() {
     if (this.apiKey) {
-      this.logger.log('Commodity service initialized. Real data will be fetched on first request.');
+      this.logger.log(
+        'Commodity service initialized. Real data will be fetched on first request.',
+      );
     } else {
-      this.logger.warn('Commodity service initialized WITHOUT API key. No data will be available.');
+      this.logger.warn(
+        'Commodity service initialized WITHOUT API key. No data will be available.',
+      );
     }
   }
 
@@ -172,12 +267,19 @@ export class CommoditiesService implements OnModuleInit {
 
     // Normal interval check (> 12 hours)
     if (timeSinceLastUpdate >= this.MIN_REFRESH_INTERVAL_MS) {
-      return { shouldRefresh: true, reason: 'Normal refresh interval passed (> 12 hours)' };
+      return {
+        shouldRefresh: true,
+        reason: 'Normal refresh interval passed (> 12 hours)',
+      };
     }
 
     // Data is fresh enough
-    const hoursUntilRefresh = (this.MIN_REFRESH_INTERVAL_MS - timeSinceLastUpdate) / (60 * 60 * 1000);
-    return { shouldRefresh: false, reason: `Data is fresh. Next refresh in ${hoursUntilRefresh.toFixed(1)} hours` };
+    const hoursUntilRefresh =
+      (this.MIN_REFRESH_INTERVAL_MS - timeSinceLastUpdate) / (60 * 60 * 1000);
+    return {
+      shouldRefresh: false,
+      reason: `Data is fresh. Next refresh in ${hoursUntilRefresh.toFixed(1)} hours`,
+    };
   }
 
   /**
@@ -205,7 +307,7 @@ export class CommoditiesService implements OnModuleInit {
     if (shouldRefresh) {
       this.logger.log(`Triggering refresh: ${reason}`);
       // Don't await - let refresh happen in background while returning cached data
-      this.refreshAllPrices().catch(err => {
+      this.refreshAllPrices().catch((err) => {
         this.logger.error(`Background refresh failed: ${err.message}`);
       });
     } else {
@@ -217,7 +319,9 @@ export class CommoditiesService implements OnModuleInit {
     // Calculate next refresh time
     let nextRefreshAt: string | null = null;
     if (this.lastFullUpdate) {
-      const nextRefreshTime = new Date(this.lastFullUpdate.getTime() + this.MIN_REFRESH_INTERVAL_MS);
+      const nextRefreshTime = new Date(
+        this.lastFullUpdate.getTime() + this.MIN_REFRESH_INTERVAL_MS,
+      );
       nextRefreshAt = nextRefreshTime.toISOString();
     }
 
@@ -243,8 +347,12 @@ export class CommoditiesService implements OnModuleInit {
   /**
    * Get prices by category
    */
-  async getPricesByCategory(category: CommodityCategory): Promise<CommodityPrice[]> {
-    return Array.from(this.priceCache.values()).filter(p => p.category === category);
+  async getPricesByCategory(
+    category: CommodityCategory,
+  ): Promise<CommodityPrice[]> {
+    return Array.from(this.priceCache.values()).filter(
+      (p) => p.category === category,
+    );
   }
 
   /**
@@ -327,7 +435,7 @@ export class CommoditiesService implements OnModuleInit {
         this.lastFullUpdate = new Date();
         this.logger.log(
           `Commodity refresh complete: ${successCount} success, ${errorCount} errors. ` +
-          `Next refresh available after ${new Date(this.lastFullUpdate.getTime() + this.MIN_REFRESH_INTERVAL_MS).toISOString()}`
+            `Next refresh available after ${new Date(this.lastFullUpdate.getTime() + this.MIN_REFRESH_INTERVAL_MS).toISOString()}`,
         );
       } else {
         this.logger.error('Commodity refresh failed: no successful fetches');
@@ -340,7 +448,9 @@ export class CommoditiesService implements OnModuleInit {
   /**
    * Fetch a single commodity price from Alpha Vantage
    */
-  private async fetchCommodityPrice(config: CommodityConfig): Promise<CommodityPrice | null> {
+  private async fetchCommodityPrice(
+    config: CommodityConfig,
+  ): Promise<CommodityPrice | null> {
     try {
       const response = await this.httpClient.get('', {
         params: {
@@ -354,32 +464,59 @@ export class CommoditiesService implements OnModuleInit {
 
       // Check for API error responses
       if (data['Error Message']) {
-        this.logger.error(`Alpha Vantage error for ${config.name}: ${data['Error Message']}`);
+        this.logger.error(
+          `Alpha Vantage error for ${config.name}: ${data['Error Message']}`,
+        );
         return null;
       }
 
       // Check for rate limit warning
       if (data['Note']) {
-        this.logger.warn(`Alpha Vantage rate limit for ${config.name}: ${data['Note']}`);
+        this.logger.warn(
+          `Alpha Vantage rate limit for ${config.name}: ${data['Note']}`,
+        );
         return null;
       }
 
       // Parse the response - Alpha Vantage returns data in a "data" array
-      const dataKey = Object.keys(data).find(k => k.includes('data'));
-      if (!dataKey || !data[dataKey] || !Array.isArray(data[dataKey]) || data[dataKey].length === 0) {
+      const dataKey = Object.keys(data).find((k) => k.includes('data'));
+      if (
+        !dataKey ||
+        !data[dataKey] ||
+        !Array.isArray(data[dataKey]) ||
+        data[dataKey].length === 0
+      ) {
         this.logger.warn(`No data found for ${config.name}`);
         return null;
       }
 
-      const latestData = data[dataKey][0];
-      const previousData = data[dataKey][1] || latestData;
+      const rawData = data[dataKey];
+      const latestData = rawData[0];
+      const previousData = rawData[1] || latestData;
 
       const currentPrice = parseFloat(latestData.value);
       const previousPrice = parseFloat(previousData.value);
       const change = currentPrice - previousPrice;
-      const changePercent = previousPrice !== 0 ? (change / previousPrice) * 100 : 0;
+      const changePercent =
+        previousPrice !== 0 ? (change / previousPrice) * 100 : 0;
 
-      this.logger.debug(`Fetched ${config.name}: $${currentPrice.toFixed(2)} (${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%)`);
+      // Extract last 7 days of price history for sparklines
+      const priceHistory: PriceHistoryPoint[] = rawData
+        .slice(0, 7)
+        .map((point: { date?: string; timestamp?: string; value: string }) => ({
+          date: point.date || point.timestamp || '',
+          value: Math.round(parseFloat(point.value) * 100) / 100,
+        }))
+        .reverse(); // Oldest first for chart rendering
+
+      // Calculate 7-day high and low (with safeguard for empty arrays)
+      const weekPrices = priceHistory.map((p) => p.value).filter((v) => !isNaN(v));
+      const weekHigh = weekPrices.length > 0 ? Math.max(...weekPrices) : currentPrice;
+      const weekLow = weekPrices.length > 0 ? Math.min(...weekPrices) : currentPrice;
+
+      this.logger.debug(
+        `Fetched ${config.name}: $${currentPrice.toFixed(2)} (${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%) | 7d range: $${weekLow.toFixed(2)}-$${weekHigh.toFixed(2)}`,
+      );
 
       return {
         _id: `commodity-${config.symbol}`,
@@ -395,6 +532,9 @@ export class CommoditiesService implements OnModuleInit {
         fetchedAt: new Date().toISOString(),
         delayMinutes: 15,
         isActive: true,
+        priceHistory,
+        weekHigh: Math.round(weekHigh * 100) / 100,
+        weekLow: Math.round(weekLow * 100) / 100,
       };
     } catch (error) {
       this.logger.error(`Error fetching ${config.name}: ${error.message}`);
@@ -405,7 +545,12 @@ export class CommoditiesService implements OnModuleInit {
   /**
    * Fetch precious metal price (Gold/Silver) using dedicated endpoints
    */
-  private async fetchPreciousMetalPrice(metal: { function: string; symbol: string; name: string; unit: string }): Promise<CommodityPrice | null> {
+  private async fetchPreciousMetalPrice(metal: {
+    function: string;
+    symbol: string;
+    name: string;
+    unit: string;
+  }): Promise<CommodityPrice | null> {
     try {
       const response = await this.httpClient.get('', {
         params: {
@@ -417,30 +562,52 @@ export class CommoditiesService implements OnModuleInit {
       const data = response.data;
 
       if (data['Error Message']) {
-        this.logger.error(`Alpha Vantage error for ${metal.name}: ${data['Error Message']}`);
+        this.logger.error(
+          `Alpha Vantage error for ${metal.name}: ${data['Error Message']}`,
+        );
         return null;
       }
 
       if (data['Note']) {
-        this.logger.warn(`Alpha Vantage rate limit for ${metal.name}: ${data['Note']}`);
+        this.logger.warn(
+          `Alpha Vantage rate limit for ${metal.name}: ${data['Note']}`,
+        );
         return null;
       }
 
-      const dataKey = Object.keys(data).find(k => k.includes('data'));
+      const dataKey = Object.keys(data).find((k) => k.includes('data'));
       if (!dataKey || !data[dataKey] || data[dataKey].length === 0) {
         this.logger.warn(`No data found for ${metal.name}`);
         return null;
       }
 
-      const latestData = data[dataKey][0];
-      const previousData = data[dataKey][1] || latestData;
+      const rawData = data[dataKey];
+      const latestData = rawData[0];
+      const previousData = rawData[1] || latestData;
 
       const currentPrice = parseFloat(latestData.value);
       const previousPrice = parseFloat(previousData.value);
       const change = currentPrice - previousPrice;
-      const changePercent = previousPrice !== 0 ? (change / previousPrice) * 100 : 0;
+      const changePercent =
+        previousPrice !== 0 ? (change / previousPrice) * 100 : 0;
 
-      this.logger.debug(`Fetched ${metal.name}: $${currentPrice.toFixed(2)} (${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%)`);
+      // Extract last 7 days of price history for sparklines
+      const priceHistory: PriceHistoryPoint[] = rawData
+        .slice(0, 7)
+        .map((point: { date?: string; timestamp?: string; value: string }) => ({
+          date: point.date || point.timestamp || '',
+          value: Math.round(parseFloat(point.value) * 100) / 100,
+        }))
+        .reverse(); // Oldest first for chart rendering
+
+      // Calculate 7-day high and low (with safeguard for empty arrays)
+      const weekPrices = priceHistory.map((p) => p.value).filter((v) => !isNaN(v));
+      const weekHigh = weekPrices.length > 0 ? Math.max(...weekPrices) : currentPrice;
+      const weekLow = weekPrices.length > 0 ? Math.min(...weekPrices) : currentPrice;
+
+      this.logger.debug(
+        `Fetched ${metal.name}: $${currentPrice.toFixed(2)} (${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%) | 7d range: $${weekLow.toFixed(2)}-$${weekHigh.toFixed(2)}`,
+      );
 
       return {
         _id: `commodity-${metal.symbol}`,
@@ -456,6 +623,9 @@ export class CommoditiesService implements OnModuleInit {
         fetchedAt: new Date().toISOString(),
         delayMinutes: 15,
         isActive: true,
+        priceHistory,
+        weekHigh: Math.round(weekHigh * 100) / 100,
+        weekLow: Math.round(weekLow * 100) / 100,
       };
     } catch (error) {
       this.logger.error(`Error fetching ${metal.name}: ${error.message}`);
@@ -467,6 +637,6 @@ export class CommoditiesService implements OnModuleInit {
    * Helper function to sleep for rate limiting
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

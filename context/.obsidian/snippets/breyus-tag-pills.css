@@ -1,0 +1,27 @@
+/* Breyus Tag Pills — colored tag badges */
+.tag {
+  background-color: rgba(138, 92, 245, 0.2) !important;
+  color: #D4BBFF !important;
+  border: 1px solid rgba(138, 92, 245, 0.3);
+  border-radius: 12px;
+  padding: 2px 10px !important;
+  font-size: 0.8em;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.tag:hover {
+  background-color: rgba(138, 92, 245, 0.35) !important;
+  border-color: rgba(138, 92, 245, 0.5);
+  transform: translateY(-1px);
+}
+
+/* Domain-specific tag colors */
+.tag[href="#backend"] { background-color: rgba(59, 130, 246, 0.2) !important; color: #93C5FD !important; border-color: rgba(59, 130, 246, 0.3); }
+.tag[href="#frontend"] { background-color: rgba(16, 185, 129, 0.2) !important; color: #6EE7B7 !important; border-color: rgba(16, 185, 129, 0.3); }
+.tag[href="#ai"] { background-color: rgba(245, 158, 11, 0.2) !important; color: #FCD34D !important; border-color: rgba(245, 158, 11, 0.3); }
+.tag[href="#trade"] { background-color: rgba(239, 68, 68, 0.2) !important; color: #FCA5A5 !important; border-color: rgba(239, 68, 68, 0.3); }
+.tag[href="#admin-portal"] { background-color: rgba(168, 85, 247, 0.2) !important; color: #D8B4FE !important; border-color: rgba(168, 85, 247, 0.3); }
+.tag[href="#docs"] { background-color: rgba(107, 114, 128, 0.2) !important; color: #D1D5DB !important; border-color: rgba(107, 114, 128, 0.3); }
+.tag[href="#fix"] { background-color: rgba(220, 38, 38, 0.2) !important; color: #FCA5A5 !important; border-color: rgba(220, 38, 38, 0.3); }
+.tag[href="#feature"] { background-color: rgba(34, 197, 94, 0.2) !important; color: #86EFAC !important; border-color: rgba(34, 197, 94, 0.3); }

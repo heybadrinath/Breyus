@@ -8,9 +8,10 @@ import { resolve } from 'path';
 
 dotenv.config({ path: resolve(__dirname, '../../.env') });
 
-const MONGODB_URI = process.env.MONGODB_URI_DEV ||
-                    process.env.MONGODB_URI ||
-                    'mongodb://localhost:27017/breyus';
+const MONGODB_URI =
+  process.env.MONGODB_URI_DEV ||
+  process.env.MONGODB_URI ||
+  'mongodb://localhost:27017/breyus';
 
 async function run() {
   console.log('Connecting to MongoDB...');
@@ -29,7 +30,9 @@ async function run() {
     console.log('Before - By phase:', byPhase);
 
     // Take some completed trades and change them to different phases for testing
-    const completedTrades = trades.filter((t: any) => t.tradePhase === 'COMPLETED');
+    const completedTrades = trades.filter(
+      (t: any) => t.tradePhase === 'COMPLETED',
+    );
     const phases = ['PR', 'SCO', 'ICPO', 'SPA', 'PAYMENT'];
 
     for (let i = 0; i < Math.min(phases.length, completedTrades.length); i++) {
@@ -50,10 +53,12 @@ async function run() {
             updatedAt: stalledDate,
             lastPhaseChangeAt: stalledDate,
             completedAt: null, // Remove completion
-          }
-        }
+          },
+        },
       );
-      console.log(`Changed trade ${trade._id.toString().slice(-6)} to ${newPhase}${isStalled ? ' (STALLED)' : ''}`);
+      console.log(
+        `Changed trade ${trade._id.toString().slice(-6)} to ${newPhase}${isStalled ? ' (STALLED)' : ''}`,
+      );
     }
 
     // Verify changes

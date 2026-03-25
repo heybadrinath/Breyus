@@ -10,7 +10,9 @@ export const RedisProvider: Provider = {
     const redisUrl = process.env.REDIS_URL;
 
     if (!redisUrl) {
-      logger.warn('REDIS_URL not configured. Using in-memory OTP storage (development mode).');
+      logger.warn(
+        'REDIS_URL not configured. Using in-memory OTP storage (development mode).',
+      );
       return null;
     }
 

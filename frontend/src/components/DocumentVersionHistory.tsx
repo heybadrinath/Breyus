@@ -19,7 +19,7 @@ interface DocumentVersion {
 
 interface DocumentVersionHistoryProps {
     tradeId: string;
-    documentType: 'sco' | 'icpo' | 'spa' | 'bol' | 'payment-proof';
+    documentType: 'sco' | 'icpo' | 'spa' | 'signed-spa' | 'bol' | 'payment-proof';
     onVersionSelect?: (version: DocumentVersion) => void;
 }
 
@@ -27,6 +27,7 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
     'sco': 'Soft Corporate Offer',
     'icpo': 'Irrevocable Corporate Purchase Order',
     'spa': 'Sales Purchase Agreement',
+    'signed-spa': 'Signed SPA',
     'bol': 'Bill of Lading',
     'payment-proof': 'Payment Proof'
 };

@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Package, MapPin, CreditCard, User, Building, Calendar, DollarSign, FileText, Loader2, History, AlertTriangle, MessageSquare, Send } from 'lucide-react';
-import { getTradeById, Trade, raiseDispute, getTradeDispute, addDisputeMessage, DisputeReason, DisputePriority, TradeDispute, DisputeMessage } from '../services/trade.service';
+import { useLocation } from 'react-router-dom';
+import { X, Package, MapPin, CreditCard, User, Building, Calendar, DollarSign, FileText, Loader2, History, AlertTriangle, MessageSquare, Send, Download } from 'lucide-react';
+import { getTradeById, Trade, raiseDispute, getTradeDispute, addDisputeMessage, DisputeReason, DisputePriority, TradeDispute, DisputeMessage, downloadPurchaseRequest, downloadPurchaseOrder, downloadInvoice } from '../services/trade.service';
 import NegotiationHistory from './NegotiationHistory';
 import AuditHistory from './AuditHistory';
+import { getImageUrl, getFileUrl } from '../utils/imageUtils';
+import CompanyAvatar from './ui/CompanyAvatar';
+import ClickableCompanyName from './ui/ClickableCompanyName';
 
 interface TradeDetailsModalProps {
     tradeId: string;
@@ -10,8 +14,6 @@ interface TradeDetailsModalProps {
     onClose: () => void;
     onNavigateToNegotiation?: () => void;
 }
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
 // Dispute reason display names
 const DISPUTE_REASON_LABELS: Record<DisputeReason, string> = {
@@ -32,16 +34,56 @@ const DISPUTE_PRIORITY_LABELS: Record<DisputePriority, string> = {
     urgent: 'Urgent',
 };
 
+// PHASE 2 REFACTORING: Phases eligible for raising disputes
+const DISPUTE_ELIGIBLE_PHASES = ['PAYMENT', 'BOL', 'COMPLETED', 'CANCELLED'];
+
+// Helper to check dispute eligibility
+const checkDisputeEligibility = (trade: Trade): { canRaise: boolean; reason?: string; daysRemaining?: number } => {
+    const tradePhase = (trade as any).tradePhase;
+
+    // Check if phase allows disputes
+    if (!DISPUTE_ELIGIBLE_PHASES.includes(tradePhase)) {
+        return {
+            canRaise: false,
+            reason: `Disputes can only be raised from Payment phase onwards. Current phase: ${tradePhase || 'PR'}`
+        };
+    }
+
+    // For completed/cancelled trades, check the 30-day window
+    if (tradePhase === 'COMPLETED' || tradePhase === 'CANCELLED') {
+        const eligibilityEndsAt = (trade as any).disputeEligibilityEndsAt;
+        if (eligibilityEndsAt) {
+            const endDate = new Date(eligibilityEndsAt);
+            const now = new Date();
+            if (now > endDate) {
+                return {
+                    canRaise: false,
+                    reason: 'Dispute window has expired (30 days from trade closure)'
+                };
+            }
+            // Calculate days remaining
+            const daysRemaining = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            return { canRaise: true, daysRemaining };
+        }
+    }
+
+    return { canRaise: true };
+};
+
 const TradeDetailsModal: React.FC<TradeDetailsModalProps> = ({
     tradeId,
     isOpen,
     onClose,
     onNavigateToNegotiation
 }) => {
+    const location = useLocation();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [trade, setTrade] = useState<Trade | null>(null);
     const [activeTab, setActiveTab] = useState<'details' | 'history' | 'audit' | 'dispute'>('details');
+
+    // Determine viewer role from URL path
+    const viewerRole = location.pathname.startsWith('/seller') ? 'seller' : 'buyer';
 
     // Dispute states
     const [showDisputeModal, setShowDisputeModal] = useState(false);
@@ -58,6 +100,11 @@ const TradeDetailsModal: React.FC<TradeDetailsModalProps> = ({
     // Dispute message states
     const [newMessage, setNewMessage] = useState('');
     const [sendingMessage, setSendingMessage] = useState(false);
+
+    // Document download states
+    const [downloadingPR, setDownloadingPR] = useState(false);
+    const [downloadingPO, setDownloadingPO] = useState(false);
+    const [downloadingInvoice, setDownloadingInvoice] = useState(false);
 
     useEffect(() => {
         if (isOpen && tradeId) {
@@ -155,6 +202,39 @@ const TradeDetailsModal: React.FC<TradeDetailsModalProps> = ({
         }
     };
 
+    const handleDownloadPR = async () => {
+        setDownloadingPR(true);
+        try {
+            await downloadPurchaseRequest(tradeId);
+        } catch (err) {
+            console.error('Failed to download purchase request:', err);
+        } finally {
+            setDownloadingPR(false);
+        }
+    };
+
+    const handleDownloadPO = async () => {
+        setDownloadingPO(true);
+        try {
+            await downloadPurchaseOrder(tradeId);
+        } catch (err) {
+            console.error('Failed to download purchase order:', err);
+        } finally {
+            setDownloadingPO(false);
+        }
+    };
+
+    const handleDownloadInvoice = async () => {
+        setDownloadingInvoice(true);
+        try {
+            await downloadInvoice(tradeId);
+        } catch (err) {
+            console.error('Failed to download invoice:', err);
+        } finally {
+            setDownloadingInvoice(false);
+        }
+    };
+
     const formatDate = (dateString?: string) => {
         if (!dateString) return 'N/A';
         return new Date(dateString).toLocaleDateString('en-US', {
@@ -224,20 +304,23 @@ const TradeDetailsModal: React.FC<TradeDetailsModalProps> = ({
                         <History className="w-4 h-4" />
                         Audit Trail
                     </button>
-                    <button
-                        onClick={() => setActiveTab('dispute')}
-                        className={`flex-1 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-1 ${
-                            activeTab === 'dispute'
-                                ? 'text-gray-900 border-b-2 border-[#C4A962]'
-                                : 'text-gray-500 hover:text-gray-700'
-                        }`}
-                    >
-                        <AlertTriangle className="w-4 h-4" />
-                        Dispute
-                        {existingDispute && existingDispute.status !== 'closed' && (
-                            <span className="ml-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                        )}
-                    </button>
+                    {/* Only show Dispute tab for eligible phases (PAYMENT, BOL, COMPLETED, CANCELLED) */}
+                    {trade && DISPUTE_ELIGIBLE_PHASES.includes((trade as any).tradePhase) && (
+                        <button
+                            onClick={() => setActiveTab('dispute')}
+                            className={`flex-1 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-1 ${
+                                activeTab === 'dispute'
+                                    ? 'text-gray-900 border-b-2 border-[#C4A962]'
+                                    : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            <AlertTriangle className="w-4 h-4" />
+                            Dispute
+                            {existingDispute && existingDispute.status !== 'closed' && (
+                                <span className="ml-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                            )}
+                        </button>
+                    )}
                 </div>
 
                 {/* Content */}
@@ -263,11 +346,11 @@ const TradeDetailsModal: React.FC<TradeDetailsModalProps> = ({
                                 <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                                     {trade.product?.productImages?.[0] ? (
                                         <img
-                                            src={`${BACKEND_URL}${trade.product.productImages[0]}`}
+                                            src={getImageUrl(trade.product.productImages[0])}
                                             alt={trade.product.name}
                                             className="w-full h-full object-cover"
                                             onError={(e) => {
-                                                (e.target as HTMLImageElement).src = '/placeholder-product.png';
+                                                (e.target as HTMLImageElement).src = '/placeholder-product.svg';
                                             }}
                                         />
                                     ) : (
@@ -284,9 +367,16 @@ const TradeDetailsModal: React.FC<TradeDetailsModalProps> = ({
                                         <span className="text-xl font-bold text-green-600">
                                             {trade.product?.price} {trade.product?.currency || 'INR'}
                                         </span>
-                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(trade.negotiationStatus)}`}>
-                                            {trade.negotiationStatus?.replace('_', ' ').toUpperCase() || 'PENDING'}
-                                        </span>
+                                        {/* Show CANCELLED badge if trade is cancelled */}
+                                        {((trade as any).tradePhase === 'CANCELLED' || trade.negotiationStatus === 'cancelled') ? (
+                                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                CANCELLED
+                                            </span>
+                                        ) : (
+                                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(trade.negotiationStatus)}`}>
+                                                {trade.negotiationStatus?.replace('_', ' ').toUpperCase() || 'PENDING'}
+                                            </span>
+                                        )}
                                     </div>
                                     <p className="text-sm text-gray-500 mt-1">
                                         Quantity: {trade.quantity} {trade.quantityUnit}
@@ -301,14 +391,52 @@ const TradeDetailsModal: React.FC<TradeDetailsModalProps> = ({
                                         <User className="w-4 h-4 text-blue-600" />
                                         <span className="text-sm font-medium text-gray-700">Buyer</span>
                                     </div>
-                                    <p className="text-sm text-gray-600">{trade.buyer?.mail || 'N/A'}</p>
+                                    <div className="flex items-center gap-2">
+                                        <CompanyAvatar
+                                            companyId={(trade.buyer as any)?.company?._id}
+                                            companyName={(trade.buyer as any)?.company?.companyName || trade.buyer?.mail || 'Buyer'}
+                                            profilePicture={(trade.buyer as any)?.company?.profilePicture}
+                                            size="sm"
+                                            clickable={viewerRole === 'seller' && !!(trade.buyer as any)?.company?._id}
+                                            viewerRole="seller"
+                                        />
+                                        {viewerRole === 'seller' ? (
+                                            <ClickableCompanyName
+                                                companyId={(trade.buyer as any)?.company?._id}
+                                                companyName={(trade.buyer as any)?.company?.companyName || trade.buyer?.mail || 'N/A'}
+                                                className="text-sm text-gray-600"
+                                                viewerRole="seller"
+                                            />
+                                        ) : (
+                                            <span className="text-sm text-gray-600">{(trade.buyer as any)?.company?.companyName || trade.buyer?.mail || 'N/A'}</span>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="p-4 bg-purple-50 rounded-lg">
                                     <div className="flex items-center gap-2 mb-2">
                                         <Building className="w-4 h-4 text-purple-600" />
                                         <span className="text-sm font-medium text-gray-700">Seller</span>
                                     </div>
-                                    <p className="text-sm text-gray-600">{trade.seller?.mail || 'N/A'}</p>
+                                    <div className="flex items-center gap-2">
+                                        <CompanyAvatar
+                                            companyId={(trade.seller as any)?.company?._id}
+                                            companyName={(trade.seller as any)?.company?.companyName || trade.seller?.mail || 'Seller'}
+                                            profilePicture={(trade.seller as any)?.company?.profilePicture}
+                                            size="sm"
+                                            clickable={viewerRole === 'buyer' && !!(trade.seller as any)?.company?._id}
+                                            viewerRole="buyer"
+                                        />
+                                        {viewerRole === 'buyer' ? (
+                                            <ClickableCompanyName
+                                                companyId={(trade.seller as any)?.company?._id}
+                                                companyName={(trade.seller as any)?.company?.companyName || trade.seller?.mail || 'N/A'}
+                                                className="text-sm text-gray-600"
+                                                viewerRole="buyer"
+                                            />
+                                        ) : (
+                                            <span className="text-sm text-gray-600">{(trade.seller as any)?.company?.companyName || trade.seller?.mail || 'N/A'}</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
@@ -409,6 +537,28 @@ const TradeDetailsModal: React.FC<TradeDetailsModalProps> = ({
                                     </h4>
                                 </div>
                                 <div className="p-4 grid grid-cols-2 gap-4">
+                                    {/* Port Information */}
+                                    {(trade as any).nearestPort && (
+                                        <div className="col-span-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                            <p className="text-xs text-blue-600 mb-1">Nearest Importing Port</p>
+                                            <p className="font-medium text-blue-900">{(trade as any).nearestPort}</p>
+                                        </div>
+                                    )}
+                                    {/* CIS Document */}
+                                    {(trade as any).buyerCisDocument && (
+                                        <div className="col-span-2 p-3 bg-green-50 rounded-lg border border-green-100">
+                                            <p className="text-xs text-green-600 mb-1">CIS Document (Customer Information Sheet)</p>
+                                            <a
+                                                href={getFileUrl((trade as any).buyerCisDocument)}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-2 text-green-700 hover:text-green-800 font-medium"
+                                            >
+                                                <FileText className="w-4 h-4" />
+                                                View CIS Document
+                                            </a>
+                                        </div>
+                                    )}
                                     <div>
                                         <p className="text-xs text-gray-500">Industry Type</p>
                                         <p className="font-medium">{trade.buyerIndustryType || 'N/A'}</p>
@@ -425,6 +575,72 @@ const TradeDetailsModal: React.FC<TradeDetailsModalProps> = ({
                                         <p className="text-xs text-gray-500">Product Usage</p>
                                         <p className="font-medium">{trade.productUsage || 'N/A'}</p>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Download Documents */}
+                            <div className="border rounded-lg overflow-hidden">
+                                <div className="bg-gray-50 p-3 border-b">
+                                    <h4 className="font-medium text-gray-700 flex items-center gap-2">
+                                        <Download className="w-4 h-4" />
+                                        Download Documents
+                                    </h4>
+                                </div>
+                                <div className="p-4">
+                                    <div className="flex flex-wrap gap-3">
+                                        {/* Purchase Request - Always available */}
+                                        <button
+                                            onClick={handleDownloadPR}
+                                            disabled={downloadingPR}
+                                            className="px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-2 text-sm font-medium disabled:opacity-50"
+                                        >
+                                            {downloadingPR ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <Download className="w-4 h-4" />
+                                            )}
+                                            Purchase Request
+                                        </button>
+
+                                        {/* Purchase Order - Only if accepted */}
+                                        {(trade.negotiationStatus === 'accepted' || (trade as any).tradePhase === 'COMPLETED') && (
+                                            <button
+                                                onClick={handleDownloadPO}
+                                                disabled={downloadingPO}
+                                                className="px-4 py-2 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors flex items-center gap-2 text-sm font-medium disabled:opacity-50"
+                                            >
+                                                {downloadingPO ? (
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                    <Download className="w-4 h-4" />
+                                                )}
+                                                Purchase Order
+                                            </button>
+                                        )}
+
+                                        {/* Invoice - Only if completed */}
+                                        {(trade as any).tradePhase === 'COMPLETED' && (
+                                            <button
+                                                onClick={handleDownloadInvoice}
+                                                disabled={downloadingInvoice}
+                                                className="px-4 py-2 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors flex items-center gap-2 text-sm font-medium disabled:opacity-50"
+                                            >
+                                                {downloadingInvoice ? (
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                    <Download className="w-4 h-4" />
+                                                )}
+                                                Invoice
+                                            </button>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-3">
+                                        {trade.negotiationStatus !== 'accepted' && (trade as any).tradePhase !== 'COMPLETED'
+                                            ? 'Purchase Order will be available after the trade is accepted.'
+                                            : (trade as any).tradePhase !== 'COMPLETED'
+                                            ? 'Invoice will be available after the trade is completed.'
+                                            : 'All documents are available for download.'}
+                                    </p>
                                 </div>
                             </div>
 
@@ -569,21 +785,49 @@ const TradeDetailsModal: React.FC<TradeDetailsModalProps> = ({
                                     </div>
                                 </div>
                             ) : (
-                                // No dispute - show option to raise one
-                                <div className="text-center py-12">
-                                    <AlertTriangle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                                    <h3 className="text-lg font-medium text-gray-700 mb-2">No Dispute</h3>
-                                    <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                                        If you're experiencing issues with this trade, you can raise a dispute. Our admin team will review and help resolve it.
-                                    </p>
-                                    <button
-                                        onClick={() => setShowDisputeModal(true)}
-                                        className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium inline-flex items-center gap-2"
-                                    >
-                                        <AlertTriangle className="w-4 h-4" />
-                                        Raise a Dispute
-                                    </button>
-                                </div>
+                                // No dispute - show option to raise one (with eligibility check)
+                                (() => {
+                                    const eligibility = trade ? checkDisputeEligibility(trade) : { canRaise: false, reason: 'Trade not loaded' };
+                                    return (
+                                        <div className="text-center py-12">
+                                            <AlertTriangle className={`w-12 h-12 mx-auto mb-4 ${eligibility.canRaise ? 'text-gray-300' : 'text-yellow-400'}`} />
+                                            <h3 className="text-lg font-medium text-gray-700 mb-2">No Dispute</h3>
+
+                                            {eligibility.canRaise ? (
+                                                <>
+                                                    <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                                                        If you're experiencing issues with this trade, you can raise a dispute. Our admin team will review and help resolve it.
+                                                    </p>
+                                                    {eligibility.daysRemaining !== undefined && (
+                                                        <div className="mb-4 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg inline-block">
+                                                            <p className="text-amber-800 text-sm">
+                                                                <span className="font-medium">Dispute window:</span> {eligibility.daysRemaining} day{eligibility.daysRemaining !== 1 ? 's' : ''} remaining
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                    <button
+                                                        onClick={() => setShowDisputeModal(true)}
+                                                        className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium inline-flex items-center gap-2"
+                                                    >
+                                                        <AlertTriangle className="w-4 h-4" />
+                                                        Raise a Dispute
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <p className="text-gray-500 mb-4 max-w-md mx-auto">
+                                                        Dispute filing is not available for this trade.
+                                                    </p>
+                                                    <div className="px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-lg inline-block">
+                                                        <p className="text-yellow-800 text-sm">
+                                                            {eligibility.reason}
+                                                        </p>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    );
+                                })()
                             )}
                         </div>
                     ) : null}
@@ -597,7 +841,12 @@ const TradeDetailsModal: React.FC<TradeDetailsModalProps> = ({
                     >
                         Close
                     </button>
-                    {onNavigateToNegotiation && trade?.negotiationStatus !== 'accepted' && trade?.negotiationStatus !== 'rejected' && (
+                    {/* Hide "Go to Negotiation" for accepted, rejected, or cancelled trades */}
+                    {onNavigateToNegotiation &&
+                     trade?.negotiationStatus !== 'accepted' &&
+                     trade?.negotiationStatus !== 'rejected' &&
+                     trade?.negotiationStatus !== 'cancelled' &&
+                     (trade as any)?.tradePhase !== 'CANCELLED' && (
                         <button
                             onClick={onNavigateToNegotiation}
                             className="flex-1 py-2.5 px-4 bg-[#1a1a2e] text-white rounded-lg hover:bg-[#16162a] transition-colors font-medium"
@@ -605,15 +854,22 @@ const TradeDetailsModal: React.FC<TradeDetailsModalProps> = ({
                             Go to Negotiation
                         </button>
                     )}
-                    {!existingDispute && activeTab === 'details' && (
-                        <button
-                            onClick={() => setShowDisputeModal(true)}
-                            className="py-2.5 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium inline-flex items-center gap-2"
-                        >
-                            <AlertTriangle className="w-4 h-4" />
-                            Raise Dispute
-                        </button>
-                    )}
+                    {/* Raise Dispute button - eligibility is handled by checkDisputeEligibility which includes CANCELLED trades */}
+                    {!existingDispute && activeTab === 'details' && trade && (() => {
+                        const eligibility = checkDisputeEligibility(trade);
+                        return eligibility.canRaise ? (
+                            <button
+                                onClick={() => setShowDisputeModal(true)}
+                                className="py-2.5 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium inline-flex items-center gap-2"
+                            >
+                                <AlertTriangle className="w-4 h-4" />
+                                Raise Dispute
+                                {eligibility.daysRemaining !== undefined && (
+                                    <span className="text-xs opacity-75">({eligibility.daysRemaining}d left)</span>
+                                )}
+                            </button>
+                        ) : null;
+                    })()}
                 </div>
             </div>
 

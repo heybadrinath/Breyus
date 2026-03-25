@@ -12,7 +12,8 @@ import * as crypto from 'crypto';
 import { AdminUser } from './schemas/admin-user.schema';
 import { AdminSession, DeviceInfo } from './schemas/admin-session.schema';
 
-const SESSION_EXPIRY_MS = Number(process.env.ADMIN_SESSION_EXPIRY) || 24 * 60 * 60 * 1000; // 24 hours
+const SESSION_EXPIRY_MS =
+  Number(process.env.ADMIN_SESSION_EXPIRY) || 24 * 60 * 60 * 1000; // 24 hours
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCK_TIME_MS = 15 * 60 * 1000; // 15 minutes
 
@@ -20,7 +21,8 @@ const LOCK_TIME_MS = 15 * 60 * 1000; // 15 minutes
 export class AdminAuthService {
   constructor(
     @InjectModel(AdminUser.name) private adminUserModel: Model<AdminUser>,
-    @InjectModel(AdminSession.name) private adminSessionModel: Model<AdminSession>,
+    @InjectModel(AdminSession.name)
+    private adminSessionModel: Model<AdminSession>,
   ) {}
 
   /**
@@ -33,7 +35,9 @@ export class AdminAuthService {
     ipAddress: string,
     userAgent: string,
   ): Promise<{ admin: Partial<AdminUser>; token: string }> {
-    const admin = await this.adminUserModel.findOne({ email: email.toLowerCase() }).exec();
+    const admin = await this.adminUserModel
+      .findOne({ email: email.toLowerCase() })
+      .exec();
 
     if (!admin) {
       throw new UnauthorizedException('Invalid email or password');
@@ -110,10 +114,12 @@ export class AdminAuthService {
 
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-    const session = await this.adminSessionModel.findOne({
-      tokenHash,
-      expiresAt: { $gt: new Date() },
-    }).exec();
+    const session = await this.adminSessionModel
+      .findOne({
+        tokenHash,
+        expiresAt: { $gt: new Date() },
+      })
+      .exec();
 
     if (!session) {
       throw new UnauthorizedException('Invalid or expired session');
@@ -167,7 +173,10 @@ export class AdminAuthService {
     const admin = await this.validateToken(token);
 
     // Verify current password
-    const isPasswordValid = await bcrypt.compare(currentPassword, admin.password);
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      admin.password,
+    );
     if (!isPasswordValid) {
       throw new BadRequestException('Current password is incorrect');
     }
@@ -179,10 +188,12 @@ export class AdminAuthService {
 
     // Optionally: Invalidate all other sessions
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    await this.adminSessionModel.deleteMany({
-      adminId: admin._id,
-      tokenHash: { $ne: tokenHash },
-    }).exec();
+    await this.adminSessionModel
+      .deleteMany({
+        adminId: admin._id,
+        tokenHash: { $ne: tokenHash },
+      })
+      .exec();
   }
 
   /**
@@ -199,11 +210,16 @@ export class AdminAuthService {
   /**
    * Revoke a specific session
    */
-  async revokeSession(sessionId: string, adminId: Types.ObjectId): Promise<void> {
-    await this.adminSessionModel.deleteOne({
-      _id: sessionId,
-      adminId,
-    }).exec();
+  async revokeSession(
+    sessionId: string,
+    adminId: Types.ObjectId,
+  ): Promise<void> {
+    await this.adminSessionModel
+      .deleteOne({
+        _id: sessionId,
+        adminId,
+      })
+      .exec();
   }
 
   /**
@@ -213,18 +229,24 @@ export class AdminAuthService {
     const admin = await this.validateToken(token);
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-    await this.adminSessionModel.deleteMany({
-      adminId: admin._id,
-      tokenHash: { $ne: tokenHash },
-    }).exec();
+    await this.adminSessionModel
+      .deleteMany({
+        adminId: admin._id,
+        tokenHash: { $ne: tokenHash },
+      })
+      .exec();
   }
 
   /**
    * Parse user agent for device info
    */
   private parseUserAgent(userAgent: string): DeviceInfo {
-    const browserMatch = userAgent.match(/(Chrome|Firefox|Safari|Edge|Opera)[\/\s](\d+)/);
-    const osMatch = userAgent.match(/(Windows NT|Mac OS X|Linux|Android|iOS)[\s]?([0-9._]*)/);
+    const browserMatch = userAgent.match(
+      /(Chrome|Firefox|Safari|Edge|Opera)[\/\s](\d+)/,
+    );
+    const osMatch = userAgent.match(
+      /(Windows NT|Mac OS X|Linux|Android|iOS)[\s]?([0-9._]*)/,
+    );
 
     let device = 'Desktop';
     if (/Mobile|Android|iPhone|iPad/i.test(userAgent)) {
@@ -232,7 +254,9 @@ export class AdminAuthService {
     }
 
     return {
-      browser: browserMatch ? `${browserMatch[1]} ${browserMatch[2]}` : 'Unknown',
+      browser: browserMatch
+        ? `${browserMatch[1]} ${browserMatch[2]}`
+        : 'Unknown',
       os: osMatch ? osMatch[1].replace('NT', '').trim() : 'Unknown',
       device,
     };
@@ -246,7 +270,9 @@ export class AdminAuthService {
     password: string,
     name: string,
   ): Promise<AdminUser> {
-    const existingAdmin = await this.adminUserModel.findOne({ email: email.toLowerCase() }).exec();
+    const existingAdmin = await this.adminUserModel
+      .findOne({ email: email.toLowerCase() })
+      .exec();
 
     if (existingAdmin) {
       throw new BadRequestException('Admin with this email already exists');

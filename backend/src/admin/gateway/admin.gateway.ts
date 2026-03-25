@@ -99,11 +99,14 @@ export class AdminGateway
   private extractTokenFromCookie(cookieHeader?: string): string | null {
     if (!cookieHeader) return null;
 
-    const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
-      const [key, value] = cookie.trim().split('=');
-      acc[key] = value;
-      return acc;
-    }, {} as Record<string, string>);
+    const cookies = cookieHeader.split(';').reduce(
+      (acc, cookie) => {
+        const [key, value] = cookie.trim().split('=');
+        acc[key] = value;
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
 
     return cookies['admin_session'] || null;
   }
@@ -206,7 +209,9 @@ export class AdminGateway
     @MessageBody() data: { service: string },
   ) {
     client.leave(`logs:${data.service}`);
-    this.logger.log(`${client.adminEmail} unsubscribed from ${data.service} logs`);
+    this.logger.log(
+      `${client.adminEmail} unsubscribed from ${data.service} logs`,
+    );
     return { status: 'ok', message: `Unsubscribed from ${data.service} logs` };
   }
 

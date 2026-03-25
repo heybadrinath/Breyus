@@ -25,6 +25,7 @@ export interface AIRawMatch {
 export interface AIRawLinkPredictionResponse {
   matches: AIRawMatch[];
   match_strategy?: string;
+  warning?: string; // Country filter fallback warning
   legacy?: {
     found: boolean;
     predicted_partner?: string;
@@ -51,12 +52,17 @@ export interface AIPartner {
     phone?: string;
     address?: string;
   };
+  /** Risk level from AI analysis */
+  risk_level?: string;
+  /** Price fluctuation prediction from AI */
+  price_fluctuation?: string;
 }
 
 export interface LinkPredictionResponse {
   top_partners: AIPartner[];
   total_matches: number;
   waterfall_stage_reached?: string;
+  warning?: string; // Country filter fallback warning
 }
 
 // ============================================
@@ -97,7 +103,12 @@ export interface GravityScoreResponse {
     historyScore: number;
     demandScore: number;
   };
-  recommendation: 'highly_recommended' | 'recommended' | 'neutral' | 'caution' | 'not_recommended';
+  recommendation:
+    | 'highly_recommended'
+    | 'recommended'
+    | 'neutral'
+    | 'caution'
+    | 'not_recommended';
   factors: {
     positive: string[];
     negative: string[];
@@ -168,6 +179,11 @@ export interface CountryTradeVolume {
   percentage: number;
 }
 
+export interface ChartData {
+  labels: string[];
+  data: number[];
+}
+
 export interface AnalysisResult {
   commodity: string;
   hsCode?: string;
@@ -186,6 +202,14 @@ export interface AnalysisResult {
   };
   riskFactors?: string[];
   opportunities?: string[];
+  // Enhanced chart data for visualization
+  chartData?: {
+    demandForecast?: ChartData;
+    capitalRequired?: ChartData;
+    priceVolatility?: ChartData;
+  };
+  // Key insights for summary display
+  keyInsights?: string[];
 }
 
 export interface AnalysisResultResponse {

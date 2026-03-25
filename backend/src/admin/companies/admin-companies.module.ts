@@ -7,8 +7,14 @@ import { User, UserSchema } from '../../users/user.schema';
 import { Trade, TradeSchema } from '../../trade/schema/trade.schema';
 import { Product, ProductSchema } from '../../products/schema/products.schema';
 import { Wishlist, WishlistSchema } from '../../wishlist/wishlist.schema';
-import { Notification, NotificationSchema } from '../../notification/schema/notification.schema';
-import { Conversation, ConversationSchema } from '../../inbox/schemas/conversations.schema';
+import {
+  Notification,
+  NotificationSchema,
+} from '../../notification/schema/notification.schema';
+import {
+  Conversation,
+  ConversationSchema,
+} from '../../inbox/schemas/conversations.schema';
 import { Message, MessageSchema } from '../../inbox/schemas/messages.schema';
 import { AdminModule } from '../admin.module';
 import { MailModule } from '../../mail/mail.module';

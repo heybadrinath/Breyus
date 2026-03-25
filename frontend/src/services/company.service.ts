@@ -215,13 +215,19 @@ export const uploadCisDocument = async (file: File): Promise<{ cisDocument: stri
 };
 
 // KYC Document Types (Phase 4)
-export type KycDocumentType = 'cis' | 'passport' | 'tax_certificate' | 'business_registration' | 'other';
+// Note: passport, tax_certificate, business_registration are legacy types
+// that may exist in old documents but are no longer uploadable via UI
+export type KycDocumentType = 'cis' | 'product_catalog' | 'other' | 'passport' | 'tax_certificate' | 'business_registration';
 export type KycDocumentStatus = 'pending' | 'approved' | 'rejected';
+
+// New document types that can be uploaded (excludes legacy types)
+export type UploadableKycDocumentType = 'cis' | 'product_catalog' | 'other';
 
 export interface KycDocument {
     _id: string;
     type: KycDocumentType;
     customName: string;
+    description?: string;  // Required for 'other' type
     filename: string;
     originalName: string;
     path: string;
@@ -244,11 +250,25 @@ export interface KycStatus {
 
 export const KYC_DOCUMENT_TYPE_LABELS: Record<KycDocumentType, string> = {
     cis: 'CIS (Customer Information Sheet)',
-    passport: 'Passport',
-    tax_certificate: 'Tax Certificate',
-    business_registration: 'Business Registration',
+    product_catalog: 'Product Catalog',
     other: 'Other',
+    // Legacy types (for displaying existing documents)
+    passport: 'Passport (Legacy)',
+    tax_certificate: 'Tax Certificate (Legacy)',
+    business_registration: 'Business Registration (Legacy)',
 };
+
+// CIS Status interface for upload eligibility
+export interface CisStatus {
+    hasCis: boolean;
+    canUploadCis: boolean;
+    reason?: string;
+    existingCisDocument?: {
+        _id: string;
+        status: string;
+        uploadedAt: string;
+    };
+}
 
 export const getKycDocuments = async (): Promise<KycDocument[]> => {
     try {
@@ -294,16 +314,46 @@ export const getKycStatus = async (): Promise<KycStatus> => {
     }
 };
 
+/**
+ * Get CIS document status for the company
+ * Used to determine upload eligibility for CIS and Product Catalog
+ */
+export const getCisStatus = async (): Promise<CisStatus> => {
+    try {
+        const response = await fetch(`${BACKEND_END_POINT}/kyc-documents/cis-status`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch CIS status: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.data;
+    } catch (error) {
+        console.error('Error fetching CIS status:', error);
+        throw error;
+    }
+};
+
 export const uploadKycDocument = async (
     file: File,
-    documentType: KycDocumentType,
-    customName: string
+    documentType: UploadableKycDocumentType,
+    customName: string,
+    description?: string
 ): Promise<KycDocument> => {
     try {
         const formData = new FormData();
         formData.append('files', file);
         formData.append('documentType', documentType);
         formData.append('customName', customName);
+        if (description) {
+            formData.append('description', description);
+        }
 
         const response = await fetch(`${BACKEND_END_POINT}/kyc-documents`, {
             method: 'POST',
@@ -432,4 +482,81 @@ export const deleteBanner = async (): Promise<void> => {
         console.error('Error deleting banner image:', error);
         throw error;
     }
-}; 
+};
+
+// Public Company Profile (Seller Profile visible to other users)
+
+export interface PublicCompanyProfile {
+    _id: string;
+    companyName: string;
+    companyAddress: string;
+    companyMobile: string;
+    taxId: string;
+    founderName: string;
+    websiteUrl: string;
+    role: string;
+    tradeType: string;
+    mainLineBusiness: string[];
+    whatsappContact: string;
+    primaryEmail: string;
+    alternativeSalesEmail: string;
+    profilePicture?: string;
+    bannerImage?: string;
+    isKycVerified: boolean;
+    tradeDetails?: {
+        emergingInterest?: string;
+    };
+}
+
+/**
+ * Get public profile for a company (seller profile visible to buyers)
+ * Returns only non-sensitive fields
+ */
+export const getPublicCompanyProfile = async (companyId: string): Promise<PublicCompanyProfile> => {
+    try {
+        const response = await fetch(`${BACKEND_END_POINT}/public/${companyId}`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Failed to fetch public company profile: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.data;
+    } catch (error) {
+        console.error('Error fetching public company profile:', error);
+        throw error;
+    }
+};
+
+/**
+ * Fetch buyer company's public profile (used by sellers viewing buyer profiles)
+ */
+export const getBuyerPublicProfile = async (companyId: string): Promise<PublicCompanyProfile> => {
+    try {
+        const response = await fetch(`${BACKEND_END_POINT}/buyer-public/${companyId}`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Failed to fetch buyer company profile: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.data;
+    } catch (error) {
+        console.error('Error fetching buyer company profile:', error);
+        throw error;
+    }
+};

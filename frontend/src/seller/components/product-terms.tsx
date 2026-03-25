@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import SelectField from '../../components/SelectField';
+import ComboboxDropdown, { ComboboxOption } from '../../components/ui/ComboboxDropdown';
+import { getPorts, getCountries, getCurrencies, Port, Country, Currency } from '../../services/content.service';
+import { Ship, Plane, Truck } from 'lucide-react';
 
 interface TradeTermsProp {
     tradeTerms: {
@@ -37,8 +40,64 @@ interface TradeTermsProp {
 }
 
 const SellerTradeTerms: React.FC<TradeTermsProp> = ({tradeTerms, setTradeTerms}) => {
-   
+
     const [loading, setLoading] = useState(false);
+
+    // Admin-controlled content state
+    const [ports, setPorts] = useState<Port[]>([]);
+    const [countries, setCountries] = useState<Country[]>([]);
+    const [currencies, setCurrencies] = useState<Currency[]>([]);
+    const [portsLoading, setPortsLoading] = useState(true);
+    const [countriesLoading, setCountriesLoading] = useState(true);
+    const [currenciesLoading, setCurrenciesLoading] = useState(true);
+
+    // Fetch admin-controlled content on mount
+    useEffect(() => {
+        const fetchContent = async () => {
+            try {
+                const [portsData, countriesData, currenciesData] = await Promise.all([
+                    getPorts(),
+                    getCountries(),
+                    getCurrencies()
+                ]);
+                setPorts(portsData);
+                setCountries(countriesData);
+                setCurrencies(currenciesData);
+            } catch (error) {
+                console.error('Failed to fetch content:', error);
+            } finally {
+                setPortsLoading(false);
+                setCountriesLoading(false);
+                setCurrenciesLoading(false);
+            }
+        };
+        fetchContent();
+    }, []);
+
+    // Convert ports to ComboboxOptions grouped by type
+    const portOptions: ComboboxOption[] = ports.map(port => {
+        const countryName = typeof port.country === 'string'
+            ? port.country
+            : (port.country as Country)?.name || '';
+        const typeLabel = port.type === 'sea' ? 'Sea Port' : port.type === 'air' ? 'Airport' : 'Land Port';
+        return {
+            value: port.code,
+            label: `${port.name} (${port.code})`,
+            subLabel: `${countryName} • ${typeLabel}`,
+            group: typeLabel,
+            icon: port.type === 'sea' ? <Ship className="w-4 h-4" /> : port.type === 'air' ? <Plane className="w-4 h-4" /> : <Truck className="w-4 h-4" />,
+            data: port
+        };
+    });
+
+    // Convert countries to ComboboxOptions
+    const countryOptions: ComboboxOption[] = countries.map(country => ({
+        value: country.name,
+        label: `${country.flagEmoji || ''} ${country.name}`.trim(),
+        subLabel: country.continent,
+        group: country.continent,
+        data: country
+    }));
 
 
 
@@ -58,28 +117,38 @@ const SellerTradeTerms: React.FC<TradeTermsProp> = ({tradeTerms, setTradeTerms})
             <h1 className='section-title font-bold mb-6 text-2xl'>Preffered Product Terms</h1>
             <div className='product-card'>
                 <div>
-                    <label className="block font-medium">
+                    <label className="block font-medium mb-2">
                         Enter export location of this product <span className="text-red-500">*</span>
                     </label>
-                    <input
-                        type="text"
-                        name="exportLocation"
+                    <ComboboxDropdown
+                        options={countryOptions}
                         value={tradeTerms.exportLocation}
-                        onChange={handleChange}
-                        className="border p-2 mt-2 w-full rounded"
+                        onChange={(value) => setTradeTerms(prev => ({ ...prev, exportLocation: value }))}
+                        placeholder="Search for a country..."
+                        loading={countriesLoading}
+                        grouped={true}
+                        allowCustom={true}
+                        showCustomWarning={true}
+                        customWarningMessage="This country is not in our standard list"
+                        emptyMessage="No countries found"
                     />
                 </div>
 
                 <div>
-                    <label className="block font-medium">
+                    <label className="block font-medium mb-2">
                         Enter your nearest exporting port <span className="text-red-500">*</span>
                     </label>
-                    <input
-                        type="text"
-                        name="nearestPort"
+                    <ComboboxDropdown
+                        options={portOptions}
                         value={tradeTerms.nearestPort}
-                        onChange={handleChange}
-                        className="border p-2 mt-2 w-full rounded"
+                        onChange={(value) => setTradeTerms(prev => ({ ...prev, nearestPort: value }))}
+                        placeholder="Search for a port (e.g., INMUN, INNSA)..."
+                        loading={portsLoading}
+                        grouped={true}
+                        allowCustom={true}
+                        showCustomWarning={true}
+                        customWarningMessage="This port is not in our standard list"
+                        emptyMessage="No ports found. Try a different search or enter custom value."
                     />
                 </div>
 
@@ -111,8 +180,20 @@ const SellerTradeTerms: React.FC<TradeTermsProp> = ({tradeTerms, setTradeTerms})
                             onChange={handleChange}
                             className="select-field--sm"
                         >
-                            <option value="USD">USD</option>
-                            <option value="INR">INR</option>
+                            {currenciesLoading ? (
+                                <option value="">Loading...</option>
+                            ) : currencies.length === 0 ? (
+                                <>
+                                    <option value="USD">USD</option>
+                                    <option value="INR">INR</option>
+                                </>
+                            ) : (
+                                currencies.map(currency => (
+                                    <option key={currency._id} value={currency.code}>
+                                        {`${currency.code} ${currency.symbol}`}
+                                    </option>
+                                ))
+                            )}
                         </SelectField>
                         <SelectField
                             name="unit"

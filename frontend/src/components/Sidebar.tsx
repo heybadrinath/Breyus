@@ -1,4 +1,4 @@
-import { Store, Inbox, ShoppingCart, Repeat, Heart, HelpCircle, Settings, ChevronDown, LayoutDashboard, Tag, CircleUser, LogOut, Sparkles, Globe } from "lucide-react";
+import { Store, Inbox, ShoppingCart, Repeat, Heart, HelpCircle, Settings, ChevronDown, LayoutDashboard, Tag, LogOut, Sparkles, Globe } from "lucide-react";
 import BreyusLogo from "../assets/Logos/full-logo.svg"
 import { useState } from "react";
 import React from "react";
@@ -6,14 +6,17 @@ import { useNavigate, Link } from 'react-router-dom';
 import { usernameService } from "../services/users.service";
 import { logout } from "../services/auth.service";
 import { useNotifications } from "../contexts/NotificationContext";
+import { getCompanyProfile } from "../services/company.service";
+import CompanyAvatar from "./ui/CompanyAvatar";
 
 
 interface UserProfileProps {
   name: string;
+  profilePicture?: string | null;
   className?: string;
 }
 
-const UserProfile: React.FC<UserProfileProps> = ({ name, className = '' }) => {
+const UserProfile: React.FC<UserProfileProps> = ({ name, profilePicture, className = '' }) => {
   return (
     <div style={{
       borderTop: '1px solid transparent',
@@ -22,9 +25,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ name, className = '' }) => {
       borderLeft: 'none',
       borderRight: 'none'
     }} className={`flex items-center w-full px-6 py-5 ${className}`}>
-      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100">
-        <CircleUser strokeWidth={1.5} size={24} className="text-gray-600"/>
-      </div>
+      <CompanyAvatar
+        companyName={name}
+        profilePicture={profilePicture}
+        size="md"
+        clickable={false}
+      />
       <div className="ml-3 text-sm font-semibold text-gray-800 truncate max-w-[140px]">{name}</div>
     </div>
   );
@@ -191,22 +197,30 @@ interface SideBarProp {
 const Sidebar: React.FC<SideBarProp> = ({ Buyer = false, Seller = false }) => {
 
   const [username, setUsername] = useState<string>("");
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const navigate = useNavigate();
   const { hasUnreadMessages, unreadCounts } = useNotifications();
 
   React.useEffect(() => {
-    const fetchUsername = async () => {
+    const fetchUserData = async () => {
       try {
+        // Fetch username
         const user = await usernameService();
         if (user && typeof user.name === "string") {
           user.name = user.name.split("@")[0];
         }
         setUsername(user?.name || "User");
+
+        // Fetch company profile for profile picture
+        const companyProfile = await getCompanyProfile();
+        if (companyProfile?.profilePicture) {
+          setProfilePicture(companyProfile.profilePicture);
+        }
       } catch (error) {
         setUsername("User");
       }
     };
-    fetchUsername();
+    fetchUserData();
   }, []);
   return (
     <aside className="w-64 bg-white border-r border-gray-100 h-screen flex flex-col">
@@ -221,7 +235,7 @@ const Sidebar: React.FC<SideBarProp> = ({ Buyer = false, Seller = false }) => {
       </div>
 
       {/* User Profile */}
-      <UserProfile name={username} />
+      <UserProfile name={username} profilePicture={profilePicture} />
 
       {/* Navigation Links */}
       <div className="flex-1 overflow-y-auto px-4 py-6">
@@ -249,6 +263,7 @@ const Sidebar: React.FC<SideBarProp> = ({ Buyer = false, Seller = false }) => {
           <SidebarItem icon={<Globe size={20} />} label="Marketplace" path="/seller/marketplace" />
           <SidebarItem icon={<Inbox size={20} />} label="Inbox" path="/seller/inbox" badgeCount={unreadCounts.messages} showDot={hasUnreadMessages} />
           <SidebarItem icon={<Repeat size={20} />} label="Trade" path="/seller/trade" />
+          <SidebarItem icon={<Heart size={20} />} label="Wishlist" path="/seller/wishlist" />
           <SidebarItem icon={<Sparkles size={20} />} label="BreyusAI" path="/seller/ai" />
         </nav>}
       </div>
