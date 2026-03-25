@@ -9,23 +9,125 @@ interface DocModule {
   slug: string;
   description: string;
   icon: string;
-  category: 'core' | 'business' | 'supporting';
+  category: 'core' | 'business' | 'supporting' | 'admin';
 }
 
 @Injectable()
 export class DocsService {
   private readonly docsPath: string;
   private readonly modules: DocModule[] = [
-    { name: 'Authentication', slug: 'auth', description: 'Session validation, logout, and password management', icon: 'shield', category: 'core' },
-    { name: 'Login', slug: 'login', description: 'User authentication with OTP verification', icon: 'log-in', category: 'core' },
-    { name: 'Onboarding', slug: 'onboarding', description: 'User registration and company setup wizard', icon: 'user-plus', category: 'core' },
-    { name: 'Products', slug: 'products', description: 'Product catalog and inventory management', icon: 'package', category: 'business' },
-    { name: 'Trade', slug: 'trade', description: 'Trade lifecycle, negotiation, and document management', icon: 'trending-up', category: 'business' },
-    { name: 'Company', slug: 'company', description: 'Company profiles and delivery addresses', icon: 'building', category: 'business' },
-    { name: 'Wishlist', slug: 'wishlist', description: 'Save and manage favorite products', icon: 'heart', category: 'supporting' },
-    { name: 'Inbox', slug: 'inbox', description: 'Real-time messaging and conversations', icon: 'message-square', category: 'supporting' },
-    { name: 'Users', slug: 'users', description: 'User account information', icon: 'users', category: 'supporting' },
-    { name: 'Analytics', slug: 'analytics', description: 'Dashboard metrics and chart data', icon: 'bar-chart-2', category: 'supporting' },
+    {
+      name: 'Authentication',
+      slug: 'auth',
+      description: 'Session validation, logout, and password management',
+      icon: 'shield',
+      category: 'core',
+    },
+    {
+      name: 'Login',
+      slug: 'login',
+      description: 'User authentication with OTP verification',
+      icon: 'log-in',
+      category: 'core',
+    },
+    {
+      name: 'Onboarding',
+      slug: 'onboarding',
+      description: 'User registration and company setup wizard',
+      icon: 'user-plus',
+      category: 'core',
+    },
+    {
+      name: 'Products',
+      slug: 'products',
+      description: 'Product catalog and inventory management',
+      icon: 'package',
+      category: 'business',
+    },
+    {
+      name: 'Trade',
+      slug: 'trade',
+      description: 'Trade lifecycle, negotiation, and document management',
+      icon: 'trending-up',
+      category: 'business',
+    },
+    {
+      name: 'Company',
+      slug: 'company',
+      description: 'Company profiles and delivery addresses',
+      icon: 'building',
+      category: 'business',
+    },
+    {
+      name: 'Wishlist',
+      slug: 'wishlist',
+      description: 'Save and manage favorite products',
+      icon: 'heart',
+      category: 'supporting',
+    },
+    {
+      name: 'Inbox',
+      slug: 'inbox',
+      description: 'Real-time messaging and conversations',
+      icon: 'message-square',
+      category: 'supporting',
+    },
+    {
+      name: 'Users',
+      slug: 'users',
+      description: 'User account information',
+      icon: 'users',
+      category: 'supporting',
+    },
+    {
+      name: 'Analytics',
+      slug: 'analytics',
+      description: 'Dashboard metrics and chart data',
+      icon: 'bar-chart-2',
+      category: 'supporting',
+    },
+    {
+      name: 'AI',
+      slug: 'ai',
+      description: 'AI-powered search, market analysis, and predictions',
+      icon: 'zap',
+      category: 'business',
+    },
+    {
+      name: 'Blog',
+      slug: 'blog',
+      description: 'Public blog posts and newsletter',
+      icon: 'book-open',
+      category: 'supporting',
+    },
+    {
+      name: 'Commodities',
+      slug: 'commodities',
+      description: 'Commodity prices and market data',
+      icon: 'trending-up',
+      category: 'business',
+    },
+    {
+      name: 'Feedback',
+      slug: 'feedback',
+      description: 'Trade feedback and ratings',
+      icon: 'message-square',
+      category: 'supporting',
+    },
+    {
+      name: 'Notification',
+      slug: 'notification',
+      description: 'User notifications and alerts',
+      icon: 'message-square',
+      category: 'supporting',
+    },
+    {
+      name: 'Admin Portal',
+      slug: 'admin',
+      description: 'Admin authentication, users, trades, and system management',
+      icon: 'shield',
+      category: 'admin',
+    },
   ];
 
   constructor() {
@@ -39,7 +141,10 @@ export class DocsService {
       highlight: (code: string, lang: string): string => {
         if (lang && hljs.getLanguage(lang)) {
           try {
-            return hljs.highlight(code, { language: lang, ignoreIllegals: true }).value;
+            return hljs.highlight(code, {
+              language: lang,
+              ignoreIllegals: true,
+            }).value;
           } catch (e) {
             return code;
           }
@@ -62,7 +167,10 @@ export class DocsService {
 
       try {
         if (lang && hljs.getLanguage(lang)) {
-          highlighted = hljs.highlight(code, { language: lang, ignoreIllegals: true }).value;
+          highlighted = hljs.highlight(code, {
+            language: lang,
+            ignoreIllegals: true,
+          }).value;
         } else {
           highlighted = hljs.highlightAuto(code).value;
         }
@@ -92,7 +200,11 @@ export class DocsService {
 
     // Custom heading renderer with anchor links
     renderer.heading = (text: string, level: number): string => {
-      const slug = text.toLowerCase().replace(/<[^>]*>/g, '').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '');
+      const slug = text
+        .toLowerCase()
+        .replace(/<[^>]*>/g, '')
+        .replace(/[^\w]+/g, '-')
+        .replace(/^-|-$/g, '');
       return `<h${level} id="${slug}" class="doc-h${level}">
         <a href="#${slug}" class="heading-anchor">#</a>
         ${text}
@@ -112,7 +224,9 @@ export class DocsService {
     // Custom blockquote renderer (for callouts)
     renderer.blockquote = (quote: string): string => {
       // Check if it's a special callout (starts with Note:, Warning:, etc.)
-      const noteMatch = quote.match(/^<p>\s*(Note|Warning|Info|Tip|Important):\s*/i);
+      const noteMatch = quote.match(
+        /^<p>\s*(Note|Warning|Info|Tip|Important):\s*/i,
+      );
       if (noteMatch) {
         const type = noteMatch[1].toLowerCase();
         const cleanContent = quote.replace(noteMatch[0], '<p>');
@@ -125,11 +239,19 @@ export class DocsService {
     };
 
     // Custom link renderer
-    renderer.link = (href: string, title: string | null, text: string): string => {
+    renderer.link = (
+      href: string,
+      title: string | null,
+      text: string,
+    ): string => {
       const titleAttr = title ? ` title="${title}"` : '';
       const isExternal = href.startsWith('http');
-      const externalAttrs = isExternal ? ' target="_blank" rel="noopener noreferrer"' : '';
-      const externalIcon = isExternal ? '<svg class="external-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>' : '';
+      const externalAttrs = isExternal
+        ? ' target="_blank" rel="noopener noreferrer"'
+        : '';
+      const externalIcon = isExternal
+        ? '<svg class="external-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>'
+        : '';
       return `<a href="${href}"${titleAttr}${externalAttrs} class="doc-link">${text}${externalIcon}</a>`;
     };
 
@@ -142,13 +264,30 @@ export class DocsService {
     marked.setOptions({ renderer });
   }
 
+  private isSafeSlug(slug: string): boolean {
+    return /^[a-z0-9-]+$/i.test(slug);
+  }
+
+  private isPathWithinDocs(filePath: string): boolean {
+    const resolvedDocsPath = path.resolve(this.docsPath);
+    const resolvedFilePath = path.resolve(filePath);
+    const relative = path.relative(resolvedDocsPath, resolvedFilePath);
+    return (
+      relative !== '' &&
+      !relative.startsWith('..') &&
+      !path.isAbsolute(relative)
+    );
+  }
+
   private getCalloutIcon(type: string): string {
     const icons: Record<string, string> = {
       note: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>',
-      warning: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
+      warning:
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
       info: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>',
       tip: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path></svg>',
-      important: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>',
+      important:
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>',
     };
     return icons[type] || icons.note;
   }
@@ -159,9 +298,10 @@ export class DocsService {
 
   getModulesByCategory(): Record<string, DocModule[]> {
     return {
-      core: this.modules.filter(m => m.category === 'core'),
-      business: this.modules.filter(m => m.category === 'business'),
-      supporting: this.modules.filter(m => m.category === 'supporting'),
+      core: this.modules.filter((m) => m.category === 'core'),
+      business: this.modules.filter((m) => m.category === 'business'),
+      supporting: this.modules.filter((m) => m.category === 'supporting'),
+      admin: this.modules.filter((m) => m.category === 'admin'),
     };
   }
 
@@ -175,8 +315,27 @@ export class DocsService {
   }
 
   getModuleDoc(slug: string): string | null {
+    // SECURITY FIX: Validate slug against known modules to prevent path traversal
+    // This prevents attacks like slug="../../etc/passwd" or slug="../config/.env"
+    const validModule = this.modules.find((m) => m.slug === slug);
+    if (!validModule) {
+      // Slug not in allowed list - reject to prevent path traversal
+      return null;
+    }
+
+    // Additional safety: ensure slug contains only alphanumeric and hyphens
+    if (!this.isSafeSlug(slug)) {
+      return null;
+    }
+
     try {
       const docPath = path.join(this.docsPath, `${slug}.md`);
+
+      // Final safety check: ensure resolved path is still within docsPath
+      if (!this.isPathWithinDocs(docPath)) {
+        return null;
+      }
+
       return fs.readFileSync(docPath, 'utf-8');
     } catch (error) {
       return null;
@@ -184,7 +343,7 @@ export class DocsService {
   }
 
   getModuleInfo(slug: string): DocModule | undefined {
-    return this.modules.find(m => m.slug === slug);
+    return this.modules.find((m) => m.slug === slug);
   }
 
   // Convert markdown to HTML using marked

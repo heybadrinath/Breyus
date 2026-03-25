@@ -14,6 +14,7 @@ import { AdminCompaniesService } from './admin-companies.service';
 import { GetCompaniesQueryDto } from './dto/get-companies-query.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 import { VerifyCompanyDto } from './dto/verify-company.dto';
+import { ApproveGstDto } from './dto/approve-gst.dto';
 import { AdminAuthGuard } from '../auth/admin-auth.guard';
 import { AdminAction } from '../activity/admin-action.decorator';
 
@@ -56,7 +57,12 @@ export class AdminCompaniesController {
   ) {
     const adminId = req.admin._id.toString();
     const adminEmail = req.admin.email;
-    return this.adminCompaniesService.updateCompany(id, updateDto, adminId, adminEmail);
+    return this.adminCompaniesService.updateCompany(
+      id,
+      updateDto,
+      adminId,
+      adminEmail,
+    );
   }
 
   @Delete(':id')
@@ -77,7 +83,12 @@ export class AdminCompaniesController {
   ) {
     const adminId = req.admin._id.toString();
     const adminEmail = req.admin.email;
-    return this.adminCompaniesService.verifyCompany(id, dto.notes || '', adminId, adminEmail);
+    return this.adminCompaniesService.verifyCompany(
+      id,
+      dto.notes || '',
+      adminId,
+      adminEmail,
+    );
   }
 
   @Post(':id/unverify')
@@ -86,5 +97,41 @@ export class AdminCompaniesController {
     const adminId = req.admin._id.toString();
     const adminEmail = req.admin.email;
     return this.adminCompaniesService.unverifyCompany(id, adminId, adminEmail);
+  }
+
+  @Post(':id/gst/approve')
+  @AdminAction('company.gst_approve', 'companies')
+  async approveGst(
+    @Param('id') id: string,
+    @Body() dto: ApproveGstDto,
+    @Req() req: any,
+  ) {
+    const adminId = req.admin._id.toString();
+    const adminEmail = req.admin.email;
+    return this.adminCompaniesService.approveGst(
+      id,
+      dto.notes || '',
+      adminId,
+      adminEmail,
+    );
+  }
+
+  @Post(':id/gst/clear-flag')
+  @AdminAction('company.gst_clear_flag', 'companies')
+  async clearGstFlag(@Param('id') id: string, @Req() req: any) {
+    const adminId = req.admin._id.toString();
+    const adminEmail = req.admin.email;
+    return this.adminCompaniesService.clearGstPendingFlag(
+      id,
+      adminId,
+      adminEmail,
+    );
+  }
+
+  @Get('gst/pending-count')
+  @AdminAction('company.gst_pending_count', 'companies')
+  async getGstPendingCount() {
+    const count = await this.adminCompaniesService.getGstPendingCount();
+    return { data: { count } };
   }
 }

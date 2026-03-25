@@ -1,5 +1,10 @@
 import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
-import { CommoditiesService, CommodityCategory, CommodityPrice, CommodityPriceSummary } from './commodities.service';
+import {
+  CommoditiesService,
+  CommodityCategory,
+  CommodityPrice,
+  CommodityPriceSummary,
+} from './commodities.service';
 
 /**
  * CommoditiesController
@@ -16,7 +21,11 @@ export class CommoditiesController {
    * Returns all commodity prices with summary metadata
    */
   @Get('prices')
-  async getPriceSummary(): Promise<{ statusCode: number; message: string; data: CommodityPriceSummary }> {
+  async getPriceSummary(): Promise<{
+    statusCode: number;
+    message: string;
+    data: CommodityPriceSummary;
+  }> {
     const data = await this.commoditiesService.getPriceSummary();
     return {
       statusCode: 200,
@@ -33,9 +42,13 @@ export class CommoditiesController {
   async getPriceBySymbol(
     @Param('symbol') symbol: string,
   ): Promise<{ statusCode: number; message: string; data: CommodityPrice }> {
-    const data = await this.commoditiesService.getPriceBySymbol(symbol.toUpperCase());
+    const data = await this.commoditiesService.getPriceBySymbol(
+      symbol.toUpperCase(),
+    );
     if (!data) {
-      throw new NotFoundException(`Commodity with symbol '${symbol}' not found`);
+      throw new NotFoundException(
+        `Commodity with symbol '${symbol}' not found`,
+      );
     }
     return {
       statusCode: 200,
@@ -53,12 +66,21 @@ export class CommoditiesController {
     @Param('category') category: string,
   ): Promise<{ statusCode: number; message: string; data: CommodityPrice[] }> {
     // Validate category
-    const validCategories: CommodityCategory[] = ['Energy', 'Metals', 'Agricultural', 'Precious Metals'];
+    const validCategories: CommodityCategory[] = [
+      'Energy',
+      'Metals',
+      'Agricultural',
+      'Precious Metals',
+    ];
     if (!validCategories.includes(category as CommodityCategory)) {
-      throw new NotFoundException(`Category '${category}' not found. Valid categories: ${validCategories.join(', ')}`);
+      throw new NotFoundException(
+        `Category '${category}' not found. Valid categories: ${validCategories.join(', ')}`,
+      );
     }
 
-    const data = await this.commoditiesService.getPricesByCategory(category as CommodityCategory);
+    const data = await this.commoditiesService.getPricesByCategory(
+      category as CommodityCategory,
+    );
     return {
       statusCode: 200,
       message: `Commodity prices for category '${category}' fetched successfully`,

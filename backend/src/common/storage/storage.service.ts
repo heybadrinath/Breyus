@@ -16,8 +16,8 @@ import { S3StorageProvider } from './s3-storage.provider';
  *   STORAGE_PROVIDER=s3 - Uses S3-compatible storage (AWS, Vultr, DigitalOcean, etc.)
  *   STORAGE_PROVIDER=cloudinary - Uses Cloudinary (requires API key)
  *
- * For S3/Vultr Object Storage, set these environment variables:
- *   S3_ENDPOINT=https://sgp1.vultrobjects.com  (omit for AWS S3)
+ * For S3/DigitalOcean Spaces, set these environment variables:
+ *   S3_ENDPOINT=https://sgp1.digitaloceanspaces.com  (omit for AWS S3)
  *   S3_REGION=sgp1
  *   S3_ACCESS_KEY=your-access-key
  *   S3_SECRET_KEY=your-secret-key
@@ -31,16 +31,21 @@ export class StorageService implements IStorageService {
 
   constructor() {
     // Determine storage provider from environment
-    this.providerType = (process.env.STORAGE_PROVIDER as StorageProvider) || 'local';
+    this.providerType =
+      (process.env.STORAGE_PROVIDER as StorageProvider) || 'local';
 
     // Initialize the appropriate provider
     switch (this.providerType) {
       case 's3':
         try {
           this.provider = new S3StorageProvider();
-          this.logger.log('Using S3-compatible storage provider (Vultr/AWS/DigitalOcean)');
+          this.logger.log(
+            'Using S3-compatible storage provider (DigitalOcean/AWS/Vultr)',
+          );
         } catch (error) {
-          this.logger.error(`Failed to initialize S3 provider: ${error.message}`);
+          this.logger.error(
+            `Failed to initialize S3 provider: ${error.message}`,
+          );
           this.logger.warn('Falling back to local storage provider');
           this.provider = new LocalStorageProvider();
         }
@@ -48,7 +53,9 @@ export class StorageService implements IStorageService {
 
       case 'cloudinary':
         // TODO: Implement Cloudinary provider when needed
-        this.logger.warn('Cloudinary storage provider not yet implemented, falling back to local');
+        this.logger.warn(
+          'Cloudinary storage provider not yet implemented, falling back to local',
+        );
         this.provider = new LocalStorageProvider();
         break;
 
@@ -71,8 +78,8 @@ export class StorageService implements IStorageService {
 
     // Remove path traversal sequences
     let sanitized = filename
-      .replace(/\.\./g, '')          // Remove .. sequences
-      .replace(/[\/\\]/g, '_')       // Replace path separators with underscore
+      .replace(/\.\./g, '') // Remove .. sequences
+      .replace(/[\/\\]/g, '_') // Replace path separators with underscore
       // Remove dangerous characters (Windows forbidden + null bytes + control chars)
       .replace(/[<>:"|?*\x00-\x1f]/g, '_')
       // Remove leading/trailing dots and spaces (Windows issues)
@@ -104,10 +111,16 @@ export class StorageService implements IStorageService {
    * Upload a file
    * SECURITY FIX: Filename is now sanitized to prevent path traversal (Audit Bug - Path Traversal)
    */
-  async upload(file: Buffer, filename: string, folder: string): Promise<string> {
+  async upload(
+    file: Buffer,
+    filename: string,
+    folder: string,
+  ): Promise<string> {
     // SECURITY: Sanitize filename before upload
     const sanitizedFilename = this.sanitizeFilename(filename);
-    this.logger.debug(`Uploading file: ${sanitizedFilename} (original: ${filename}) to folder: ${folder}`);
+    this.logger.debug(
+      `Uploading file: ${sanitizedFilename} (original: ${filename}) to folder: ${folder}`,
+    );
     return this.provider.upload(file, sanitizedFilename, folder);
   }
 

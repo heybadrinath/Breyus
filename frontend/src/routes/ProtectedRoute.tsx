@@ -1,7 +1,7 @@
 import React, { JSX, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 
-const Backend_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
 
 const BuyerProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -11,9 +11,9 @@ const BuyerProtectedRoute = ({ children }: { children: JSX.Element }) => {
  useEffect(() => {
     const checkAuthAndBackend = async () => {
       try {
-      await fetch(`${Backend_URL}/health`, { credentials: 'include' });
+      await fetch(`${BACKEND_URL}/health`, { credentials: 'include' });
 
-      const res = await fetch(`${Backend_URL}/auth/validate-cookie`, {
+      const res = await fetch(`${BACKEND_URL}/auth/validate-cookie`, {
         credentials: 'include',
       });
 
@@ -53,9 +53,9 @@ const SellerProtectedRoute = ({ children }: { children: JSX.Element }) => {
   useEffect(() => {
     const checkAuthAndBackend = async () => {
       try {
-      await fetch(`${Backend_URL}/health`, { credentials: 'include' });
+      await fetch(`${BACKEND_URL}/health`, { credentials: 'include' });
 
-      const res = await fetch(`${Backend_URL}/auth/validate-cookie`, {
+      const res = await fetch(`${BACKEND_URL}/auth/validate-cookie`, {
         credentials: 'include',
       });
 

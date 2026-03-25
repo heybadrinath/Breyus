@@ -5,7 +5,11 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Company, KycDocument, KycDocumentStatus } from '../../company/company.schema';
+import {
+  Company,
+  KycDocument,
+  KycDocumentStatus,
+} from '../../company/company.schema';
 import { User } from '../../users/user.schema';
 import { GetKycDocumentsQueryDto } from './dto/get-kyc-documents-query.dto';
 import { MailService } from '../../mail/mail.service';
@@ -48,7 +52,9 @@ export class AdminKycService {
   /**
    * Get all KYC documents across all companies with pagination
    */
-  async getKycDocuments(query: GetKycDocumentsQueryDto): Promise<PaginatedKycDocumentsResult> {
+  async getKycDocuments(
+    query: GetKycDocumentsQueryDto,
+  ): Promise<PaginatedKycDocumentsResult> {
     const {
       page = 1,
       limit = 20,
@@ -76,7 +82,7 @@ export class AdminKycService {
       .exec();
 
     // Flatten documents with company info
-    let allDocuments: KycDocumentWithCompany[] = [];
+    const allDocuments: KycDocumentWithCompany[] = [];
 
     for (const company of companies) {
       const docs = company.kycDocuments || [];
@@ -100,8 +106,14 @@ export class AdminKycService {
     // Sort documents
     const sortMultiplier = sortOrder === 'asc' ? 1 : -1;
     allDocuments.sort((a, b) => {
-      const aVal = sortBy === 'uploadedAt' ? new Date(a.document.uploadedAt).getTime() : a.document.customName;
-      const bVal = sortBy === 'uploadedAt' ? new Date(b.document.uploadedAt).getTime() : b.document.customName;
+      const aVal =
+        sortBy === 'uploadedAt'
+          ? new Date(a.document.uploadedAt).getTime()
+          : a.document.customName;
+      const bVal =
+        sortBy === 'uploadedAt'
+          ? new Date(b.document.uploadedAt).getTime()
+          : b.document.customName;
       if (aVal < bVal) return -1 * sortMultiplier;
       if (aVal > bVal) return 1 * sortMultiplier;
       return 0;
@@ -109,9 +121,15 @@ export class AdminKycService {
 
     // Get stats before pagination
     const stats = {
-      pending: allDocuments.filter(d => d.document.status === KycDocumentStatus.PENDING).length,
-      approved: allDocuments.filter(d => d.document.status === KycDocumentStatus.APPROVED).length,
-      rejected: allDocuments.filter(d => d.document.status === KycDocumentStatus.REJECTED).length,
+      pending: allDocuments.filter(
+        (d) => d.document.status === KycDocumentStatus.PENDING,
+      ).length,
+      approved: allDocuments.filter(
+        (d) => d.document.status === KycDocumentStatus.APPROVED,
+      ).length,
+      rejected: allDocuments.filter(
+        (d) => d.document.status === KycDocumentStatus.REJECTED,
+      ).length,
     };
 
     // Paginate
@@ -132,8 +150,14 @@ export class AdminKycService {
   /**
    * Get a single document by company ID and document ID
    */
-  async getDocument(companyId: string, documentId: string): Promise<KycDocumentWithCompany> {
-    if (!Types.ObjectId.isValid(companyId) || !Types.ObjectId.isValid(documentId)) {
+  async getDocument(
+    companyId: string,
+    documentId: string,
+  ): Promise<KycDocumentWithCompany> {
+    if (
+      !Types.ObjectId.isValid(companyId) ||
+      !Types.ObjectId.isValid(documentId)
+    ) {
       throw new BadRequestException('Invalid ID format');
     }
 
@@ -176,7 +200,10 @@ export class AdminKycService {
     adminId: string,
     adminEmail: string,
   ): Promise<KycDocument> {
-    if (!Types.ObjectId.isValid(companyId) || !Types.ObjectId.isValid(documentId)) {
+    if (
+      !Types.ObjectId.isValid(companyId) ||
+      !Types.ObjectId.isValid(documentId)
+    ) {
       throw new BadRequestException('Invalid ID format');
     }
 
@@ -222,7 +249,7 @@ export class AdminKycService {
     // Send notifications
     for (const user of users) {
       await this.notificationService.createNotification({
-        userId: (user._id as Types.ObjectId).toString(),
+        userId: user._id.toString(),
         type: 'kyc_document_approved',
         title: 'Document Approved',
         message: `Your document "${document.customName}" has been approved.`,
@@ -275,12 +302,17 @@ export class AdminKycService {
     adminId: string,
     adminEmail: string,
   ): Promise<KycDocument> {
-    if (!Types.ObjectId.isValid(companyId) || !Types.ObjectId.isValid(documentId)) {
+    if (
+      !Types.ObjectId.isValid(companyId) ||
+      !Types.ObjectId.isValid(documentId)
+    ) {
       throw new BadRequestException('Invalid ID format');
     }
 
     if (!notes || notes.trim().length < 10) {
-      throw new BadRequestException('Please provide a reason for rejection (at least 10 characters)');
+      throw new BadRequestException(
+        'Please provide a reason for rejection (at least 10 characters)',
+      );
     }
 
     const company = await this.companyModel.findById(companyId).exec();
@@ -325,7 +357,7 @@ export class AdminKycService {
     // Send notifications
     for (const user of users) {
       await this.notificationService.createNotification({
-        userId: (user._id as Types.ObjectId).toString(),
+        userId: user._id.toString(),
         type: 'kyc_document_rejected',
         title: 'Document Rejected',
         message: `Your document "${document.customName}" has been rejected. Reason: ${notes}`,
@@ -392,7 +424,9 @@ export class AdminKycService {
     for (const company of companies) {
       const docs = company.kycDocuments || [];
       totalDocuments += docs.length;
-      pendingDocuments += docs.filter((d: any) => d.status === KycDocumentStatus.PENDING).length;
+      pendingDocuments += docs.filter(
+        (d: any) => d.status === KycDocumentStatus.PENDING,
+      ).length;
 
       if (company.isKycVerified) {
         verifiedCompanies++;

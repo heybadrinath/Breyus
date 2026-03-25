@@ -17,6 +17,8 @@ import { NotificationModule } from '../notification/notification.module';
 import { AdminDisputesModule } from '../admin/disputes/admin-disputes.module';
 // SECURITY FIX: Import InboxModule for WsAuthService (Audit Bug #6)
 import { InboxModule } from '../inbox/inbox.module';
+// FIX: Import AnalyticsModule for cache invalidation on trade completion
+import { AnalyticsModule } from '../analytics/analytics.module';
 
 @Module({
   imports: [
@@ -24,7 +26,7 @@ import { InboxModule } from '../inbox/inbox.module';
       { name: Trade.name, schema: TradeSchema },
       { name: Product.name, schema: ProductSchema },
       { name: AuditLog.name, schema: AuditLogSchema },
-      { name: User.name, schema: UserSchema }
+      { name: User.name, schema: UserSchema },
     ]),
     AuthModule,
     MailModule,
@@ -33,9 +35,17 @@ import { InboxModule } from '../inbox/inbox.module';
     AdminDisputesModule,
     // SECURITY FIX: Import InboxModule for WsAuthService (Audit Bug #6)
     forwardRef(() => InboxModule),
+    // FIX: Import AnalyticsModule for cache invalidation on trade completion
+    AnalyticsModule,
   ],
-  providers: [TradeService, InvoiceService, TradeGateway, TradeNotificationService, AuditService],
+  providers: [
+    TradeService,
+    InvoiceService,
+    TradeGateway,
+    TradeNotificationService,
+    AuditService,
+  ],
   controllers: [TradeController],
-  exports: [TradeService, TradeGateway, TradeNotificationService, AuditService]
+  exports: [TradeService, TradeGateway, TradeNotificationService, AuditService],
 })
 export class TradeModule {}

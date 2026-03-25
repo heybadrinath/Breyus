@@ -7,6 +7,7 @@ import TrackTrade from "../../components/TrackTrade";
 import DocumentUploadModal from "../../components/DocumentUploadModal";
 import ViewDocumentModal from "../../components/ViewDocumentModal";
 import SelectField from "../../components/SelectField";
+import TradeAbbreviation from "../../components/ui/TradeAbbreviation";
 import { useNotifications } from "../../contexts/NotificationContext";
 
 interface TradeWithProduct extends Omit<Trade, 'paymentMethod'> {
@@ -41,16 +42,13 @@ const PHASE_LABELS: Record<TradePhase, string> = {
     'SPA': 'SPA Phase',
     'PAYMENT': 'Payment Phase',
     'BOL': 'Bill of Lading',
-    'COMPLETED': 'Completed'
+    'COMPLETED': 'Completed',
+    'CANCELLED': 'Cancelled'
 };
 
-// What document the seller needs to upload/view at each phase
+// What document the seller needs to upload/view at SPA phase
 const PHASE_DOCUMENT_INFO: Record<string, { viewDoc: string; uploadDoc: DocumentType | ''; uploadLabel: string }> = {
-    'SCO': { viewDoc: '', uploadDoc: 'sco', uploadLabel: 'Upload SCO' },
-    'ICPO': { viewDoc: 'sco', uploadDoc: '', uploadLabel: '' },
     'SPA': { viewDoc: 'icpo', uploadDoc: 'spa', uploadLabel: 'Upload SPA' },
-    'PAYMENT': { viewDoc: 'spa', uploadDoc: '', uploadLabel: '' },
-    'BOL': { viewDoc: 'paymentProof', uploadDoc: 'bol', uploadLabel: 'Upload BoL' },
 };
 
 export const SellerSPAStatus: React.FC = () => {
@@ -169,95 +167,49 @@ export const SellerSPAStatus: React.FC = () => {
     };
 
     const getStatusBadge = (trade: TradeWithProduct) => {
-        const phase = trade.tradePhase;
+        const spaDoc = trade.spaDocument;
 
-        // For seller: check what they're waiting for or need to do
-        if (phase === 'BOL') {
-            // Check if BoL is uploaded
-            if (trade.bolDocument?.filePath) {
-                return (
-                    <span className="flex items-center gap-1 text-green-600">
-                        <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
-                        Uploaded
-                    </span>
-                );
-            }
+        // SPA uploaded and approved
+        if (spaDoc?.status === 'approved') {
             return (
-                <span className="flex items-center gap-1 text-yellow-600">
-                    <span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
-                    Awaiting Upload
+                <span className="flex items-center gap-1 text-green-600">
+                    <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                    Approved
                 </span>
             );
         }
-        if (phase === 'PAYMENT') {
-            if (trade.paymentProof?.filePath) {
-                return (
-                    <span className="flex items-center gap-1 text-green-600">
-                        <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
-                        Payment Received
-                    </span>
-                );
-            }
-            return (
-                <span className="flex items-center gap-1 text-yellow-600">
-                    <span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
-                    Awaiting Payment
-                </span>
-            );
-        }
-        if (phase === 'SPA') {
-            if (trade.spaDocument?.filePath) {
-                return (
-                    <span className="flex items-center gap-1 text-green-600">
-                        <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
-                        SPA Uploaded
-                    </span>
-                );
-            }
-            return (
-                <span className="flex items-center gap-1 text-yellow-600">
-                    <span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
-                    Awaiting SPA
-                </span>
-            );
-        }
-        if (phase === 'ICPO') {
-            if (trade.icpoDocument?.filePath) {
-                return (
-                    <span className="flex items-center gap-1 text-green-600">
-                        <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
-                        ICPO Received
-                    </span>
-                );
-            }
+        // SPA uploaded, under review by buyer
+        if (spaDoc?.status === 'uploaded') {
             return (
                 <span className="flex items-center gap-1 text-blue-600">
                     <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                    Awaiting ICPO
+                    Under Review
                 </span>
             );
         }
-        if (phase === 'SCO') {
-            if (trade.scoDocument?.filePath) {
-                return (
-                    <span className="flex items-center gap-1 text-green-600">
-                        <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
-                        SCO Sent
-                    </span>
-                );
-            }
+        // SPA rejected by buyer
+        if (spaDoc?.status === 'rejected') {
+            return (
+                <span className="flex items-center gap-1 text-red-600">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                    Rejected
+                </span>
+            );
+        }
+        // SPA uploaded but pending
+        if (spaDoc?.filePath) {
             return (
                 <span className="flex items-center gap-1 text-yellow-600">
                     <span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
-                    Send SCO
+                    Pending
                 </span>
             );
         }
-
+        // No SPA uploaded yet — seller needs to upload
         return (
-            <span className="flex items-center gap-1 text-gray-600">
-                <span className="w-2.5 h-2.5 rounded-full bg-gray-400"></span>
-                Unknown
+            <span className="flex items-center gap-1 text-yellow-600">
+                <span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
+                Awaiting Upload
             </span>
         );
     };
@@ -387,8 +339,8 @@ export const SellerSPAStatus: React.FC = () => {
             <div className="p-8 flex-col flex">
                 <div className="flex">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-700">Document Status</h1>
-                        <span className="text-gray-500">Manage trade documents and track progress</span>
+                        <h1 className="text-2xl font-bold text-gray-700"><TradeAbbreviation abbreviation="SPA" /> Document Status</h1>
+                        <span className="text-gray-500">Upload and track Sales Purchase Agreement documents</span>
                     </div>
                     <Filter className="ml-auto cursor-pointer hover:text-gray-600" />
                 </div>

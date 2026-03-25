@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -17,6 +18,8 @@ import { UpdateDisputeStatusDto } from './dto/update-dispute-status.dto';
 import { CreateDisputeDto } from './dto/create-dispute.dto';
 import { ActivityLogService } from '../activity/activity-log.service';
 import { NotificationService } from '../../notification/notification.service';
+import { MailService } from '../../mail/mail.service';
+import { emailTemplates } from '../../mail/templates/email.templates';
 
 export interface PaginatedDisputesResult {
   disputes: any[];
@@ -40,6 +43,8 @@ export interface DisputeStats {
 
 @Injectable()
 export class AdminDisputesService {
+  private readonly logger = new Logger(AdminDisputesService.name);
+
   constructor(
     @InjectModel(TradeDispute.name) private disputeModel: Model<TradeDispute>,
     @InjectModel(Trade.name) private tradeModel: Model<Trade>,
@@ -47,12 +52,15 @@ export class AdminDisputesService {
     @InjectModel(AdminUser.name) private adminUserModel: Model<AdminUser>,
     private readonly activityLogService: ActivityLogService,
     private readonly notificationService: NotificationService,
+    private readonly mailService: MailService,
   ) {}
 
   /**
    * Get paginated list of disputes with filters
    */
-  async getDisputes(query: GetDisputesQueryDto): Promise<PaginatedDisputesResult> {
+  async getDisputes(
+    query: GetDisputesQueryDto,
+  ): Promise<PaginatedDisputesResult> {
     const {
       page = 1,
       limit = 20,
@@ -160,8 +168,10 @@ export class AdminDisputesService {
     if (sortBy === 'priority') {
       const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
       sortedDisputes = [...disputes].sort((a, b) => {
-        const orderA = priorityOrder[a.priority as keyof typeof priorityOrder] || 4;
-        const orderB = priorityOrder[b.priority as keyof typeof priorityOrder] || 4;
+        const orderA =
+          priorityOrder[a.priority as keyof typeof priorityOrder] || 4;
+        const orderB =
+          priorityOrder[b.priority as keyof typeof priorityOrder] || 4;
         return sortOrder === 'asc' ? orderA - orderB : orderB - orderA;
       });
     }
@@ -195,7 +205,10 @@ export class AdminDisputesService {
       this.disputeModel.countDocuments({ status: 'under_review' }),
       this.disputeModel.countDocuments({ status: 'resolved' }),
       this.disputeModel.countDocuments({ status: 'closed' }),
-      this.disputeModel.countDocuments({ assignedAdmin: null, status: { $in: ['open', 'under_review'] } }),
+      this.disputeModel.countDocuments({
+        assignedAdmin: null,
+        status: { $in: ['open', 'under_review'] },
+      }),
       this.disputeModel.aggregate([
         { $group: { _id: '$priority', count: { $sum: 1 } } },
       ]),
@@ -224,7 +237,9 @@ export class AdminDisputesService {
     });
 
     const avgResolutionTimeMs = avgResolutionAggregation[0]?.avgTime || 0;
-    const avgResolutionTimeHours = Math.round(avgResolutionTimeMs / (1000 * 60 * 60));
+    const avgResolutionTimeHours = Math.round(
+      avgResolutionTimeMs / (1000 * 60 * 60),
+    );
 
     return {
       total,
@@ -342,6 +357,11 @@ export class AdminDisputesService {
     const updatedDispute = await this.disputeModel
       .findByIdAndUpdate(disputeId, update, { new: true })
       .populate('assignedAdmin', 'email name')
+      .populate({
+        path: 'trade',
+        select: 'product',
+        populate: { path: 'product', select: 'name' },
+      })
       .lean();
 
     // Log the action
@@ -355,9 +375,33 @@ export class AdminDisputesService {
       targetIdentifier: disputeId,
       description: `Assigned dispute ${disputeId} to ${adminToAssign.email}`,
       previousValue,
-      newValue: { assignedAdmin: adminIdToAssign, assignedAdminEmail: adminToAssign.email },
+      newValue: {
+        assignedAdmin: adminIdToAssign,
+        assignedAdminEmail: adminToAssign.email,
+      },
       metadata: { notes },
     });
+
+    // Send email notification to assigned admin
+    try {
+      const productName =
+        (updatedDispute?.trade as any)?.product?.name || 'Unknown Product';
+      const emailHtml = emailTemplates.disputeAssigned(
+        disputeId,
+        productName,
+        currentAdminEmail,
+      );
+      await this.mailService.sendTradeNotificationEmail(
+        adminToAssign.email,
+        `Dispute Assigned: ${productName}`,
+        emailHtml,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to send dispute assigned email to ${adminToAssign.email}:`,
+        error,
+      );
+    }
 
     return updatedDispute;
   }
@@ -405,6 +449,12 @@ export class AdminDisputesService {
 
     const updatedDispute = await this.disputeModel
       .findByIdAndUpdate(disputeId, update, { new: true })
+      .populate('raisedBy', 'mail _id')
+      .populate({
+        path: 'trade',
+        select: 'product',
+        populate: { path: 'product', select: 'name' },
+      })
       .lean();
 
     // Log the action
@@ -421,6 +471,41 @@ export class AdminDisputesService {
       newValue: { status: statusDto.status },
       metadata: { notes: statusDto.notes },
     });
+
+    // Notify the user who raised the dispute
+    const raisedByUser = updatedDispute?.raisedBy as any;
+    if (raisedByUser?._id && raisedByUser?.mail) {
+      // Create in-app notification
+      await this.notificationService.createNotification({
+        userId: raisedByUser._id.toString(),
+        type: 'dispute_status_updated',
+        title: 'Dispute Status Updated',
+        message: `Your dispute status has changed from ${previousStatus} to ${statusDto.status}.`,
+        priority: 'normal',
+      });
+
+      // Send email notification
+      try {
+        const productName =
+          (updatedDispute?.trade as any)?.product?.name || 'Unknown Product';
+        const emailHtml = emailTemplates.disputeStatusUpdated(
+          disputeId,
+          productName,
+          previousStatus,
+          statusDto.status,
+        );
+        await this.mailService.sendTradeNotificationEmail(
+          raisedByUser.mail,
+          `Dispute Status Updated: ${productName}`,
+          emailHtml,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to send dispute status email to ${raisedByUser.mail}:`,
+          error,
+        );
+      }
+    }
 
     return updatedDispute;
   }
@@ -476,9 +561,17 @@ export class AdminDisputesService {
       $unset: { activeDispute: '' },
     });
 
+    // Get product name for email
+    const tradeWithProduct = await this.tradeModel
+      .findById(dispute.trade)
+      .populate('product', 'name')
+      .lean();
+    const productName = (tradeWithProduct as any)?.product?.name || 'Unknown Product';
+
     // Notify the user who raised the dispute
     const raisedByUser = updatedDispute?.raisedBy as any;
     if (raisedByUser?._id) {
+      // Create in-app notification
       await this.notificationService.createNotification({
         userId: raisedByUser._id.toString(),
         type: 'dispute_resolved',
@@ -486,6 +579,27 @@ export class AdminDisputesService {
         message: `Your dispute has been resolved. Check the resolution notes for details.`,
         priority: 'high',
       });
+
+      // Send email notification
+      if (raisedByUser.mail) {
+        try {
+          const emailHtml = emailTemplates.disputeResolved(
+            disputeId,
+            resolveDto.resolutionNotes,
+            productName,
+          );
+          await this.mailService.sendTradeNotificationEmail(
+            raisedByUser.mail,
+            `Dispute Resolved: ${productName}`,
+            emailHtml,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to send dispute resolved email to ${raisedByUser.mail}:`,
+            error,
+          );
+        }
+      }
     }
 
     // Log the action
@@ -499,7 +613,10 @@ export class AdminDisputesService {
       targetIdentifier: disputeId,
       description: `Resolved dispute ${disputeId}`,
       previousValue: { status: dispute.status },
-      newValue: { status: 'resolved', resolutionNotes: resolveDto.resolutionNotes },
+      newValue: {
+        status: 'resolved',
+        resolutionNotes: resolveDto.resolutionNotes,
+      },
       metadata: {},
     });
 
@@ -555,9 +672,104 @@ export class AdminDisputesService {
         targetIdentifier: disputeId,
         description: `Added ${messageDto.isInternal ? 'internal ' : ''}message to dispute`,
         previousValue: undefined,
-        newValue: { messageId: newMessage._id, isInternal: messageDto.isInternal },
+        newValue: {
+          messageId: newMessage._id,
+          isInternal: messageDto.isInternal,
+        },
         metadata: {},
       });
+    }
+
+    // Send notification to other parties (if message is not internal)
+    if (!newMessage.isInternal) {
+      const fullDispute = await this.disputeModel
+        .findById(disputeId)
+        .populate('raisedBy', 'mail _id')
+        .populate({
+          path: 'trade',
+          select: 'buyer seller product',
+          populate: [
+            { path: 'buyer', select: 'mail _id' },
+            { path: 'seller', select: 'mail _id' },
+            { path: 'product', select: 'name' },
+          ],
+        })
+        .lean();
+
+      if (fullDispute) {
+        const trade = fullDispute.trade as any;
+        const raisedBy = fullDispute.raisedBy as any;
+        const productName = trade?.product?.name || 'Unknown Product';
+
+        // Determine who should receive the notification
+        const recipientsToNotify: { userId: string; email: string }[] = [];
+
+        // If sender is admin, notify the user who raised the dispute
+        if (senderType === 'admin' && raisedBy?._id) {
+          recipientsToNotify.push({
+            userId: raisedBy._id.toString(),
+            email: raisedBy.mail,
+          });
+        }
+        // If sender is buyer/seller, notify the other party and admin if assigned
+        else {
+          if (
+            senderType === 'buyer' &&
+            trade?.seller?._id &&
+            trade.seller._id.toString() !== senderId
+          ) {
+            recipientsToNotify.push({
+              userId: trade.seller._id.toString(),
+              email: trade.seller.mail,
+            });
+          } else if (
+            senderType === 'seller' &&
+            trade?.buyer?._id &&
+            trade.buyer._id.toString() !== senderId
+          ) {
+            recipientsToNotify.push({
+              userId: trade.buyer._id.toString(),
+              email: trade.buyer.mail,
+            });
+          }
+        }
+
+        // Send notifications
+        for (const recipient of recipientsToNotify) {
+          try {
+            // In-app notification
+            await this.notificationService.createNotification({
+              userId: recipient.userId,
+              type: 'dispute_message',
+              title: 'New Dispute Message',
+              message: `New message from ${senderEmail} in your dispute.`,
+              priority: 'normal',
+            });
+
+            // Email notification (with preview)
+            const messagePreview =
+              messageDto.content.length > 100
+                ? messageDto.content.substring(0, 100) + '...'
+                : messageDto.content;
+            const emailHtml = emailTemplates.disputeMessage(
+              disputeId,
+              senderEmail,
+              messagePreview,
+              { productName },
+            );
+            await this.mailService.sendTradeNotificationEmail(
+              recipient.email,
+              `New Dispute Message: ${productName}`,
+              emailHtml,
+            );
+          } catch (error) {
+            this.logger.error(
+              `Failed to send dispute message notification to ${recipient.email}:`,
+              error,
+            );
+          }
+        }
+      }
     }
 
     return newMessage;
@@ -566,7 +778,10 @@ export class AdminDisputesService {
   /**
    * Get messages for a dispute
    */
-  async getMessages(disputeId: string, includeInternal: boolean = true): Promise<DisputeMessage[]> {
+  async getMessages(
+    disputeId: string,
+    includeInternal: boolean = true,
+  ): Promise<DisputeMessage[]> {
     if (!Types.ObjectId.isValid(disputeId)) {
       throw new BadRequestException('Invalid dispute ID');
     }
@@ -590,7 +805,8 @@ export class AdminDisputesService {
 
     // Sort by createdAt ascending
     return messages.sort(
-      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     );
   }
 
@@ -618,11 +834,54 @@ export class AdminDisputesService {
       throw new ConflictException('This trade already has an active dispute');
     }
 
-    // Check if trade is in valid state for disputes
+    // ========================
+    // PHASE 2 REFACTORING: Dispute Eligibility Validation
+    // ========================
     const tradeData = trade as any;
-    if (tradeData.tradePhase === 'CANCELLED') {
-      throw new BadRequestException('Cannot create dispute for a cancelled trade');
+
+    // Only allow disputes from PAYMENT phase onwards
+    const allowedPhasesForDispute = [
+      'PAYMENT',
+      'BOL',
+      'COMPLETED',
+      'CANCELLED',
+    ];
+    if (!allowedPhasesForDispute.includes(tradeData.tradePhase)) {
+      throw new BadRequestException(
+        `Disputes can only be raised from Payment phase onwards. Current phase: ${tradeData.tradePhase}`,
+      );
     }
+
+    // For cancelled/completed trades, check 30-day dispute window
+    if (
+      tradeData.tradePhase === 'CANCELLED' ||
+      tradeData.tradePhase === 'COMPLETED'
+    ) {
+      if (tradeData.disputeEligibilityEndsAt) {
+        const eligibilityEnds = new Date(tradeData.disputeEligibilityEndsAt);
+        if (new Date() > eligibilityEnds) {
+          throw new BadRequestException(
+            'Dispute window has expired. Disputes must be raised within 30 days of trade completion or cancellation.',
+          );
+        }
+      } else {
+        // Legacy trades without disputeEligibilityEndsAt: Check completedAt/cancelledAt + 30 days
+        const endDate = tradeData.completedAt || tradeData.cancelledAt;
+        if (endDate) {
+          const thirtyDaysAfter = new Date(
+            new Date(endDate).getTime() + 30 * 24 * 60 * 60 * 1000,
+          );
+          if (new Date() > thirtyDaysAfter) {
+            throw new BadRequestException(
+              'Dispute window has expired. Disputes must be raised within 30 days of trade completion or cancellation.',
+            );
+          }
+        }
+      }
+    }
+    // ========================
+    // END PHASE 2 REFACTORING
+    // ========================
 
     // Create the dispute
     const dispute = new this.disputeModel({
@@ -653,6 +912,44 @@ export class AdminDisputesService {
     await this.tradeModel.findByIdAndUpdate(tradeId, {
       activeDispute: dispute._id,
     });
+
+    // Get product name for notifications
+    const tradeWithProduct = await this.tradeModel
+      .findById(tradeId)
+      .populate('product', 'name')
+      .lean();
+    const productName = (tradeWithProduct as any)?.product?.name || 'Unknown Product';
+
+    // Notify admins about new dispute (send to all active admins)
+    try {
+      const admins = await this.adminUserModel
+        .find({ isActive: true })
+        .select('email')
+        .lean();
+
+      for (const admin of admins) {
+        try {
+          const emailHtml = emailTemplates.disputeCreated(
+            (dispute._id as any).toString(),
+            productName,
+            createDto.reason,
+            userEmail,
+          );
+          await this.mailService.sendTradeNotificationEmail(
+            admin.email,
+            `New Dispute: ${productName} - ${createDto.reason}`,
+            emailHtml,
+          );
+        } catch (emailError) {
+          this.logger.error(
+            `Failed to send dispute created email to admin ${admin.email}:`,
+            emailError,
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.error('Failed to notify admins about new dispute:', error);
+    }
 
     return dispute;
   }

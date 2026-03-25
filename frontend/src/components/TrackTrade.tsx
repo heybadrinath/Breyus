@@ -12,29 +12,31 @@ import {
     Upload,
     Eye,
     AlertCircle,
-    Pen,
-    Check
+    Check,
+    MessageCircle,
+    XCircle
 } from 'lucide-react';
 import {
     Trade,
     TradePhase,
     DocumentInfo,
     DocumentStatus,
-    SPAStatus,
+    DocumentRejectionTracking,
     getTradeById,
     getTradeDocuments,
     uploadSCO,
     uploadICPO,
     uploadSPA,
+    uploadSignedSpa,
     uploadBoL,
     uploadPaymentProof,
     completeTrade,
-    verifyDocument,
-    signDocument
+    verifyDocument
 } from '../services/trade.service';
+import { createConversation, createConversationByCompany } from '../services/inbox.service';
 import DocumentUploadModal, { DocumentType } from './DocumentUploadModal';
 import ViewDocumentModal from './ViewDocumentModal';
-import SignatureCanvas from './SignatureCanvas';
+
 import { useNotifications } from '../contexts/NotificationContext';
 
 interface TrackTradeProps {
@@ -50,6 +52,14 @@ interface PhaseInfo {
     description: string;
     documentType?: DocumentType;
     uploadedBy: 'seller' | 'buyer';
+}
+
+// PHASE 2 REFACTORING: New SPA approval status interface
+interface SPAApprovalStatus {
+    spaUploaded: boolean;
+    spaApproved: boolean;
+    signedSpaUploaded: boolean;
+    signedSpaApproved: boolean;
 }
 
 const PHASES: PhaseInfo[] = [
@@ -84,7 +94,7 @@ const PHASES: PhaseInfo[] = [
         label: 'Sales Purchase Agreement',
         shortLabel: 'SPA',
         icon: <FileText className="w-5 h-5" />,
-        description: 'Both parties sign SPA',
+        description: 'Seller uploads SPA, buyer approves and uploads signed copy',
         documentType: 'spa',
         uploadedBy: 'seller'
     },
@@ -112,7 +122,7 @@ const PHASES: PhaseInfo[] = [
         shortLabel: 'Done',
         icon: <Award className="w-5 h-5" />,
         description: 'Trade completed successfully',
-        uploadedBy: 'seller'
+        uploadedBy: 'buyer'  // PHASE 2: Changed to buyer - only buyer completes trade
     }
 ];
 
@@ -120,21 +130,24 @@ const DOCUMENT_LABELS: Record<DocumentType, string> = {
     sco: 'SCO',
     icpo: 'ICPO',
     spa: 'SPA',
+    'signed-spa': 'Signed SPA',  // PHASE 2 REFACTORING
     'payment-proof': 'Payment Proof',
     bol: 'BoL'
 };
 
+// PHASE 2 REFACTORING: Added 'signed-spa' to document order
 const DOCUMENT_ORDER: DocumentType[] = [
     'sco',
     'icpo',
     'spa',
+    'signed-spa',  // PHASE 2: New signed SPA document
     'payment-proof',
     'bol'
 ];
 
 const DOCUMENT_STATUS_LABELS: Record<DocumentStatus, string> = {
     pending: 'Pending',
-    uploaded: 'Submitted',
+    uploaded: 'Under Review',  // PHASE 2: More descriptive
     approved: 'Approved',
     rejected: 'Rejected'
 };
@@ -150,9 +163,12 @@ const getDocumentStatus = (doc?: DocumentInfo | null): DocumentStatus => {
     return doc?.status || 'uploaded';
 };
 
-const getVerifierRole = (docType: DocumentType): 'buyer' | 'seller' | 'signatures' => {
-    if (docType === 'spa') return 'signatures';
-    if (docType === 'sco' || docType === 'bol') return 'buyer';
+// PHASE 2 REFACTORING: Updated verifier roles - removed 'signatures', SPA uses approval flow
+const getVerifierRole = (docType: DocumentType): 'buyer' | 'seller' => {
+    // Buyer verifies documents uploaded by seller
+    if (docType === 'sco' || docType === 'bol' || docType === 'spa') return 'buyer';
+    // Seller verifies documents uploaded by buyer (including signed-spa)
+    if (docType === 'icpo' || docType === 'payment-proof' || docType === 'signed-spa') return 'seller';
     return 'seller';
 };
 
@@ -184,14 +200,19 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
     const [viewingDocument, setViewingDocument] = useState<DocumentInfo | null>(null);
     const [viewingDocType, setViewingDocType] = useState<DocumentType | null>(null);
 
-    // SPA dual signature tracking
-    const [spaStatus, setSpaStatus] = useState<SPAStatus | null>(null);
-    const [signingSpa, setSigningSpa] = useState(false);
+    // PHASE 2 REFACTORING: SPA approval flow tracking (replaces signature tracking)
+    const [spaApprovalStatus, setSpaApprovalStatus] = useState<SPAApprovalStatus>({
+        spaUploaded: false,
+        spaApproved: false,
+        signedSpaUploaded: false,
+        signedSpaApproved: false
+    });
 
-    // Signature modal state
-    const [showSignatureModal, setShowSignatureModal] = useState(false);
-    const [signatureData, setSignatureData] = useState<string | null>(null);
-    const [signatureConfirmed, setSignatureConfirmed] = useState(false);
+    // PHASE 2 REFACTORING: Rejection tracking for documents
+    const [rejectionTracking, setRejectionTracking] = useState<Record<string, DocumentRejectionTracking>>({});
+
+    // PHASE 2 REFACTORING: Messaging state
+    const [startingConversation, setStartingConversation] = useState(false);
 
     useEffect(() => {
         fetchTradeData();
@@ -211,7 +232,7 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
             setTrade(tradeData);
             setCurrentPhase((tradeData as any).tradePhase || 'PR');
 
-            // Map documents - backend returns nested structure {documents: {sco, icpo, spa, bol, paymentProof}}
+            // Map documents - backend returns nested structure {documents: {sco, icpo, spa, bol, paymentProof, signedSpa}}
             const docs: Record<string, DocumentInfo> = {};
             const docsData = docsResponse.data as any;
             // Handle both nested structure (from getTradeDocuments) and flat structure (from getTradeById)
@@ -220,29 +241,38 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
             if (nestedDocs.sco) docs['sco'] = nestedDocs.sco;
             if (nestedDocs.icpo) docs['icpo'] = nestedDocs.icpo;
             if (nestedDocs.spa) docs['spa'] = nestedDocs.spa;
+            if (nestedDocs.signedSpa) docs['signed-spa'] = nestedDocs.signedSpa;  // PHASE 2
             if (nestedDocs.bol) docs['bol'] = nestedDocs.bol;
             if (nestedDocs.paymentProof) docs['payment-proof'] = nestedDocs.paymentProof;
             // Also check for flat document properties (scoDocument, icpoDocument, etc.)
             if (docsData.scoDocument) docs['sco'] = docsData.scoDocument;
             if (docsData.icpoDocument) docs['icpo'] = docsData.icpoDocument;
             if (docsData.spaDocument) docs['spa'] = docsData.spaDocument;
+            if (docsData.signedSpaDocument) docs['signed-spa'] = docsData.signedSpaDocument;  // PHASE 2
             if (docsData.bolDocument) docs['bol'] = docsData.bolDocument;
             if (docsData.paymentProof && !docs['payment-proof']) docs['payment-proof'] = docsData.paymentProof;
             setDocuments(docs);
 
-            // Extract SPA status for dual signature tracking
-            if (docsData.spaStatus) {
-                setSpaStatus(docsData.spaStatus);
-            } else if (docs['spa']) {
-                // Construct SPA status from document
-                const spaDoc = docs['spa'] as any;
-                setSpaStatus({
-                    uploaded: true,
-                    sellerSigned: !!spaDoc.sellerSignatureDataUrl,
-                    buyerSigned: !!spaDoc.buyerSignatureDataUrl,
-                    fullySigned: !!spaDoc.sellerSignatureDataUrl && !!spaDoc.buyerSignatureDataUrl
-                });
-            }
+            // PHASE 2 REFACTORING: Extract SPA approval status
+            const spaDoc = docs['spa'];
+            const signedSpaDoc = docs['signed-spa'];
+            setSpaApprovalStatus({
+                spaUploaded: !!spaDoc,
+                spaApproved: spaDoc?.status === 'approved',
+                signedSpaUploaded: !!signedSpaDoc,
+                signedSpaApproved: signedSpaDoc?.status === 'approved'
+            });
+
+            // PHASE 2 REFACTORING: Extract rejection tracking from trade data
+            const trackingData: Record<string, DocumentRejectionTracking> = {};
+            const tradeAny = tradeData as any;
+            if (tradeAny.scoRejectionTracking) trackingData['sco'] = tradeAny.scoRejectionTracking;
+            if (tradeAny.icpoRejectionTracking) trackingData['icpo'] = tradeAny.icpoRejectionTracking;
+            if (tradeAny.spaRejectionTracking) trackingData['spa'] = tradeAny.spaRejectionTracking;
+            if (tradeAny.signedSpaRejectionTracking) trackingData['signed-spa'] = tradeAny.signedSpaRejectionTracking;
+            if (tradeAny.paymentProofRejectionTracking) trackingData['payment-proof'] = tradeAny.paymentProofRejectionTracking;
+            if (tradeAny.bolRejectionTracking) trackingData['bol'] = tradeAny.bolRejectionTracking;
+            setRejectionTracking(trackingData);
         } catch (err: any) {
             setError(err.message || 'Failed to load trade data');
         } finally {
@@ -296,6 +326,33 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
         return null;
     };
 
+    // PHASE 2 REFACTORING: Helper to get rejection info for a document type
+    // Returns shape matching RejectionTrackingInfo interface for ViewDocumentModal
+    const getRejectionInfo = (docType: DocumentType): { rejectionCount: number; maxAttempts: number; remainingAttempts: number; isLastAttempt: boolean } | null => {
+        const tracking = rejectionTracking[docType];
+        if (!tracking) return null;
+        const remainingAttempts = tracking.maxAttempts - tracking.rejectionCount;
+        return {
+            rejectionCount: tracking.rejectionCount,
+            maxAttempts: tracking.maxAttempts,
+            remainingAttempts,
+            isLastAttempt: remainingAttempts === 1
+        };
+    };
+
+    // PHASE 2 REFACTORING: Check if signed-spa upload is allowed
+    const canUploadSignedSpa = (): boolean => {
+        // Only buyer can upload signed SPA
+        if (isSeller) return false;
+        // SPA must be approved first
+        if (!spaApprovalStatus.spaApproved) return false;
+        // Can't upload if already uploaded and pending review
+        const signedSpaDoc = documents['signed-spa'];
+        if (signedSpaDoc?.status === 'uploaded') return false;
+        // Can upload if not uploaded yet or if rejected
+        return !signedSpaDoc || signedSpaDoc.status === 'rejected';
+    };
+
     const canUpload = (phase: PhaseInfo): boolean => {
         if (!phase.documentType) return false;
 
@@ -303,6 +360,10 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                           (!isSeller && phase.uploadedBy === 'buyer');
         const existingDoc = documents[phase.documentType];
         const isRejected = existingDoc?.status === 'rejected';
+        const isPendingReview = existingDoc?.status === 'uploaded';
+
+        // PHASE 2 REFACTORING: Block upload when document is pending review
+        if (isPendingReview) return false;
 
         // Special case: Allow re-upload of rejected documents even if not current phase
         // This is needed when a prior document is rejected after trade has progressed
@@ -310,6 +371,11 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
             // But still block if there's a prior rejected document that needs to be fixed first
             if (checkPriorDocumentsRejected(phase.documentType)) {
                 return false;
+            }
+            // PHASE 2: Check if max attempts exceeded
+            const rejectionInfo = getRejectionInfo(phase.documentType);
+            if (rejectionInfo && rejectionInfo.remainingAttempts <= 0) {
+                return false; // No more attempts allowed
             }
             return true;
         }
@@ -333,22 +399,27 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
     const handleUpload = async (file: File, notes?: string) => {
         if (!selectedDocType) return;
 
+        // PHASE 2 REFACTORING: Added 'signed-spa' upload function
         const uploadFns: Record<DocumentType, typeof uploadSCO> = {
             'sco': uploadSCO,
             'icpo': uploadICPO,
             'spa': uploadSPA,
+            'signed-spa': uploadSignedSpa,
             'bol': uploadBoL,
             'payment-proof': uploadPaymentProof
         };
 
         await uploadFns[selectedDocType](tradeId, file, notes);
-        await fetchTradeData();
+        // NOTE: Don't call fetchTradeData() here - the modal shows success for 1.5s
+        // We'll refresh data when the modal closes to avoid re-render flickering
     };
 
-    // Determine if user can verify a document based on role and document type
+    // PHASE 2 REFACTORING: Determine if user can verify a document based on role and document type
     const canVerifyDocument = (docType: DocumentType): boolean => {
         if (docType === 'sco') return !isSeller;          // Buyer verifies SCO
         if (docType === 'icpo') return isSeller;          // Seller verifies ICPO
+        if (docType === 'spa') return !isSeller;          // PHASE 2: Buyer approves SPA
+        if (docType === 'signed-spa') return isSeller;    // PHASE 2: Seller approves signed SPA
         if (docType === 'payment-proof') return isSeller; // Seller verifies payment
         if (docType === 'bol') return !isSeller;          // Buyer verifies BoL
         return false;
@@ -362,50 +433,62 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
 
     const handleVerify = async (status: 'approved' | 'rejected', notes?: string) => {
         if (!viewingDocType) return;
-        await verifyDocument(tradeId, viewingDocType, status, notes);
-        await fetchTradeData();
-    };
-
-    // Handle SPA signing - both parties must sign
-    const handleSignSPA = async (signatureDataUrl: string) => {
         try {
-            setSigningSpa(true);
-            const result = await signDocument(tradeId, 'spa', signatureDataUrl);
-            console.log('Sign SPA result:', result);
-
-            // Update SPA status from response if available
-            const responseData = result.data as any;
-            if (responseData?.spaStatus) {
-                setSpaStatus(responseData.spaStatus);
-            }
-
-            // Update trade phase if it changed
-            if (responseData?.trade?.tradePhase) {
-                setCurrentPhase(responseData.trade.tradePhase);
-            }
-
-            // Show success message
-            showToast(result.message || 'SPA signed successfully!', 'success');
-
-            // Refresh full data in background (without loading spinner)
-            fetchTradeData(false);
+            await verifyDocument(tradeId, viewingDocType, status, notes);
+            showToast(
+                status === 'approved' ? 'Document approved successfully!' : 'Document rejected.',
+                status === 'approved' ? 'success' : 'warning'
+            );
+            await fetchTradeData(false);
         } catch (err: any) {
-            console.error('Failed to sign SPA:', err);
-            showToast(err.message || 'Failed to sign SPA. Please try again.', 'error');
-        } finally {
-            setSigningSpa(false);
+            showToast(err.message || 'Failed to verify document. Please try again.', 'error');
         }
     };
 
-    // Check if current user can sign SPA
-    const canSignSPA = (): boolean => {
-        if (!spaStatus || !spaStatus.uploaded) return false;
-        if (spaStatus.fullySigned) return false;
-        // Seller can sign if they haven't signed yet
-        if (isSeller && !spaStatus.sellerSigned) return true;
-        // Buyer can sign if they haven't signed yet
-        if (!isSeller && !spaStatus.buyerSigned) return true;
-        return false;
+    // PHASE 2 REFACTORING: Message the other party (useful when document is rejected)
+    const handleMessageOtherParty = async () => {
+        if (!trade) return;
+
+        try {
+            setStartingConversation(true);
+            const tradeAny = trade as any;
+
+            // Try to get product ID first (preferred - creates product-based conversation)
+            const productId = tradeAny.product?._id || tradeAny.productId;
+
+            let conversationId: string | undefined;
+
+            if (productId) {
+                // Use product-based conversation (preferred)
+                const response = await createConversation(productId);
+                conversationId = response.conversationId;
+            } else {
+                // Fallback to company-based conversation
+                const targetCompanyId = isSeller
+                    ? tradeAny.buyer?.company?._id || tradeAny.buyerCompany?._id || tradeAny.buyer?._id
+                    : tradeAny.seller?.company?._id || tradeAny.sellerCompany?._id || tradeAny.seller?._id;
+
+                if (!targetCompanyId) {
+                    showToast('Unable to find other party information', 'error');
+                    return;
+                }
+
+                const response = await createConversationByCompany(targetCompanyId);
+                conversationId = response.conversationId;
+            }
+
+            if (conversationId) {
+                const basePath = isSeller ? '/seller' : '/buyer';
+                navigate(`${basePath}/inbox?conversationId=${conversationId}`);
+            } else {
+                showToast('Failed to start conversation', 'error');
+            }
+        } catch (err: any) {
+            console.error('Failed to start conversation:', err);
+            showToast(err.message || 'Failed to start conversation', 'error');
+        } finally {
+            setStartingConversation(false);
+        }
     };
 
     const handleCompleteTrade = async () => {
@@ -433,6 +516,76 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
         'inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm';
     const secondaryActionClasses =
         'inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm';
+
+    const SPA_STEPS = [
+        { label: 'Seller uploads SPA', shortLabel: 'Upload' },
+        { label: 'Buyer reviews & approves SPA', shortLabel: 'Review' },
+        { label: 'Buyer uploads Signed SPA', shortLabel: 'Sign' },
+        { label: 'Seller reviews & approves Signed SPA', shortLabel: 'Approve' },
+    ];
+
+    const getSPAStepNumber = (): number => {
+        if (!spaApprovalStatus.spaUploaded) return 1;
+        if (!spaApprovalStatus.spaApproved) return 2;
+        if (!spaApprovalStatus.signedSpaUploaded) return 3;
+        return 4;
+    };
+
+    const renderSPAStepIndicator = () => {
+        if (currentPhase !== 'SPA') return null;
+        const currentStep = getSPAStepNumber();
+
+        // Check for rejection states — show which step needs redo
+        const spaDoc = documents['spa'];
+        const signedSpaDoc = documents['signed-spa'];
+        const spaRejected = spaDoc?.status === 'rejected';
+        const signedSpaRejected = signedSpaDoc?.status === 'rejected';
+
+        let activeStep = currentStep;
+        if (spaRejected) activeStep = 1;       // Go back to step 1
+        if (signedSpaRejected) activeStep = 3;  // Go back to step 3
+
+        return (
+            <div className="mb-4 p-3 bg-white border border-gray-200 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                    {SPA_STEPS.map((step, idx) => {
+                        const stepNum = idx + 1;
+                        const isDone = stepNum < activeStep;
+                        const isCurrent = stepNum === activeStep;
+
+                        return (
+                            <React.Fragment key={stepNum}>
+                                {idx > 0 && (
+                                    <div className={`flex-1 h-0.5 mx-1 ${isDone ? 'bg-gray-900' : 'bg-gray-200'}`} />
+                                )}
+                                <div className="flex flex-col items-center" style={{ minWidth: '2rem' }}>
+                                    <div
+                                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold border-2 ${
+                                            isDone
+                                                ? 'bg-gray-900 border-gray-900 text-white'
+                                                : isCurrent
+                                                    ? 'bg-white border-gray-900 text-gray-900'
+                                                    : 'bg-white border-gray-300 text-gray-400'
+                                        }`}
+                                    >
+                                        {isDone ? '✓' : stepNum}
+                                    </div>
+                                    <span className={`text-xs mt-1 text-center ${
+                                        isCurrent ? 'text-gray-900 font-medium' : isDone ? 'text-gray-700' : 'text-gray-400'
+                                    }`}>
+                                        {step.shortLabel}
+                                    </span>
+                                </div>
+                            </React.Fragment>
+                        );
+                    })}
+                </div>
+                <p className="text-xs text-gray-600 text-center mt-1">
+                    Step {activeStep}: {SPA_STEPS[activeStep - 1]?.label}
+                </p>
+            </div>
+        );
+    };
 
     const renderCurrentPhaseAction = () => {
         const phase = currentPhaseInfo;
@@ -507,86 +660,229 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
             </button>
         );
 
+        // PHASE 2 REFACTORING: New SPA approval flow (replaces signature flow)
         if (docType === 'spa') {
+            const signedSpaDoc = documents['signed-spa'];
+            const signedSpaStatus = signedSpaDoc ? getDocumentStatus(signedSpaDoc) : null;
+
+            // Step 1: SPA not uploaded yet
             if (!doc) {
                 return canUpload(phase)
                     ? renderUploadButton(`Upload ${docLabel}`)
                     : (
                         <p className="text-sm text-gray-600">
-                            Waiting for {waitingFor} to upload {docLabel}.
+                            Waiting for seller to upload {docLabel}.
                         </p>
                     );
             }
 
+            // Step 2: SPA rejected - show re-upload option with rejection info
             if (docStatus === 'rejected') {
+                const rejectionInfo = getRejectionInfo('spa');
                 return canUpload(phase) ? (
-                    <div className="flex flex-col gap-2">
-                        <p className="text-sm text-red-600">
-                            SPA was rejected. Please upload a revised copy.
-                        </p>
-                        {renderUploadButton(`Upload revised ${docLabel}`)}
+                    <div className="flex flex-col gap-3">
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-sm text-red-700 flex items-center gap-2">
+                                <XCircle className="w-4 h-4 flex-shrink-0" />
+                                SPA was rejected.
+                            </p>
+                            {rejectionInfo && (
+                                <p className="text-xs text-red-600 mt-1">
+                                    {rejectionInfo.isLastAttempt
+                                        ? '⚠️ This is your FINAL attempt!'
+                                        : `Attempt ${rejectionInfo.rejectionCount + 1}/${rejectionInfo.maxAttempts}`}
+                                </p>
+                            )}
+                        </div>
+                        <div className="flex gap-2">
+                            {renderUploadButton(`Upload revised ${docLabel}`)}
+                            <button
+                                onClick={handleMessageOtherParty}
+                                disabled={startingConversation}
+                                className={secondaryActionClasses}
+                            >
+                                <MessageCircle className="w-4 h-4" />
+                                Message Buyer
+                            </button>
+                        </div>
                     </div>
                 ) : (
-                    <p className="text-sm text-gray-600">
-                        SPA was rejected. Waiting for {waitingFor} to upload a revised copy.
+                    <div className="flex flex-col gap-2">
+                        <p className="text-sm text-gray-600">
+                            SPA was rejected. Waiting for seller to upload a revised copy.
+                        </p>
+                        <button
+                            onClick={handleMessageOtherParty}
+                            disabled={startingConversation}
+                            className={secondaryActionClasses}
+                        >
+                            <MessageCircle className="w-4 h-4" />
+                            Message Seller
+                        </button>
+                    </div>
+                );
+            }
+
+            // Step 3: SPA uploaded, waiting for buyer approval
+            if (docStatus === 'uploaded') {
+                if (!isSeller) {
+                    return (
+                        <div className="flex flex-col gap-2">
+                            <p className="text-sm text-gray-700">
+                                SPA submitted by seller. Please review and approve to continue.
+                            </p>
+                            {renderReviewButton('Review SPA')}
+                        </div>
+                    );
+                }
+                return (
+                    <p className="text-sm text-gray-600 flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        SPA submitted. Waiting for buyer to review and approve.
                     </p>
                 );
             }
 
-            if (spaStatus?.fullySigned) {
-                return (
-                    <div className="flex flex-col gap-2">
-                        <p className="text-sm text-green-700 flex items-center gap-2">
-                            <CheckCircle className="w-4 h-4" />
-                            SPA signed by both parties. Moving to Payment phase.
-                        </p>
-                        {renderViewButton('View SPA')}
-                    </div>
-                );
-            }
-
-            const userHasSigned = isSeller ? spaStatus?.sellerSigned : spaStatus?.buyerSigned;
-            const otherParty = isSeller ? 'buyer' : 'seller';
-            const otherHasSigned = isSeller ? spaStatus?.buyerSigned : spaStatus?.sellerSigned;
-
-            return (
-                <div className="flex flex-col gap-2">
-                    {userHasSigned ? (
+            // Step 4: SPA approved - now buyer uploads signed SPA
+            if (docStatus === 'approved') {
+                // Check signed SPA status
+                if (!signedSpaDoc) {
+                    // No signed SPA uploaded yet
+                    if (!isSeller) {
+                        return (
+                            <div className="flex flex-col gap-2">
+                                <p className="text-sm text-green-700 flex items-center gap-2">
+                                    <CheckCircle className="w-4 h-4" />
+                                    SPA approved. Please upload your signed copy.
+                                </p>
+                                <button
+                                    onClick={() => handleUploadClick('signed-spa')}
+                                    className={primaryActionClasses}
+                                >
+                                    <Upload className="w-4 h-4" />
+                                    Upload Signed SPA
+                                </button>
+                            </div>
+                        );
+                    }
+                    return (
                         <p className="text-sm text-gray-600 flex items-center gap-2">
                             <Clock className="w-4 h-4" />
-                            You have signed. Waiting for {otherParty} to sign.
+                            SPA approved. Waiting for buyer to upload signed copy.
                         </p>
-                    ) : (
-                        <p className="text-sm text-gray-600">
-                            {otherHasSigned
-                                ? `The ${otherParty} has signed. Your signature is required.`
-                                : 'Awaiting signatures from both parties.'}
+                    );
+                }
+
+                // Signed SPA rejected
+                if (signedSpaStatus === 'rejected') {
+                    const rejectionInfo = getRejectionInfo('signed-spa');
+                    if (!isSeller) {
+                        return (
+                            <div className="flex flex-col gap-3">
+                                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                    <p className="text-sm text-red-700 flex items-center gap-2">
+                                        <XCircle className="w-4 h-4 flex-shrink-0" />
+                                        Signed SPA was rejected.
+                                    </p>
+                                    {rejectionInfo && (
+                                        <p className="text-xs text-red-600 mt-1">
+                                            {rejectionInfo.isLastAttempt
+                                                ? '⚠️ This is your FINAL attempt!'
+                                                : `Attempt ${rejectionInfo.rejectionCount + 1}/${rejectionInfo.maxAttempts}`}
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => handleUploadClick('signed-spa')}
+                                        className={primaryActionClasses}
+                                    >
+                                        <Upload className="w-4 h-4" />
+                                        Upload Revised Signed SPA
+                                    </button>
+                                    <button
+                                        onClick={handleMessageOtherParty}
+                                        disabled={startingConversation}
+                                        className={secondaryActionClasses}
+                                    >
+                                        <MessageCircle className="w-4 h-4" />
+                                        Message Seller
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    }
+                    return (
+                        <div className="flex flex-col gap-2">
+                            <p className="text-sm text-gray-600">
+                                Signed SPA was rejected. Waiting for buyer to upload a revised copy.
+                            </p>
+                            <button
+                                onClick={handleMessageOtherParty}
+                                disabled={startingConversation}
+                                className={secondaryActionClasses}
+                            >
+                                <MessageCircle className="w-4 h-4" />
+                                Message Buyer
+                            </button>
+                        </div>
+                    );
+                }
+
+                // Signed SPA uploaded, waiting for seller approval
+                if (signedSpaStatus === 'uploaded') {
+                    if (isSeller) {
+                        return (
+                            <div className="flex flex-col gap-2">
+                                <p className="text-sm text-gray-700">
+                                    Signed SPA submitted by buyer. Please review and approve.
+                                </p>
+                                <button
+                                    onClick={() => handleViewDocument(signedSpaDoc, 'signed-spa')}
+                                    className={primaryActionClasses}
+                                >
+                                    <Eye className="w-4 h-4" />
+                                    Review Signed SPA
+                                </button>
+                            </div>
+                        );
+                    }
+                    return (
+                        <p className="text-sm text-gray-600 flex items-center gap-2">
+                            <Clock className="w-4 h-4" />
+                            Signed SPA submitted. Waiting for seller to approve.
                         </p>
-                    )}
-                    {canSignSPA() && (
-                        <button
-                            onClick={() => {
-                                setSignatureData(null);
-                                setSignatureConfirmed(false);
-                                setShowSignatureModal(true);
-                            }}
-                            disabled={signingSpa}
-                            className={primaryActionClasses}
-                        >
-                            {signingSpa ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    Signing...
-                                </>
-                            ) : (
-                                <>
-                                    <Pen className="w-4 h-4" />
-                                    Sign SPA
-                                </>
-                            )}
-                        </button>
-                    )}
-                </div>
+                    );
+                }
+
+                // Signed SPA approved - moving to payment
+                if (signedSpaStatus === 'approved') {
+                    return (
+                        <div className="flex flex-col gap-2">
+                            <p className="text-sm text-green-700 flex items-center gap-2">
+                                <CheckCircle className="w-4 h-4" />
+                                SPA process complete. Moving to Payment phase.
+                            </p>
+                            <div className="flex gap-2">
+                                {renderViewButton('View SPA')}
+                                <button
+                                    onClick={() => handleViewDocument(signedSpaDoc, 'signed-spa')}
+                                    className={secondaryActionClasses}
+                                >
+                                    <Eye className="w-4 h-4" />
+                                    View Signed SPA
+                                </button>
+                            </div>
+                        </div>
+                    );
+                }
+            }
+
+            // Default fallback
+            return (
+                <p className="text-sm text-gray-600">
+                    Processing SPA documents...
+                </p>
             );
         }
 
@@ -600,17 +896,71 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                 );
         }
 
+        // PHASE 2 REFACTORING: Enhanced rejection handling with tracking info and message button
         if (docStatus === 'rejected') {
+            const rejectionInfo = getRejectionInfo(docType);
+            const otherPartyLabel = waitingFor === 'seller' ? 'Buyer' : 'Seller';
+
             return canUpload(phase) ? (
-                <div className="flex flex-col gap-2">
-                    <p className="text-sm text-red-600">
-                        {docLabel} was rejected. Please upload a revised copy.
-                    </p>
-                    {renderUploadButton(`Upload revised ${docLabel}`)}
+                <div className="flex flex-col gap-3">
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-sm text-red-700 flex items-center gap-2">
+                            <XCircle className="w-4 h-4 flex-shrink-0" />
+                            {docLabel} was rejected. Please upload a revised copy.
+                        </p>
+                        {rejectionInfo && (
+                            <p className="text-xs text-red-600 mt-1">
+                                {rejectionInfo.isLastAttempt
+                                    ? '⚠️ This is your FINAL attempt!'
+                                    : `Attempt ${rejectionInfo.rejectionCount + 1}/${rejectionInfo.maxAttempts}`}
+                            </p>
+                        )}
+                    </div>
+                    <div className="flex gap-2">
+                        {renderUploadButton(`Upload revised ${docLabel}`)}
+                        <button
+                            onClick={handleMessageOtherParty}
+                            disabled={startingConversation}
+                            className={secondaryActionClasses}
+                        >
+                            <MessageCircle className="w-4 h-4" />
+                            Message {otherPartyLabel}
+                        </button>
+                    </div>
                 </div>
             ) : (
-                <p className="text-sm text-gray-600">
-                    {docLabel} was rejected. Waiting for {waitingFor} to upload a revised copy.
+                <div className="flex flex-col gap-2">
+                    <p className="text-sm text-gray-600">
+                        {docLabel} was rejected. Waiting for {waitingFor} to upload a revised copy.
+                    </p>
+                    <button
+                        onClick={handleMessageOtherParty}
+                        disabled={startingConversation}
+                        className={secondaryActionClasses}
+                    >
+                        <MessageCircle className="w-4 h-4" />
+                        Message {waitingFor === 'seller' ? 'Seller' : 'Buyer'}
+                    </button>
+                </div>
+            );
+        }
+
+        // PHASE 2 REFACTORING: Show pending review status when document is uploaded
+        if (docStatus === 'uploaded') {
+            if (canVerifyDocument(docType)) {
+                return (
+                    <div className="flex flex-col gap-2">
+                        <p className="text-sm text-gray-700">
+                            {docLabel} submitted. Please review to continue.
+                        </p>
+                        {renderReviewButton(`Review ${docLabel}`)}
+                    </div>
+                );
+            }
+            return (
+                <p className="text-sm text-gray-600 flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    {docLabel} submitted. Waiting for {verifier} to review.
                 </p>
             );
         }
@@ -623,17 +973,6 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                         {docLabel} approved.
                     </p>
                     {renderViewButton(`View ${docLabel}`)}
-                </div>
-            );
-        }
-
-        if (canVerifyDocument(docType)) {
-            return (
-                <div className="flex flex-col gap-2">
-                    <p className="text-sm text-gray-700">
-                        {docLabel} submitted. Please review to continue.
-                    </p>
-                    {renderReviewButton(`Review ${docLabel}`)}
                 </div>
             );
         }
@@ -730,7 +1069,7 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                                     {/* Document Actions */}
                                     {phase.documentType && (
                                         <div className="mt-2">
-                                            {/* Special handling for SPA - show dual signature status */}
+                                            {/* PHASE 2 REFACTORING: Special handling for SPA - show approval status */}
                                             {phase.key === 'SPA' && doc ? (
                                                 <div className="flex flex-col items-center gap-1">
                                                     <button
@@ -752,19 +1091,37 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                                                                     Re-upload
                                                                 </button>
                                                             )}
-                                                            <span className="text-xs text-red-600 font-medium">Rejected</span>
+                                                            {/* SPA rejection with tracking info */}
+                                                            {(() => {
+                                                                const info = getRejectionInfo('spa');
+                                                                const isLastAttempt = info?.isLastAttempt;
+                                                                return (
+                                                                    <div className={`text-center px-2 py-1 rounded ${isLastAttempt ? 'bg-orange-100' : 'bg-red-100'}`}>
+                                                                        <span className={`text-xs font-semibold ${isLastAttempt ? 'text-orange-700' : 'text-red-600'}`}>
+                                                                            {isLastAttempt ? '⚠️ Final!' : 'Rejected'}
+                                                                        </span>
+                                                                        {info && (
+                                                                            <p className={`text-xs ${isLastAttempt ? 'text-orange-600' : 'text-red-500'}`}>
+                                                                                {info.remainingAttempts}/{info.maxAttempts}
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })()}
                                                         </>
-                                                    ) : spaStatus && (
-                                                        /* SPA Signature Status */
+                                                    ) : (
+                                                        /* PHASE 2: SPA Approval Status */
                                                         <div className="flex flex-col items-center gap-0.5 mt-1">
-                                                            <div className={`flex items-center gap-1 text-xs ${spaStatus.sellerSigned ? 'text-gray-800' : 'text-gray-500'}`}>
-                                                                {spaStatus.sellerSigned ? <Check className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                                                                Seller
+                                                            <div className={`flex items-center gap-1 text-xs ${spaApprovalStatus.spaApproved ? 'text-green-600' : doc.status === 'uploaded' ? 'text-yellow-600' : 'text-gray-500'}`}>
+                                                                {spaApprovalStatus.spaApproved ? <Check className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                                                                SPA {spaApprovalStatus.spaApproved ? 'Approved' : 'Pending'}
                                                             </div>
-                                                            <div className={`flex items-center gap-1 text-xs ${spaStatus.buyerSigned ? 'text-gray-800' : 'text-gray-500'}`}>
-                                                                {spaStatus.buyerSigned ? <Check className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                                                                Buyer
-                                                            </div>
+                                                            {spaApprovalStatus.spaApproved && (
+                                                                <div className={`flex items-center gap-1 text-xs ${spaApprovalStatus.signedSpaApproved ? 'text-green-600' : spaApprovalStatus.signedSpaUploaded ? 'text-yellow-600' : 'text-gray-500'}`}>
+                                                                    {spaApprovalStatus.signedSpaApproved ? <Check className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                                                                    Signed {spaApprovalStatus.signedSpaApproved ? 'Approved' : spaApprovalStatus.signedSpaUploaded ? 'Pending' : 'Needed'}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>
@@ -787,10 +1144,23 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                                                             Re-upload
                                                         </button>
                                                     )}
-                                                    {/* Show rejected badge */}
-                                                    {doc.status === 'rejected' && (
-                                                        <span className="text-xs text-red-600 font-medium">Rejected</span>
-                                                    )}
+                                                    {/* Show rejected badge with tracking info */}
+                                                    {doc.status === 'rejected' && (() => {
+                                                        const info = getRejectionInfo(phase.documentType!);
+                                                        const isLastAttempt = info?.isLastAttempt;
+                                                        return (
+                                                            <div className={`text-center px-2 py-1 rounded ${isLastAttempt ? 'bg-orange-100' : 'bg-red-100'}`}>
+                                                                <span className={`text-xs font-semibold ${isLastAttempt ? 'text-orange-700' : 'text-red-600'}`}>
+                                                                    {isLastAttempt ? '⚠️ Final Attempt!' : 'Rejected'}
+                                                                </span>
+                                                                {info && (
+                                                                    <p className={`text-xs ${isLastAttempt ? 'text-orange-600' : 'text-red-500'}`}>
+                                                                        {info.remainingAttempts} of {info.maxAttempts} left
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
                                                 </div>
                                             ) : canUpload(phase) ? (
                                                 <button
@@ -817,7 +1187,7 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                 <div className="mt-8 rounded-lg border border-gray-200 bg-gray-50 p-4">
                     <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
                         <Clock className="w-4 h-4" />
-                        <span>Current Phase: {currentPhaseInfo?.label}</span>
+                        <span>Current Phase: <span className="font-semibold">{currentPhaseInfo?.label}</span></span>
                     </div>
                     <p className="text-sm text-gray-600 mt-1">
                         {currentPhaseInfo?.description}
@@ -825,33 +1195,43 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
 
                     {currentPhase !== 'COMPLETED' && (
                         <div className="mt-4">
+                            {renderSPAStepIndicator()}
                             {renderCurrentPhaseAction()}
                         </div>
                     )}
 
-                    {/* Complete Trade Button - shown when BoL is approved */}
+                    {/* PHASE 2 REFACTORING: Complete Trade Button - only for buyer when BoL is approved */}
                     {currentPhase === 'BOL' && bolStatus === 'approved' && (
-                        <button
-                            onClick={handleCompleteTrade}
-                            disabled={completing}
-                            className="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                        >
-                            {completing ? (
-                                <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    Completing Trade...
-                                </>
-                            ) : (
-                                <>
-                                    <CheckCircle className="w-5 h-5" />
-                                    Complete Trade
-                                </>
-                            )}
-                        </button>
+                        !isSeller ? (
+                            <button
+                                onClick={handleCompleteTrade}
+                                disabled={completing}
+                                className="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            >
+                                {completing ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        Completing Trade...
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle className="w-5 h-5" />
+                                        Complete Trade
+                                    </>
+                                )}
+                            </button>
+                        ) : (
+                            <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                <p className="text-sm text-gray-600 flex items-center gap-2">
+                                    <Clock className="w-4 h-4" />
+                                    BoL approved. Waiting for buyer to close the trade.
+                                </p>
+                            </div>
+                        )
                     )}
                 </div>
 
-                {/* Documents List */}
+                {/* Documents List - PHASE 2 REFACTORING: Updated to show rejection tracking */}
                 <div className="mt-6">
                     <h3 className="font-medium text-gray-800 mb-3">Uploaded Documents</h3>
                     {DOCUMENT_ORDER.filter(type => documents[type]).length === 0 ? (
@@ -867,28 +1247,25 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                                 const needsApproval =
                                     (docStatus === 'uploaded' || docStatus === 'pending') &&
                                     canVerifyDocument(type);
-                                const spaDoc = type === 'spa' ? (doc as any) : null;
-                                const spaFullySigned = type === 'spa'
-                                    ? (spaStatus?.fullySigned ??
-                                        (!!spaDoc?.sellerSignatureDataUrl && !!spaDoc?.buyerSignatureDataUrl))
-                                    : false;
-                                const spaUserSigned = type === 'spa'
-                                    ? (isSeller
-                                        ? (spaStatus?.sellerSigned ?? !!spaDoc?.sellerSignatureDataUrl)
-                                        : (spaStatus?.buyerSigned ?? !!spaDoc?.buyerSignatureDataUrl))
-                                    : false;
-                                const needsSignature = type === 'spa' && doc && !spaFullySigned;
-                                const signatureLabel = needsSignature
-                                    ? (spaUserSigned ? 'Awaiting other signature' : 'Your signature needed')
-                                    : '';
+
+                                // PHASE 2: Get rejection tracking info
+                                const rejectionInfo = getRejectionInfo(type);
+                                const showRejectionWarning = docStatus === 'rejected' && rejectionInfo;
+
                                 return (
                                     <div
                                         key={type}
-                                        className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 p-3"
+                                        className={`flex items-center justify-between gap-4 rounded-lg border p-3 ${
+                                            docStatus === 'rejected' ? 'border-red-200 bg-red-50/30' : 'border-gray-200'
+                                        }`}
                                     >
                                         <div className="flex items-center gap-3 min-w-0">
-                                            <div className="rounded-lg bg-gray-100 p-2">
-                                                <FileText className="w-5 h-5 text-gray-500" />
+                                            <div className={`rounded-lg p-2 ${
+                                                docStatus === 'rejected' ? 'bg-red-100' : 'bg-gray-100'
+                                            }`}>
+                                                <FileText className={`w-5 h-5 ${
+                                                    docStatus === 'rejected' ? 'text-red-500' : 'text-gray-500'
+                                                }`} />
                                             </div>
                                             <div className="min-w-0">
                                                 <p className="text-sm font-medium text-gray-900 truncate">
@@ -897,17 +1274,20 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                                                 <p className="text-xs text-gray-500">
                                                     {DOCUMENT_LABELS[type]} - Uploaded {formatDate(doc.uploadedAt)}
                                                 </p>
+                                                {/* PHASE 2: Show rejection info */}
+                                                {showRejectionWarning && (
+                                                    <p className="text-xs text-red-600 mt-0.5">
+                                                        {rejectionInfo.isLastAttempt
+                                                            ? '⚠️ Final attempt remaining'
+                                                            : `${rejectionInfo.remainingAttempts} attempt(s) remaining`}
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3">
                                             {needsApproval && (
                                                 <span className="rounded-full bg-yellow-50 px-2.5 py-1 text-xs font-medium text-yellow-700">
                                                     Needs your approval
-                                                </span>
-                                            )}
-                                            {needsSignature && (
-                                                <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
-                                                    {signatureLabel}
                                                 </span>
                                             )}
                                             <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${statusClass}`}>
@@ -928,7 +1308,7 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                 </div>
             </div>
 
-            {/* View Document Modal */}
+            {/* View Document Modal - PHASE 2 REFACTORING: Updated for new SPA approval flow */}
             {viewingDocType && (
                 <ViewDocumentModal
                     isOpen={showViewModal}
@@ -944,8 +1324,14 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                         canVerifyDocument(viewingDocType) &&
                         (!viewingDocument?.status || viewingDocument?.status === 'uploaded' || viewingDocument?.status === 'pending')
                     }
-                    canRejectSPA={viewingDocType === 'spa' && viewingDocument?.status !== 'rejected'}
+                    canRejectSPA={
+                        (viewingDocType === 'spa' || viewingDocType === 'signed-spa') &&
+                        viewingDocument?.status !== 'rejected' &&
+                        viewingDocument?.status !== 'approved'
+                    }
                     onVerify={handleVerify}
+                    // PHASE 2: Pass rejection tracking info for informative UI
+                    rejectionTracking={viewingDocType ? getRejectionInfo(viewingDocType) || undefined : undefined}
                 />
             )}
 
@@ -956,83 +1342,15 @@ const TrackTrade: React.FC<TrackTradeProps> = ({ tradeId, isSeller }) => {
                     onClose={() => {
                         setShowUploadModal(false);
                         setSelectedDocType(null);
+                        // Refresh data when modal closes (after upload success or cancel)
+                        fetchTradeData(false);
                     }}
                     onUpload={handleUpload}
                     documentType={selectedDocType}
                 />
             )}
 
-            {/* Signature Modal */}
-            {showSignatureModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-xl max-w-lg w-full mx-4 p-6">
-                        <h3 className="text-lg font-bold mb-2">Sign SPA Document</h3>
-                        <p className="text-sm text-gray-600 mb-4">
-                            Draw your signature below to sign the Sales Purchase Agreement.
-                        </p>
-
-                        <SignatureCanvas
-                            onSignatureChange={setSignatureData}
-                            width={400}
-                            height={150}
-                        />
-
-                        {/* Confirmation checkbox */}
-                        <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                            <label className="flex items-start gap-3 cursor-pointer">
-                                <div className="relative flex items-center mt-0.5">
-                                    <input
-                                        type="checkbox"
-                                        checked={signatureConfirmed}
-                                        onChange={(e) => setSignatureConfirmed(e.target.checked)}
-                                        className="w-5 h-5 rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer"
-                                    />
-                                </div>
-                                <span className="text-sm text-gray-600">
-                                    I confirm that this is my legal signature and I authorize its use to sign this Sales Purchase Agreement.
-                                </span>
-                            </label>
-                        </div>
-
-                        <div className="flex gap-3 mt-6">
-                            <button
-                                onClick={() => {
-                                    setShowSignatureModal(false);
-                                    setSignatureData(null);
-                                    setSignatureConfirmed(false);
-                                }}
-                                className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={() => {
-                                    if (signatureData && signatureConfirmed) {
-                                        handleSignSPA(signatureData);
-                                        setShowSignatureModal(false);
-                                        setSignatureData(null);
-                                        setSignatureConfirmed(false);
-                                    }
-                                }}
-                                disabled={!signatureData || !signatureConfirmed || signingSpa}
-                                className="flex-1 py-2 px-4 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                            >
-                                {signingSpa ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                        Signing...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Pen className="w-4 h-4" />
-                                        Confirm & Sign
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* PHASE 2 REFACTORING: Signature modal removed - replaced with approval flow */}
         </div>
     );
 };

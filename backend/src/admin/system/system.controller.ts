@@ -11,9 +11,20 @@ import {
   Req,
 } from '@nestjs/common';
 import { SystemService } from './system.service';
-import { HealthService, SystemHealth, ContainerInfo, DiskUsage, SSLCertificateInfo, EnhancedDatabaseStats } from './health.service';
-import { ScriptRunnerService, ScriptResult, BackupTarget } from './script-runner.service';
-import { UpdateMaintenanceDto, ScheduleMaintenanceDto } from './dto/maintenance.dto';
+import {
+  HealthService,
+  SystemHealth,
+  ContainerInfo,
+  DiskUsage,
+  SSLCertificateInfo,
+  EnhancedDatabaseStats,
+} from './health.service';
+import {
+  ScriptRunnerService,
+  ScriptResult,
+  BackupTarget,
+} from './script-runner.service';
+import { UpdateMaintenanceDto } from './dto/maintenance.dto';
 import { AdminAuthGuard } from '../auth/admin-auth.guard';
 import { AdminAction } from '../common/decorators/admin-action.decorator';
 import { Types } from 'mongoose';
@@ -82,19 +93,22 @@ export class SystemController {
     };
   }> {
     const lineCount = lines ? parseInt(lines, 10) : 100;
-    const result = await this.healthService.getContainerLogs(containerName, lineCount);
+    const result = await this.healthService.getContainerLogs(
+      containerName,
+      lineCount,
+    );
     return {
       statusCode: result.success ? 200 : 500,
-      message: result.success ? 'Container logs retrieved successfully' : 'Failed to retrieve logs',
+      message: result.success
+        ? 'Container logs retrieved successfully'
+        : 'Failed to retrieve logs',
       data: result,
     };
   }
 
   @Get('health/containers/:name/details')
   @AdminAction({ action: 'VIEW_CONTAINER_DETAILS', category: 'SYSTEM' })
-  async getContainerDetails(
-    @Param('name') containerName: string,
-  ): Promise<{
+  async getContainerDetails(@Param('name') containerName: string): Promise<{
     statusCode: number;
     message: string;
     data: any;
@@ -102,7 +116,9 @@ export class SystemController {
     const result = await this.healthService.getContainerDetails(containerName);
     return {
       statusCode: result.success ? 200 : 500,
-      message: result.success ? 'Container details retrieved successfully' : result.message || 'Failed to retrieve details',
+      message: result.success
+        ? 'Container details retrieved successfully'
+        : result.message || 'Failed to retrieve details',
       data: result.details,
     };
   }
@@ -225,49 +241,9 @@ export class SystemController {
     );
     return {
       statusCode: 200,
-      message: dto.isEnabled ? 'Maintenance mode enabled' : 'Maintenance mode disabled',
-      data: config,
-    };
-  }
-
-  @Post('maintenance/schedule')
-  @AdminAction({ action: 'SCHEDULE_MAINTENANCE', category: 'SYSTEM' })
-  async scheduleMaintenanceWindow(
-    @Body() dto: ScheduleMaintenanceDto,
-    @Req() req: AdminRequest,
-  ): Promise<{
-    statusCode: number;
-    message: string;
-    data: any;
-  }> {
-    const config = await this.systemService.scheduleMaintenanceWindow(
-      dto,
-      req.admin._id as any,
-      req.admin.email,
-    );
-    return {
-      statusCode: 200,
-      message: 'Maintenance window scheduled successfully',
-      data: config,
-    };
-  }
-
-  @Delete('maintenance/schedule')
-  @AdminAction({ action: 'CANCEL_MAINTENANCE', category: 'SYSTEM' })
-  async cancelScheduledMaintenance(
-    @Req() req: AdminRequest,
-  ): Promise<{
-    statusCode: number;
-    message: string;
-    data: any;
-  }> {
-    const config = await this.systemService.cancelScheduledMaintenance(
-      req.admin._id as any,
-      req.admin.email,
-    );
-    return {
-      statusCode: 200,
-      message: 'Scheduled maintenance cancelled',
+      message: dto.isEnabled
+        ? 'Maintenance mode enabled'
+        : 'Maintenance mode disabled',
       data: config,
     };
   }
@@ -369,9 +345,7 @@ export class SystemController {
 
   @Post('actions/rotate-logs')
   @AdminAction({ action: 'ROTATE_LOGS', category: 'SYSTEM' })
-  async rotateLogs(
-    @Req() req: AdminRequest,
-  ): Promise<{
+  async rotateLogs(@Req() req: AdminRequest): Promise<{
     statusCode: number;
     message: string;
     data: ScriptResult;
@@ -382,16 +356,16 @@ export class SystemController {
     );
     return {
       statusCode: result.success ? 200 : 500,
-      message: result.success ? 'Logs rotated successfully' : 'Log rotation failed',
+      message: result.success
+        ? 'Logs rotated successfully'
+        : 'Log rotation failed',
       data: result,
     };
   }
 
   @Post('actions/health-check')
   @AdminAction({ action: 'MANUAL_HEALTH_CHECK', category: 'SYSTEM' })
-  async runHealthCheck(
-    @Req() req: AdminRequest,
-  ): Promise<{
+  async runHealthCheck(@Req() req: AdminRequest): Promise<{
     statusCode: number;
     message: string;
     data: { health: SystemHealth; scriptResult: ScriptResult };
@@ -436,16 +410,18 @@ export class SystemController {
       statusCode: 200,
       message: 'Backups retrieved successfully',
       data: {
-        mongodb: backups.mongodb.map(b => ({
+        mongodb: backups.mongodb.map((b) => ({
           filename: b.filename,
           size: b.size,
           created: b.created,
         })),
-        postgresql: backups.postgresql ? {
-          filename: backups.postgresql.filename,
-          size: backups.postgresql.size,
-          created: backups.postgresql.created,
-        } : null,
+        postgresql: backups.postgresql
+          ? {
+              filename: backups.postgresql.filename,
+              size: backups.postgresql.size,
+              created: backups.postgresql.created,
+            }
+          : null,
         lastBackup: backups.lastBackup,
       },
     };

@@ -73,6 +73,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isFetchingNotificationsRef = useRef(false);
   const isFetchingRecentRef = useRef(false);
+  const pendingUserIdRef = useRef<string | null>(null);
+  const listenerAttachedRef = useRef(false);
 
   // Show a toast notification
   const showToast = useCallback((message: string, type: ToastType = 'info', title?: string) => {
@@ -89,25 +91,20 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const showToastRef = useRef(showToast);
   showToastRef.current = showToast;
 
-  // Refresh counts
+  // Refresh counts - now uses breakdown endpoint for granular tab badges
   const refreshUnreadCounts = useCallback(async () => {
     try {
-      const count = await notificationService.getUnreadCount();
-      // Since backend gives total, we put it in total. 
-      // Breakdown is not supported by backend yet, so we leave specific categories as 0 
-      // or we could assume everything is 'ongoing' or similar if needed.
-      setUnreadCounts(prev => ({
-        ...prev,
-        total: count,
-        // Optional: Reset others or keep them? Resetting seems safer to avoid confusion.
-        pr: 0, po: 0, spa: 0, ongoing: count,
-      }));
+      const breakdown = await notificationService.getUnreadCountBreakdown();
+      setUnreadCounts(breakdown);
+      setHasUnreadMessages(breakdown.messages > 0);
     } catch (error) {
       console.error('Failed to refresh unread counts', error);
     }
   }, []);
 
   const refreshUnreadMessageCount = useCallback(async () => {
+    // This is now handled by refreshUnreadCounts via breakdown endpoint,
+    // but kept for backward compatibility and explicit message-only refresh
     try {
       const count = await notificationService.getUnreadCount('new_message');
       setUnreadCounts(prev => ({ ...prev, messages: count }));
@@ -152,9 +149,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   }, []);
 
   // Handle new notification from socket
-  const handleNotificationCreated = useCallback((payload: { notification: Notification; unreadCount: number }) => {
+  const handleNotificationCreated = useCallback((payload: {
+    notification: Notification;
+    unreadCount: number;
+    unreadCounts?: UnreadCounts; // New granular breakdown
+  }) => {
     console.log('%c[NotificationContext] RECEIVED notification-created:', 'background: green; color: white; font-weight: bold;', payload);
-    const { notification, unreadCount } = payload;
+    const { notification, unreadCount, unreadCounts: breakdown } = payload;
 
     // Update list
     setNotifications((prev) => {
@@ -168,15 +169,22 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       return [notification, ...prev].slice(0, 5);
     });
 
-    // Update count
-    setUnreadCounts(prev => ({
-       ...prev,
-       total: unreadCount,
-       ongoing: unreadCount // Simplified mapping
-    }));
-    if (notification.type === 'new_message') {
-      setHasUnreadMessages(true);
-      setUnreadCounts(prev => ({ ...prev, messages: prev.messages + 1 }));
+    // Update counts - use breakdown if available (new format), fall back to legacy
+    if (breakdown) {
+      // New format with full breakdown for trade tab badges
+      setUnreadCounts(breakdown);
+      setHasUnreadMessages(breakdown.messages > 0);
+    } else {
+      // Legacy format - only total count available
+      setUnreadCounts(prev => ({
+        ...prev,
+        total: unreadCount,
+        ongoing: unreadCount // Simplified fallback mapping
+      }));
+      if (notification.type === 'new_message') {
+        setHasUnreadMessages(true);
+        setUnreadCounts(prev => ({ ...prev, messages: prev.messages + 1 }));
+      }
     }
 
     // Show toast
@@ -207,54 +215,71 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     setConnectionState(state);
     setIsConnected(state === 'connected');
 
-      if (state === 'connected') {
-        if (!isFirstConnectionRef.current && (prevState === 'reconnecting' || prevState === 'disconnected')) {
-          showToastRef.current('Connected to real-time updates', 'success');
-        }
-        isFirstConnectionRef.current = false;
-        // Fetch latest notifications on connect/reconnect
-        fetchNotifications();
-        fetchRecentNotifications();
-        refreshUnreadCounts();
-        refreshUnreadMessageCount();
-      } else if (state === 'reconnecting' && prevState !== 'reconnecting') {
-        showToastRef.current('Connection lost. Reconnecting...', 'warning');
-      } else if (state === 'failed') {
-        showToastRef.current('Unable to connect to real-time updates', 'error');
+    if (state === 'connected') {
+      // CRITICAL: Attach listeners and join trade ONLY after socket is connected
+      // This fixes the race condition where listeners were set before connection
+      if (pendingUserIdRef.current && !listenerAttachedRef.current) {
+        console.log('[NotificationContext] Socket connected, attaching listener and joining trade for userId:', pendingUserIdRef.current);
+        socketService.offNotificationCreated(); // Remove any stale listeners
+        socketService.onNotificationCreated(handleNotificationCreated);
+        socketService.joinTrade(pendingUserIdRef.current);
+        listenerAttachedRef.current = true;
       }
 
+      if (!isFirstConnectionRef.current && (prevState === 'reconnecting' || prevState === 'disconnected')) {
+        showToastRef.current('Connected to real-time updates', 'success');
+        // Re-attach listener on reconnect (socket is new)
+        if (pendingUserIdRef.current) {
+          console.log('[NotificationContext] Reconnected, re-attaching listener for userId:', pendingUserIdRef.current);
+          socketService.offNotificationCreated();
+          socketService.onNotificationCreated(handleNotificationCreated);
+          socketService.joinTrade(pendingUserIdRef.current);
+        }
+      }
+      isFirstConnectionRef.current = false;
+      // Fetch latest notifications on connect/reconnect
+      fetchNotifications();
+      fetchRecentNotifications();
+      refreshUnreadCounts();
+      refreshUnreadMessageCount();
+    } else if (state === 'reconnecting' && prevState !== 'reconnecting') {
+      showToastRef.current('Connection lost. Reconnecting...', 'warning');
+      // Mark listener as detached since socket will be recreated
+      listenerAttachedRef.current = false;
+    } else if (state === 'failed') {
+      showToastRef.current('Unable to connect to real-time updates', 'error');
+      listenerAttachedRef.current = false;
+    } else if (state === 'disconnected') {
+      listenerAttachedRef.current = false;
+    }
+
     lastStateRef.current = state;
-  }, [fetchNotifications, fetchRecentNotifications, refreshUnreadCounts]);
+  }, [fetchNotifications, fetchRecentNotifications, refreshUnreadCounts, refreshUnreadMessageCount, handleNotificationCreated]);
 
   // Connect socket
   const connectTradeSocket = useCallback((userId: string) => {
     console.log('%c[NotificationContext] connectTradeSocket called with userId:', 'background: blue; color: white;', userId);
+
+    // Store userId for use when connection is established
+    pendingUserIdRef.current = userId;
+    listenerAttachedRef.current = false;
+
     if (stateUnsubscribeRef.current) {
       stateUnsubscribeRef.current();
     }
 
+    // Set up state change handler FIRST - this will handle listener attachment when connected
     stateUnsubscribeRef.current = socketService.onTradeStateChange(handleConnectionStateChange);
 
     console.log('[NotificationContext] Calling socketService.connectTrade()...');
     socketService.connectTrade();
-    console.log('[NotificationContext] Calling socketService.joinTrade(' + userId + ')...');
-    socketService.joinTrade(userId); // Join user room (often same as userId)
 
-    // Listen for general notification event
-    console.log('[NotificationContext] Setting up notification-created listener...');
-    socketService.offNotificationCreated();
-    socketService.onNotificationCreated(handleNotificationCreated);
-    console.log('[NotificationContext] Notification listener setup complete');
+    // NOTE: We no longer call joinTrade() or onNotificationCreated() here!
+    // These are now called in handleConnectionStateChange when state === 'connected'
+    // This fixes the race condition where listeners were attached before the socket was ready
+    console.log('[NotificationContext] Connection initiated, listener will be attached after connect event');
 
-    // Previously separate handlers (trade, negotiation, document) are theoretically replaced by notification-created
-    // BUT, if frontend *also* needs to update specific UI (like a trade board) based on trade-update,
-    // those listeners might still be needed elsewhere.
-    // For *Notifcation Context* purposes, we only care about notifications now.
-    // However, if we remove other listeners here, does it break anything?
-    // The previous context updated notifications based on trade events. Now backend sends notifications directly.
-    // So distinct listeners for notifications are redundant *if* we trust notification-created.
-    
-  }, [handleConnectionStateChange, handleNotificationCreated]);
+  }, [handleConnectionStateChange]);
 
   // Disconnect socket
   const disconnectTradeSocket = useCallback(() => {
@@ -268,6 +293,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     setConnectionState('disconnected');
     lastStateRef.current = 'disconnected';
     isFirstConnectionRef.current = true;
+    pendingUserIdRef.current = null;
+    listenerAttachedRef.current = false;
   }, []);
 
   // Retry
@@ -277,60 +304,96 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
   // Actions
   const markAsRead = useCallback(async (id: string) => {
+    // Find the notification to check if it was a message type
+    const notification = notifications.find(n => n._id === id);
+    const wasMessage = notification?.type === 'new_message';
+
     // Optimistic update
     setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
     setRecentNotifications(prev => prev.filter(n => n._id !== id));
+
+    // Optimistically update counts
+    if (wasMessage) {
+      setUnreadCounts(prev => ({
+        ...prev,
+        messages: Math.max(0, prev.messages - 1),
+        total: Math.max(0, prev.total - 1),
+      }));
+    } else {
+      setUnreadCounts(prev => ({
+        ...prev,
+        total: Math.max(0, prev.total - 1),
+      }));
+    }
+
     try {
       await notificationService.markAsRead(id);
+      // Refresh to get accurate counts from server (also updates hasUnreadMessages)
       await refreshUnreadCounts();
-      await refreshUnreadMessageCount();
     } catch (error) {
        // Revert or error toast?
        console.error(error);
     }
-  }, [refreshUnreadCounts, refreshUnreadMessageCount]);
+  }, [notifications, refreshUnreadCounts]);
 
   const markAllAsRead = useCallback(async () => {
+    // Optimistic update - clear all counts
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     setRecentNotifications([]);
     setUnreadCounts(defaultUnreadCounts);
+    setHasUnreadMessages(false);
     try {
       await notificationService.markAllAsRead();
+      // Refresh to confirm server state
       await refreshUnreadCounts();
-      await refreshUnreadMessageCount();
     } catch (error) {
       console.error(error);
+      // On error, refresh to get actual state
+      await refreshUnreadCounts();
     }
-  }, [refreshUnreadCounts, refreshUnreadMessageCount]);
+  }, [refreshUnreadCounts]);
 
   const deleteNotification = useCallback(async (id: string) => {
+    // Find the notification to check if it was unread and/or a message
+    const notification = notifications.find(n => n._id === id);
+    const wasUnread = notification && !notification.read;
+    const wasMessage = notification?.type === 'new_message';
+
+    // Remove from local state
     setNotifications(prev => prev.filter(n => n._id !== id));
     setRecentNotifications(prev => prev.filter(n => n._id !== id));
+
+    // Optimistically update counts if it was unread
+    if (wasUnread) {
+      setUnreadCounts(prev => ({
+        ...prev,
+        messages: wasMessage ? Math.max(0, prev.messages - 1) : prev.messages,
+        total: Math.max(0, prev.total - 1),
+      }));
+    }
+
     try {
       await notificationService.deleteNotification(id);
+      // Refresh to get accurate counts (also updates hasUnreadMessages)
       await refreshUnreadCounts();
-      await refreshUnreadMessageCount();
     } catch (error) {
       console.error(error);
     }
-  }, [refreshUnreadCounts, refreshUnreadMessageCount]);
+  }, [notifications, refreshUnreadCounts]);
 
   const clearNotifications = useCallback(async () => {
-    // Optimistic clear
-    setNotifications([]);
-    setRecentNotifications([]);
-    setUnreadCounts(defaultUnreadCounts);
+    // Clear read notifications (keeps unread ones)
+    setNotifications(prev => prev.filter(n => !n.read));
+    // Recent should still show unread
     try {
-      await notificationService.deleteReadNotifications(); // Or maybe there should be a deleteAll?
-      // Spec implies clearing *notifications* usually means read ones or all?
-      // implementation_plan said "Delete Read". Let's assume clear clears read ones visually.
-      // But user might want to simple clear view.
-      // I'll map this to deleteReadNotifications for now as safe default.
-      await refreshUnreadMessageCount();
+      await notificationService.deleteReadNotifications();
+      // Refresh to get accurate state
+      await refreshUnreadCounts();
+      await fetchRecentNotifications();
     } catch (error) {
       console.error(error);
     }
-  }, [refreshUnreadMessageCount]);
+  }, [refreshUnreadCounts, fetchRecentNotifications]);
 
   // Cleanup
   useEffect(() => {
@@ -353,11 +416,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
 
     if (!pollIntervalRef.current) {
+      // Poll every 10 seconds when disconnected (reduced from 30s for faster updates)
       pollIntervalRef.current = setInterval(() => {
         fetchRecentNotifications();
         refreshUnreadCounts();
-        refreshUnreadMessageCount();
-      }, 30000);
+        // Note: refreshUnreadMessageCount not needed - refreshUnreadCounts now includes messages
+      }, 10000);
     }
   }, [connectionState, fetchRecentNotifications, refreshUnreadCounts, refreshUnreadMessageCount]);
 
@@ -380,6 +444,24 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       isMounted = false;
     };
   }, [connectTradeSocket, refreshUnreadMessageCount]);
+
+  // Handle browser visibility change - refresh state when user returns to tab
+  // This catches notifications that arrived while the tab was in background
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[NotificationContext] Tab became visible, refreshing notification state');
+        // Refresh all notification state when user returns
+        refreshUnreadCounts();
+        fetchRecentNotifications();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refreshUnreadCounts, fetchRecentNotifications]);
 
   const value: NotificationContextValue = {
     notifications,

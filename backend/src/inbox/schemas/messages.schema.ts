@@ -4,13 +4,13 @@ import { Document, Types } from 'mongoose';
 @Schema({ timestamps: true })
 export class Message extends Document {
   @Prop({ required: true })
-  text: string;  // Text content of the message
+  text: string; // Text content of the message
 
   @Prop({ type: Types.ObjectId, ref: 'Company', required: true, index: true })
-  sender: Types.ObjectId;  // Reference to Company
+  sender: Types.ObjectId; // Reference to Company
 
   @Prop({ type: Types.ObjectId, ref: 'Company', required: true, index: true })
-  receiver: Types.ObjectId;  // Reference to Company
+  receiver: Types.ObjectId; // Reference to Company
 
   @Prop({ type: [Types.ObjectId], ref: 'Company', default: [], index: true })
   readBy: Types.ObjectId[]; // Companies who have read this message
@@ -42,23 +42,23 @@ export class Message extends Document {
 
   @Prop({ type: [Object], default: [] })
   attachments: {
-    filePath: string;  // Path to the stored file
-    fileName: string;  // Original file name
-    mimeType: string;  // MIME type of the file
-  }[];  // Array of attachments
+    filePath: string; // Path to the stored file
+    fileName: string; // Original file name
+    mimeType: string; // MIME type of the file
+  }[]; // Array of attachments
 
   // Soft-delete tracking (Bug #6: Cascade Deletes)
   @Prop({ type: Boolean, default: false })
-  senderDeleted: boolean;  // True if sender company was deleted
+  senderDeleted: boolean; // True if sender company was deleted
 
   @Prop({ type: Date })
-  senderDeletedAt?: Date;  // When the sender company was deleted
+  senderDeletedAt?: Date; // When the sender company was deleted
 
   @Prop({ type: Boolean, default: false })
-  receiverDeleted: boolean;  // True if receiver company was deleted
+  receiverDeleted: boolean; // True if receiver company was deleted
 
   @Prop({ type: Date })
-  receiverDeletedAt?: Date;  // When the receiver company was deleted
+  receiverDeletedAt?: Date; // When the receiver company was deleted
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message);

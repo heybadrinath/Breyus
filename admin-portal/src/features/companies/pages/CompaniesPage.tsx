@@ -264,6 +264,25 @@ export function CompaniesPage() {
           </SelectContent>
         </Select>
 
+        <Select
+          value={params.gstPendingManualReview ? 'pending' : 'all'}
+          onValueChange={(value) => {
+            setParams((prev) => ({
+              ...prev,
+              gstPendingManualReview: value === 'pending' ? true : undefined,
+              page: 1,
+            }))
+          }}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="GST Review" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All GST Status</SelectItem>
+            <SelectItem value="pending">GST Pending Review</SelectItem>
+          </SelectContent>
+        </Select>
+
         <Button variant="outline" onClick={handleSearch}>
           Search
         </Button>
@@ -333,17 +352,25 @@ export function CompaniesPage() {
                     <Badge variant="outline">{company.role}</Badge>
                   </TableCell>
                   <TableCell>
-                    {company.isKycVerified ? (
-                      <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                        <Shield className="h-3 w-3 mr-1" />
-                        Verified
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">
-                        <ShieldOff className="h-3 w-3 mr-1" />
-                        Unverified
-                      </Badge>
-                    )}
+                    <div className="flex flex-col gap-1">
+                      {company.isKycVerified ? (
+                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100 w-fit">
+                          <Shield className="h-3 w-3 mr-1" />
+                          Verified
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="w-fit">
+                          <ShieldOff className="h-3 w-3 mr-1" />
+                          Unverified
+                        </Badge>
+                      )}
+                      {company.gstPendingManualReview && (
+                        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 w-fit">
+                          <Clock className="h-3 w-3 mr-1" />
+                          GST Review
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1 text-muted-foreground">

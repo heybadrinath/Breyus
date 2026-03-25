@@ -13,7 +13,9 @@ import { Logger, Inject, forwardRef } from '@nestjs/common';
 import { WsAuthService } from '../inbox/ws-auth.service';
 
 const corsOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)
+  ? process.env.CORS_ORIGIN.split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean)
   : [];
 const corsOrigin = corsOrigins.length > 0 ? corsOrigins : true;
 
@@ -67,7 +69,9 @@ export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const authResult = await this.wsAuthService.validateSocket(client);
 
       if (!authResult) {
-        this.logger.warn(`Trade client ${client.id} authentication failed - no valid credentials`);
+        this.logger.warn(
+          `Trade client ${client.id} authentication failed - no valid credentials`,
+        );
         client.emit('error', { message: 'Authentication failed' });
         client.disconnect();
         return;
@@ -77,9 +81,13 @@ export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.data.userId = authResult.userId;
       client.data.companyId = authResult.companyId;
 
-      this.logger.log(`Trade client ${client.id} authenticated as user ${authResult.userId}`);
+      this.logger.log(
+        `Trade client ${client.id} authenticated as user ${authResult.userId}`,
+      );
     } catch (error) {
-      this.logger.error(`Trade client ${client.id} authentication error: ${error.message}`);
+      this.logger.error(
+        `Trade client ${client.id} authentication error: ${error.message}`,
+      );
       client.emit('error', { message: 'Authentication error' });
       client.disconnect();
     }
@@ -121,18 +129,24 @@ export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Reject if not authenticated
     if (!userId) {
-      this.logger.warn(`[join-trade] Unauthenticated socket ${client.id} attempted to join`);
+      this.logger.warn(
+        `[join-trade] Unauthenticated socket ${client.id} attempted to join`,
+      );
       return { success: false, error: 'Authentication required' };
     }
 
-    this.logger.log(`[join-trade] User ${userId} joining with socket ${client.id}`);
+    this.logger.log(
+      `[join-trade] User ${userId} joining with socket ${client.id}`,
+    );
 
     // Track user connection
     if (!this.connectedUsers.has(userId)) {
       this.connectedUsers.set(userId, new Set());
     }
     this.connectedUsers.get(userId)?.add(client.id);
-    this.logger.log(`[join-trade] User ${userId} now has ${this.connectedUsers.get(userId)?.size} socket(s)`);
+    this.logger.log(
+      `[join-trade] User ${userId} now has ${this.connectedUsers.get(userId)?.size} socket(s)`,
+    );
 
     // If specific trade ID provided, subscribe to that trade's room
     if (tradeId) {
@@ -174,6 +188,16 @@ export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /**
+   * Handle heartbeat ping from client
+   * Responds with heartbeat-pong to confirm connection is alive
+   */
+  @SubscribeMessage('heartbeat-ping')
+  handleHeartbeatPing(@ConnectedSocket() client: Socket) {
+    // Simply respond with pong - no logging to avoid noise
+    client.emit('heartbeat-pong');
+  }
+
+  /**
    * Check if a user is currently online
    */
   isUserOnline(userId: string): boolean {
@@ -197,7 +221,12 @@ export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * Notify both parties in a trade
    */
-  notifyTradeParties(buyerId: string, sellerId: string, event: string, data: any) {
+  notifyTradeParties(
+    buyerId: string,
+    sellerId: string,
+    event: string,
+    data: any,
+  ) {
     this.notifyUser(buyerId, event, data);
     this.notifyUser(sellerId, event, data);
   }
@@ -214,7 +243,12 @@ export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * Emit trade update event
    */
-  emitTradeUpdate(tradeId: string, buyerId: string, sellerId: string, data: any) {
+  emitTradeUpdate(
+    tradeId: string,
+    buyerId: string,
+    sellerId: string,
+    data: any,
+  ) {
     const eventData = {
       tradeId,
       ...data,
@@ -232,7 +266,12 @@ export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * Emit negotiation update event
    */
-  emitNegotiationUpdate(tradeId: string, buyerId: string, sellerId: string, data: any) {
+  emitNegotiationUpdate(
+    tradeId: string,
+    buyerId: string,
+    sellerId: string,
+    data: any,
+  ) {
     const eventData = {
       tradeId,
       type: 'negotiation',
@@ -247,7 +286,12 @@ export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * Emit document uploaded event
    */
-  emitDocumentUploaded(tradeId: string, buyerId: string, sellerId: string, data: any) {
+  emitDocumentUploaded(
+    tradeId: string,
+    buyerId: string,
+    sellerId: string,
+    data: any,
+  ) {
     const eventData = {
       tradeId,
       type: 'document',
@@ -262,11 +306,16 @@ export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * Issue #17 - Emit document signed event
    */
-  emitDocumentSigned(tradeId: string, buyerId: string, sellerId: string, data: {
-    documentType: string;
-    signedBy: 'buyer' | 'seller';
-    fullySigned?: boolean;
-  }) {
+  emitDocumentSigned(
+    tradeId: string,
+    buyerId: string,
+    sellerId: string,
+    data: {
+      documentType: string;
+      signedBy: 'buyer' | 'seller';
+      fullySigned?: boolean;
+    },
+  ) {
     const eventData = {
       tradeId,
       type: 'document-signed',
@@ -282,11 +331,16 @@ export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * Issue #17 - Emit document verified event
    */
-  emitDocumentVerified(tradeId: string, buyerId: string, sellerId: string, data: {
-    documentType: string;
-    verifiedBy: 'buyer' | 'seller';
-    status: 'approved' | 'rejected';
-  }) {
+  emitDocumentVerified(
+    tradeId: string,
+    buyerId: string,
+    sellerId: string,
+    data: {
+      documentType: string;
+      verifiedBy: 'buyer' | 'seller';
+      status: 'approved' | 'rejected';
+    },
+  ) {
     const eventData = {
       tradeId,
       type: 'document-verified',
@@ -302,11 +356,16 @@ export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * Issue #17 - Emit phase advanced event
    */
-  emitPhaseAdvanced(tradeId: string, buyerId: string, sellerId: string, data: {
-    previousPhase: string;
-    newPhase: string;
-    advancedBy: 'buyer' | 'seller';
-  }) {
+  emitPhaseAdvanced(
+    tradeId: string,
+    buyerId: string,
+    sellerId: string,
+    data: {
+      previousPhase: string;
+      newPhase: string;
+      advancedBy: 'buyer' | 'seller';
+    },
+  ) {
     const eventData = {
       tradeId,
       type: 'phase-advanced',
@@ -322,10 +381,15 @@ export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * Issue #17 - Emit trade completed event
    */
-  emitTradeCompleted(tradeId: string, buyerId: string, sellerId: string, data: {
-    completedBy: 'buyer' | 'seller';
-    completedAt: Date;
-  }) {
+  emitTradeCompleted(
+    tradeId: string,
+    buyerId: string,
+    sellerId: string,
+    data: {
+      completedBy: 'buyer' | 'seller';
+      completedAt: Date;
+    },
+  ) {
     const eventData = {
       tradeId,
       type: 'trade-completed',
@@ -342,13 +406,28 @@ export class TradeGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * Emit notification event to a specific user
    * Used when a new notification is created
    */
-  emitNotificationCreated(userId: string, data: {
-    notification: any;
-    unreadCount: number;
-  }): void {
-    this.logger.log(`Emitting notification-created to user ${userId}, type: ${data.notification?.type}`);
+  emitNotificationCreated(
+    userId: string,
+    data: {
+      notification: any;
+      unreadCount: number;
+      unreadCounts?: {
+        total: number;
+        messages: number;
+        pr: number;
+        po: number;
+        spa: number;
+        ongoing: number;
+      };
+    },
+  ): void {
+    this.logger.log(
+      `Emitting notification-created to user ${userId}, type: ${data.notification?.type}`,
+    );
     const sockets = this.connectedUsers.get(userId);
-    this.logger.log(`User ${userId} has ${sockets?.size || 0} connected sockets`);
+    this.logger.log(
+      `User ${userId} has ${sockets?.size || 0} connected sockets`,
+    );
     this.notifyUser(userId, 'notification-created', data);
   }
 }

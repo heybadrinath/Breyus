@@ -26,6 +26,12 @@ const RECONNECT_CONFIG = {
   backoffMultiplier: 2,
 };
 
+// Heartbeat configuration for detecting dead connections
+const HEARTBEAT_CONFIG = {
+  interval: 15000,         // Send ping every 15 seconds
+  timeout: 5000,           // Expect pong within 5 seconds
+};
+
 interface Message {
   _id: string;
   text: string;
@@ -164,6 +170,11 @@ class SocketService {
   private tradeRetryCount: number = 0;
   private tradeReconnectTimer: NodeJS.Timeout | null = null;
   private tradeConnectionState: ConnectionState = 'disconnected';
+
+  // Heartbeat tracking for trade socket
+  private tradeHeartbeatInterval: NodeJS.Timeout | null = null;
+  private tradeHeartbeatTimeout: NodeJS.Timeout | null = null;
+  private lastTradePong: number = 0;
 
   // Connection state callbacks
   private inboxStateCallbacks: Set<ConnectionStateCallback> = new Set();
@@ -493,6 +504,79 @@ class SocketService {
     }
   }
 
+  // ==================== Trade Socket Heartbeat ====================
+
+  private startTradeHeartbeat(): void {
+    this.stopTradeHeartbeat(); // Clear any existing heartbeat
+    this.lastTradePong = Date.now();
+
+    console.log('[SocketService] Starting trade socket heartbeat');
+
+    this.tradeHeartbeatInterval = setInterval(() => {
+      if (!this.tradeSocket?.connected) {
+        console.log('[SocketService] Heartbeat: Socket not connected, stopping heartbeat');
+        this.stopTradeHeartbeat();
+        return;
+      }
+
+      // Check if last pong was too long ago (missed pong)
+      const timeSinceLastPong = Date.now() - this.lastTradePong;
+      if (timeSinceLastPong > HEARTBEAT_CONFIG.interval + HEARTBEAT_CONFIG.timeout) {
+        console.warn(`[SocketService] Heartbeat: No pong in ${timeSinceLastPong}ms, connection may be dead`);
+        this.handleDeadConnection();
+        return;
+      }
+
+      // Send ping
+      console.log('[SocketService] Heartbeat: Sending ping');
+      this.tradeSocket.emit('heartbeat-ping');
+
+      // Set timeout for pong response
+      if (this.tradeHeartbeatTimeout) {
+        clearTimeout(this.tradeHeartbeatTimeout);
+      }
+      this.tradeHeartbeatTimeout = setTimeout(() => {
+        if (Date.now() - this.lastTradePong > HEARTBEAT_CONFIG.interval) {
+          console.warn('[SocketService] Heartbeat: Pong timeout, connection may be dead');
+          this.handleDeadConnection();
+        }
+      }, HEARTBEAT_CONFIG.timeout);
+
+    }, HEARTBEAT_CONFIG.interval);
+  }
+
+  private stopTradeHeartbeat(): void {
+    if (this.tradeHeartbeatInterval) {
+      clearInterval(this.tradeHeartbeatInterval);
+      this.tradeHeartbeatInterval = null;
+    }
+    if (this.tradeHeartbeatTimeout) {
+      clearTimeout(this.tradeHeartbeatTimeout);
+      this.tradeHeartbeatTimeout = null;
+    }
+  }
+
+  private handleTradePong(): void {
+    this.lastTradePong = Date.now();
+    if (this.tradeHeartbeatTimeout) {
+      clearTimeout(this.tradeHeartbeatTimeout);
+      this.tradeHeartbeatTimeout = null;
+    }
+    console.log('[SocketService] Heartbeat: Received pong');
+  }
+
+  private handleDeadConnection(): void {
+    console.warn('[SocketService] Dead connection detected, forcing reconnect');
+    this.stopTradeHeartbeat();
+
+    // Force disconnect and reconnect
+    if (this.tradeSocket) {
+      this.tradeSocket.disconnect();
+    }
+    this.setTradeState('disconnected');
+    this.scheduleTradeReconnect();
+  }
+
   connectTrade(): void {
     if (this.tradeSocket?.connected) {
       return;
@@ -508,8 +592,9 @@ class SocketService {
       reconnection: false, // We handle reconnection manually
     });
 
-    // Reattach any stored listeners to the new socket
-    this.reattachTradeListeners();
+    // NOTE: We no longer call reattachTradeListeners() here since:
+    // 1. The callback is likely not set yet (context sets it after 'connected' state)
+    // 2. It will be properly called in the 'connect' handler below
 
     this.tradeSocket.on('connect', () => {
       console.log('%c[SocketService] Trade socket CONNECTED!', 'background: green; color: white; font-weight: bold;', 'Socket ID:', this.tradeSocket?.id);
@@ -522,6 +607,13 @@ class SocketService {
         console.log('[SocketService] Rejoining trade with userId:', this.currentUserId);
         this.joinTrade(this.currentUserId, this.currentTradeId || undefined);
       }
+      // Start heartbeat monitoring
+      this.startTradeHeartbeat();
+    });
+
+    // Listen for heartbeat pong response
+    this.tradeSocket.on('heartbeat-pong', () => {
+      this.handleTradePong();
     });
 
     this.tradeSocket.on('disconnect', (reason) => {
@@ -540,6 +632,7 @@ class SocketService {
 
   disconnectTrade(): void {
     this.clearTradeReconnect();
+    this.stopTradeHeartbeat();
     this.tradeRetryCount = 0;
     if (this.tradeSocket) {
       this.tradeSocket.disconnect();
@@ -635,15 +728,24 @@ class SocketService {
 
   // Notification created event listeners
   onNotificationCreated(callback: (data: NotificationCreatedPayload) => void): void {
-    // Store callback for reattachment on reconnect
+    // Always store callback for reattachment on reconnect
     this.notificationCreatedCallback = callback;
+
+    // Attach to socket if it exists
     if (this.tradeSocket) {
-      // IMPORTANT: Remove existing listeners first to prevent duplicates
+      // Remove existing listeners first to prevent duplicates
       this.tradeSocket.off('notification-created');
-      console.log('[SocketService] Attaching notification-created listener (removed old first)');
+
+      if (this.tradeSocket.connected) {
+        console.log('[SocketService] Attaching notification-created listener (socket connected)');
+      } else {
+        console.log('[SocketService] Attaching notification-created listener (socket exists but not connected yet)');
+      }
+
       this.tradeSocket.on('notification-created', callback);
     } else {
-      console.warn('[SocketService] Cannot attach notification listener - tradeSocket is null');
+      // Socket doesn't exist yet - callback is stored and will be attached when socket connects
+      console.log('[SocketService] Stored notification callback (socket not created yet, will attach on connect)');
     }
   }
 
@@ -659,16 +761,28 @@ class SocketService {
     }
   }
 
-  // Reattach stored listeners to the current socket (called after reconnect)
+  /**
+   * Reattach stored listeners to the current socket
+   * Called after socket connects (new connection or reconnect)
+   * This ensures listeners are properly bound even if they were set before connection
+   */
   private reattachTradeListeners(): void {
-    if (this.notificationCreatedCallback && this.tradeSocket) {
-      // IMPORTANT: Remove existing listeners first to prevent duplicates
-      this.tradeSocket.off('notification-created');
-      console.log('[SocketService] Reattaching notification-created listener (removed old first)');
-      this.tradeSocket.on('notification-created', this.notificationCreatedCallback);
-    } else {
-      console.log('[SocketService] reattachTradeListeners: callback=' + !!this.notificationCreatedCallback + ', socket=' + !!this.tradeSocket);
+    if (!this.tradeSocket) {
+      console.log('[SocketService] reattachTradeListeners: No socket to attach to');
+      return;
     }
+
+    if (this.notificationCreatedCallback) {
+      // Remove existing listeners first to prevent duplicates
+      this.tradeSocket.off('notification-created');
+      this.tradeSocket.on('notification-created', this.notificationCreatedCallback);
+      console.log('[SocketService] Reattached notification-created listener');
+    } else {
+      console.log('[SocketService] reattachTradeListeners: No callback stored yet (will be set by context)');
+    }
+
+    // Note: Other trade event listeners (trade-update, negotiation-update, etc.)
+    // are typically set up by individual components that need them, not globally
   }
 
   // Issue #17 - Document signed event listeners

@@ -58,8 +58,6 @@ export interface MaintenanceConfig {
   isEnabled: boolean
   message: string
   estimatedEndTime?: string
-  scheduledStart?: string
-  scheduledEnd?: string
   allowedIPs: string[]
 }
 
@@ -225,39 +223,6 @@ export function useMaintenance() {
     toggle: toggleMutation.mutateAsync,
     isToggling: toggleMutation.isPending,
   }
-}
-
-export function useScheduleMaintenance() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (dto: {
-      scheduledStart: string
-      scheduledEnd: string
-      message?: string
-      allowedIPs?: string[]
-    }) => {
-      const { data } = await api.post<MaintenanceResponse>('/admin/system/maintenance/schedule', dto)
-      return data.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['system', 'maintenance'] })
-    },
-  })
-}
-
-export function useCancelScheduledMaintenance() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async () => {
-      const { data } = await api.delete<MaintenanceResponse>('/admin/system/maintenance/schedule')
-      return data.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['system', 'maintenance'] })
-    },
-  })
 }
 
 export function useSSLCertificates() {

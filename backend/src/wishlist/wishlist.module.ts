@@ -7,10 +7,12 @@ import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{name: Wishlist.name, schema: WishlistSchema}]),
-    AuthModule
+    MongooseModule.forFeature([
+      { name: Wishlist.name, schema: WishlistSchema },
+    ]),
+    AuthModule,
   ],
   providers: [WishlistService],
-  controllers: [WishlistController]
+  controllers: [WishlistController],
 })
 export class WishlistModule {}

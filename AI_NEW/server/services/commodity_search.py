@@ -20,8 +20,9 @@ dev_logger = DevLogger("CommoditySearch")
 # Minimum similarity threshold for search results.
 # Cosine similarity is 1 - cosine_distance.
 # Results below this threshold are filtered out as irrelevant.
-# 0.55 = strict filtering, only highly relevant items pass through.
-MIN_SIMILARITY_THRESHOLD = 0.55
+# 0.70 = stricter filtering to prevent semantically similar but factually wrong matches
+# (e.g., "Saffron" returning "SABUDANA" which are both "Indian food" but different products)
+MIN_SIMILARITY_THRESHOLD = 0.70
 
 
 class CommoditySearchService:
@@ -42,7 +43,7 @@ class CommoditySearchService:
             raise DatabaseException("Database connection unavailable.")
 
         query_normalized = self.classifier.normalize(request.commodity)
-        query_classification = self.classifier.classify(request.commodity)
+        query_classification = await self.classifier.classify(request.commodity)
 
         embedding = await asyncio.to_thread(
             self.embedding_service.embed_text,
@@ -86,7 +87,7 @@ class CommoditySearchService:
         results = []
         summary = {"total": 0, "mainstream": 0, "niche": 0}
         for suggestion in suggestions[: request.limit]:
-            classification = self.classifier.classify(suggestion["name"])
+            classification = await self.classifier.classify(suggestion["name"])
             suggestion["normalized_name"] = self.classifier.normalize(suggestion["name"])
             suggestion["classification"] = classification
             suggestion["is_niche"] = classification["type"] == "niche"
@@ -270,6 +271,7 @@ class CommoditySearchService:
                 similarity,
                 detail.get("origin_country") or detail.get("destination_country"),
                 detail.get("price"),
+                detail.get("hs_code"),
             )
 
         if filtered_trade_count > 0:
@@ -302,6 +304,7 @@ class CommoditySearchService:
                 similarity,
                 detail.get("country"),
                 detail.get("price_value"),
+                detail.get("hs_code"),
             )
 
         if filtered_product_count > 0:
@@ -321,7 +324,8 @@ class CommoditySearchService:
                    destination_country,
                    indian_port,
                    foreign_port,
-                   COALESCE(unit_price_usd, unit_price) AS price
+                   COALESCE(unit_price_usd, unit_price) AS price,
+                   hs_code
             FROM trade_records
             WHERE id = ANY($1::uuid[])
             """,
@@ -334,7 +338,7 @@ class CommoditySearchService:
             return {}
         rows = await self.db.fetch(
             """
-            SELECT id, name, country, price_value, price_unit
+            SELECT id, name, country, price_value, price_unit, hs_code
             FROM products
             WHERE id = ANY($1::uuid[])
             """,
@@ -432,13 +436,18 @@ class CommoditySearchService:
         similarity: float,
         country: Optional[str],
         price: Optional[float],
+        hs_code: Optional[str] = None,
     ) -> None:
         existing = suggestions.get(name)
         if existing and existing["similarity"] >= similarity:
+            # Even if we don't update similarity, fill in HS code if missing
+            if hs_code and not existing.get("hs_code"):
+                existing["hs_code"] = str(hs_code)
             return
         suggestions[name] = {
             "name": name,
             "similarity": round(similarity, 4),
             "sample_country": country,
             "sample_price": float(price) if price is not None else None,
+            "hs_code": str(hs_code) if hs_code else None,
         }

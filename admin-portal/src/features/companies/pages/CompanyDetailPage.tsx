@@ -32,7 +32,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
-import { useCompany, useVerifyCompany, useUnverifyCompany } from '../hooks/useCompanies'
+import { useCompany, useVerifyCompany, useUnverifyCompany, useApproveGst, useClearGstFlag } from '../hooks/useCompanies'
 import { KYC_DOCUMENT_TYPE_LABELS, KycDocument } from '../types'
 
 export function CompanyDetailPage() {
@@ -41,6 +41,8 @@ export function CompanyDetailPage() {
   const { data: company, isLoading, error } = useCompany(id!)
   const verifyCompany = useVerifyCompany()
   const unverifyCompany = useUnverifyCompany()
+  const approveGst = useApproveGst()
+  const clearGstFlag = useClearGstFlag()
   const [documentViewer, setDocumentViewer] = useState<{ open: boolean; document: KycDocument | null }>({
     open: false,
     document: null,
@@ -69,6 +71,34 @@ export function CompanyDetailPage() {
       toast({
         title: 'Error',
         description: err.message || 'Failed to remove verification',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleApproveGst = async () => {
+    if (!company) return
+    try {
+      await approveGst.mutateAsync({ id: company._id })
+      toast({ title: 'GST approved successfully' })
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to approve GST',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleClearGstFlag = async () => {
+    if (!company) return
+    try {
+      await clearGstFlag.mutateAsync(company._id)
+      toast({ title: 'GST pending review flag cleared' })
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to clear GST flag',
         variant: 'destructive',
       })
     }
@@ -355,6 +385,135 @@ export function CompanyDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* GST Verification Section - Only for Indian companies */}
+      {company.country === 'India' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              GST Verification
+            </CardTitle>
+            <CardDescription>
+              GST verification status for this Indian company
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* GST Status Badges */}
+            <div className="flex flex-wrap gap-2">
+              {company.gstVerified ? (
+                <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  GST Verified
+                </Badge>
+              ) : company.gstPendingManualReview ? (
+                <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+                  <Clock className="h-3 w-3 mr-1" />
+                  Pending Manual Review
+                </Badge>
+              ) : (
+                <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
+                  <AlertCircle className="h-3 w-3 mr-1" />
+                  Not Verified
+                </Badge>
+              )}
+            </div>
+
+            {/* GST Information */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">GST Number</p>
+                <p className="font-medium font-mono">{company.taxId || '-'}</p>
+              </div>
+              {company.gstVerifiedAt && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Verified At</p>
+                  <p className="font-medium">{formatDate(company.gstVerifiedAt)}</p>
+                </div>
+              )}
+            </div>
+
+            {/* GST Verification Data from Cashfree */}
+            {company.gstVerificationData && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Verification Data (from Cashfree API)</p>
+                  <div className="grid grid-cols-2 gap-4 p-3 bg-muted/50 rounded-lg">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Legal Name</p>
+                      <p className="text-sm font-medium">{company.gstVerificationData.legalName}</p>
+                    </div>
+                    {company.gstVerificationData.tradeName && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Trade Name</p>
+                        <p className="text-sm font-medium">{company.gstVerificationData.tradeName}</p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs text-muted-foreground">GST Status</p>
+                      <p className="text-sm font-medium">{company.gstVerificationData.status}</p>
+                    </div>
+                    {company.gstVerificationData.stateJurisdiction && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">State Jurisdiction</p>
+                        <p className="text-sm font-medium">{company.gstVerificationData.stateJurisdiction}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Pending Manual Review Info */}
+            {company.gstPendingManualReview && (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-yellow-700">
+                    <p className="font-medium">Manual Review Required</p>
+                    <p>The Cashfree GST API was unavailable during onboarding. Please verify this GST number manually.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            {(company.gstPendingManualReview || !company.gstVerified) && (
+              <div className="flex gap-2 pt-2">
+                {!company.gstVerified && (
+                  <Button
+                    onClick={handleApproveGst}
+                    disabled={approveGst.isPending}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {approveGst.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Approve GST
+                  </Button>
+                )}
+                {company.gstPendingManualReview && (
+                  <Button
+                    variant="outline"
+                    onClick={handleClearGstFlag}
+                    disabled={clearGstFlag.isPending}
+                  >
+                    {clearGstFlag.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Clear Review Flag
+                  </Button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* KYC Documents */}
       <Card>

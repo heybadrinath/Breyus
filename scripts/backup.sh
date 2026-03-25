@@ -26,7 +26,7 @@
 #
 # Storage:
 #   Currently: Local Docker volume (/data/backups)
-#   Production: Will be switched to Hetzner Storage Box mount
+#   Production: Offsite to DigitalOcean Spaces (see backup-offsite.sh)
 # =============================================================================
 
 set -euo pipefail

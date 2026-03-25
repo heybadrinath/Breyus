@@ -1,0 +1,96 @@
+/* Breyus Clean UI — polished interface */
+
+/* Smooth scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(138, 92, 245, 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(138, 92, 245, 0.5);
+}
+
+/* Wikilink styling */
+.cm-hmd-internal-link,
+.internal-link {
+  color: #B794F6 !important;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(183, 148, 246, 0.4);
+  transition: all 0.2s ease;
+}
+
+.cm-hmd-internal-link:hover,
+.internal-link:hover {
+  color: #D4BBFF !important;
+  border-bottom-color: #D4BBFF;
+  text-shadow: 0 0 8px rgba(183, 148, 246, 0.3);
+}
+
+/* External links */
+.external-link {
+  color: #60A5FA !important;
+}
+
+/* Frontmatter/properties styling */
+.metadata-container {
+  background-color: rgba(138, 92, 245, 0.05);
+  border: 1px solid rgba(138, 92, 245, 0.15);
+  border-radius: 8px;
+  padding: 0.5em;
+  margin-bottom: 1em;
+}
+
+/* Blockquote accent */
+.markdown-preview-view blockquote {
+  border-left: 3px solid #8A5CF5;
+  background-color: rgba(138, 92, 245, 0.05);
+  padding: 0.5em 1em;
+  border-radius: 0 6px 6px 0;
+}
+
+/* Horizontal rule */
+.markdown-preview-view hr {
+  border: none;
+  height: 2px;
+  background: linear-gradient(to right, transparent, rgba(138, 92, 245, 0.4), transparent);
+  margin: 2em 0;
+}
+
+/* Checkbox styling */
+.task-list-item-checkbox:checked {
+  background-color: #8A5CF5;
+  border-color: #8A5CF5;
+}
+
+/* Active line highlight */
+.cm-active {
+  background-color: rgba(138, 92, 245, 0.05) !important;
+}
+
+/* File explorer hover */
+.nav-file-title:hover,
+.nav-folder-title:hover {
+  background-color: rgba(138, 92, 245, 0.1);
+  border-radius: 4px;
+}
+
+/* Status bar subtle */
+.status-bar {
+  border-top: 1px solid rgba(138, 92, 245, 0.15);
+  font-size: 0.75em;
+}
+
+/* Vault title styling */
+.nav-folder-title[data-path="/"] {
+  font-weight: 700;
+  color: #D4BBFF;
+}

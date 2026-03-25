@@ -2,17 +2,25 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Trade, AdminNote } from '../../trade/schema/trade.schema';
 import { User } from '../../users/user.schema';
 import { Product } from '../../products/schema/products.schema';
+import { Company } from '../../company/company.schema';
 import { GetTradesQueryDto } from './dto/get-trades-query.dto';
 import { AddTradeNoteDto } from './dto/add-trade-note.dto';
-import { VerifyDocumentDto, VerifiableDocumentType } from './dto/verify-document.dto';
+import {
+  VerifyDocumentDto,
+  VerifiableDocumentType,
+} from './dto/verify-document.dto';
 import { ForcePhaseChangeDto } from './dto/force-phase.dto';
+import { SendReminderDto } from './dto/send-reminder.dto';
 import { ActivityLogService } from '../activity/activity-log.service';
+import { MailService } from '../../mail/mail.service';
+import { emailTemplates } from '../../mail/templates/email.templates';
 
 export interface PaginatedTradesResult {
   trades: any[];
@@ -44,11 +52,15 @@ export interface TradeTimelineEvent {
 
 @Injectable()
 export class AdminTradesService {
+  private readonly logger = new Logger(AdminTradesService.name);
+
   constructor(
     @InjectModel(Trade.name) private tradeModel: Model<Trade>,
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Product.name) private productModel: Model<Product>,
+    @InjectModel(Company.name) private companyModel: Model<Company>,
     private readonly activityLogService: ActivityLogService,
+    private readonly mailService: MailService,
   ) {}
 
   /**
@@ -89,7 +101,10 @@ export class AdminTradesService {
           .lean();
         const userIds = users.map((u) => u._id);
         if (userIds.length > 0) {
-          filter.$or = [{ buyer: { $in: userIds } }, { seller: { $in: userIds } }];
+          filter.$or = [
+            { buyer: { $in: userIds } },
+            { seller: { $in: userIds } },
+          ];
         } else {
           // No matching users, return empty result
           return { trades: [], total: 0, page, limit, totalPages: 0 };
@@ -334,7 +349,8 @@ export class AdminTradesService {
     // Compute stalled status
     const stalledThreshold = new Date();
     stalledThreshold.setDate(stalledThreshold.getDate() - 7);
-    const phaseDate = (trade as any).lastPhaseChangeAt || (trade as any).updatedAt;
+    const phaseDate =
+      (trade as any).lastPhaseChangeAt || (trade as any).updatedAt;
     const isStalled =
       !['COMPLETED', 'CANCELLED'].includes((trade as any).tradePhase) &&
       new Date(phaseDate) < stalledThreshold;
@@ -380,7 +396,10 @@ export class AdminTradesService {
     });
 
     // Negotiation history
-    if (tradeData.negotiationHistory && tradeData.negotiationHistory.length > 0) {
+    if (
+      tradeData.negotiationHistory &&
+      tradeData.negotiationHistory.length > 0
+    ) {
       tradeData.negotiationHistory.forEach((entry: any) => {
         events.push({
           type: 'negotiation',
@@ -388,7 +407,10 @@ export class AdminTradesService {
             entry.offeredPrice ? `offered $${entry.offeredPrice}` : 'responded'
           }`,
           timestamp: entry.timestamp,
-          actor: entry.party === 'buyer' ? tradeData.buyer?.mail : tradeData.seller?.mail,
+          actor:
+            entry.party === 'buyer'
+              ? tradeData.buyer?.mail
+              : tradeData.seller?.mail,
           actorType: entry.party,
           metadata: {
             round: entry.round,
@@ -511,7 +533,10 @@ export class AdminTradesService {
     }
 
     // Sort by timestamp
-    events.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    events.sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+    );
 
     return events;
   }
@@ -542,10 +567,9 @@ export class AdminTradesService {
       addedAt: new Date(),
     };
 
-    await this.tradeModel.findByIdAndUpdate(
-      tradeId,
-      { $push: { adminNotes: newNote } },
-    );
+    await this.tradeModel.findByIdAndUpdate(tradeId, {
+      $push: { adminNotes: newNote },
+    });
 
     // Log the action
     await this.activityLogService.log({
@@ -617,10 +641,9 @@ export class AdminTradesService {
       throw new NotFoundException('Note not found');
     }
 
-    await this.tradeModel.findByIdAndUpdate(
-      tradeId,
-      { $pull: { adminNotes: { _id: new Types.ObjectId(noteId) } } },
-    );
+    await this.tradeModel.findByIdAndUpdate(tradeId, {
+      $pull: { adminNotes: { _id: new Types.ObjectId(noteId) } },
+    });
 
     // Log the action
     await this.activityLogService.log({
@@ -665,7 +688,13 @@ export class AdminTradesService {
     dto: VerifyDocumentDto,
     adminId: string,
     adminEmail: string,
-  ): Promise<{ documentType: string; status: string; verifiedBy: string; verifiedAt: Date; notes?: string }> {
+  ): Promise<{
+    documentType: string;
+    status: string;
+    verifiedBy: string;
+    verifiedAt: Date;
+    notes?: string;
+  }> {
     if (!Types.ObjectId.isValid(tradeId)) {
       throw new BadRequestException('Invalid trade ID');
     }
@@ -679,12 +708,16 @@ export class AdminTradesService {
     const document = (trade as any)[fieldName];
 
     if (!document) {
-      throw new BadRequestException(`No ${dto.documentType.toUpperCase()} document has been uploaded yet`);
+      throw new BadRequestException(
+        `No ${dto.documentType.toUpperCase()} document has been uploaded yet`,
+      );
     }
 
     // If rejecting, notes are required
     if (dto.status === 'rejected' && !dto.notes) {
-      throw new BadRequestException('Notes are required when rejecting a document');
+      throw new BadRequestException(
+        'Notes are required when rejecting a document',
+      );
     }
 
     const previousStatus = document.status;
@@ -741,7 +774,13 @@ export class AdminTradesService {
     dto: ForcePhaseChangeDto,
     adminId: string,
     adminEmail: string,
-  ): Promise<{ previousPhase: string; newPhase: string; changedBy: string; changedAt: Date; reason: string }> {
+  ): Promise<{
+    previousPhase: string;
+    newPhase: string;
+    changedBy: string;
+    changedAt: Date;
+    reason: string;
+  }> {
     if (!Types.ObjectId.isValid(tradeId)) {
       throw new BadRequestException('Invalid trade ID');
     }
@@ -755,7 +794,9 @@ export class AdminTradesService {
 
     // Don't allow changing to the same phase
     if (previousPhase === dto.newPhase) {
-      throw new BadRequestException(`Trade is already in phase ${dto.newPhase}`);
+      throw new BadRequestException(
+        `Trade is already in phase ${dto.newPhase}`,
+      );
     }
 
     const changedAt = new Date();
@@ -832,7 +873,9 @@ export class AdminTradesService {
     // Validate document type
     const validTypes = ['sco', 'icpo', 'spa', 'bol', 'payment-proof'];
     if (!validTypes.includes(documentType)) {
-      throw new BadRequestException(`Invalid document type. Must be one of: ${validTypes.join(', ')}`);
+      throw new BadRequestException(
+        `Invalid document type. Must be one of: ${validTypes.join(', ')}`,
+      );
     }
 
     const trade = await this.tradeModel.findById(tradeId).lean();
@@ -840,11 +883,15 @@ export class AdminTradesService {
       throw new NotFoundException('Trade not found');
     }
 
-    const fieldName = this.getDocumentFieldName(documentType as VerifiableDocumentType);
+    const fieldName = this.getDocumentFieldName(
+      documentType as VerifiableDocumentType,
+    );
     const document = (trade as any)[fieldName];
 
     if (!document) {
-      throw new NotFoundException(`No ${documentType.toUpperCase()} document has been uploaded for this trade`);
+      throw new NotFoundException(
+        `No ${documentType.toUpperCase()} document has been uploaded for this trade`,
+      );
     }
 
     if (!document.filePath) {
@@ -856,5 +903,150 @@ export class AdminTradesService {
       originalName: document.originalName || `${documentType}-document`,
       mimeType: document.mimeType || 'application/octet-stream',
     };
+  }
+
+  // ========================
+  // STALLED TRADE REMINDER
+  // ========================
+
+  /**
+   * Send reminder email(s) to buyer and/or seller for a stalled trade
+   * This is an admin action to prompt users to resume inactive trades
+   */
+  async sendStalledTradeReminder(
+    tradeId: string,
+    dto: SendReminderDto,
+    adminId: string,
+    adminEmail: string,
+  ): Promise<{ success: boolean; sentTo: string[] }> {
+    if (!Types.ObjectId.isValid(tradeId)) {
+      throw new BadRequestException('Invalid trade ID');
+    }
+
+    const trade = await this.tradeModel
+      .findById(tradeId)
+      .populate({
+        path: 'buyer',
+        select: 'mail company',
+        populate: { path: 'company', select: 'companyName' },
+      })
+      .populate({
+        path: 'seller',
+        select: 'mail company',
+        populate: { path: 'company', select: 'companyName' },
+      })
+      .populate('product', 'name')
+      .lean();
+
+    if (!trade) {
+      throw new NotFoundException('Trade not found');
+    }
+
+    const tradeData = trade as any;
+    const productName = tradeData.product?.name || 'Unknown Product';
+    const buyerEmail = tradeData.buyer?.mail;
+    const sellerEmail = tradeData.seller?.mail;
+    const buyerCompanyName =
+      tradeData.buyer?.company?.companyName || 'Unknown Buyer';
+    const sellerCompanyName =
+      tradeData.seller?.company?.companyName || 'Unknown Seller';
+
+    // Calculate days since last activity
+    const lastActivityDate =
+      tradeData.lastPhaseChangeAt || tradeData.updatedAt || tradeData.createdAt;
+    const daysSinceActivity = Math.floor(
+      (Date.now() - new Date(lastActivityDate).getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    const baseUrl = (
+      process.env.FRONTEND_URL || 'http://localhost:3000'
+    ).replace(/\/+$/, '');
+
+    const sentTo: string[] = [];
+
+    // Send to buyer
+    if (
+      (dto.recipientType === 'both' || dto.recipientType === 'buyer') &&
+      buyerEmail
+    ) {
+      try {
+        const buyerActionUrl = `${baseUrl}/buyer/trade?tab=ongoing&tradeId=${tradeId}`;
+        const emailHtml = emailTemplates.stalledTradeReminder(
+          productName,
+          sellerCompanyName,
+          daysSinceActivity,
+          tradeData.tradePhase,
+          buyerActionUrl,
+          dto.customMessage,
+        );
+        await this.mailService.sendTradeNotificationEmail(
+          buyerEmail,
+          `Trade Reminder: ${productName}`,
+          emailHtml,
+        );
+        sentTo.push(buyerEmail);
+        this.logger.log(
+          `Sent stalled trade reminder to buyer ${buyerEmail} for trade ${tradeId}`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to send reminder to buyer ${buyerEmail}:`,
+          error,
+        );
+      }
+    }
+
+    // Send to seller
+    if (
+      (dto.recipientType === 'both' || dto.recipientType === 'seller') &&
+      sellerEmail
+    ) {
+      try {
+        const sellerActionUrl = `${baseUrl}/seller/trade?tab=ongoing&tradeId=${tradeId}`;
+        const emailHtml = emailTemplates.stalledTradeReminder(
+          productName,
+          buyerCompanyName,
+          daysSinceActivity,
+          tradeData.tradePhase,
+          sellerActionUrl,
+          dto.customMessage,
+        );
+        await this.mailService.sendTradeNotificationEmail(
+          sellerEmail,
+          `Trade Reminder: ${productName}`,
+          emailHtml,
+        );
+        sentTo.push(sellerEmail);
+        this.logger.log(
+          `Sent stalled trade reminder to seller ${sellerEmail} for trade ${tradeId}`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to send reminder to seller ${sellerEmail}:`,
+          error,
+        );
+      }
+    }
+
+    // Log the admin action
+    await this.activityLogService.log({
+      adminId: new Types.ObjectId(adminId),
+      adminEmail,
+      action: 'trade.send_reminder',
+      actionCategory: 'trades',
+      targetType: 'trade',
+      targetId: new Types.ObjectId(tradeId),
+      targetIdentifier: tradeId,
+      description: `Sent stalled trade reminder to ${dto.recipientType} (${sentTo.join(', ')})`,
+      previousValue: undefined,
+      newValue: {
+        recipientType: dto.recipientType,
+        sentTo,
+        customMessage: dto.customMessage,
+      },
+      metadata: { daysSinceActivity, currentPhase: tradeData.tradePhase },
+    });
+
+    return { success: sentTo.length > 0, sentTo };
   }
 }

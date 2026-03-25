@@ -89,6 +89,35 @@ class NotificationService {
     }
 
     /**
+     * Get breakdown of unread counts for trade tab badges
+     * Returns: { pr, po, spa, ongoing, messages, total }
+     */
+    async getUnreadCountBreakdown(): Promise<{
+        pr: number;
+        po: number;
+        spa: number;
+        ongoing: number;
+        messages: number;
+        total: number;
+    }> {
+        try {
+            const response = await fetch(`${API_URL}/notifications/unread-count-breakdown`, {
+                method: 'GET',
+                headers: this.getHeaders(),
+                credentials: 'include',
+            });
+
+            if (!response.ok) throw new Error('Failed to fetch unread count breakdown');
+
+            const result = await response.json();
+            return result.data || { pr: 0, po: 0, spa: 0, ongoing: 0, messages: 0, total: 0 };
+        } catch (error) {
+            console.error('Error fetching unread count breakdown:', error);
+            return { pr: 0, po: 0, spa: 0, ongoing: 0, messages: 0, total: 0 };
+        }
+    }
+
+    /**
      * Mark a single notification as read
      */
     async markAsRead(id: string): Promise<void> {

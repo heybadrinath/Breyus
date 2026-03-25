@@ -6,12 +6,13 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Unit, DEFAULT_UNITS, UNIT_TYPES, UnitType } from '../schemas/unit.schema';
 import {
-  CreateUnitDto,
-  UpdateUnitDto,
-  GetUnitsQueryDto,
-} from '../dto';
+  Unit,
+  DEFAULT_UNITS,
+  UNIT_TYPES,
+  UnitType,
+} from '../schemas/unit.schema';
+import { CreateUnitDto, UpdateUnitDto, GetUnitsQueryDto } from '../dto';
 
 @Injectable()
 export class UnitsService {
@@ -70,7 +71,9 @@ export class UnitsService {
    * Get unit by code
    */
   async getUnitByCode(code: string) {
-    const unit = await this.unitModel.findOne({ code: code.toUpperCase() }).lean();
+    const unit = await this.unitModel
+      .findOne({ code: code.toUpperCase() })
+      .lean();
     if (!unit) {
       throw new NotFoundException(`Unit with code ${code} not found`);
     }
@@ -194,9 +197,17 @@ export class UnitsService {
   /**
    * Convert a value from one unit to another (same type only)
    */
-  async convert(value: number, fromCode: string, toCode: string): Promise<number | null> {
-    const fromUnit = await this.unitModel.findOne({ code: fromCode.toUpperCase() }).lean();
-    const toUnit = await this.unitModel.findOne({ code: toCode.toUpperCase() }).lean();
+  async convert(
+    value: number,
+    fromCode: string,
+    toCode: string,
+  ): Promise<number | null> {
+    const fromUnit = await this.unitModel
+      .findOne({ code: fromCode.toUpperCase() })
+      .lean();
+    const toUnit = await this.unitModel
+      .findOne({ code: toCode.toUpperCase() })
+      .lean();
 
     if (!fromUnit || !toUnit) {
       return null;

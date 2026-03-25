@@ -65,14 +65,21 @@ export class SearchService {
     // Sort by relevance (exact matches first) and limit
     return results
       .sort((a, b) => {
-        const aExact = a.title.toLowerCase().includes(query.toLowerCase()) ? 0 : 1;
-        const bExact = b.title.toLowerCase().includes(query.toLowerCase()) ? 0 : 1;
+        const aExact = a.title.toLowerCase().includes(query.toLowerCase())
+          ? 0
+          : 1;
+        const bExact = b.title.toLowerCase().includes(query.toLowerCase())
+          ? 0
+          : 1;
         return aExact - bExact;
       })
       .slice(0, limit);
   }
 
-  private async searchUsers(searchRegex: RegExp, limit: number): Promise<SearchResult[]> {
+  private async searchUsers(
+    searchRegex: RegExp,
+    limit: number,
+  ): Promise<SearchResult[]> {
     try {
       const users = await this.userModel
         .find({
@@ -90,7 +97,10 @@ export class SearchService {
         type: 'user' as const,
         id: user._id.toString(),
         title: user.email,
-        subtitle: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.role || 'User',
+        subtitle:
+          `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+          user.role ||
+          'User',
         url: `/users/${user._id}`,
         metadata: {
           role: user.role,
@@ -103,7 +113,10 @@ export class SearchService {
     }
   }
 
-  private async searchCompanies(searchRegex: RegExp, limit: number): Promise<SearchResult[]> {
+  private async searchCompanies(
+    searchRegex: RegExp,
+    limit: number,
+  ): Promise<SearchResult[]> {
     try {
       const companies = await this.companyModel
         .find({
@@ -135,14 +148,14 @@ export class SearchService {
     }
   }
 
-  private async searchTrades(searchRegex: RegExp, limit: number): Promise<SearchResult[]> {
+  private async searchTrades(
+    searchRegex: RegExp,
+    limit: number,
+  ): Promise<SearchResult[]> {
     try {
       const trades = await this.tradeModel
         .find({
-          $or: [
-            { tradeId: searchRegex },
-            { productName: searchRegex },
-          ],
+          $or: [{ tradeId: searchRegex }, { productName: searchRegex }],
         })
         .select('_id tradeId productName status quantity createdAt')
         .limit(limit)
@@ -166,7 +179,10 @@ export class SearchService {
     }
   }
 
-  private async searchProducts(searchRegex: RegExp, limit: number): Promise<SearchResult[]> {
+  private async searchProducts(
+    searchRegex: RegExp,
+    limit: number,
+  ): Promise<SearchResult[]> {
     try {
       const products = await this.productModel
         .find({
@@ -199,7 +215,10 @@ export class SearchService {
     }
   }
 
-  async getSearchSuggestions(query: string, limit: number = 5): Promise<string[]> {
+  async getSearchSuggestions(
+    query: string,
+    limit: number = 5,
+  ): Promise<string[]> {
     if (!query || query.trim().length < 2) {
       return [];
     }

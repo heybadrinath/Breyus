@@ -173,8 +173,8 @@ services:
       - ADMIN_SESSION_EXPIRY=${ADMIN_SESSION_EXPIRY:-86400000}
       # Alpha Vantage API (Commodity Prices)
       - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY:-YDDR5CNYARHIGYOE}
-      # Storage Configuration (S3-Compatible / Vultr Object Storage)
-      # Set STORAGE_PROVIDER=s3 to use Vultr Object Storage, or 'local' for filesystem
+      # Storage Configuration (S3-Compatible / DigitalOcean Spaces)
+      # Set STORAGE_PROVIDER=s3 to use DigitalOcean Spaces, or 'local' for filesystem
       - STORAGE_PROVIDER=${STORAGE_PROVIDER:-local}
       - S3_ENDPOINT=${S3_ENDPOINT:-}
       - S3_REGION=${S3_REGION:-sgp1}
@@ -190,6 +190,8 @@ services:
       - log_data:/data/logs
       # Mount scripts for backup/rotation operations
       - ./scripts:/opt/breyus/scripts:ro
+      # Persistent storage for uploaded files (images, documents)
+      - uploads_data:/app/uploads
     depends_on:
       mongo:
         condition: service_healthy
@@ -240,7 +242,7 @@ services:
       - HF_HUB_DOWNLOAD_TIMEOUT=600
       - HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-false}
       - PIPELINE_DEV_NAME=${PIPELINE_DEV_NAME}
-      # Storage Configuration (S3-Compatible / Vultr Object Storage)
+      # Storage Configuration (S3-Compatible / DigitalOcean Spaces)
       - S3_ENDPOINT=${S3_ENDPOINT:-}
       - S3_REGION=${S3_REGION:-sgp1}
       - S3_ACCESS_KEY=${S3_ACCESS_KEY:-}
@@ -323,11 +325,14 @@ volumes:
     name: breyus_redis_data
   backup_data:
     name: breyus_backup_data
-    # NOTE: For production with Vultr Object Storage, backups are stored in S3 bucket
+    # NOTE: For production with DigitalOcean Spaces, backups are stored in S3 bucket
     # (breyus-backups). This local volume is only used for temporary backup staging.
     # The backup script uploads to S3 after creating the dump.
   log_data:
     name: breyus_log_data
+  uploads_data:
+    name: breyus_uploads_data
+    # Persistent storage for user uploads (blog images, documents, etc.)
 
 # ============================================================================
 # NETWORKS

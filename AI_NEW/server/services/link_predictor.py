@@ -55,6 +55,7 @@ class LinkPredictor:
         self._avg_price_cache: Dict[Tuple[str, str, str, str], Optional[float]] = {}
         self._primary_port_cache: Dict[Tuple[str, str, str, str], Optional[str]] = {}
         self._commodity_match_cache: Dict[Tuple[str, str, str, str], bool] = {}
+        self._price_fluctuation_cache: Dict[Tuple[str, str, str, str], float] = {}
 
     async def predict(self, request) -> dict:
         """Run waterfall prediction logic."""
@@ -73,6 +74,11 @@ class LinkPredictor:
         if not hs_code:
             hs_code = await self._guess_hs_code(commodity)
             normalized["hs_code"] = hs_code
+
+        # Debug logging for HS code prefix matching
+        hs_prefix = hs_code[:4] if hs_code and len(hs_code) >= 4 else hs_code
+        logger.info(f"[LINK_PREDICT] Searching for: commodity='{commodity}', hs_code='{hs_code}', hs_prefix='{hs_prefix}%', seeker_type='{seeker_type}'")
+
         mode = self._normalize_mode(getattr(request, "mode", None))
         top_k = self._normalize_top_k(getattr(request, "top_k", None), mode)
         normalized["top_k"] = top_k
@@ -123,6 +129,8 @@ class LinkPredictor:
             }
 
         matches = list(candidates_by_key.values())
+        fallback_warning: Optional[str] = None  # Track if we fell back to global results
+
         if self._has_filters(normalized):
             candidate_role = "seller" if seeker_type == "buyer" else "buyer"
             filtered: List[Dict[str, Any]] = []
@@ -133,12 +141,26 @@ class LinkPredictor:
                     candidate_role,
                 ):
                     filtered.append(candidate)
-            matches = filtered
+
+            # Check if country filter caused empty results - fall back to global with warning
+            country_pref = normalized.get("country_preference")
+            if not filtered and country_pref and matches:
+                # Country filter removed all results - use unfiltered matches with warning
+                fallback_warning = f"No suppliers found in {country_pref}. Showing global alternatives."
+                dev_logger.flow(
+                    "country_filter_fallback",
+                    country_preference=country_pref,
+                    original_count=len(matches),
+                    message="Falling back to global results due to no country matches"
+                )
+            else:
+                matches = filtered
 
         if not matches:
             return {
                 "matches": [],
                 "match_strategy": None,
+                "warning": fallback_warning,
                 "legacy": {
                     "found": False,
                     "predicted_partner": None,
@@ -154,8 +176,6 @@ class LinkPredictor:
         scorer = TradeScorer(self.db)
         buyer, seller = await self._resolve_buyer_seller(seeker, seeker_type)
         enriched: List[Dict[str, Any]] = []
-
-        price_fluctuation = await self._predict_price_fluctuation(commodity, hs_code)
 
         for candidate in matches:
             company_row = await self._fetch_company(candidate.get("company_id"), candidate.get("company_name"))
@@ -195,9 +215,31 @@ class LinkPredictor:
             if commodity_match is False:
                 score = max(score, 0.2)
 
-            product_info = await self._get_product_info(candidate_company, commodity, hs_code)
+            # Use product info from commodity pool query if available (more accurate for external sellers)
+            product_info = None
+            if candidate_company.get("product_description"):
+                # Build product info from commodity pool query data
+                price = candidate_company.get("unit_price")
+                qty = candidate_company.get("quantity")
+                unit = candidate_company.get("unit_of_measurement")
+                price_str = f"{float(price):.2f}" if price is not None else None
+                moq_str = f"{float(qty):.2f} {unit or ''}".strip() if qty is not None else None
+                product_info = {
+                    "name": candidate_company.get("product_description"),
+                    "price": price_str,
+                    "moq": moq_str,
+                }
+            else:
+                # Fallback to separate product lookup (for non-commodity-pool sources)
+                product_info = await self._get_product_info(candidate_company, commodity, hs_code)
             if not product_info:
                 product_info = self._fallback_product_info(candidate_company, commodity, hs_code)
+            price_fluctuation = await self._predict_company_price_fluctuation(
+                company=candidate_company,
+                commodity=commodity,
+                hs_code=hs_code,
+                role=candidate_role,
+            )
             risk_level = await self._assess_risk(
                 candidate_company,
                 commodity,
@@ -266,11 +308,17 @@ class LinkPredictor:
         top_distance = ranked[0].get("_distance_km") if ranked else None
         legacy = self._legacy_response_from_matches(matches_out, match_strategy, top_distance)
 
-        return {
+        response = {
             "matches": matches_out,
             "match_strategy": match_strategy,
             "legacy": legacy,
         }
+
+        # Include warning if country filter fell back to global results
+        if fallback_warning:
+            response["warning"] = fallback_warning
+
+        return response
 
     def _has_filters(self, context: Dict[str, Any]) -> bool:
         return bool(
@@ -496,13 +544,46 @@ class LinkPredictor:
         return None
 
     def _country_matches(self, candidate_country: Optional[str], country_pref: str) -> bool:
+        """
+        Flexible country matching using substring and token matching.
+
+        Matching strategies (in order):
+        1. Exact match (normalized)
+        2. Substring match (preference in candidate or vice versa)
+        3. Token match (any word from preference matches any word in candidate)
+
+        Examples:
+        - "India" matches "INDIA", "india", "Republic of India"
+        - "United" matches "United States", "United Kingdom", "United Arab Emirates"
+        - "Korea" matches "South Korea", "Republic of Korea"
+        """
         if not candidate_country:
             return False
+
         candidate_norm = self._normalize_text(candidate_country)
+        if not candidate_norm:
+            return False
+
+        # Split preference by comma or slash for multiple country options
         for raw in re.split(r"[,/]+", country_pref):
-            token = self._normalize_text(raw)
-            if token and (token == candidate_norm or token in candidate_norm or candidate_norm in token):
+            pref_norm = self._normalize_text(raw.strip())
+            if not pref_norm:
+                continue
+
+            # Strategy 1: Exact match
+            if pref_norm == candidate_norm:
                 return True
+
+            # Strategy 2: Substring match (either direction)
+            if pref_norm in candidate_norm or candidate_norm in pref_norm:
+                return True
+
+            # Strategy 3: Token match - any word matches
+            pref_tokens = set(pref_norm.split())
+            candidate_tokens = set(candidate_norm.split())
+            if pref_tokens & candidate_tokens:  # Intersection - any common words
+                return True
+
         return False
 
     def _port_matches(self, candidate_port: str, port_pref: str) -> bool:
@@ -766,8 +847,10 @@ class LinkPredictor:
         if not self.db or not commodity:
             return []
         if hs_code:
-            commodity_clause = "hs_code = $1"
-            params: List[Any] = [hs_code]
+            # Use first 4 digits of HS code for prefix matching (matches NestJS backend behavior)
+            hs_prefix = hs_code[:4] if len(hs_code) >= 4 else hs_code
+            commodity_clause = "hs_code LIKE $1"
+            params: List[Any] = [f"{hs_prefix}%"]
         else:
             commodity_clause = "(product_description ILIKE $1 OR item_description ILIKE $1)"
             params = [f"%{commodity}%"]
@@ -786,7 +869,11 @@ class LinkPredictor:
                                extra->>'exporter_city' AS city,
                                extra->>'state' AS state,
                                extra->>'pin_code' AS pin_code,
-                               total_value_usd AS trade_value
+                               total_value_usd AS trade_value,
+                               COALESCE(product_description, item_description) AS product_description,
+                               COALESCE(unit_price_usd, unit_price) AS unit_price,
+                               quantity,
+                               unit_of_measurement
                         FROM trade_records
                         WHERE {commodity_clause}
                           AND (exporter_id IS NOT NULL OR exporter_name IS NOT NULL)
@@ -800,26 +887,71 @@ class LinkPredictor:
                                extra->>'city' AS city,
                                extra->>'state' AS state,
                                extra->>'pin_code' AS pin_code,
-                               total_value_usd AS trade_value
+                               total_value_usd AS trade_value,
+                               COALESCE(product_description, item_description) AS product_description,
+                               COALESCE(unit_price_usd, unit_price) AS unit_price,
+                               quantity,
+                               unit_of_measurement
                         FROM trade_records
                         WHERE {commodity_clause}
                           AND (supplier_id IS NOT NULL OR supplier_name IS NOT NULL)
+                    ),
+                    company_stats AS (
+                        SELECT company_name,
+                               MAX(address_full) AS address_full,
+                               MAX(country) AS country,
+                               MAX(contact_phone) AS contact_phone,
+                               MAX(contact_email) AS contact_email,
+                               MAX(city) AS city,
+                               MAX(state) AS state,
+                               MAX(pin_code) AS pin_code,
+                               COUNT(*) AS trade_count,
+                               SUM(COALESCE(trade_value, 0)) AS total_value_usd
+                        FROM commodity_trades
+                        WHERE company_name IS NOT NULL
+                        GROUP BY company_name
+                    ),
+                    product_counts AS (
+                        SELECT company_name,
+                               product_description,
+                               MAX(unit_price) AS unit_price,
+                               MAX(quantity) AS quantity,
+                               MAX(unit_of_measurement) AS unit_of_measurement,
+                               COUNT(*) AS product_trade_count
+                        FROM commodity_trades
+                        WHERE company_name IS NOT NULL AND product_description IS NOT NULL
+                        GROUP BY company_name, product_description
+                    ),
+                    ranked_products AS (
+                        SELECT company_name,
+                               product_description,
+                               unit_price,
+                               quantity,
+                               unit_of_measurement,
+                               ROW_NUMBER() OVER (
+                                   PARTITION BY company_name
+                                   ORDER BY product_trade_count DESC, unit_price DESC NULLS LAST
+                               ) AS rn
+                        FROM product_counts
                     )
                     SELECT NULL::uuid AS company_id,
-                           company_name,
-                           MAX(address_full) AS address_full,
-                           MAX(country) AS country,
-                           MAX(contact_phone) AS contact_phone,
-                           MAX(contact_email) AS contact_email,
-                           MAX(city) AS city,
-                           MAX(state) AS state,
-                           MAX(pin_code) AS pin_code,
-                           COUNT(*) AS trade_count,
-                           SUM(COALESCE(trade_value, 0)) AS total_value_usd
-                    FROM commodity_trades
-                    WHERE company_name IS NOT NULL
-                    GROUP BY company_name
-                    ORDER BY trade_count DESC NULLS LAST, total_value_usd DESC NULLS LAST
+                           cs.company_name,
+                           cs.address_full,
+                           cs.country,
+                           cs.contact_phone,
+                           cs.contact_email,
+                           cs.city,
+                           cs.state,
+                           cs.pin_code,
+                           cs.trade_count,
+                           cs.total_value_usd,
+                           rp.product_description,
+                           rp.unit_price,
+                           rp.quantity,
+                           rp.unit_of_measurement
+                    FROM company_stats cs
+                    LEFT JOIN ranked_products rp ON cs.company_name = rp.company_name AND rp.rn = 1
+                    ORDER BY cs.trade_count DESC NULLS LAST, cs.total_value_usd DESC NULLS LAST
                     LIMIT {limit}
                 """.format(commodity_clause=commodity_clause, limit=limit)
             return """
@@ -833,7 +965,11 @@ class LinkPredictor:
                            extra->>'city' AS city,
                            extra->>'state' AS state,
                            extra->>'pin_code' AS pin_code,
-                           total_value_usd AS trade_value
+                           total_value_usd AS trade_value,
+                           COALESCE(product_description, item_description) AS product_description,
+                           COALESCE(unit_price_usd, unit_price) AS unit_price,
+                           quantity,
+                           unit_of_measurement
                     FROM trade_records
                     WHERE {commodity_clause}
                       AND (importer_id IS NOT NULL OR importer_name IS NOT NULL)
@@ -847,28 +983,76 @@ class LinkPredictor:
                            extra->>'city' AS city,
                            extra->>'state' AS state,
                            extra->>'pin_code' AS pin_code,
-                           total_value_usd AS trade_value
+                           total_value_usd AS trade_value,
+                           COALESCE(product_description, item_description) AS product_description,
+                           COALESCE(unit_price_usd, unit_price) AS unit_price,
+                           quantity,
+                           unit_of_measurement
                     FROM trade_records
                     WHERE {commodity_clause}
                       AND (consignee_id IS NOT NULL OR consignee_name IS NOT NULL)
+                ),
+                company_stats AS (
+                    SELECT company_name,
+                           MAX(address_full) AS address_full,
+                           MAX(country) AS country,
+                           MAX(contact_phone) AS contact_phone,
+                           MAX(contact_email) AS contact_email,
+                           MAX(city) AS city,
+                           MAX(state) AS state,
+                           MAX(pin_code) AS pin_code,
+                           COUNT(*) AS trade_count,
+                           SUM(COALESCE(trade_value, 0)) AS total_value_usd
+                    FROM commodity_trades
+                    WHERE company_name IS NOT NULL
+                    GROUP BY company_name
+                ),
+                product_counts AS (
+                    SELECT company_name,
+                           product_description,
+                           MAX(unit_price) AS unit_price,
+                           MAX(quantity) AS quantity,
+                           MAX(unit_of_measurement) AS unit_of_measurement,
+                           COUNT(*) AS product_trade_count
+                    FROM commodity_trades
+                    WHERE company_name IS NOT NULL AND product_description IS NOT NULL
+                    GROUP BY company_name, product_description
+                ),
+                ranked_products AS (
+                    SELECT company_name,
+                           product_description,
+                           unit_price,
+                           quantity,
+                           unit_of_measurement,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY company_name
+                               ORDER BY product_trade_count DESC, unit_price DESC NULLS LAST
+                           ) AS rn
+                    FROM product_counts
                 )
                 SELECT NULL::uuid AS company_id,
-                       company_name,
-                       MAX(address_full) AS address_full,
-                       MAX(country) AS country,
-                       MAX(contact_phone) AS contact_phone,
-                       MAX(contact_email) AS contact_email,
-                       MAX(city) AS city,
-                       MAX(state) AS state,
-                       MAX(pin_code) AS pin_code,
-                       COUNT(*) AS trade_count,
-                       SUM(COALESCE(trade_value, 0)) AS total_value_usd
-                FROM commodity_trades
-                WHERE company_name IS NOT NULL
-                GROUP BY company_name
-                ORDER BY trade_count DESC NULLS LAST, total_value_usd DESC NULLS LAST
+                       cs.company_name,
+                       cs.address_full,
+                       cs.country,
+                       cs.contact_phone,
+                       cs.contact_email,
+                       cs.city,
+                       cs.state,
+                       cs.pin_code,
+                       cs.trade_count,
+                       cs.total_value_usd,
+                       rp.product_description,
+                       rp.unit_price,
+                       rp.quantity,
+                       rp.unit_of_measurement
+                FROM company_stats cs
+                LEFT JOIN ranked_products rp ON cs.company_name = rp.company_name AND rp.rn = 1
+                ORDER BY cs.trade_count DESC NULLS LAST, cs.total_value_usd DESC NULLS LAST
                 LIMIT {limit}
             """.format(commodity_clause=commodity_clause, limit=limit)
+
+        # Debug: Log the query parameters
+        logger.info(f"[COMMODITY_POOL] Query params: commodity_clause='{commodity_clause}', params={params}, seeker_type='{seeker_type}'")
 
         if seeker_type == "buyer":
             rows = await self.db.fetch(_commodity_pool_query("buyer"), *params)
@@ -876,7 +1060,12 @@ class LinkPredictor:
             rows = await self.db.fetch(_commodity_pool_query("seller"), *params)
             if not rows:
                 # If importer/consignee data is missing, fall back to exporter/supplier.
+                logger.info(f"[COMMODITY_POOL] No importer/consignee data, falling back to exporter/supplier")
                 rows = await self.db.fetch(_commodity_pool_query("buyer"), *params)
+
+        # Debug: Log results count
+        logger.info(f"[COMMODITY_POOL] Found {len(rows)} rows for seeker_type='{seeker_type}'")
+
         candidates = []
         for row in rows:
             entry = dict(row)
@@ -948,6 +1137,11 @@ class LinkPredictor:
                     "contact_website",
                     "total_value_usd",
                     "total_trade_value_usd",
+                    # Product fields from commodity pool query
+                    "product_description",
+                    "unit_price",
+                    "quantity",
+                    "unit_of_measurement",
                 ]:
                     if not entry.get(field) and candidate.get(field):
                         entry[field] = candidate.get(field)
@@ -1028,6 +1222,8 @@ class LinkPredictor:
                 self._commodity_match_cache[cache_key] = result
             return result
         like = f"%{commodity}%"
+        # Use first 4 digits of HS code for prefix matching
+        hs_prefix_pattern = f"{hs_code[:4]}%" if hs_code and len(hs_code) >= 4 else (f"{hs_code}%" if hs_code else None)
         if role == "buyer":
             condition = """
                 (importer_id = $1 OR importer_name ILIKE $2 OR consignee_id = $1 OR consignee_name ILIKE $2)
@@ -1041,12 +1237,12 @@ class LinkPredictor:
             SELECT 1
             FROM trade_records
             WHERE {condition}
-              AND (hs_code = $3 OR product_description ILIKE $4 OR item_description ILIKE $4)
+              AND (hs_code LIKE $3 OR product_description ILIKE $4 OR item_description ILIKE $4)
             LIMIT 1
             """,
             company_id,
             f"%{company_name}%" if company_name else None,
-            hs_code,
+            hs_prefix_pattern,
             like,
         )
         result = bool(row)
@@ -1120,6 +1316,11 @@ class LinkPredictor:
         base["city"] = candidate.get("city") or base.get("city")
         base["state"] = candidate.get("state") or base.get("state")
         base["pin_code"] = candidate.get("pin_code") or base.get("pin_code")
+        # Include product fields from commodity pool query
+        base["product_description"] = candidate.get("product_description")
+        base["unit_price"] = candidate.get("unit_price")
+        base["quantity"] = candidate.get("quantity")
+        base["unit_of_measurement"] = candidate.get("unit_of_measurement")
         if company_row:
             base["id"] = company_row.get("id") or base.get("id")
             base["name"] = company_row.get("name") or base.get("name")
@@ -1220,8 +1421,10 @@ class LinkPredictor:
         company_id = company.get("id")
         name_like = f"%{company.get('name')}%" if company.get("name") else None
         if hs_code:
-            commodity_clause = "hs_code = $3"
-            params = [company_id, name_like, hs_code]
+            # Use first 4 digits of HS code for prefix matching
+            hs_prefix = hs_code[:4] if len(hs_code) >= 4 else hs_code
+            commodity_clause = "hs_code LIKE $3"
+            params = [company_id, name_like, f"{hs_prefix}%"]
         else:
             commodity_clause = "(product_description ILIKE $3 OR item_description ILIKE $3)"
             params = [company_id, name_like, like]
@@ -1269,14 +1472,16 @@ class LinkPredictor:
             return None
         row = None
         if hs_code:
+            # Use first 4 digits of HS code for prefix matching
+            hs_prefix = hs_code[:4] if len(hs_code) >= 4 else hs_code
             row = await self.db.fetchrow(
                 """
                 SELECT name, price_value, price_unit
                 FROM products
-                WHERE hs_code = $1
+                WHERE hs_code LIKE $1
                 LIMIT 1
                 """,
-                hs_code,
+                f"{hs_prefix}%",
             )
         if not row and commodity:
             row = await self.db.fetchrow(
@@ -1333,6 +1538,8 @@ class LinkPredictor:
         if cache_key is not None and cache_key in self._avg_price_cache:
             return self._avg_price_cache[cache_key]
         like = f"%{commodity}%"
+        # Use first 4 digits of HS code for prefix matching
+        hs_prefix_pattern = f"{hs_code[:4]}%" if hs_code and len(hs_code) >= 4 else (f"{hs_code}%" if hs_code else None)
         if role == "buyer":
             condition = """
                 (importer_id = $1 OR importer_name ILIKE $2 OR consignee_id = $1 OR consignee_name ILIKE $2)
@@ -1346,12 +1553,12 @@ class LinkPredictor:
             SELECT AVG(COALESCE(unit_price_usd, unit_price)) AS price
             FROM trade_records
             WHERE {condition}
-              AND (hs_code = $3 OR product_description ILIKE $4 OR item_description ILIKE $4)
+              AND (hs_code LIKE $3 OR product_description ILIKE $4 OR item_description ILIKE $4)
               AND COALESCE(unit_price_usd, unit_price) IS NOT NULL
             """,
             company.get("id"),
             f"%{company.get('name')}%",
-            hs_code,
+            hs_prefix_pattern,
             like,
         )
         result = float(row["price"]) if row and row["price"] is not None else None
@@ -1372,6 +1579,8 @@ class LinkPredictor:
         if cache_key is not None and cache_key in self._primary_port_cache:
             return self._primary_port_cache[cache_key]
         like = f"%{commodity}%"
+        # Use first 4 digits of HS code for prefix matching
+        hs_prefix_pattern = f"{hs_code[:4]}%" if hs_code and len(hs_code) >= 4 else (f"{hs_code}%" if hs_code else None)
         if role == "buyer":
             condition = """
                 (importer_id = $1 OR importer_name ILIKE $2 OR consignee_id = $1 OR consignee_name ILIKE $2)
@@ -1388,14 +1597,14 @@ class LinkPredictor:
             FROM trade_records
             WHERE {condition}
               AND {port_expr} IS NOT NULL
-              AND (hs_code = $3 OR product_description ILIKE $4 OR item_description ILIKE $4)
+              AND (hs_code LIKE $3 OR product_description ILIKE $4 OR item_description ILIKE $4)
             GROUP BY {port_expr}
             ORDER BY cnt DESC
             LIMIT 1
             """,
             company.get("id"),
             f"%{company.get('name')}%",
-            hs_code,
+            hs_prefix_pattern,
             like,
         )
         result = row["port"] if row else None
@@ -1412,16 +1621,18 @@ class LinkPredictor:
             if not hs_code:
                 return 0.0
         if hs_code:
+            # Use first 4 digits of HS code for prefix matching
+            hs_prefix = hs_code[:4] if len(hs_code) >= 4 else hs_code
             rows = await self.db.fetch(
                 """
                 SELECT COALESCE(unit_price_usd, unit_price) AS price
                 FROM trade_records
-                WHERE hs_code = $1
+                WHERE hs_code LIKE $1
                   AND COALESCE(unit_price_usd, unit_price) IS NOT NULL
                 ORDER BY COALESCE(sb_date, reg_date) DESC
                 LIMIT 24
                 """,
-                hs_code,
+                f"{hs_prefix}%",
             )
         else:
             cutoff = datetime.utcnow().date() - timedelta(days=365 * 3)
@@ -1444,6 +1655,64 @@ class LinkPredictor:
             return round(volatility, 2)
         llm_value = await self._llm_price_fluctuation(commodity)
         return round(llm_value, 2)
+
+    async def _predict_company_price_fluctuation(
+        self,
+        company: Dict[str, Any],
+        commodity: str,
+        hs_code: Optional[str],
+        role: str,
+    ) -> float:
+        """
+        Estimate next-month price fluctuation for a specific company and commodity.
+        Falls back to commodity-level fluctuation when company-level history is sparse.
+        """
+        if not self.db:
+            return 0.0
+
+        cache_key = self._metric_cache_key(company, commodity, hs_code, role)
+        if cache_key is not None and cache_key in self._price_fluctuation_cache:
+            return self._price_fluctuation_cache[cache_key]
+
+        if role == "buyer":
+            condition = """
+                (importer_id = $1 OR importer_name ILIKE $2 OR consignee_id = $1 OR consignee_name ILIKE $2)
+            """
+        else:
+            condition = """
+                (exporter_id = $1 OR exporter_name ILIKE $2 OR supplier_id = $1 OR supplier_name ILIKE $2)
+            """
+
+        like = f"%{commodity}%"
+        hs_prefix_pattern = (
+            f"{hs_code[:4]}%" if hs_code and len(hs_code) >= 4 else (f"{hs_code}%" if hs_code else None)
+        )
+
+        rows = await self.db.fetch(
+            f"""
+            SELECT COALESCE(unit_price_usd, unit_price) AS price
+            FROM trade_records
+            WHERE {condition}
+              AND (hs_code LIKE $3 OR product_description ILIKE $4 OR item_description ILIKE $4)
+              AND COALESCE(unit_price_usd, unit_price) IS NOT NULL
+            ORDER BY COALESCE(sb_date, reg_date) DESC
+            LIMIT 24
+            """,
+            company.get("id"),
+            f"%{company.get('name')}%",
+            hs_prefix_pattern,
+            like,
+        )
+
+        prices = [float(r["price"]) for r in rows if r["price"] is not None]
+        if len(prices) >= 4:
+            value = round(calculate_volatility(prices, period=12), 2)
+        else:
+            value = await self._predict_price_fluctuation(commodity, hs_code)
+
+        if cache_key is not None:
+            self._price_fluctuation_cache[cache_key] = value
+        return value
 
     async def _llm_price_fluctuation(self, commodity: str) -> float:
         try:

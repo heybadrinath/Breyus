@@ -6,11 +6,14 @@ import {
     updateCompanyProfile,
     KycDocument,
     KycDocumentType,
+    UploadableKycDocumentType,
     KYC_DOCUMENT_TYPE_LABELS,
     getKycStatus,
+    getCisStatus,
     uploadKycDocument,
     deleteKycDocument,
-    KycStatus
+    KycStatus,
+    CisStatus
 } from "../../services/company.service";
 
 interface TradeDetailsTabProps {
@@ -18,13 +21,17 @@ interface TradeDetailsTabProps {
     onUpdate: (profile: CompanyProfile) => void;
 }
 
-const DOCUMENT_TYPE_OPTIONS: { value: KycDocumentType; label: string }[] = [
-    { value: 'cis', label: 'CIS (Customer Information Sheet)' },
-    { value: 'passport', label: 'Passport' },
-    { value: 'tax_certificate', label: 'Tax Certificate' },
-    { value: 'business_registration', label: 'Business Registration' },
-    { value: 'other', label: 'Other' },
+// Document types available for upload (excludes legacy types)
+const DOCUMENT_TYPE_OPTIONS: { value: UploadableKycDocumentType; label: string; description?: string }[] = [
+    { value: 'cis', label: 'CIS (Customer Information Sheet)', description: 'Only one CIS document allowed' },
+    { value: 'product_catalog', label: 'Product Catalog', description: 'Requires CIS to be uploaded first' },
+    { value: 'other', label: 'Other', description: 'Requires a description' },
 ];
+
+// Helper to get label for any document type (including legacy types)
+const getDocumentTypeLabel = (type: KycDocumentType): string => {
+    return KYC_DOCUMENT_TYPE_LABELS[type] || type;
+};
 
 const StatusBadge: React.FC<{ status: KycDocument['status'] }> = ({ status }) => {
     const config = {
@@ -51,14 +58,16 @@ const TradeDetailsTab: React.FC<TradeDetailsTabProps> = ({ profile, onUpdate }) 
 
     // KYC Documents state
     const [kycStatus, setKycStatus] = useState<KycStatus | null>(null);
+    const [cisStatus, setCisStatus] = useState<CisStatus | null>(null);
     const [isLoadingKyc, setIsLoadingKyc] = useState(true);
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
 
     // Upload form state
-    const [uploadDocType, setUploadDocType] = useState<KycDocumentType>('cis');
+    const [uploadDocType, setUploadDocType] = useState<UploadableKycDocumentType>('cis');
     const [uploadCustomName, setUploadCustomName] = useState('');
+    const [uploadDescription, setUploadDescription] = useState('');
     const [uploadFile, setUploadFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,16 +76,36 @@ const TradeDetailsTab: React.FC<TradeDetailsTabProps> = ({ profile, onUpdate }) 
         agreedToTerms: profile?.tradeDetails?.agreedToTerms || false,
     });
 
-    // Load KYC status on mount
+    // Load KYC status and CIS status on mount
     useEffect(() => {
-        loadKycStatus();
+        loadKycData();
     }, []);
+
+    const loadKycData = async () => {
+        try {
+            setIsLoadingKyc(true);
+            const [kycStatusResult, cisStatusResult] = await Promise.all([
+                getKycStatus(),
+                getCisStatus()
+            ]);
+            setKycStatus(kycStatusResult);
+            setCisStatus(cisStatusResult);
+        } catch (err) {
+            console.error('Error loading KYC data:', err);
+        } finally {
+            setIsLoadingKyc(false);
+        }
+    };
 
     const loadKycStatus = async () => {
         try {
             setIsLoadingKyc(true);
-            const status = await getKycStatus();
-            setKycStatus(status);
+            const [kycStatusResult, cisStatusResult] = await Promise.all([
+                getKycStatus(),
+                getCisStatus()
+            ]);
+            setKycStatus(kycStatusResult);
+            setCisStatus(cisStatusResult);
         } catch (err) {
             console.error('Error loading KYC status:', err);
         } finally {
@@ -129,9 +158,30 @@ const TradeDetailsTab: React.FC<TradeDetailsTabProps> = ({ profile, onUpdate }) 
         }
     };
 
-    const openUploadModal = () => {
-        setUploadDocType('cis');
+    const openUploadModal = async () => {
+        // Refresh CIS status to ensure we have the latest data
+        try {
+            const freshCisStatus = await getCisStatus();
+            setCisStatus(freshCisStatus);
+
+            // Default to CIS if can upload, otherwise product_catalog, otherwise other
+            let defaultType: UploadableKycDocumentType = 'cis';
+            if (!freshCisStatus.canUploadCis) {
+                defaultType = freshCisStatus.hasCis ? 'product_catalog' : 'other';
+            }
+            setUploadDocType(defaultType);
+        } catch (err) {
+            console.error('Error refreshing CIS status:', err);
+            // Fall back to current state
+            let defaultType: UploadableKycDocumentType = 'cis';
+            if (cisStatus && !cisStatus.canUploadCis) {
+                defaultType = cisStatus.hasCis ? 'product_catalog' : 'other';
+            }
+            setUploadDocType(defaultType);
+        }
+
         setUploadCustomName('');
+        setUploadDescription('');
         setUploadFile(null);
         setShowUploadModal(true);
     };
@@ -154,10 +204,21 @@ const TradeDetailsTab: React.FC<TradeDetailsTabProps> = ({ profile, onUpdate }) 
             return;
         }
 
+        // Validate description for "other" type
+        if (uploadDocType === 'other' && (!uploadDescription.trim() || uploadDescription.trim().length < 5)) {
+            setError('Please provide a description for the document type (at least 5 characters)');
+            return;
+        }
+
         try {
             setIsUploading(true);
             setError(null);
-            await uploadKycDocument(uploadFile, uploadDocType, uploadCustomName.trim());
+            await uploadKycDocument(
+                uploadFile,
+                uploadDocType,
+                uploadCustomName.trim(),
+                uploadDocType === 'other' ? uploadDescription.trim() : undefined
+            );
             setSuccessMessage('Document uploaded successfully');
             setShowUploadModal(false);
             await loadKycStatus();
@@ -369,56 +430,68 @@ const TradeDetailsTab: React.FC<TradeDetailsTabProps> = ({ profile, onUpdate }) 
 
                         {/* Document List */}
                         <div className="divide-y divide-gray-100">
-                            {kycStatus.documents.map((doc) => (
-                                <div key={doc._id} className="py-4 first:pt-0 last:pb-0">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-start gap-3">
-                                            <div className="p-2 bg-gray-100 rounded-lg">
-                                                <FileText className="h-5 w-5 text-gray-600" />
+                            {kycStatus.documents.map((doc) => {
+                                // CIS can be deleted regardless of status
+                                // Non-CIS documents can only be deleted if not approved
+                                const canDelete = doc.type === 'cis' || doc.status !== 'approved';
+
+                                return (
+                                    <div key={doc._id} className="py-4 first:pt-0 last:pb-0">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex items-start gap-3">
+                                                <div className="p-2 bg-gray-100 rounded-lg">
+                                                    <FileText className="h-5 w-5 text-gray-600" />
+                                                </div>
+                                                <div>
+                                                    <p className="font-medium text-gray-900">{doc.customName}</p>
+                                                    <p className="text-sm text-gray-500">
+                                                        {getDocumentTypeLabel(doc.type)} • {formatFileSize(doc.size)} • Uploaded {formatDate(doc.uploadedAt)}
+                                                    </p>
+                                                    {/* Show description for 'other' type documents */}
+                                                    {doc.type === 'other' && doc.description && (
+                                                        <p className="text-sm text-gray-600 mt-1 italic">
+                                                            "{doc.description}"
+                                                        </p>
+                                                    )}
+                                                    {doc.status === 'rejected' && doc.reviewNotes && (
+                                                        <div className="mt-2 p-2 bg-red-50 rounded text-sm text-red-700">
+                                                            <strong>Rejection reason:</strong> {doc.reviewNotes}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="font-medium text-gray-900">{doc.customName}</p>
-                                                <p className="text-sm text-gray-500">
-                                                    {KYC_DOCUMENT_TYPE_LABELS[doc.type]} • {formatFileSize(doc.size)} • Uploaded {formatDate(doc.uploadedAt)}
-                                                </p>
-                                                {doc.status === 'rejected' && doc.reviewNotes && (
-                                                    <div className="mt-2 p-2 bg-red-50 rounded text-sm text-red-700">
-                                                        <strong>Rejection reason:</strong> {doc.reviewNotes}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <StatusBadge status={doc.status} />
-                                            <div className="flex gap-1">
-                                                <a
-                                                    href={getDocumentUrl(doc.path)}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
-                                                    title="View document"
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </a>
-                                                {doc.status !== 'approved' && (
-                                                    <button
-                                                        onClick={() => handleDeleteDocument(doc._id)}
-                                                        disabled={deletingDocId === doc._id}
-                                                        className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded disabled:opacity-50"
-                                                        title="Delete document"
+                                            <div className="flex items-center gap-3">
+                                                <StatusBadge status={doc.status} />
+                                                <div className="flex gap-1">
+                                                    <a
+                                                        href={getDocumentUrl(doc.path)}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                                        title="View document"
                                                     >
-                                                        {deletingDocId === doc._id ? (
-                                                            <Loader2 className="animate-spin h-4 w-4" />
-                                                        ) : (
-                                                            <Trash2 className="h-4 w-4" />
-                                                        )}
-                                                    </button>
-                                                )}
+                                                        <Eye className="h-4 w-4" />
+                                                    </a>
+                                                    {canDelete && (
+                                                        <button
+                                                            onClick={() => handleDeleteDocument(doc._id)}
+                                                            disabled={deletingDocId === doc._id}
+                                                            className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded disabled:opacity-50"
+                                                            title={doc.type === 'cis' ? "Delete CIS (you can re-upload)" : "Delete document"}
+                                                        >
+                                                            {deletingDocId === doc._id ? (
+                                                                <Loader2 className="animate-spin h-4 w-4" />
+                                                            ) : (
+                                                                <Trash2 className="h-4 w-4" />
+                                                            )}
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 ) : (
@@ -456,17 +529,59 @@ const TradeDetailsTab: React.FC<TradeDetailsTabProps> = ({ profile, onUpdate }) 
                                 <div className="relative">
                                     <select
                                         value={uploadDocType}
-                                        onChange={(e) => setUploadDocType(e.target.value as KycDocumentType)}
+                                        onChange={(e) => {
+                                            setUploadDocType(e.target.value as UploadableKycDocumentType);
+                                            // Clear description when changing away from "other"
+                                            if (e.target.value !== 'other') {
+                                                setUploadDescription('');
+                                            }
+                                        }}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
                                     >
-                                        {DOCUMENT_TYPE_OPTIONS.map((option) => (
-                                            <option key={option.value} value={option.value}>
-                                                {option.label}
-                                            </option>
-                                        ))}
+                                        {DOCUMENT_TYPE_OPTIONS.map((option) => {
+                                            // Determine if option should be disabled
+                                            let isDisabled = false;
+                                            let disabledReason = '';
+
+                                            if (option.value === 'cis' && cisStatus) {
+                                                if (cisStatus.hasCis && !cisStatus.canUploadCis) {
+                                                    isDisabled = true;
+                                                    disabledReason = ' (already uploaded)';
+                                                }
+                                            } else if (option.value === 'product_catalog' && cisStatus) {
+                                                if (!cisStatus.hasCis) {
+                                                    isDisabled = true;
+                                                    disabledReason = ' (upload CIS first)';
+                                                }
+                                            }
+
+                                            return (
+                                                <option
+                                                    key={option.value}
+                                                    value={option.value}
+                                                    disabled={isDisabled}
+                                                >
+                                                    {option.label}{disabledReason}
+                                                </option>
+                                            );
+                                        })}
                                     </select>
                                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                                 </div>
+
+                                {/* Warning/Info messages based on selected type */}
+                                {uploadDocType === 'cis' && cisStatus?.reason && cisStatus.canUploadCis && (
+                                    <p className="mt-2 text-sm text-amber-600 flex items-center gap-1">
+                                        <AlertCircle className="h-4 w-4" />
+                                        {cisStatus.reason}
+                                    </p>
+                                )}
+                                {uploadDocType === 'cis' && cisStatus?.hasCis && !cisStatus.canUploadCis && (
+                                    <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                                        <AlertCircle className="h-4 w-4" />
+                                        {cisStatus.reason || 'A CIS document already exists. Delete it first to upload a new one.'}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Custom Name */}
@@ -482,6 +597,25 @@ const TradeDetailsTab: React.FC<TradeDetailsTabProps> = ({ profile, onUpdate }) 
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 />
                             </div>
+
+                            {/* Description (required for "other" type) */}
+                            {uploadDocType === 'other' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Description <span className="text-red-500">*</span>
+                                    </label>
+                                    <textarea
+                                        value={uploadDescription}
+                                        onChange={(e) => setUploadDescription(e.target.value)}
+                                        placeholder="Please describe what this document is and why you're uploading it (min 5 characters)"
+                                        rows={3}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        {uploadDescription.trim().length}/5 characters minimum
+                                    </p>
+                                </div>
+                            )}
 
                             {/* File Upload */}
                             <div>
@@ -529,7 +663,14 @@ const TradeDetailsTab: React.FC<TradeDetailsTabProps> = ({ profile, onUpdate }) 
                             </button>
                             <button
                                 onClick={handleUpload}
-                                disabled={isUploading || !uploadFile || !uploadCustomName.trim()}
+                                disabled={
+                                    isUploading ||
+                                    !uploadFile ||
+                                    !uploadCustomName.trim() ||
+                                    (uploadDocType === 'cis' && cisStatus?.hasCis && !cisStatus?.canUploadCis) ||
+                                    (uploadDocType === 'product_catalog' && !cisStatus?.hasCis) ||
+                                    (uploadDocType === 'other' && uploadDescription.trim().length < 5)
+                                }
                                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isUploading ? (

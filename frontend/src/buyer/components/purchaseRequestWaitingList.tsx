@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MessageCircle, FlaskConical, Eye, Loader2, FileText } from "lucide-react";
-import { getUserTrades, rejectTrade, Trade, uploadICPO } from "../../services/trade.service";
+import { MessageCircle, FlaskConical, Eye, Loader2, FileText, Download } from "lucide-react";
+import { getUserTrades, Trade, uploadICPO, downloadPurchaseRequest } from "../../services/trade.service";
 import DocumentUploadModal from "../../components/DocumentUploadModal";
 import ViewDocumentModal from "../../components/ViewDocumentModal";
 import { createConversation } from "../../services/inbox.service";
@@ -10,17 +10,9 @@ import QueryModal from "../../components/QueryModal";
 import ReviewTermsModal from "../../components/ReviewTermsModal";
 import TradeCancellationModal from "../../components/TradeCancellationModal";
 import { useNotifications } from "../../contexts/NotificationContext";
+import { getImageUrl } from "../../utils/imageUtils";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
-
-// Helper function to construct proper image URL
-const getImageUrl = (imagePath: string | undefined) => {
-    if (!imagePath) return 'https://via.placeholder.com/128?text=No+Image';
-    if (imagePath.startsWith('http')) return imagePath;
-    // Ensure path starts with /
-    const path = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
-    return `${BACKEND_URL}${path}`;
-};
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
 interface DocumentInfo {
     filePath: string;
@@ -39,7 +31,7 @@ interface TradeWithProduct extends Omit<Trade, 'purchaseRequestStatus' | 'negoti
         currency: string;
         productImages: string[];
         description?: string;
-        productTestReports?: string[];
+        testReports?: string[];
     };
     purchaseRequestStatus?: string;
     negotiationStatus?: string;
@@ -50,6 +42,28 @@ interface TradeWithProduct extends Omit<Trade, 'purchaseRequestStatus' | 'negoti
 
 // Phases that should NOT appear in PR Status (they have progressed beyond ICPO)
 const ADVANCED_PHASES = ['SPA', 'PAYMENT', 'BOL', 'COMPLETED'];
+
+// ========================
+// PHASE 2 REFACTORING: Cancelled Trade Visibility
+// ========================
+// Show cancelled trades for 2 days after cancellation, then hide them
+const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
+
+const shouldShowCancelledTrade = (trade: TradeWithProduct): boolean => {
+    if (trade.tradePhase !== 'CANCELLED' && trade.negotiationStatus !== 'cancelled') {
+        return true; // Not cancelled, always show
+    }
+
+    // Check if trade was cancelled within the last 2 days
+    const cancelledAt = (trade as any).cancelledAt || (trade as any).autoCancelledAt;
+    if (!cancelledAt) {
+        return true; // No cancellation date, show it
+    }
+
+    const cancelledDate = new Date(cancelledAt);
+    const twoDaysAgo = new Date(Date.now() - TWO_DAYS_MS);
+    return cancelledDate > twoDaysAgo;
+};
 
 // Trade Status Step Component
 const TradeStatusStep = ({ label, status, isLast }: { label: string; status: 'completed' | 'active' | 'pending'; isLast?: boolean }) => {
@@ -122,6 +136,11 @@ const getTradeSteps = (trade: TradeWithProduct): { label: string; status: StepSt
     ];
 };
 
+// Helper to check if trade is cancelled
+const isTradeCancelled = (trade: TradeWithProduct): boolean => {
+    return trade.tradePhase === 'CANCELLED' || trade.negotiationStatus === 'cancelled';
+};
+
 // Waiting List Item - matches Figma design
 const WaitingListItem = ({
     trade,
@@ -132,7 +151,9 @@ const WaitingListItem = ({
     onAskQueries,
     onChatWithSeller,
     onViewQualityReport,
-    isChatting
+    isChatting,
+    onDownloadPR,
+    isDownloadingPR
 }: {
     trade: TradeWithProduct;
     onCancel: (tradeId: string) => void;
@@ -143,38 +164,66 @@ const WaitingListItem = ({
     onChatWithSeller: (trade: TradeWithProduct) => void;
     onViewQualityReport: (trade: TradeWithProduct) => void;
     isChatting: boolean;
+    onDownloadPR: (tradeId: string) => void;
+    isDownloadingPR: boolean;
 }) => {
-    const productPrice = parseFloat(trade.product?.price || '0');
-    const finalPrice = parseFloat(trade.buyerOfferedPrice || trade.product?.price || '0');
+    const productPrice = parseFloat(String(trade.product?.price || '0'));
+    const finalPrice = parseFloat(String(trade.buyerOfferedPrice || trade.product?.price || '0'));
     const discount = productPrice > 0 ? Math.round(((productPrice - finalPrice) / productPrice) * 100) : 0;
     const steps = getTradeSteps(trade);
 
     const imageUrl = getImageUrl(trade.product?.productImages?.[0]);
 
     const showRespondButton = trade.negotiationStatus === 'countered';
+    const isCancelled = isTradeCancelled(trade);
 
     return (
-        <div className="border rounded-lg p-4 bg-white">
+        <div className={`border rounded-lg p-4 bg-white ${isCancelled ? 'border-red-200 bg-red-50/30' : ''}`}>
+            {/* Cancelled Banner */}
+            {isCancelled && (
+                <div className="mb-4 p-3 bg-red-100 border border-red-200 rounded-lg flex items-center gap-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    <span className="text-sm font-medium text-red-700">This trade has been cancelled</span>
+                    {(trade as any).cancellationReason && (
+                        <span className="text-xs text-red-600 ml-2">
+                            Reason: {(trade as any).cancellationReason}
+                        </span>
+                    )}
+                </div>
+            )}
+
             <div className="flex gap-4">
                 {/* Trade Status - Left */}
                 <div className="flex-shrink-0 w-40 border-r pr-4">
                     <h4 className="text-xs font-semibold text-gray-700 mb-3">Trade Status:</h4>
-                    {steps.map((step, index) => (
-                        <TradeStatusStep
-                            key={index}
-                            label={step.label}
-                            status={step.status}
-                            isLast={index === steps.length - 1}
-                        />
-                    ))}
+                    {isCancelled ? (
+                        <div className="flex items-start">
+                            <div className="flex flex-col items-center mr-3">
+                                <div className="w-3 h-3 rounded-full border-2 bg-red-500 border-red-500" />
+                            </div>
+                            <div className="text-xs text-red-600 font-semibold">
+                                Cancelled
+                                <span className="block text-[10px] text-gray-400">Trade terminated</span>
+                            </div>
+                        </div>
+                    ) : (
+                        steps.map((step, index) => (
+                            <TradeStatusStep
+                                key={index}
+                                label={step.label}
+                                status={step.status}
+                                isLast={index === steps.length - 1}
+                            />
+                        ))
+                    )}
                 </div>
 
                 {/* Product Info - Center */}
                 <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900">{trade.product?.name || 'Unknown Product'}</h3>
+                    <h3 className={`font-bold ${isCancelled ? 'text-gray-500' : 'text-gray-900'}`}>{trade.product?.name || 'Unknown Product'}</h3>
                     <div className="flex items-baseline gap-2 mt-1">
-                        <span className="text-lg font-bold">{finalPrice.toLocaleString()} {trade.product?.currency || 'INR'}</span>
-                        {discount > 0 && (
+                        <span className={`text-lg font-bold ${isCancelled ? 'text-gray-400 line-through' : ''}`}>{finalPrice.toLocaleString()} {trade.product?.currency || 'INR'}</span>
+                        {discount > 0 && !isCancelled && (
                             <>
                                 <span className="text-sm text-gray-400 line-through">{productPrice.toLocaleString()} {trade.product?.currency || 'INR'}</span>
                                 <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded font-medium">{discount}% Off</span>
@@ -199,24 +248,40 @@ const WaitingListItem = ({
                         >
                             <Eye size={14} /> Submitted Offer
                         </button>
+                        {!isCancelled && (
+                            <>
+                                <button
+                                    onClick={() => onAskQueries(trade)}
+                                    className="border rounded px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 flex items-center gap-1"
+                                >
+                                    <MessageCircle size={14} /> Ask Queries
+                                </button>
+                                <button
+                                    onClick={() => onViewQualityReport(trade)}
+                                    className="border rounded px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 flex items-center gap-1"
+                                >
+                                    <FlaskConical size={14} /> Product Quality Report
+                                </button>
+                            </>
+                        )}
                         <button
-                            onClick={() => onAskQueries(trade)}
-                            className="border rounded px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 flex items-center gap-1"
+                            onClick={() => onDownloadPR(trade._id)}
+                            disabled={isDownloadingPR}
+                            className="border rounded px-3 py-1.5 text-xs text-blue-600 hover:bg-blue-50 flex items-center gap-1 disabled:opacity-50"
                         >
-                            <MessageCircle size={14} /> Ask Queries
-                        </button>
-                        <button
-                            onClick={() => onViewQualityReport(trade)}
-                            className="border rounded px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 flex items-center gap-1"
-                        >
-                            <FlaskConical size={14} /> Product Quality Report
+                            {isDownloadingPR ? (
+                                <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                                <Download size={14} />
+                            )}
+                            Download PR
                         </button>
                     </div>
                 </div>
 
                 {/* Product Image - Right */}
                 <div className="flex-shrink-0">
-                    <div className="w-32 h-32 rounded-lg overflow-hidden bg-gray-100">
+                    <div className={`w-32 h-32 rounded-lg overflow-hidden bg-gray-100 ${isCancelled ? 'opacity-50' : ''}`}>
                         <img
                             alt={trade.product?.name || 'Product'}
                             className="w-full h-full object-cover"
@@ -229,63 +294,67 @@ const WaitingListItem = ({
                 </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                {showRespondButton ? (
-                    <>
-                        <button
-                            onClick={() => onCancel(trade._id)}
-                            disabled={isProcessing}
-                            className="px-6 py-2 bg-red-500 text-white text-sm rounded hover:bg-red-600 disabled:opacity-50"
-                        >
-                            {isProcessing ? 'Processing...' : 'Reject Trade'}
-                        </button>
-                        <button
-                            onClick={() => onNavigateToNegotiation(trade._id)}
-                            className="px-6 py-2 bg-black text-white text-sm rounded hover:bg-gray-800"
-                        >
-                            Respond to Counter
-                        </button>
-                    </>
-                ) : (
-                    <>
-                        <button
-                            onClick={() => onCancel(trade._id)}
-                            disabled={isProcessing}
-                            className="px-6 py-2 bg-red-500 text-white text-sm rounded hover:bg-red-600 disabled:opacity-50"
-                        >
-                            {isProcessing ? 'Processing...' : 'Cancel PR'}
-                        </button>
-                        <button
-                            onClick={() => onChatWithSeller(trade)}
-                            disabled={isChatting}
-                            className="px-6 py-2 border text-sm rounded hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50"
-                        >
-                            {isChatting ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                                <MessageCircle size={16} />
-                            )}
-                            Chat with seller
-                        </button>
-                    </>
-                )}
-            </div>
+            {/* Action Buttons - Hidden for cancelled trades */}
+            {!isCancelled && (
+                <div className="flex justify-between items-center mt-4 pt-4 border-t">
+                    {showRespondButton ? (
+                        <>
+                            <button
+                                onClick={() => onCancel(trade._id)}
+                                disabled={isProcessing}
+                                className="px-6 py-2 bg-red-500 text-white text-sm rounded hover:bg-red-600 disabled:opacity-50"
+                            >
+                                {isProcessing ? 'Processing...' : 'Reject Trade'}
+                            </button>
+                            <button
+                                onClick={() => onNavigateToNegotiation(trade._id)}
+                                className="px-6 py-2 bg-black text-white text-sm rounded hover:bg-gray-800"
+                            >
+                                Respond to Counter
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button
+                                onClick={() => onCancel(trade._id)}
+                                disabled={isProcessing}
+                                className="px-6 py-2 bg-red-500 text-white text-sm rounded hover:bg-red-600 disabled:opacity-50"
+                            >
+                                {isProcessing ? 'Processing...' : 'Cancel PR'}
+                            </button>
+                            <button
+                                onClick={() => onChatWithSeller(trade)}
+                                disabled={isChatting}
+                                className="px-6 py-2 border text-sm rounded hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {isChatting ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <MessageCircle size={16} />
+                                )}
+                                Chat with seller
+                            </button>
+                        </>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
 
 // Accepted Request Item - matches Figma design (right panel)
-const AcceptedListItem = ({ trade, onViewSCO, onReviewFinalTerms, onRejectTrade, onProceedToPO, isProcessing }: {
+const AcceptedListItem = ({ trade, onViewSCO, onReviewFinalTerms, onRejectTrade, onProceedToPO, isProcessing, onDownloadPR, isDownloadingPR }: {
     trade: TradeWithProduct;
     onViewSCO: (trade: TradeWithProduct) => void;
     onReviewFinalTerms: (tradeId: string) => void;
     onRejectTrade: (tradeId: string) => void;
     onProceedToPO: (tradeId: string) => void;
     isProcessing: boolean;
+    onDownloadPR: (tradeId: string) => void;
+    isDownloadingPR: boolean;
 }) => {
-    const finalPrice = parseFloat(trade.buyerOfferedPrice || trade.product?.price || '0');
-    const productPrice = parseFloat(trade.product?.price || '0');
+    const finalPrice = parseFloat(String(trade.buyerOfferedPrice || trade.product?.price || '0'));
+    const productPrice = parseFloat(String(trade.product?.price || '0'));
     const discount = productPrice > 0 ? Math.round(((productPrice - finalPrice) / productPrice) * 100) : 0;
     const imageUrl = getImageUrl(trade.product?.productImages?.[0]);
 
@@ -358,6 +427,18 @@ const AcceptedListItem = ({ trade, onViewSCO, onReviewFinalTerms, onRejectTrade,
                         <Eye size={12} /> Review Final Terms
                     </button>
                 </div>
+                <button
+                    onClick={() => onDownloadPR(trade._id)}
+                    disabled={isDownloadingPR}
+                    className="w-full mt-2 border rounded px-2 py-1.5 text-xs text-blue-600 hover:bg-blue-50 flex items-center justify-center gap-1 disabled:opacity-50"
+                >
+                    {isDownloadingPR ? (
+                        <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                        <Download size={12} />
+                    )}
+                    Download PR
+                </button>
             </div>
 
             {/* Action Buttons */}
@@ -367,7 +448,7 @@ const AcceptedListItem = ({ trade, onViewSCO, onReviewFinalTerms, onRejectTrade,
                     disabled={isProcessing}
                     className="flex-1 px-3 py-2 bg-red-500 text-white text-xs rounded hover:bg-red-600 disabled:opacity-50"
                 >
-                    {isProcessing ? 'Processing...' : 'Reject Trade'}
+                    {isProcessing ? 'Processing...' : 'Cancel Trade'}
                 </button>
                 <button
                     onClick={() => onProceedToPO(trade._id)}
@@ -419,6 +500,21 @@ export const PurchaseRequestWaitingList = () => {
     // SCO View Document Modal state
     const [viewDocModalOpen, setViewDocModalOpen] = useState(false);
     const [viewDocInfo, setViewDocInfo] = useState<any>(null);
+
+    // PR Download state
+    const [downloadingPRId, setDownloadingPRId] = useState<string | null>(null);
+
+    const handleDownloadPR = async (tradeId: string) => {
+        setDownloadingPRId(tradeId);
+        try {
+            await downloadPurchaseRequest(tradeId);
+        } catch (err) {
+            console.error('Failed to download purchase request:', err);
+            showToast('Failed to download purchase request. Please try again.', 'error');
+        } finally {
+            setDownloadingPRId(null);
+        }
+    };
 
     const handleViewOffer = (tradeId: string) => {
         setSelectedTradeId(tradeId);
@@ -500,7 +596,7 @@ export const PurchaseRequestWaitingList = () => {
     };
 
     const handleViewQualityReport = (trade: TradeWithProduct) => {
-        const testReports = trade.product.productTestReports;
+        const testReports = trade.product.testReports;
         if (testReports && testReports.length > 0) {
             // Open first report in new tab
             const reportUrl = testReports[0].startsWith('http')
@@ -564,20 +660,13 @@ export const PurchaseRequestWaitingList = () => {
         await fetchTrades();
     };
 
-    const handleRejectAcceptedTrade = async (tradeId: string) => {
-        if (!window.confirm('Are you sure you want to reject this accepted trade?')) {
-            return;
-        }
-
-        try {
-            setProcessingId(tradeId);
-            await rejectTrade(tradeId, 'Rejected by buyer after acceptance');
-            await fetchTrades();
-        } catch (err) {
-            console.error('Failed to reject trade:', err);
-            showToast('Failed to reject trade. Please try again.', 'error');
-        } finally {
-            setProcessingId(null);
+    // Cancel an accepted trade - uses the same cancellation modal as pending trades
+    // but the trade phase will determine the rules (SCO phase requires reason)
+    const handleCancelAcceptedTrade = (tradeId: string) => {
+        const trade = acceptedTrades.find(t => t._id === tradeId);
+        if (trade) {
+            setCancelModalTrade(trade);
+            setShowCancelModal(true);
         }
     };
 
@@ -605,16 +694,33 @@ export const PurchaseRequestWaitingList = () => {
 
     // Filter trades by status
     // Only show trades that are still in PR/negotiation phase (not advanced to SPA+)
-    const pendingTrades = trades.filter(t =>
-        t.negotiationStatus !== 'accepted' &&
-        t.negotiationStatus !== 'rejected' &&
-        t.purchaseRequestStatus !== 'rejected' &&
-        !ADVANCED_PHASES.includes(t.tradePhase || '')
-    );
+    // PHASE 2 REFACTORING: Apply cancelled trade visibility filter
+    // Include recently cancelled trades (within 2 days) in the pending section
+    const pendingTrades = trades.filter(t => {
+        // First check 2-day visibility for cancelled trades
+        if (!shouldShowCancelledTrade(t)) return false;
+
+        // Exclude advanced phases
+        if (ADVANCED_PHASES.includes(t.tradePhase || '')) return false;
+
+        // Include recently cancelled trades
+        if (t.tradePhase === 'CANCELLED' || t.negotiationStatus === 'cancelled') {
+            return true; // Show cancelled trades in pending section
+        }
+
+        // Include normal pending trades
+        return t.negotiationStatus !== 'accepted' &&
+               t.negotiationStatus !== 'rejected' &&
+               t.purchaseRequestStatus !== 'rejected';
+    });
 
     // Only show accepted trades that haven't advanced past ICPO phase
+    // PHASE 2 REFACTORING: Apply cancelled trade visibility filter
+    // Exclude cancelled trades from accepted section
     const acceptedTrades = trades.filter(t =>
+        shouldShowCancelledTrade(t) &&
         t.negotiationStatus === 'accepted' &&
+        t.tradePhase !== 'CANCELLED' &&
         !ADVANCED_PHASES.includes(t.tradePhase || '')
     );
 
@@ -662,6 +768,8 @@ export const PurchaseRequestWaitingList = () => {
                                 onChatWithSeller={handleChatWithSeller}
                                 onViewQualityReport={handleViewQualityReport}
                                 isChatting={chattingTradeIds.has(trade._id)}
+                                onDownloadPR={handleDownloadPR}
+                                isDownloadingPR={downloadingPRId === trade._id}
                             />
                         ))}
                     </div>
@@ -683,9 +791,11 @@ export const PurchaseRequestWaitingList = () => {
                                 trade={trade}
                                 onViewSCO={handleViewSCO}
                                 onReviewFinalTerms={handleReviewFinalTerms}
-                                onRejectTrade={handleRejectAcceptedTrade}
+                                onRejectTrade={handleCancelAcceptedTrade}
                                 onProceedToPO={handleProceedToPO}
                                 isProcessing={processingId === trade._id}
+                                onDownloadPR={handleDownloadPR}
+                                isDownloadingPR={downloadingPRId === trade._id}
                             />
                         ))}
                     </div>

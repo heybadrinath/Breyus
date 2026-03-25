@@ -164,15 +164,15 @@ export const AddProduct = () => {
         });
 
         setPriceData({
-          price: data.price || '',
+          price: data.price != null ? String(data.price) : '',
           currency: data.currency || 'INR',
           sku: data.sku || '',
           onSale: data.onSale || false,
-          discount: data.discount || '',
-          salePrice: data.salePrice || '',
-          costOfGoods: data.costOfGoods || '',
-          profit: data.profit || '',
-          pricing: data.pricing || '',
+          discount: data.discount != null ? String(data.discount) : '',
+          salePrice: data.salePrice != null ? String(data.salePrice) : '',
+          costOfGoods: data.costOfGoods != null ? String(data.costOfGoods) : '',
+          profit: data.profit != null ? String(data.profit) : '',
+          pricing: data.pricing != null ? String(data.pricing) : '',
           margin: data.margin || '',
         });
 
@@ -384,11 +384,11 @@ export const AddProduct = () => {
         currency: priceData.currency,
         sku: priceData.sku,
         onSale: priceData.onSale,
-        discount: priceData.discount,
+        discount: priceData.discount ? String(priceData.discount).replace('%', '') : '',
         salePrice: priceData.salePrice,
         costOfGoods: priceData.costOfGoods,
         profit: priceData.profit,
-        margin: priceData.margin,
+        margin: priceData.margin ? String(priceData.margin).replace('%', '') : '',
 
         // Tags
         tags: tagsData.tags,
@@ -462,7 +462,8 @@ export const AddProduct = () => {
       case 4:
         return <AddProductTerms tradeTerms={tradeTerms} setTradeTerms={setTradeTerms} />
       case 5:
-        return <Incoterms incoterms={incotermsState} setIncoterms={setIncotermsState} />
+        // Users can only SELECT an Incoterm type, cost allocations are admin-controlled
+        return <Incoterms incoterms={incotermsState} setIncoterms={setIncotermsState} readOnly={true} />
       default:
         return null;
     }

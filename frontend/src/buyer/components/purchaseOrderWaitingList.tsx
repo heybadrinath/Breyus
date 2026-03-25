@@ -1,15 +1,34 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MessageCircle, FlaskConical, Eye, Loader2, X, Clock, CheckCircle, AlertCircle, Pen } from "lucide-react";
-import { getUserTrades, Trade, cancelTrade, rejectTrade, verifyDocument, uploadICPO } from "../../services/trade.service";
+import { MessageCircle, FlaskConical, Eye, Loader2, X, Clock, CheckCircle, AlertCircle, Pen, Download } from "lucide-react";
+import { getUserTrades, Trade, cancelTrade, rejectTrade, verifyDocument, uploadICPO, downloadPurchaseRequest, downloadPurchaseOrder } from "../../services/trade.service";
+import { createConversation, sendMessage } from "../../services/inbox.service";
 import ViewDocumentModal from "../../components/ViewDocumentModal";
 import DocumentUploadModal from "../../components/DocumentUploadModal";
 import ReviewTermsModal from "../../components/ReviewTermsModal";
 import QueryModal from "../../components/QueryModal";
 import TradeDetailsModal from "../../components/TradeDetailsModal";
 import { useNotifications } from "../../contexts/NotificationContext";
+import { getImageUrl } from "../../utils/imageUtils";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
+
+// ========================
+// PHASE 2 REFACTORING: Cancelled Trade Visibility
+// ========================
+// Show cancelled trades for 2 days after cancellation, then hide them
+const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
+
+const shouldShowCancelledTrade = (trade: any): boolean => {
+    if (trade.tradePhase !== 'CANCELLED' && trade.negotiationStatus !== 'cancelled') {
+        return true; // Not cancelled, always show
+    }
+    const cancelledAt = trade.cancelledAt || trade.autoCancelledAt;
+    if (!cancelledAt) return true;
+    const cancelledDate = new Date(cancelledAt);
+    const twoDaysAgo = new Date(Date.now() - TWO_DAYS_MS);
+    return cancelledDate > twoDaysAgo;
+};
 
 interface DocumentInfo {
     filePath: string;
@@ -48,12 +67,6 @@ interface TradeWithProduct extends Omit<Trade, 'purchaseOrderStatus' | 'purchase
     icpoSubmittedAt?: string;
 }
 
-const getImageUrl = (imagePath: string | undefined) => {
-    if (!imagePath) return 'https://via.placeholder.com/128?text=No+Image';
-    if (imagePath.startsWith('http')) return imagePath;
-    const path = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
-    return `${BACKEND_URL}${path}`;
-};
 
 // Trade Status Progress Component (Vertical) - Updated with accurate SCO/ICPO states
 const TradeStatusProgress = ({ trade }: { trade: TradeWithProduct }) => {
@@ -64,12 +77,55 @@ const TradeStatusProgress = ({ trade }: { trade: TradeWithProduct }) => {
     const icpoApproved = trade.icpoDocument?.status === 'approved';
     const icpoRejected = trade.icpoDocument?.status === 'rejected';
 
+    // PHASE 2: Get rejection tracking info
+    const getSCOTrackingInfo = () => {
+        const tracking = (trade as any).scoRejectionTracking;
+        if (!tracking) return null;
+        const rejectionCount = tracking.rejectionCount || 0;
+        const maxAttempts = tracking.maxAttempts || 2;
+        const remainingAttempts = maxAttempts - rejectionCount;
+        return { rejectionCount, maxAttempts, remainingAttempts, isLastAttempt: remainingAttempts === 1 };
+    };
+
+    const getICPOTrackingInfo = () => {
+        const tracking = (trade as any).icpoRejectionTracking;
+        if (!tracking) return null;
+        const rejectionCount = tracking.rejectionCount || 0;
+        const maxAttempts = tracking.maxAttempts || 2;
+        const remainingAttempts = maxAttempts - rejectionCount;
+        return { rejectionCount, maxAttempts, remainingAttempts, isLastAttempt: remainingAttempts === 1 };
+    };
+
     // Determine SCO step status and sublabel
     const getSCOStepInfo = () => {
         if (!hasSCO) return { sublabel: "Waiting for seller", status: 'current', color: 'text-yellow-600' };
-        if (scoRejected) return { sublabel: "Rejected - Awaiting re-upload", status: 'rejected', color: 'text-red-600' };
+        if (scoRejected) {
+            const tracking = getSCOTrackingInfo();
+            const attemptInfo = tracking
+                ? (tracking.isLastAttempt ? "⚠️ FINAL" : `(${tracking.rejectionCount + 1}/${tracking.maxAttempts})`)
+                : "";
+            return { sublabel: `Rejected ${attemptInfo} - Re-upload`, status: 'rejected', color: 'text-red-600' };
+        }
         if (scoApproved) return { sublabel: "Approved", status: 'completed', color: 'text-green-600' };
         return { sublabel: "Pending your review", status: 'pending', color: 'text-blue-600' };
+    };
+
+    // Determine ICPO step sublabel with tracking info
+    const getICPOSublabel = () => {
+        if (hasICPO) {
+            if (icpoApproved) return "Verified";
+            if (icpoRejected) {
+                const tracking = getICPOTrackingInfo();
+                const attemptInfo = tracking
+                    ? (tracking.isLastAttempt ? "⚠️ FINAL" : `(${tracking.rejectionCount + 1}/${tracking.maxAttempts})`)
+                    : "";
+                return `Rejected ${attemptInfo} - Re-upload`;
+            }
+            return "Sent - Awaiting verification";
+        }
+        if (scoApproved) return "Ready to upload";
+        if (hasSCO) return "Approve SCO first";
+        return "Waiting for SCO first";
     };
 
     const scoStep = getSCOStepInfo();
@@ -90,9 +146,7 @@ const TradeStatusProgress = ({ trade }: { trade: TradeWithProduct }) => {
             },
             {
                 label: "Your ICPO",
-                sublabel: hasICPO
-                    ? (icpoApproved ? "Verified" : icpoRejected ? "Rejected - Re-upload" : "Sent - Awaiting verification")
-                    : (scoApproved ? "Ready to upload" : hasSCO ? "Approve SCO first" : "Waiting for SCO first"),
+                sublabel: getICPOSublabel(),
                 status: hasICPO
                     ? (icpoApproved ? 'completed' : icpoRejected ? 'rejected' : 'pending')
                     : (scoApproved ? 'current' : 'pending'),
@@ -168,10 +222,18 @@ const PhaseMessageBanner = ({ trade }: { trade: TradeWithProduct }) => {
         textColor = "text-yellow-700";
         Icon = Clock;
     } else if (scoRejected) {
-        // SCO was rejected - waiting for seller to re-upload
-        message = "SCO was rejected. Waiting for seller to upload revised SCO.";
-        bgColor = "bg-red-50 border-red-200";
-        textColor = "text-red-700";
+        // SCO was rejected - waiting for seller to re-upload (with rejection tracking)
+        const tracking = (trade as any).scoRejectionTracking;
+        const rejectionCount = tracking?.rejectionCount || 0;
+        const maxAttempts = tracking?.maxAttempts || 2;
+        const remainingAttempts = maxAttempts - rejectionCount;
+        const isLastAttempt = remainingAttempts === 1;
+
+        message = isLastAttempt
+            ? `⚠️ SCO rejected (FINAL ATTEMPT for seller). Waiting for revised SCO - trade will auto-cancel if rejected again.`
+            : `SCO rejected (Attempt ${rejectionCount + 1}/${maxAttempts}). Waiting for seller to upload revised SCO.`;
+        bgColor = isLastAttempt ? "bg-orange-50 border-orange-300" : "bg-red-50 border-red-200";
+        textColor = isLastAttempt ? "text-orange-700" : "text-red-700";
         Icon = AlertCircle;
     } else if (!scoApproved) {
         // SCO exists but not yet approved - buyer needs to review
@@ -180,12 +242,24 @@ const PhaseMessageBanner = ({ trade }: { trade: TradeWithProduct }) => {
         textColor = "text-blue-700";
         Icon = CheckCircle;
     } else if (!hasICPO || icpoRejected) {
-        // SCO approved, now ICPO phase
-        message = icpoRejected
-            ? "Your ICPO was rejected. Please re-upload with corrections."
-            : "SCO Approved! Click PROCEED to upload your ICPO";
-        bgColor = icpoRejected ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200";
-        textColor = icpoRejected ? "text-red-700" : "text-green-700";
+        // SCO approved, now ICPO phase - with rejection tracking
+        const tracking = (trade as any).icpoRejectionTracking;
+        const rejectionCount = tracking?.rejectionCount || 0;
+        const maxAttempts = tracking?.maxAttempts || 2;
+        const remainingAttempts = maxAttempts - rejectionCount;
+        const isLastAttempt = remainingAttempts === 1;
+
+        if (icpoRejected) {
+            message = isLastAttempt
+                ? `⚠️ FINAL ATTEMPT! ICPO rejected. Re-upload carefully - trade will auto-cancel if rejected again.`
+                : `ICPO rejected (Attempt ${rejectionCount + 1}/${maxAttempts}). Please re-upload with corrections.`;
+            bgColor = isLastAttempt ? "bg-orange-50 border-orange-300" : "bg-red-50 border-red-200";
+            textColor = isLastAttempt ? "text-orange-700" : "text-red-700";
+        } else {
+            message = "SCO Approved! Click PROCEED to upload your ICPO";
+            bgColor = "bg-green-50 border-green-200";
+            textColor = "text-green-700";
+        }
         Icon = icpoRejected ? AlertCircle : CheckCircle;
     } else if (icpoApproved) {
         message = "ICPO Verified! Proceed to SPA phase";
@@ -217,7 +291,12 @@ const POWaitingListItem = ({
     onAskQueries,
     onViewSubmittedOffer,
     onViewProductQuality,
-    onChatWithSeller
+    onChatWithSeller,
+    onDownloadPR,
+    onDownloadPO,
+    isDownloadingPR,
+    isDownloadingPO,
+    isChattingWithSeller
 }: {
     trade: TradeWithProduct;
     onCancel: (tradeId: string) => void;
@@ -227,10 +306,15 @@ const POWaitingListItem = ({
     onAskQueries: (trade: TradeWithProduct) => void;
     onViewSubmittedOffer: (tradeId: string) => void;
     onViewProductQuality: (trade: TradeWithProduct) => void;
-    onChatWithSeller: (trade: TradeWithProduct) => void;
+    onChatWithSeller: (trade: TradeWithProduct) => Promise<void>;
+    onDownloadPR: (tradeId: string) => void;
+    onDownloadPO: (tradeId: string) => void;
+    isDownloadingPR: boolean;
+    isDownloadingPO: boolean;
+    isChattingWithSeller: boolean;
 }) => {
-    const productPrice = parseFloat(trade.product?.price || '0');
-    const finalPrice = parseFloat(trade.buyerOfferedPrice || trade.product?.price || '0');
+    const productPrice = parseFloat(String(trade.product?.price || '0'));
+    const finalPrice = parseFloat(String(trade.buyerOfferedPrice || trade.product?.price || '0'));
     const discount = productPrice > 0 ? Math.round(((productPrice - finalPrice) / productPrice) * 100) : 0;
     const imageUrl = getImageUrl(trade.product?.productImages?.[0]);
 
@@ -327,6 +411,18 @@ const POWaitingListItem = ({
                                                     : 'bg-yellow-500'
                                     }`} />
                                     SCO: {scoRejected ? 'Rejected' : scoApproved ? 'Approved' : hasSCO ? 'Pending Review' : 'Pending'}
+                                    {/* PHASE 2: Show SCO rejection tracking */}
+                                    {scoRejected && (() => {
+                                        const tracking = (trade as any).scoRejectionTracking;
+                                        const rejectionCount = tracking?.rejectionCount || 0;
+                                        const maxAttempts = tracking?.maxAttempts || 2;
+                                        const isLastAttempt = (maxAttempts - rejectionCount) === 1;
+                                        return (
+                                            <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${isLastAttempt ? 'bg-orange-200 text-orange-800' : 'bg-red-200 text-red-800'}`}>
+                                                {isLastAttempt ? '⚠️' : `${rejectionCount + 1}/${maxAttempts}`}
+                                            </span>
+                                        );
+                                    })()}
                                 </div>
 
                                 {/* ICPO Status Badge */}
@@ -341,6 +437,18 @@ const POWaitingListItem = ({
                                             : 'bg-gray-400'
                                     }`} />
                                     ICPO: {hasICPO ? (icpoRejected ? 'Rejected' : icpoApproved ? 'Verified' : 'Sent') : 'Not Uploaded'}
+                                    {/* PHASE 2: Show ICPO rejection tracking */}
+                                    {icpoRejected && (() => {
+                                        const tracking = (trade as any).icpoRejectionTracking;
+                                        const rejectionCount = tracking?.rejectionCount || 0;
+                                        const maxAttempts = tracking?.maxAttempts || 2;
+                                        const isLastAttempt = (maxAttempts - rejectionCount) === 1;
+                                        return (
+                                            <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${isLastAttempt ? 'bg-orange-200 text-orange-800' : 'bg-red-200 text-red-800'}`}>
+                                                {isLastAttempt ? '⚠️' : `${rejectionCount + 1}/${maxAttempts}`}
+                                            </span>
+                                        );
+                                    })()}
                                 </div>
                             </div>
 
@@ -390,7 +498,7 @@ const POWaitingListItem = ({
                     </div>
 
                     {/* Bottom Actions */}
-                    <div className="flex items-center gap-3 mt-4">
+                    <div className="flex items-center gap-3 mt-4 flex-wrap">
                         <div className="flex items-center gap-2 px-4 py-2 border rounded-lg">
                             <span className="text-sm text-gray-600">Quantity:</span>
                             <span className="text-sm font-medium">{trade.quantity}</span>
@@ -410,6 +518,30 @@ const POWaitingListItem = ({
                             <FlaskConical size={16} />
                             <span className="text-sm">Product Quality Report</span>
                         </button>
+                        <button
+                            onClick={() => onDownloadPR(trade._id)}
+                            disabled={isDownloadingPR}
+                            className="flex items-center gap-2 px-4 py-2 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 disabled:opacity-50"
+                        >
+                            {isDownloadingPR ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <Download size={16} />
+                            )}
+                            <span className="text-sm">Download PR</span>
+                        </button>
+                        <button
+                            onClick={() => onDownloadPO(trade._id)}
+                            disabled={isDownloadingPO}
+                            className="flex items-center gap-2 px-4 py-2 border border-green-200 text-green-600 rounded-lg hover:bg-green-50 disabled:opacity-50"
+                        >
+                            {isDownloadingPO ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <Download size={16} />
+                            )}
+                            <span className="text-sm">Download PO</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -425,10 +557,15 @@ const POWaitingListItem = ({
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => onChatWithSeller(trade)}
-                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+                        disabled={isChattingWithSeller}
+                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 disabled:opacity-50"
                     >
-                        <MessageCircle size={16} />
-                        Chat with seller
+                        {isChattingWithSeller ? (
+                            <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                            <MessageCircle size={16} />
+                        )}
+                        {isChattingWithSeller ? 'Opening chat...' : 'Chat with seller'}
                     </button>
                     <div className="relative group">
                         <button
@@ -471,8 +608,8 @@ const AcceptedRequestItem = ({
     onRejectTrade: (tradeId: string) => void;
     onSignSPA: (tradeId: string) => void;
 }) => {
-    const finalPrice = parseFloat(trade.buyerOfferedPrice || trade.product?.price || '0');
-    const productPrice = parseFloat(trade.product?.price || '0');
+    const finalPrice = parseFloat(String(trade.buyerOfferedPrice || trade.product?.price || '0'));
+    const productPrice = parseFloat(String(trade.product?.price || '0'));
     const discount = productPrice > 0 ? Math.round(((productPrice - finalPrice) / productPrice) * 100) : 0;
     const imageUrl = getImageUrl(trade.product?.productImages?.[0]);
 
@@ -647,6 +784,37 @@ export const PurchaseOrderWaitingList = () => {
     const [showTradeDetailsModal, setShowTradeDetailsModal] = useState(false);
     const [detailsTradeId, setDetailsTradeId] = useState<string | null>(null);
 
+    // Document download states
+    const [downloadingPRId, setDownloadingPRId] = useState<string | null>(null);
+    const [downloadingPOId, setDownloadingPOId] = useState<string | null>(null);
+
+    // Chat loading state
+    const [chattingWithSellerId, setChattingWithSellerId] = useState<string | null>(null);
+
+    const handleDownloadPR = async (tradeId: string) => {
+        setDownloadingPRId(tradeId);
+        try {
+            await downloadPurchaseRequest(tradeId);
+        } catch (err) {
+            console.error('Failed to download purchase request:', err);
+            showToast('Failed to download purchase request. Please try again.', 'error');
+        } finally {
+            setDownloadingPRId(null);
+        }
+    };
+
+    const handleDownloadPO = async (tradeId: string) => {
+        setDownloadingPOId(tradeId);
+        try {
+            await downloadPurchaseOrder(tradeId);
+        } catch (err) {
+            console.error('Failed to download purchase order:', err);
+            showToast('Failed to download purchase order. Please try again.', 'error');
+        } finally {
+            setDownloadingPOId(null);
+        }
+    };
+
     useEffect(() => {
         fetchTrades();
     }, []);
@@ -732,13 +900,31 @@ export const PurchaseOrderWaitingList = () => {
         }
     };
 
-    // Handle Chat with Seller button
-    const handleChatWithSeller = (trade: TradeWithProduct) => {
-        const sellerId = (trade as any).seller?._id || (trade as any).sellerId;
-        if (sellerId) {
-            navigate(`/buyer/inbox?recipient=${sellerId}`);
-        } else {
-            showToast('Seller information not available', 'warning');
+    // Handle Chat with Seller button - finds existing or creates new conversation
+    const handleChatWithSeller = async (trade: TradeWithProduct) => {
+        const productId = trade.product?._id;
+        if (!productId) {
+            showToast('Product information not available', 'warning');
+            return;
+        }
+
+        setChattingWithSellerId(trade._id);
+        try {
+            // Create conversation (or get existing one) - the backend handles both cases
+            const result = await createConversation(productId);
+            const conversationId = result.conversationId;
+
+            if (conversationId) {
+                // Navigate to inbox with the conversation
+                navigate(`/buyer/inbox?conversationId=${conversationId}`);
+            } else {
+                showToast('Failed to open chat. Please try again.', 'error');
+            }
+        } catch (err) {
+            console.error('Failed to start chat:', err);
+            showToast('Failed to start chat with seller', 'error');
+        } finally {
+            setChattingWithSellerId(null);
         }
     };
 
@@ -828,7 +1014,9 @@ export const PurchaseOrderWaitingList = () => {
 
     // Filter trades
     // Strict phase filtering: PO tab shows only SCO and ICPO phases
+    // PHASE 2 REFACTORING: Include cancelled trade 2-day visibility filter
     const waitingTrades = trades.filter(t =>
+        shouldShowCancelledTrade(t) &&
         t.negotiationStatus === 'accepted' &&
         (t.tradePhase === 'SCO' || t.tradePhase === 'ICPO')
     );
@@ -874,6 +1062,11 @@ export const PurchaseOrderWaitingList = () => {
                                 onViewSubmittedOffer={handleViewSubmittedOffer}
                                 onViewProductQuality={handleViewProductQuality}
                                 onChatWithSeller={handleChatWithSeller}
+                                onDownloadPR={handleDownloadPR}
+                                onDownloadPO={handleDownloadPO}
+                                isDownloadingPR={downloadingPRId === trade._id}
+                                isDownloadingPO={downloadingPOId === trade._id}
+                                isChattingWithSeller={chattingWithSellerId === trade._id}
                             />
                         ))}
                     </div>

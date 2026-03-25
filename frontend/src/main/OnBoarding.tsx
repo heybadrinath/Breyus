@@ -335,39 +335,60 @@ const OnBoarding: React.FC = () => {
     const [step2Form, setStep2Form] = useState({
         companyName: companyDetails.companyName ?? '',
         companyLocation: companyDetails.companyAddress ?? '',
+        country: companyDetails.country ?? '', // Track country separately for GST validation
         contactNumber: companyDetails.companyMobile ?? '',
         taxId: companyDetails.taxId ?? '',
     });
+
+    // GSTIN format regex for Indian companies
+    const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 
     // Update step2Form when companyDetails changes and fields are empty
     React.useEffect(() => {
         setStep2Form(prev => ({
             companyName: prev.companyName || companyDetails.companyName || '',
             companyLocation: prev.companyLocation || companyDetails.companyAddress || '',
+            country: prev.country || companyDetails.country || '',
             contactNumber: prev.contactNumber || companyDetails.companyMobile || '',
             taxId: prev.taxId || companyDetails.taxId || '',
         }));
     }, [companyDetails]);
     const handleStep2InputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setStep2Form((prevState) => ({
-            ...prevState,
-            [name]: value,
-        }));
+        setStep2Form((prevState) => {
+            const updated = { ...prevState, [name]: value };
+            // If country selector (companyLocation) changes, also update country field
+            if (name === 'companyLocation') {
+                updated.country = value;
+            }
+            return updated;
+        });
     };
 
     const handleStep2Service = async () => {
         setErrorMessage('');
         setSuccessMessage('');
         try {
+            const result = await step2Service(
+                AccountToken as string,
+                step2Form.companyName,
+                step2Form.companyLocation,
+                step2Form.country, // Pass country for GST verification
+                step2Form.contactNumber,
+                step2Form.country === 'India' ? step2Form.taxId.toUpperCase() : step2Form.taxId
+            );
 
-            await step2Service(AccountToken as string, step2Form.companyName, step2Form.companyLocation, step2Form.contactNumber, step2Form.taxId);
-
-            setSuccessMessage('Company details updated successfully!');
+            // Show verification message if present
+            if (result?.gstVerificationMessage) {
+                setSuccessMessage(result.gstVerificationMessage);
+            } else {
+                setSuccessMessage('Company details updated successfully!');
+            }
             setCurrentStep(prev => prev + 1);
-        } catch (error) {
-            setErrorMessage("Error");
-
+        } catch (error: any) {
+            // Display backend error message (GST validation errors)
+            const errorMsg = error?.message || error?.response?.data?.message || "Failed to save company details. Please try again.";
+            setErrorMessage(errorMsg);
         }
     };
 
@@ -714,7 +735,9 @@ const OnBoarding: React.FC = () => {
                         </motion.div>
 
                         <motion.div variants={itemVariants}>
-                            <label htmlFor="taxId" className="block text-2xl font-bold text-black">Tax Id <span className="text-red-500">*</span></label>
+                            <label htmlFor="taxId" className="block text-2xl font-bold text-black">
+                                {step2Form.country === 'India' ? 'GST Number' : 'Tax ID'} <span className="text-red-500">*</span>
+                            </label>
                             <input
                                 type="text"
                                 name="taxId"
@@ -723,8 +746,25 @@ const OnBoarding: React.FC = () => {
                                 required
                                 onChange={handleStep2InputChange}
                                 className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
-                                placeholder="Enter your company GST number"
+                                placeholder={step2Form.country === 'India'
+                                    ? "Enter 15-digit GST number (e.g., 27AABCT1234H1Z5)"
+                                    : "Enter your company tax ID"
+                                }
+                                maxLength={step2Form.country === 'India' ? 15 : undefined}
                             />
+                            {/* Real-time GST format validation hint for Indian companies */}
+                            {step2Form.country === 'India' && step2Form.taxId && (
+                                <p className={`mt-1 text-sm ${
+                                    GSTIN_REGEX.test(step2Form.taxId.toUpperCase())
+                                        ? 'text-green-600'
+                                        : 'text-gray-500'
+                                }`}>
+                                    {GSTIN_REGEX.test(step2Form.taxId.toUpperCase())
+                                        ? '✓ Valid GST format'
+                                        : 'GST format: 2 digits (state) + 5 letters + 4 digits + 1 letter + 1 alphanumeric + Z + 1 alphanumeric'
+                                    }
+                                </p>
+                            )}
                         </motion.div>
 
                     </motion.div>
@@ -975,7 +1015,7 @@ const OnBoarding: React.FC = () => {
                 return false;
             }
             if (!step2Form.companyLocation || step2Form.companyLocation.length < 2) {
-                setErrorMessage("Company location is required (min 2 characters).");
+                setErrorMessage("Company location is required.");
                 return false;
             }
             if (
@@ -985,9 +1025,23 @@ const OnBoarding: React.FC = () => {
                 setErrorMessage("Please enter a valid Whatsapp number (10-15 digits, with or without country code, spaces allowed).");
                 return false;
             }
-            if (!step2Form.taxId || step2Form.taxId.length < 8) {
-                setErrorMessage("Tax ID is required (min 8 characters).");
-                return false;
+
+            // GST validation for Indian companies
+            if (step2Form.country === 'India') {
+                if (!step2Form.taxId) {
+                    setErrorMessage("GST Number is required for Indian companies.");
+                    return false;
+                }
+                if (!GSTIN_REGEX.test(step2Form.taxId.toUpperCase())) {
+                    setErrorMessage("Please enter a valid 15-character GST number (e.g., 27AABCT1234H1Z5).");
+                    return false;
+                }
+            } else {
+                // Non-Indian companies: standard tax ID validation
+                if (!step2Form.taxId || step2Form.taxId.length < 8) {
+                    setErrorMessage("Tax ID is required (min 8 characters).");
+                    return false;
+                }
             }
         }
         // Step 3: Business Info

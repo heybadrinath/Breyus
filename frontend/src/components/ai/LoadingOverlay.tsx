@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 
 interface LoadingOverlayProps {
   message: string;
@@ -15,6 +15,7 @@ interface LoadingOverlayProps {
     label: string;
     completed: boolean;
   }[];
+  onDismiss?: () => void;
 }
 
 export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
@@ -23,10 +24,21 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
   showProgress = false,
   progress = 0,
   steps,
+  onDismiss,
 }) => {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center shadow-2xl animate-fadeIn">
+      <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center shadow-2xl animate-fadeIn relative">
+        {/* Dismiss button */}
+        {onDismiss && (
+          <button
+            onClick={onDismiss}
+            className="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Dismiss"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
         {/* Loading Indicator */}
         <div className="relative mb-6">
           {showProgress ? (

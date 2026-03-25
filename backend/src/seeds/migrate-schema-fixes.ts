@@ -3,8 +3,9 @@
  *
  * This script:
  * 1. Converts string numbers to actual numbers in products (stock, price, etc.)
- * 2. Converts string numbers to actual numbers in trades (quantity, buyerOfferedPrice)
- * 3. Adds stockRestored flag to existing trades
+ * 2. Converts string numbers to actual numbers in trades (quantity, buyerOfferedPrice, sellerOfferedPrice)
+ * 3. Converts string numbers in negotiationHistory entries
+ * 4. Adds stockRestored flag to existing trades
  *
  * Run with: npx ts-node src/seeds/migrate-schema-fixes.ts
  *
@@ -18,7 +19,10 @@ import { resolve } from 'path';
 // Load environment variables
 dotenv.config({ path: resolve(__dirname, '../../.env') });
 
-const MONGODB_URI = process.env.MONGODB_URI_DEV || process.env.MONGODB_URI || 'mongodb://localhost:27017/breyus';
+const MONGODB_URI =
+  process.env.MONGODB_URI_DEV ||
+  process.env.MONGODB_URI ||
+  'mongodb://localhost:27017/breyus';
 
 interface OldProduct {
   _id: Types.ObjectId;
@@ -31,10 +35,21 @@ interface OldProduct {
   profit?: string | number;
 }
 
+interface NegotiationHistoryEntry {
+  round: number;
+  party: 'buyer' | 'seller';
+  offeredPrice?: string | number;
+  offeredIncoterms?: any;
+  message?: string;
+  timestamp: Date;
+}
+
 interface OldTrade {
   _id: Types.ObjectId;
   quantity?: string | number;
   buyerOfferedPrice?: string | number;
+  sellerOfferedPrice?: string | number;
+  negotiationHistory?: NegotiationHistoryEntry[];
   stockRestored?: boolean;
   negotiationStatus?: string;
 }
@@ -42,7 +57,9 @@ interface OldTrade {
 /**
  * Safely parse a string to number, returning null if invalid
  */
-function safeParseNumber(value: string | number | undefined | null): number | null {
+function safeParseNumber(
+  value: string | number | undefined | null,
+): number | null {
   if (value === undefined || value === null || value === '') {
     return null;
   }
@@ -55,10 +72,10 @@ function safeParseNumber(value: string | number | undefined | null): number | nu
 
 async function migrateSchemaFixes() {
   console.log('\n🔄 Schema Fixes Migration Script\n');
-  console.log('=' .repeat(60));
+  console.log('='.repeat(60));
   console.log('This script migrates string numbers to actual numbers');
   console.log('and adds the stockRestored flag to trades.');
-  console.log('=' .repeat(60));
+  console.log('='.repeat(60));
 
   try {
     // Connect to MongoDB
@@ -79,7 +96,9 @@ async function migrateSchemaFixes() {
     console.log('\n📦 PHASE 1: Migrating Products...\n');
 
     const productsCollection = db.collection('products');
-    const products = await productsCollection.find({}).toArray() as unknown as OldProduct[];
+    const products = (await productsCollection
+      .find({})
+      .toArray()) as unknown as OldProduct[];
 
     console.log(`Found ${products.length} products to check\n`);
 
@@ -149,14 +168,13 @@ async function migrateSchemaFixes() {
         if (needsUpdate) {
           await productsCollection.updateOne(
             { _id: product._id },
-            { $set: updates }
+            { $set: updates },
           );
           console.log(`  ✅ Migrated product: ${product.name}`);
           productsMigrated++;
         } else {
           productsSkipped++;
         }
-
       } catch (error) {
         console.error(`  ❌ Error migrating product ${product.name}:`, error);
         productErrors++;
@@ -174,7 +192,9 @@ async function migrateSchemaFixes() {
     console.log('\n\n📦 PHASE 2: Migrating Trades...\n');
 
     const tradesCollection = db.collection('trades');
-    const trades = await tradesCollection.find({}).toArray() as unknown as OldTrade[];
+    const trades = (await tradesCollection
+      .find({})
+      .toArray()) as unknown as OldTrade[];
 
     console.log(`Found ${trades.length} trades to check\n`);
 
@@ -205,10 +225,41 @@ async function migrateSchemaFixes() {
           }
         }
 
+        // Convert sellerOfferedPrice (NEW - schema consistency fix)
+        if (typeof trade.sellerOfferedPrice === 'string') {
+          const numPrice = safeParseNumber(trade.sellerOfferedPrice);
+          if (numPrice !== null) {
+            updates.sellerOfferedPrice = numPrice;
+            needsUpdate = true;
+          }
+        }
+
+        // Convert negotiationHistory entries' offeredPrice (NEW - schema consistency fix)
+        if (trade.negotiationHistory && trade.negotiationHistory.length > 0) {
+          let historyNeedsUpdate = false;
+          const updatedHistory = trade.negotiationHistory.map((entry) => {
+            if (typeof entry.offeredPrice === 'string') {
+              const numPrice = safeParseNumber(entry.offeredPrice);
+              if (numPrice !== null) {
+                historyNeedsUpdate = true;
+                return { ...entry, offeredPrice: numPrice };
+              }
+            }
+            return entry;
+          });
+
+          if (historyNeedsUpdate) {
+            updates.negotiationHistory = updatedHistory;
+            needsUpdate = true;
+          }
+        }
+
         // Add stockRestored flag if missing
         if (trade.stockRestored === undefined) {
           // Set to true if trade is already rejected/cancelled (stock would have been restored)
-          const isTerminalState = ['rejected', 'cancelled'].includes(trade.negotiationStatus || '');
+          const isTerminalState = ['rejected', 'cancelled'].includes(
+            trade.negotiationStatus || '',
+          );
           updates.stockRestored = isTerminalState;
           needsUpdate = true;
         }
@@ -216,14 +267,13 @@ async function migrateSchemaFixes() {
         if (needsUpdate) {
           await tradesCollection.updateOne(
             { _id: trade._id },
-            { $set: updates }
+            { $set: updates },
           );
           console.log(`  ✅ Migrated trade: ${trade._id}`);
           tradesMigrated++;
         } else {
           tradesSkipped++;
         }
-
       } catch (error) {
         console.error(`  ❌ Error migrating trade ${trade._id}:`, error);
         tradeErrors++;
@@ -238,17 +288,22 @@ async function migrateSchemaFixes() {
     // ========================
     // FINAL SUMMARY
     // ========================
-    console.log('\n' + '=' .repeat(60));
+    console.log('\n' + '='.repeat(60));
     console.log('\n🎉 Migration Complete!\n');
     console.log('📊 Overall Summary:');
-    console.log(`   Products: ${productsMigrated} migrated, ${productsSkipped} skipped, ${productErrors} errors`);
-    console.log(`   Trades:   ${tradesMigrated} migrated, ${tradesSkipped} skipped, ${tradeErrors} errors`);
-    console.log('\n' + '=' .repeat(60));
+    console.log(
+      `   Products: ${productsMigrated} migrated, ${productsSkipped} skipped, ${productErrors} errors`,
+    );
+    console.log(
+      `   Trades:   ${tradesMigrated} migrated, ${tradesSkipped} skipped, ${tradeErrors} errors`,
+    );
+    console.log('\n' + '='.repeat(60));
 
     if (productErrors > 0 || tradeErrors > 0) {
-      console.log('\n⚠️  Some errors occurred. Please review the logs above.\n');
+      console.log(
+        '\n⚠️  Some errors occurred. Please review the logs above.\n',
+      );
     }
-
   } catch (error) {
     console.error('\n❌ Migration failed:', error);
     process.exit(1);

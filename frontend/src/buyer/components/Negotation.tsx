@@ -34,7 +34,8 @@ export const Negoatation: React.FC<NegotationProps> = ({
 }) => {
     const [showIncoterms, setShowIncoterms] = useState(false)
     const [showNegotiatedIncoterms, setShowNegotiatedIncoterms] = useState(false)
-    const [incotermType, setIncotermType] = useState("EditIncoterms") // Default to edit mode
+    // View mode for comparison modal: "SellerIncoterms" or "BuyerIncoterms"
+    const [compareViewMode, setCompareViewMode] = useState<"SellerIncoterms" | "BuyerIncoterms">("SellerIncoterms")
 
     // Form data state - these will be controlled by parent
     const [additionalMessage, setAdditionalMessage] = useState(stepData?.buyerMessage || '');
@@ -250,43 +251,14 @@ export const Negoatation: React.FC<NegotationProps> = ({
                         >
                             <X size={22} />
                         </button>
-                        <h2 className="text-xl font-bold mb-4 text-center">Edit Incoterms</h2>
+                        <h2 className="text-xl font-bold mb-4 text-center">Select Your Preferred Incoterm</h2>
                         <div className="flex-1 overflow-y-auto">
                             <div>
-                                <div className="flex mx-auto w-fit mb-4 gap-8">
-                                    <label className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer ${incotermType === "SellerIncoterms" ? 'bg-gray-100 font-medium' : ''}`}>
-                                        <input
-                                            className="accent-black"
-                                            name="Incoterms"
-                                            value="SellerIncoterms"
-                                            type='radio'
-                                            onChange={(e) => setIncotermType(e.target.value)}
-                                            checked={incotermType === "SellerIncoterms"}
-                                        />
-                                        View Seller's Terms (Read-only)
-                                    </label>
-                                    <label className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer ${incotermType === "EditIncoterms" ? 'bg-blue-100 font-medium' : ''}`}>
-                                        <input
-                                            className="accent-blue-600"
-                                            name="Incoterms"
-                                            value="EditIncoterms"
-                                            type='radio'
-                                            onChange={(e) => setIncotermType(e.target.value)}
-                                            checked={incotermType === "EditIncoterms"}
-                                        />
-                                        Edit Your Terms
-                                    </label>
-                                </div>
-                                {incotermType === "EditIncoterms" && (
-                                    <p className="text-center text-sm text-gray-600 mb-2">
-                                        Select an Incoterm column (checkbox) to edit its values. Click on Buyer/Seller cells to toggle.
-                                    </p>
-                                )}
-                                {incotermType === "SellerIncoterms" ? (
-                                    <Incoterms incoterms={sellerIncotermsState} setIncoterms={() => { }} />
-                                ) : (
-                                    <Incoterms incoterms={negoatiatedIncotermsState} setIncoterms={onNegotiatedIncotermsChange} />
-                                )}
+                                <p className="text-center text-sm text-gray-600 mb-4">
+                                    Select an Incoterm type using the checkboxes below. Cost allocations are standardized and cannot be modified.
+                                </p>
+                                {/* Users can select a different Incoterm type, but cost allocations are read-only */}
+                                <Incoterms incoterms={negoatiatedIncotermsState} setIncoterms={onNegotiatedIncotermsChange} readOnly={true} />
                             </div>
                         </div>
                     </div>
@@ -307,36 +279,36 @@ export const Negoatation: React.FC<NegotationProps> = ({
                         <div className="flex-1 overflow-y-auto">
                             <div>
                                 <div className="flex mx-auto w-fit mb-4 gap-8">
-                                    <label className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer ${incotermType === "SellerIncoterms" ? 'bg-green-100 font-medium' : ''}`}>
+                                    <label className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer ${compareViewMode === "SellerIncoterms" ? 'bg-green-100 font-medium' : ''}`}>
                                         <input
                                             className="accent-green-600"
                                             name="ViewIncoterms"
                                             value="SellerIncoterms"
                                             type='radio'
-                                            onChange={(e) => setIncotermType(e.target.value)}
-                                            checked={incotermType === "SellerIncoterms"}
+                                            onChange={() => setCompareViewMode("SellerIncoterms")}
+                                            checked={compareViewMode === "SellerIncoterms"}
                                         />
                                         Seller's Terms
                                     </label>
-                                    <label className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer ${incotermType === "EditIncoterms" ? 'bg-blue-100 font-medium' : ''}`}>
+                                    <label className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer ${compareViewMode === "BuyerIncoterms" ? 'bg-blue-100 font-medium' : ''}`}>
                                         <input
                                             className="accent-blue-600"
                                             name="ViewIncoterms"
-                                            value="EditIncoterms"
+                                            value="BuyerIncoterms"
                                             type='radio'
-                                            onChange={(e) => setIncotermType(e.target.value)}
-                                            checked={incotermType === "EditIncoterms"}
+                                            onChange={() => setCompareViewMode("BuyerIncoterms")}
+                                            checked={compareViewMode === "BuyerIncoterms"}
                                         />
-                                        Your Counter Terms
+                                        Your Selected Terms
                                     </label>
                                 </div>
                                 <p className="text-center text-sm text-gray-500 mb-2">
-                                    View-only comparison of terms
+                                    View-only comparison of Incoterm selections
                                 </p>
-                                {incotermType === "SellerIncoterms" ? (
-                                    <Incoterms incoterms={sellerIncotermsState} setIncoterms={() => { }} />
+                                {compareViewMode === "SellerIncoterms" ? (
+                                    <Incoterms incoterms={sellerIncotermsState} setIncoterms={() => { }} readOnly={true} />
                                 ) : (
-                                    <Incoterms incoterms={negoatiatedIncotermsState} setIncoterms={() => { }} />
+                                    <Incoterms incoterms={negoatiatedIncotermsState} setIncoterms={() => { }} readOnly={true} />
                                 )}
                             </div>
                         </div>

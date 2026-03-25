@@ -1,4 +1,10 @@
-import { IsString, IsIn, IsOptional, MinLength, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsIn,
+  IsOptional,
+  MinLength,
+  MaxLength,
+} from 'class-validator';
 
 /**
  * Document types that can be verified by admin
@@ -37,7 +43,9 @@ export class VerifyDocumentDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(5, { message: 'Notes must be at least 5 characters when provided' })
+  @MinLength(5, {
+    message: 'Notes must be at least 5 characters when provided',
+  })
   @MaxLength(500, { message: 'Notes cannot exceed 500 characters' })
   notes?: string;
 }

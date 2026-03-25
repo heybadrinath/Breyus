@@ -13,23 +13,23 @@ import {
  * S3 Storage Provider Configuration
  *
  * Works with any S3-compatible storage:
- * - Vultr Object Storage
- * - AWS S3
  * - DigitalOcean Spaces
+ * - AWS S3
+ * - Vultr Object Storage
  * - MinIO
  * - Cloudflare R2
  *
  * Environment Variables:
  *
  * STORAGE_PROVIDER=s3
- * S3_ENDPOINT=https://sgp1.vultrobjects.com   (Vultr/DO/etc) or omit for AWS
+ * S3_ENDPOINT=https://sgp1.digitaloceanspaces.com   (DigitalOcean/Vultr/etc) or omit for AWS
  * S3_REGION=sgp1                               (or us-east-1 for AWS)
  * S3_ACCESS_KEY=your-access-key
  * S3_SECRET_KEY=your-secret-key
  * S3_BUCKET=breyus-uploads
  */
 interface S3Config {
-  endpoint?: string; // Custom endpoint for S3-compatible storage (Vultr, DO, etc.)
+  endpoint?: string; // Custom endpoint for S3-compatible storage (DigitalOcean, Vultr, etc.)
   region: string;
   accessKeyId: string;
   secretAccessKey: string;
@@ -46,20 +46,27 @@ export class S3StorageProvider implements IStorageService {
   constructor() {
     // Load configuration from environment
     this.config = {
-      endpoint: process.env.S3_ENDPOINT, // undefined for AWS, set for Vultr/DO/etc
+      endpoint: process.env.S3_ENDPOINT, // undefined for AWS, set for DigitalOcean/Vultr/etc
       region: process.env.S3_REGION || 'us-east-1',
       accessKeyId: process.env.S3_ACCESS_KEY || '',
       secretAccessKey: process.env.S3_SECRET_KEY || '',
       bucket: process.env.S3_BUCKET || process.env.S3_BUCKET_UPLOADS || '',
-      forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true' || !!process.env.S3_ENDPOINT,
+      forcePathStyle:
+        process.env.S3_FORCE_PATH_STYLE === 'true' || !!process.env.S3_ENDPOINT,
     };
 
     // Validate configuration
-    if (!this.config.accessKeyId || !this.config.secretAccessKey || !this.config.bucket) {
+    if (
+      !this.config.accessKeyId ||
+      !this.config.secretAccessKey ||
+      !this.config.bucket
+    ) {
       this.logger.error(
         'S3 configuration incomplete. Required: S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET (or S3_BUCKET_UPLOADS)',
       );
-      throw new Error('S3 storage provider not configured. Check environment variables.');
+      throw new Error(
+        'S3 storage provider not configured. Check environment variables.',
+      );
     }
 
     // Initialize S3 client
@@ -93,7 +100,11 @@ export class S3StorageProvider implements IStorageService {
    * @param folder - Folder/prefix in the bucket
    * @returns Full URL to the uploaded file
    */
-  async upload(file: Buffer, filename: string, folder: string): Promise<string> {
+  async upload(
+    file: Buffer,
+    filename: string,
+    folder: string,
+  ): Promise<string> {
     const uniqueFilename = `${Date.now()}-${this.sanitizeFilename(filename)}`;
     const key = folder ? `${folder}/${uniqueFilename}` : uniqueFilename;
 
@@ -163,10 +174,15 @@ export class S3StorageProvider implements IStorageService {
       await this.s3Client.send(command);
       return true;
     } catch (error) {
-      if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+      if (
+        error.name === 'NotFound' ||
+        error.$metadata?.httpStatusCode === 404
+      ) {
         return false;
       }
-      this.logger.error(`Failed to check file existence ${path}: ${error.message}`);
+      this.logger.error(
+        `Failed to check file existence ${path}: ${error.message}`,
+      );
       throw error;
     }
   }
@@ -231,7 +247,10 @@ export class S3StorageProvider implements IStorageService {
         let pathname = url.pathname;
 
         // For path-style URLs (endpoint/bucket/key), remove bucket prefix
-        if (this.config.endpoint && pathname.startsWith(`/${this.config.bucket}/`)) {
+        if (
+          this.config.endpoint &&
+          pathname.startsWith(`/${this.config.bucket}/`)
+        ) {
           pathname = pathname.slice(this.config.bucket.length + 2);
         }
 

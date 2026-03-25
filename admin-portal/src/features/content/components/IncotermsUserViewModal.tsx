@@ -49,7 +49,8 @@ export function IncotermsUserViewModal({
             <Badge variant="secondary">Read-only</Badge>
           </DialogTitle>
           <DialogDescription>
-            This is how buyers and sellers see incoterms on the platform
+            This is how buyers and sellers see incoterms on the platform.
+            Users can select an Incoterm type (via checkboxes) but cannot modify cost allocations.
           </DialogDescription>
         </DialogHeader>
 

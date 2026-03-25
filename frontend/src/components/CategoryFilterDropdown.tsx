@@ -88,8 +88,8 @@ export function CategoryFilterDropdown({
       ...groupedCategories.niche,
     ];
 
-    // Match by slug or _id
-    return allCategories.find((cat) => cat.slug === value || cat._id === value) || null;
+    // Match by name (used for backend filtering)
+    return allCategories.find((cat) => cat.name === value) || null;
   }, [value, groupedCategories]);
 
   // Filter categories based on search term
@@ -117,9 +117,10 @@ export function CategoryFilterDropdown({
     };
   }, [groupedCategories, searchTerm]);
 
-  // Handle category selection
-  const handleSelect = (categorySlug: string) => {
-    onChange(categorySlug);
+  // Handle category selection - pass category NAME for backend filtering
+  // (backend filters by `category` string field which stores the name, not slug)
+  const handleSelect = (categoryName: string) => {
+    onChange(categoryName);
     setIsOpen(false);
     setSearchTerm('');
   };
@@ -143,9 +144,9 @@ export function CategoryFilterDropdown({
     <button
       key={category._id}
       type="button"
-      onClick={() => handleSelect(category.slug || category._id)}
+      onClick={() => handleSelect(category.name)}
       className={`w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center justify-between transition-colors ${
-        (value === category.slug || value === category._id)
+        value === category.name
           ? 'bg-gray-50 border-l-4 border-gray-900'
           : ''
       }`}

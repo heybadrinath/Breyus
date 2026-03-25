@@ -116,8 +116,15 @@ export const continueOnboardingService = async (token: string, password: string)
 
 }
 
-// step 2 services 
-export const step2Service = async (token: string, companyName: string, companyAddress: string, companyMobile: string, taxId: string) => {
+// step 2 services
+export const step2Service = async (
+    token: string,
+    companyName: string,
+    companyAddress: string,
+    country: string,
+    companyMobile: string,
+    taxId: string
+) => {
     const endpoint = "/step-2";
     const headers = {
         'Content-Type': 'application/json',
@@ -126,6 +133,7 @@ export const step2Service = async (token: string, companyName: string, companyAd
     const body = {
         companyName,
         companyAddress,
+        country, // Include country for GST verification
         companyMobile,
         taxId
     }
@@ -137,12 +145,14 @@ export const step2Service = async (token: string, companyName: string, companyAd
     });
 
     if (!response.ok) {
-        throw new Error("Your Session Expired please Refresh this page and try again! access!");
+        // Parse error response to get GST validation error messages
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to save company details. Please try again.");
     }
 
-    return response;
-
-
+    // Return JSON response to access gstVerificationMessage
+    const data = await response.json();
+    return data;
 }
 
 

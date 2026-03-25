@@ -6,7 +6,10 @@ import { AdminAuthGuard } from './admin-auth.guard';
 // SECURITY FIX: Import RBAC guard (Audit Bug - IDOR)
 import { AdminRolesGuard } from './guards/admin-roles.guard';
 import { AdminUser, AdminUserSchema } from './schemas/admin-user.schema';
-import { AdminSession, AdminSessionSchema } from './schemas/admin-session.schema';
+import {
+  AdminSession,
+  AdminSessionSchema,
+} from './schemas/admin-session.schema';
 import { ActivityLogModule } from '../activity/activity-log.module';
 
 @Module({

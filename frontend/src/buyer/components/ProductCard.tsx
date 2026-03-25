@@ -3,6 +3,8 @@ import { Heart } from "lucide-react";
 import { Product } from '../../services/products.service';
 import { addToWishlist, removeFromWishlist, getWishlist } from '../../services/wishlist.service';
 import { useNavigate } from 'react-router-dom';
+import { getImageUrl } from '../../utils/imageUtils';
+import ClickableCompanyName from '../../components/ui/ClickableCompanyName';
 
 
 interface ProductCardProps {
@@ -79,8 +81,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
         return '/placeholder-product.svg';
       }
       // Prefer images, then productImages, then fallback
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || '';
-      let img = '';
+      let img: string | undefined;
       if (product.images && product.images.length > 0) {
         img = product.images[0];
       } else if ((product as any).productImages && (product as any).productImages.length > 0) {
@@ -90,10 +91,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
       } else if (product.productImage) {
         img = product.productImage;
       }
-      if (img && !img.startsWith('http')) {
-        img = `${backendUrl}/${img}`;
-      }
-      return img || '/placeholder-product.svg';
+      // Use centralized URL handling for consistent local/Docker/production support
+      return getImageUrl(img, '/placeholder-product.svg');
     };
 
 
@@ -220,17 +219,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
             {product.name}
           </h3>
 
-          <p className="text-sm text-gray-400 truncate">
-            {product.companyName || product.sellerName || 'Unknown Company'}
-          </p>
+          <ClickableCompanyName
+            companyId={product.companyId}
+            companyName={product.companyName || product.sellerName || 'Unknown Company'}
+            className="text-sm text-gray-400 truncate block"
+          />
 
           {/* Price */}
           <div className="flex items-baseline gap-2 pt-1">
             <span className="text-xl font-bold text-gray-900">
-              {(product.salePrice) ? product.salePrice.toLocaleString() : product.price.toLocaleString()}
+              {(product.salePrice) ? product.salePrice.toLocaleString() : (product.price ? product.price.toLocaleString() : 'N/A')}
             </span>
-            <span className="text-sm font-medium text-gray-500">{product.currency}</span>
-            {product.onSale && (
+            <span className="text-sm font-medium text-gray-500">{product.currency || ''}</span>
+            {product.onSale && product.price && (
               <span className="text-sm text-gray-400 line-through ml-1">
                 {product.price.toLocaleString()}
               </span>

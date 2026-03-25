@@ -139,6 +139,11 @@ export interface NotificationPreferences {
         phaseAdvanced: boolean;
         tradeCompleted: boolean;
         tradeCancelled: boolean;
+        // PHASE 2 REFACTORING: Document rejection tracking notifications
+        documentRejected: boolean;
+        lastAttemptWarning: boolean;
+        tradeAutoCancelled: boolean;
+        signedSpaRequired: boolean;
     };
     realtime: {
         tradeCreated: boolean;
@@ -150,6 +155,11 @@ export interface NotificationPreferences {
         phaseAdvanced: boolean;
         tradeCompleted: boolean;
         tradeCancelled: boolean;
+        // PHASE 2 REFACTORING: Document rejection tracking notifications
+        documentRejected: boolean;
+        lastAttemptWarning: boolean;
+        tradeAutoCancelled: boolean;
+        signedSpaRequired: boolean;
     };
 }
 

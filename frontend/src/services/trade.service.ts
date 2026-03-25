@@ -25,6 +25,26 @@ export interface Incoterms {
     defaults?: Record<string, Record<string, 'Buyer' | 'Seller'>>;
 }
 
+// PHASE 2: Document rejection tracking
+export interface DocumentRejectionTracking {
+    rejectionCount: number;
+    lastRejectionAt?: string;
+    lastRejectionReason?: string;
+    maxAttempts: number;
+}
+
+export interface TradeCompany {
+    _id?: string;
+    name?: string;
+    address?: {
+        city?: string;
+        state?: string;
+        country?: string;
+    };
+    isKycVerified?: boolean;
+    createdAt?: string;
+}
+
 export interface CreateTradeRequest {
     productId: string;
     quantity: string;
@@ -38,6 +58,9 @@ export interface CreateTradeRequest {
     marketCapture?: string;
     tradeYears: string;
     productUsage?: string;
+    // New fields for PR
+    nearestPort?: string;
+    buyerCisDocument?: string;
     paymentMethod: PaymentMethod;
 }
 
@@ -53,14 +76,16 @@ export interface Trade {
     buyer: {
         _id: string;
         mail: string;
+        company?: TradeCompany;
     };
     seller: {
         _id: string;
         mail: string;
+        company?: TradeCompany;
     };
-    quantity: string;
+    quantity: string | number;
     quantityUnit: string;
-    buyerOfferedPrice?: string;
+    buyerOfferedPrice?: string | number;
     buyerIncoterms?: Incoterms;
     buyerMessage?: string;
     selectedAddress: Address;
@@ -69,6 +94,9 @@ export interface Trade {
     marketCapture?: string;
     tradeYears: string;
     productUsage?: string;
+    // Port and CIS document
+    nearestPort?: string;
+    buyerCisDocument?: string;
     paymentMethod: PaymentMethod;
     tradeStatus: string;
     // Status fields
@@ -77,7 +105,7 @@ export interface Trade {
     negotiationStatus?: string;
     currentNegotiationRound?: number;
     // Seller response fields
-    sellerOfferedPrice?: string;
+    sellerOfferedPrice?: string | number;
     sellerOfferedIncoterms?: Incoterms;
     sellerMessage?: string;
     // Rejection/acceptance tracking
@@ -86,6 +114,16 @@ export interface Trade {
     rejectedAt?: string;
     createdAt: string;
     updatedAt: string;
+    // PHASE 2: Document rejection tracking
+    scoRejectionTracking?: DocumentRejectionTracking;
+    icpoRejectionTracking?: DocumentRejectionTracking;
+    spaRejectionTracking?: DocumentRejectionTracking;
+    signedSpaRejectionTracking?: DocumentRejectionTracking;
+    paymentProofRejectionTracking?: DocumentRejectionTracking;
+    bolRejectionTracking?: DocumentRejectionTracking;
+    // Auto-cancellation info
+    autoCancelledAt?: string;
+    autoCancellationReason?: string;
 }
 
 export interface TradeResponse {
@@ -345,9 +383,27 @@ export const getNegotiationHistory = async (tradeId: string): Promise<Negotiatio
 // Document Upload APIs
 // ========================
 
-export type DocumentType = 'sco' | 'icpo' | 'spa' | 'bol' | 'payment-proof';
-export type TradePhase = 'PR' | 'SCO' | 'ICPO' | 'SPA' | 'PAYMENT' | 'BOL' | 'COMPLETED';
+// PHASE 2 REFACTORING: Added 'signed-spa' type
+export type DocumentType = 'sco' | 'icpo' | 'spa' | 'signed-spa' | 'bol' | 'payment-proof';
+export type TradePhase = 'PR' | 'SCO' | 'ICPO' | 'SPA' | 'PAYMENT' | 'BOL' | 'COMPLETED' | 'CANCELLED';
 export type DocumentStatus = 'pending' | 'uploaded' | 'approved' | 'rejected';
+
+// ========================
+// PHASE 2 REFACTORING: Document Rejection Tracking
+// ========================
+
+export interface DocumentRejectionInfo {
+    remainingAttempts: number;
+    maxAttempts: number;
+    isLastAttempt: boolean;
+}
+
+export interface DocumentRejectionTracking {
+    rejectionCount: number;
+    lastRejectionAt?: string;
+    lastRejectionReason?: string;
+    maxAttempts: number;
+}
 
 export interface DocumentInfo {
     filePath: string;
@@ -395,6 +451,7 @@ export interface TradeDocumentsResponse {
             sco?: DocumentInfo;
             icpo?: DocumentInfo;
             spa?: SPADocumentInfo;
+            signedSpa?: DocumentInfo;  // PHASE 2: Buyer's signed SPA
             bol?: DocumentInfo;
             paymentProof?: DocumentInfo;
         };
@@ -404,11 +461,24 @@ export interface TradeDocumentsResponse {
             spaUploadedAt?: string;
             spaSellerSignedAt?: string;
             spaBuyerSignedAt?: string;
+            signedSpaSubmittedAt?: string;  // PHASE 2: When buyer uploaded signed SPA
+            signedSpaApprovedAt?: string;    // PHASE 2: When seller approved signed SPA
             paymentVerifiedAt?: string;
             bolUploadedAt?: string;
             completedAt?: string;
+            autoCancelledAt?: string;        // PHASE 2: Auto-cancellation timestamp
+            disputeEligibilityEndsAt?: string; // PHASE 2: 30-day dispute window
         };
         spaStatus?: SPAStatus;
+        // PHASE 2 REFACTORING: Rejection tracking for all documents
+        rejectionTracking?: {
+            sco?: DocumentRejectionTracking;
+            icpo?: DocumentRejectionTracking;
+            spa?: DocumentRejectionTracking;
+            signedSpa?: DocumentRejectionTracking;
+            paymentProof?: DocumentRejectionTracking;
+            bol?: DocumentRejectionTracking;
+        };
     };
 }
 
@@ -466,6 +536,40 @@ export const uploadBoL = async (tradeId: string, file: File, notes?: string): Pr
 
 export const uploadPaymentProof = async (tradeId: string, file: File, notes?: string): Promise<TradeResponse> => {
     return uploadDocument(tradeId, 'payment-proof', file, notes);
+};
+
+/**
+ * ========================
+ * PHASE 2 REFACTORING: Upload Signed SPA
+ * ========================
+ * Buyer uploads their signed copy of the SPA after seller's SPA is approved
+ * Flow: Seller uploads SPA → Buyer approves → Buyer uploads signed SPA → Seller approves
+ */
+export const uploadSignedSpa = async (tradeId: string, file: File, notes?: string): Promise<TradeResponse> => {
+    try {
+        const formData = new FormData();
+        formData.append('files', file);
+        if (notes) {
+            formData.append('notes', notes);
+        }
+
+        const response = await fetch(`${BACKEND_END_POINT}/${tradeId}/upload-signed-spa`, {
+            method: 'POST',
+            credentials: 'include',
+            body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to upload signed SPA');
+        }
+
+        return data;
+    } catch (error) {
+        console.error('Error uploading signed SPA:', error);
+        throw error;
+    }
 };
 
 export const getTradeDocuments = async (tradeId: string): Promise<TradeDocumentsResponse> => {
@@ -543,8 +647,13 @@ export const completeTrade = async (tradeId: string): Promise<TradeResponse> => 
  * Different documents are verified by different parties:
  * - SCO → Buyer verifies
  * - ICPO → Seller verifies
+ * - SPA → Buyer approves/rejects (PHASE 2 REFACTORING)
+ * - Signed SPA → Seller verifies (PHASE 2 REFACTORING)
  * - Payment Proof → Seller verifies
  * - BoL → Buyer verifies
+ *
+ * PHASE 2 NOTE: Response now includes rejectionInfo with remainingAttempts
+ * when a document is rejected
  */
 export const verifyDocument = async (
     tradeId: string,
@@ -618,11 +727,87 @@ export const downloadInvoice = async (tradeId: string): Promise<void> => {
 };
 
 /**
+ * Download Purchase Request PDF for a trade
+ * Available for any trade (buyer/seller)
+ */
+export const downloadPurchaseRequest = async (tradeId: string): Promise<void> => {
+    try {
+        const response = await fetch(`${BACKEND_END_POINT}/${tradeId}/purchase-request-pdf`, {
+            method: 'GET',
+            credentials: 'include',
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Failed to download purchase request');
+        }
+
+        // Get the PDF blob
+        const blob = await response.blob();
+
+        // Create a download link
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `purchase-request-PR-${tradeId.slice(-8).toUpperCase()}.pdf`;
+
+        // Trigger download
+        document.body.appendChild(link);
+        link.click();
+
+        // Cleanup
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Error downloading purchase request:', error);
+        throw error;
+    }
+};
+
+/**
+ * Download Purchase Order PDF for a trade
+ * Only available after trade negotiation is accepted
+ */
+export const downloadPurchaseOrder = async (tradeId: string): Promise<void> => {
+    try {
+        const response = await fetch(`${BACKEND_END_POINT}/${tradeId}/purchase-order-pdf`, {
+            method: 'GET',
+            credentials: 'include',
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Failed to download purchase order');
+        }
+
+        // Get the PDF blob
+        const blob = await response.blob();
+
+        // Create a download link
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `purchase-order-PO-${tradeId.slice(-8).toUpperCase()}.pdf`;
+
+        // Trigger download
+        document.body.appendChild(link);
+        link.click();
+
+        // Cleanup
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Error downloading purchase order:', error);
+        throw error;
+    }
+};
+
+/**
  * Download a trade document (SCO, ICPO, SPA, BoL, or Payment Proof)
  */
 export const downloadTradeDocument = async (
     tradeId: string,
-    documentType: 'sco' | 'icpo' | 'spa' | 'bol' | 'payment-proof'
+    documentType: 'sco' | 'icpo' | 'spa' | 'signed-spa' | 'bol' | 'payment-proof'
 ): Promise<void> => {
     try {
         const response = await fetch(
@@ -679,6 +864,7 @@ export interface UnreadCounts {
     po: number;
     spa: number;
     ongoing: number;
+    history: number;
 }
 
 export interface UnreadCountsResponse {

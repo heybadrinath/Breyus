@@ -15,6 +15,7 @@ import {
   MarketAnalysisRawResult,
   NicheSearchResponse,
   AIHealthResponse,
+  CountryTradeVolume,
 } from './interfaces';
 
 /**
@@ -29,7 +30,9 @@ export class AIHttpService {
   private readonly apiKey: string;
 
   constructor(private configService: ConfigService) {
-    this.aiServerUrl = this.configService.get<string>('AI_SERVER_URL') || 'http://localhost:8000';
+    this.aiServerUrl =
+      this.configService.get<string>('AI_SERVER_URL') ||
+      'http://localhost:8000';
     this.apiKey = this.configService.get<string>('AI_API_KEY') || '';
 
     this.client = axios.create({
@@ -44,7 +47,9 @@ export class AIHttpService {
     // Request interceptor for logging
     this.client.interceptors.request.use(
       (config) => {
-        this.logger.debug(`AI Request: ${config.method?.toUpperCase()} ${config.url}`);
+        this.logger.debug(
+          `AI Request: ${config.method?.toUpperCase()} ${config.url}`,
+        );
         return config;
       },
       (error) => {
@@ -56,16 +61,22 @@ export class AIHttpService {
     // Response interceptor for logging
     this.client.interceptors.response.use(
       (response) => {
-        this.logger.debug(`AI Response: ${response.status} from ${response.config.url}`);
+        this.logger.debug(
+          `AI Response: ${response.status} from ${response.config.url}`,
+        );
         return response;
       },
       (error: AxiosError) => {
-        this.logger.error(`AI Error: ${error.response?.status} - ${error.message}`);
+        this.logger.error(
+          `AI Error: ${error.response?.status} - ${error.message}`,
+        );
         return Promise.reject(error);
       },
     );
 
-    this.logger.log(`AI HTTP Service initialized - Server: ${this.aiServerUrl}`);
+    this.logger.log(
+      `AI HTTP Service initialized - Server: ${this.aiServerUrl}`,
+    );
   }
 
   /**
@@ -116,17 +127,28 @@ export class AIHttpService {
       if (params.buyer_name) payload.buyer_name = params.buyer_name;
       if (params.seller_id) payload.seller_id = params.seller_id;
       if (params.seller_name) payload.seller_name = params.seller_name;
-      if (params.country_preference) payload.country_preference = params.country_preference;
-      if (params.port_preference) payload.port_preference = params.port_preference;
+      if (params.country_preference)
+        payload.country_preference = params.country_preference;
+      if (params.port_preference)
+        payload.port_preference = params.port_preference;
       if (params.price_range) payload.price_range = params.price_range;
       if (params.hs_code) payload.hs_code = params.hs_code;
       if (params.profile) payload.profile = params.profile;
 
-      this.logger.log(`Predicting partners for ${params.commodity} (${params.role}) with payload: ${JSON.stringify(payload)}`);
-      const response = await this.client.post<AIRawLinkPredictionResponse>('/v1/links/predict', payload);
+      this.logger.log(
+        `Predicting partners for ${params.commodity} (${params.role}) with payload: ${JSON.stringify(payload)}`,
+      );
+      const response = await this.client.post<AIRawLinkPredictionResponse>(
+        '/v1/links/predict',
+        payload,
+      );
 
       // Transform raw AI response to expected format
-      const transformed = this.transformLinkPredictionResponse(response.data, params.commodity);
+      const rawData = (response.data as any)?.data || response.data;
+      const transformed = this.transformLinkPredictionResponse(
+        rawData,
+        params.commodity,
+      );
       this.logger.log(`Found ${transformed.total_matches} potential partners`);
       return transformed;
     } catch (error) {
@@ -143,25 +165,49 @@ export class AIHttpService {
   ): LinkPredictionResponse {
     const matches = raw.matches || [];
 
-    const topPartners: AIPartner[] = matches.map((match) => ({
-      id: undefined, // AI service doesn't provide IDs
-      name: match.company_name || 'Unknown',
-      match_score: match.gravity_score || match.probability || 0,
-      match_reason: this.buildMatchReason(match),
-      commodity: match.product || commodity,
-      country: match.country,
-      link_type: raw.match_strategy || undefined,
-      contact_info: {
-        email: match.contact_email,
-        phone: match.contact_phone,
-        address: match.location,
-      },
-    }));
+    const topPartners: AIPartner[] = matches.map((match) => {
+      // Prefer AI probability for display (already relative across matches).
+      // Fall back to gravity_score when probability is unavailable.
+      const rawProbability = Number(match.probability);
+      const hasProbability = Number.isFinite(rawProbability) && rawProbability > 0;
+
+      const rawGravity = Number(match.gravity_score);
+      const hasGravity = Number.isFinite(rawGravity) && rawGravity > 0;
+
+      let matchScore = 0;
+      if (hasProbability) {
+        matchScore = rawProbability <= 1 ? rawProbability * 100 : rawProbability;
+      } else if (hasGravity) {
+        matchScore = rawGravity <= 1 ? rawGravity * 100 : rawGravity;
+      }
+
+      // Keep one decimal to avoid collapsing close scores into identical integers.
+      matchScore = Math.min(100, Math.max(0, Math.round(matchScore * 10) / 10));
+
+      return {
+        id: undefined, // AI service doesn't provide IDs
+        name: match.company_name || 'Unknown',
+        match_score: matchScore,
+        match_reason: this.buildMatchReason(match),
+        commodity: match.product || commodity,
+        country: match.country,
+        link_type: raw.match_strategy || undefined,
+        contact_info: {
+          email: match.contact_email,
+          phone: match.contact_phone,
+          address: match.location,
+        },
+        // Pass through AI-provided values for risk and price fluctuation
+        risk_level: match.risk_level,
+        price_fluctuation: match.next_month_price_fluctuation,
+      };
+    });
 
     return {
       top_partners: topPartners,
       total_matches: matches.length,
       waterfall_stage_reached: raw.match_strategy || undefined,
+      warning: raw.warning, // Pass through country filter fallback warning
     };
   }
 
@@ -171,8 +217,13 @@ export class AIHttpService {
   private buildMatchReason(match: AIRawMatch): string {
     const reasons: string[] = [];
 
-    if (match.probability) {
-      reasons.push(`${match.probability}% probability`);
+    const rawProbability = Number(match.probability);
+    if (Number.isFinite(rawProbability) && rawProbability > 0) {
+      const normalizedProbability =
+        rawProbability <= 1 ? rawProbability * 100 : rawProbability;
+      reasons.push(
+        `${Math.round(normalizedProbability * 10) / 10}% probability`,
+      );
     }
     if (match.risk_level) {
       reasons.push(`${match.risk_level} risk`);
@@ -212,7 +263,10 @@ export class AIHttpService {
     };
   }): Promise<GravityScoreResponse> {
     try {
-      const response = await this.client.post<GravityScoreRawResponse>('/v1/trades/score', params);
+      const response = await this.client.post<GravityScoreRawResponse>(
+        '/v1/trades/score',
+        params,
+      );
       return this.transformGravityScore(response.data);
     } catch (error) {
       this.handleError(error, 'Gravity score calculation');
@@ -222,13 +276,19 @@ export class AIHttpService {
   /**
    * Transform raw gravity score response to frontend format
    */
-  private transformGravityScore(raw: GravityScoreRawResponse): GravityScoreResponse {
+  private transformGravityScore(
+    raw: GravityScoreRawResponse,
+  ): GravityScoreResponse {
     const factors = raw.factors;
 
     // Calculate breakdown scores (normalize to 0-100)
     const breakdown = {
-      volumeScore: Math.round((factors.demand + factors.trade_frequency) / 2 * 10),
-      proximityScore: Math.round((factors.port_proximity + factors.source_geography) / 2 * 10),
+      volumeScore: Math.round(
+        ((factors.demand + factors.trade_frequency) / 2) * 10,
+      ),
+      proximityScore: Math.round(
+        ((factors.port_proximity + factors.source_geography) / 2) * 10,
+      ),
       priceScore: Math.round(factors.price_range * 10),
       historyScore: Math.round(factors.trade_frequency * 10),
       demandScore: Math.round(factors.demand * 10),
@@ -251,7 +311,8 @@ export class AIHttpService {
     else if (factors.demand <= 3) negative.push('Low market demand');
 
     if (factors.port_proximity >= 7) positive.push('Good port accessibility');
-    else if (factors.port_proximity <= 3) negative.push('Poor port accessibility');
+    else if (factors.port_proximity <= 3)
+      negative.push('Poor port accessibility');
 
     if (factors.trade_frequency >= 7) positive.push('Frequent trade activity');
     else if (factors.trade_frequency <= 3) negative.push('Low trade frequency');
@@ -260,7 +321,8 @@ export class AIHttpService {
     else if (factors.weather_risk <= 3) negative.push('High weather risk');
 
     if (factors.trade_barriers >= 7) positive.push('Favorable trade policies');
-    else if (factors.trade_barriers <= 3) negative.push('Trade barriers present');
+    else if (factors.trade_barriers <= 3)
+      negative.push('Trade barriers present');
 
     if (factors.volatility >= 7) positive.push('Stable price environment');
     else if (factors.volatility <= 3) negative.push('High price volatility');
@@ -277,6 +339,9 @@ export class AIHttpService {
   /**
    * Initiate market analysis (async)
    * POST /v1/analysis/initiate
+   *
+   * AI server returns: { statusCode, message, data: { jobId, status, ... } }
+   * We need to unwrap the 'data' envelope to access the actual job data
    */
   async initiateAnalysis(params: {
     commodity: string;
@@ -293,10 +358,29 @@ export class AIHttpService {
   }): Promise<AnalysisInitiateResponse> {
     try {
       this.logger.log(`Initiating market analysis for ${params.commodity}`);
-      const response = await this.client.post<AnalysisInitiateResponse>('/v1/analysis/initiate', params);
+      const response = await this.client.post<any>(
+        '/v1/analysis/initiate',
+        params,
+      );
 
-      this.logger.log(`Analysis job started: ${response.data.jobId}`);
-      return response.data;
+      // AI service wraps response in { statusCode, message, data: {...} }
+      // We need to unwrap the 'data' property to get the actual job data
+      const outerData = response.data;
+      const jobData = outerData?.data || outerData;
+
+      // Handle both camelCase and snake_case responses from AI server
+      const jobId = jobData.jobId || jobData.job_id;
+      const status = (jobData.status || 'ACCEPTED').toUpperCase();
+
+      this.logger.log(`Analysis job started: ${jobId}`);
+
+      return {
+        jobId,
+        status: status as 'ACCEPTED',
+        commodity: jobData.commodity || params.commodity,
+        hs_code: jobData.hs_code,
+        initial_charts: jobData.initial_charts,
+      };
     } catch (error) {
       this.handleError(error, 'Analysis initiation');
     }
@@ -306,11 +390,29 @@ export class AIHttpService {
    * Get analysis results (poll)
    * GET /v1/analysis/results/{jobId}
    * Transforms raw AI response to frontend-expected format
+   *
+   * AI server returns: { statusCode, message, data: { jobId, status, result, ... } }
+   * We need to unwrap the 'data' envelope to access the actual job data
    */
-  async getAnalysisResults(jobId: string, commodity?: string, hsCode?: string): Promise<AnalysisResultResponse> {
+  async getAnalysisResults(
+    jobId: string,
+    commodity?: string,
+    hsCode?: string,
+  ): Promise<AnalysisResultResponse> {
     try {
-      const response = await this.client.get<AnalysisRawResultResponse>(`/v1/analysis/results/${jobId}`);
-      return this.transformAnalysisResult(response.data, commodity, hsCode);
+      const response = await this.client.get<any>(
+        `/v1/analysis/results/${jobId}`,
+      );
+
+      // AI service wraps response in { statusCode, message, data: {...} }
+      // We need to unwrap the 'data' property to get the actual job data
+      const jobData = response.data?.data || response.data;
+
+      this.logger.debug(
+        `Analysis results for ${jobId}: status=${jobData?.status}, hasResult=${!!jobData?.result}`,
+      );
+
+      return this.transformAnalysisResult(jobData, jobId, commodity, hsCode);
     } catch (error) {
       this.handleError(error, 'Analysis results');
     }
@@ -318,23 +420,49 @@ export class AIHttpService {
 
   /**
    * Transform raw analysis result to frontend format
+   *
+   * AI Server returns result with structure:
+   * {
+   *   commodity, hs_code, db_stats, market_context,
+   *   charts: { demand_forecast, capital_required, price_volatility },
+   *   insights: { summary, key_insights, recommendations },
+   *   analysis: { market_analysis, supply_chain, ground_check, futures },
+   *   predictions, company_contacts
+   * }
+   *
+   * We transform this to match the frontend's AnalysisResult interface
    */
   private transformAnalysisResult(
-    raw: AnalysisRawResultResponse,
+    raw: any,
+    originalJobId: string,
     commodity?: string,
     hsCode?: string,
   ): AnalysisResultResponse {
-    // For pending/processing, just pass through status
-    // Don't send progress for PENDING - let frontend use estimated progress
-    // Only send progress for PROCESSING (50%) to indicate job is being worked on
-    if (raw.status !== 'COMPLETED' || !raw.result) {
+    // Handle both camelCase and snake_case from AI server
+    const jobId = raw.jobId || raw.job_id || originalJobId;
+
+    // Normalize status to uppercase for consistent comparison
+    // AI server may return lowercase ('pending', 'completed') or uppercase ('PENDING', 'COMPLETED')
+    const normalizedStatus = (raw.status || 'PENDING').toUpperCase();
+
+    // For pending/processing/failed, return status with progress indication
+    if (normalizedStatus !== 'COMPLETED' || !raw.result) {
       const response: AnalysisResultResponse = {
-        jobId: raw.jobId,
-        status: raw.status,
+        jobId,
+        status: normalizedStatus as
+          | 'PENDING'
+          | 'PROCESSING'
+          | 'COMPLETED'
+          | 'FAILED',
         error: raw.error,
       };
-      // Only include progress when job is actively being processed
-      if (raw.status === 'PROCESSING') {
+      // Include progress based on status to give users feedback
+      // PENDING: Job queued, waiting to start (15%)
+      // PROCESSING: Job actively running (50%)
+      // FAILED: Job failed (0%)
+      if (normalizedStatus === 'PENDING') {
+        response.progress = 15;
+      } else if (normalizedStatus === 'PROCESSING') {
         response.progress = 50;
       }
       return response;
@@ -342,84 +470,400 @@ export class AIHttpService {
 
     const result = raw.result;
 
-    // Build summary from market overview
-    const summary = [
-      result.market_overview.export_side,
-      result.market_overview.import_side,
-    ].filter(Boolean).join(' ');
+    // Safely extract data from the new AI response structure
+    const insights = result.insights || {};
+    const analysis = result.analysis || {};
+    const charts = result.charts || {};
+    const marketAnalysis = analysis.market_analysis || {};
+    const groundCheck = analysis.ground_check || {};
+    const supplyChain = analysis.supply_chain || {};
 
-    // Transform price predictions to price trends (mock monthly data from min/avg/max)
-    const currentMonth = new Date().toLocaleString('default', { month: 'short' });
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const currentMonthIndex = months.indexOf(currentMonth.slice(0, 3));
+    // Build summary - try new structure first, fall back to old
+    let summary = insights.summary || '';
+    if (!summary && result.market_overview) {
+      // Fallback for old response format
+      summary = [
+        result.market_overview.export_side,
+        result.market_overview.import_side,
+      ]
+        .filter(Boolean)
+        .join(' ');
+    }
+    if (!summary) {
+      // Build from market analysis sections if available
+      const exportSide = marketAnalysis.export_side?.summary || '';
+      const importSide = marketAnalysis.import_side?.summary || '';
+      summary =
+        [exportSide, importSide].filter(Boolean).join(' ') ||
+        'Market analysis completed.';
+    }
 
-    const priceTrends = months.slice(Math.max(0, currentMonthIndex - 5), currentMonthIndex + 1).map((month, idx) => {
-      const variance = 0.1 * (idx + 1); // Simulate price change over time
-      return {
-        month,
-        avgPrice: Math.round(result.price_predictions.avg * (1 + variance * 0.1)),
-        minPrice: Math.round(result.price_predictions.min * (1 + variance * 0.05)),
-        maxPrice: Math.round(result.price_predictions.max * (1 + variance * 0.15)),
-      };
-    });
+    // Build price trends from charts or predictions
+    const priceTrends = this.buildPriceTrends(
+      charts,
+      result.predictions,
+      result.price_predictions,
+    );
 
     // Extract risk factors from ground_check
     const riskFactors: string[] = [];
-    if (result.ground_check.weather_risk && result.ground_check.weather_risk !== 'Low') {
-      riskFactors.push(`Weather Risk: ${result.ground_check.weather_risk}`);
+    if (groundCheck.weather_storage?.summary) {
+      riskFactors.push(groundCheck.weather_storage.summary);
     }
-    if (result.ground_check.barriers && result.ground_check.barriers !== 'None') {
-      riskFactors.push(`Trade Barriers: ${result.ground_check.barriers}`);
+    if (groundCheck.market_barriers?.summary) {
+      riskFactors.push(groundCheck.market_barriers.summary);
+    }
+    // Fallback for old format
+    if (riskFactors.length === 0 && result.ground_check) {
+      if (
+        result.ground_check.weather_risk &&
+        result.ground_check.weather_risk !== 'Low'
+      ) {
+        riskFactors.push(`Weather Risk: ${result.ground_check.weather_risk}`);
+      }
+      if (
+        result.ground_check.barriers &&
+        result.ground_check.barriers !== 'None'
+      ) {
+        riskFactors.push(`Trade Barriers: ${result.ground_check.barriers}`);
+      }
     }
 
-    // Extract opportunities from supply chain insights
-    const opportunities = result.supply_chain_insights.filter(
-      insight => !insight.toLowerCase().includes('risk') && !insight.toLowerCase().includes('barrier'),
+    // Extract opportunities from insights or supply chain
+    let opportunities: string[] = insights.recommendations || [];
+    if (opportunities.length === 0 && insights.key_insights) {
+      opportunities = insights.key_insights.filter(
+        (insight: string) =>
+          !insight.toLowerCase().includes('risk') &&
+          !insight.toLowerCase().includes('barrier'),
+      );
+    }
+    // Fallback for old format
+    if (opportunities.length === 0 && result.supply_chain_insights) {
+      opportunities = result.supply_chain_insights.filter(
+        (insight: string) =>
+          !insight.toLowerCase().includes('risk') &&
+          !insight.toLowerCase().includes('barrier'),
+      );
+    }
+
+    // Determine demand forecast
+    const tradeFrequency =
+      groundCheck.trade_frequency?.summary ||
+      result.ground_check?.frequency ||
+      '';
+    let demandDirection: 'increasing' | 'stable' | 'decreasing' = 'stable';
+    if (
+      tradeFrequency.toLowerCase().includes('high') ||
+      tradeFrequency.toLowerCase().includes('increas')
+    ) {
+      demandDirection = 'increasing';
+    } else if (
+      tradeFrequency.toLowerCase().includes('low') ||
+      tradeFrequency.toLowerCase().includes('decreas')
+    ) {
+      demandDirection = 'decreasing';
+    }
+
+    // Extract top exporters and importers
+    const topExporters = this.extractTopTraders(
+      result.db_stats?.top_exporters ||
+        charts.demand_forecast?.top_exporters ||
+        result.company_contacts?.filter((c: any) => c.role === 'exporter'),
+      'exporter',
+    );
+
+    const topImporters = this.extractTopTraders(
+      result.db_stats?.top_importers ||
+        charts.demand_forecast?.top_importers ||
+        result.company_contacts?.filter((c: any) => c.role === 'importer'),
+      'importer',
+    );
+
+    // Extract seasonality patterns
+    const seasonality = this.extractSeasonality(
+      result.predictions?.seasonality ||
+        analysis.market_analysis?.seasonality ||
+        charts.demand_forecast?.seasonality,
+    );
+
+    // Extract chart data for frontend visualization
+    // Pass chart type to handle AI server's specific response structures
+    const chartData = {
+      demandForecast: this.extractChartData(charts.demand_forecast, 'demand'),
+      capitalRequired: this.extractChartData(charts.capital_required, 'capital'),
+      priceVolatility: this.extractChartData(charts.price_volatility, 'price'),
+    };
+
+    // Extract key insights for display
+    const keyInsights = insights.key_insights || [];
+
+    this.logger.log(
+      `Analysis transformed successfully for ${commodity || result.commodity}`,
     );
 
     return {
-      jobId: raw.jobId,
+      jobId,
       status: 'COMPLETED',
       progress: 100,
       result: {
-        commodity: commodity || 'Unknown',
-        hsCode,
+        commodity: commodity || result.commodity || 'Unknown',
+        hsCode: hsCode || result.hs_code,
         summary,
         priceTrends,
+        topExporters,
+        topImporters,
+        seasonality,
         riskFactors,
         opportunities,
         demandForecast: {
-          direction: result.ground_check.frequency?.toLowerCase().includes('high') ? 'increasing' : 'stable',
+          direction: demandDirection,
           confidence: 75,
-          explanation: `Based on trade frequency: ${result.ground_check.frequency}`,
+          explanation: tradeFrequency || 'Based on market analysis',
         },
+        // Additional data for enhanced UI
+        chartData,
+        keyInsights,
       },
     };
   }
 
   /**
+   * Extract top traders (exporters or importers) from various data sources
+   */
+  private extractTopTraders(
+    data: any,
+    role: 'exporter' | 'importer',
+  ): CountryTradeVolume[] {
+    if (!data) return [];
+
+    // Handle array of country strings (from initial_charts)
+    if (Array.isArray(data) && typeof data[0] === 'string') {
+      return data.slice(0, 5).map((country: string, idx: number) => ({
+        country,
+        volume: Math.round(10000 / (idx + 1)), // Descending volume placeholder
+        percentage: Math.round(100 / (idx + 1)),
+      }));
+    }
+
+    // Handle array of objects with country data
+    if (Array.isArray(data) && typeof data[0] === 'object') {
+      const totalVolume = data.reduce(
+        (sum: number, item: any) => sum + (item.volume || item.trade_volume || 0),
+        0,
+      );
+      return data.slice(0, 5).map((item: any) => ({
+        country: item.country || item.name || 'Unknown',
+        volume: item.volume || item.trade_volume || 0,
+        percentage:
+          totalVolume > 0
+            ? Math.round(((item.volume || item.trade_volume || 0) / totalVolume) * 100)
+            : 0,
+      }));
+    }
+
+    return [];
+  }
+
+  /**
+   * Extract seasonality patterns from analysis data
+   */
+  private extractSeasonality(data: any): { peakMonths: string[]; lowMonths: string[] } | undefined {
+    if (!data) return undefined;
+
+    // Handle object format
+    if (data.peak_months || data.peakMonths || data.low_months || data.lowMonths) {
+      return {
+        peakMonths: data.peak_months || data.peakMonths || [],
+        lowMonths: data.low_months || data.lowMonths || [],
+      };
+    }
+
+    // Handle string description format - parse months
+    if (typeof data === 'string') {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const peakMonths: string[] = [];
+      const lowMonths: string[] = [];
+
+      const lowerData = data.toLowerCase();
+      if (lowerData.includes('peak') || lowerData.includes('high')) {
+        months.forEach((m) => {
+          if (lowerData.includes(m.toLowerCase())) {
+            peakMonths.push(m);
+          }
+        });
+      }
+
+      return peakMonths.length > 0 ? { peakMonths, lowMonths } : undefined;
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Extract chart data for frontend visualization
+   * Returns empty structure if no valid data found (no placeholder data)
+   *
+   * Handles AI server's chart structures:
+   * - demand_forecast: { countries, current_demand, forecast_3m, ... }
+   * - capital_required: { timeline, historical, projected }
+   * - price_volatility: { timeline, prices, volatility_percent }
+   */
+  private extractChartData(
+    chart: any,
+    chartType?: 'demand' | 'capital' | 'price',
+  ): { labels: string[]; data: number[] } {
+    // Return empty structure if no chart data
+    if (!chart) return { labels: [], data: [] };
+
+    // Handle AI server's specific chart structures based on type
+    if (chartType) {
+      switch (chartType) {
+        case 'demand':
+          // demand_forecast: countries + current_demand
+          if (chart.countries && chart.current_demand) {
+            return {
+              labels: Array.isArray(chart.countries) ? chart.countries : [],
+              data: Array.isArray(chart.current_demand) ? chart.current_demand : [],
+            };
+          }
+          break;
+
+        case 'capital':
+          // capital_required: timeline + historical
+          if (chart.timeline && chart.historical) {
+            return {
+              labels: Array.isArray(chart.timeline) ? chart.timeline : [],
+              data: Array.isArray(chart.historical) ? chart.historical : [],
+            };
+          }
+          break;
+
+        case 'price':
+          // price_volatility: timeline + prices
+          if (chart.timeline && chart.prices) {
+            return {
+              labels: Array.isArray(chart.timeline) ? chart.timeline : [],
+              data: Array.isArray(chart.prices) ? chart.prices : [],
+            };
+          }
+          break;
+      }
+    }
+
+    // Handle standard chart format (fallback)
+    if (chart.labels && chart.data) {
+      return {
+        labels: Array.isArray(chart.labels) ? chart.labels : [],
+        data: Array.isArray(chart.data) ? chart.data : [],
+      };
+    }
+
+    // Handle data array with month/value pairs
+    if (Array.isArray(chart.data) && chart.data.length > 0) {
+      const labels = chart.data.map((d: any) => d.month || d.label || '');
+      const data = chart.data.map((d: any) => d.value || d.price || d.amount || 0);
+      return { labels, data };
+    }
+
+    // Return empty structure - no placeholder data
+    return { labels: [], data: [] };
+  }
+
+  /**
+   * Build price trends from various possible data sources
+   */
+  private buildPriceTrends(
+    charts: any,
+    predictions: any,
+    oldPricePredictions: any,
+  ): any[] {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    const currentMonth = new Date().toLocaleString('default', {
+      month: 'short',
+    });
+    const currentMonthIndex = months.indexOf(currentMonth.slice(0, 3));
+
+    // Try to use price volatility chart data if available
+    if (charts.price_volatility?.data) {
+      const volatilityData = charts.price_volatility.data;
+      if (Array.isArray(volatilityData) && volatilityData.length > 0) {
+        return volatilityData.slice(-6).map((item: any, idx: number) => ({
+          month: item.month || months[(currentMonthIndex - 5 + idx + 12) % 12],
+          avgPrice: item.price || item.avg || 0,
+          minPrice: item.min || Math.round((item.price || item.avg || 0) * 0.9),
+          maxPrice: item.max || Math.round((item.price || item.avg || 0) * 1.1),
+        }));
+      }
+    }
+
+    // Try to use predictions if available
+    if (predictions?.price_forecast) {
+      const forecast = predictions.price_forecast;
+      return months
+        .slice(Math.max(0, currentMonthIndex - 5), currentMonthIndex + 1)
+        .map((month, idx) => ({
+          month,
+          avgPrice: forecast.avg || forecast.predicted || 1000,
+          minPrice: forecast.min || Math.round((forecast.avg || 1000) * 0.9),
+          maxPrice: forecast.max || Math.round((forecast.avg || 1000) * 1.1),
+        }));
+    }
+
+    // Fallback to old format price_predictions (only if valid data exists)
+    if (oldPricePredictions && oldPricePredictions.avg) {
+      return months
+        .slice(Math.max(0, currentMonthIndex - 5), currentMonthIndex + 1)
+        .map((month, idx) => {
+          const variance = 0.1 * (idx + 1);
+          return {
+            month,
+            avgPrice: Math.round(
+              oldPricePredictions.avg * (1 + variance * 0.1),
+            ),
+            minPrice: Math.round(
+              oldPricePredictions.min * (1 + variance * 0.05),
+            ),
+            maxPrice: Math.round(
+              oldPricePredictions.max * (1 + variance * 0.15),
+            ),
+          };
+        });
+    }
+
+    // No data available - return empty array (no placeholder/dummy data)
+    return [];
+  }
+
+  /**
    * Search niche commodities
    * POST /v1/commodities/search-niche
+   *
+   * @deprecated This method is no longer used. All commodity search is now done
+   * through MongoDB categories only. Use CategoriesService.getCategoriesGroupedByClassification()
+   * instead. This method now returns empty results.
    */
-  async searchNicheCommodities(query: string, limit: number = 20): Promise<NicheSearchResponse> {
-    try {
-      // AI service wraps response in { statusCode, message, data: {...} }
-      // We need to unwrap the 'data' property to get the actual results
-      const response = await this.client.post<{ statusCode: number; message: string; data: NicheSearchResponse }>('/v1/commodities/search-niche', {
-        commodity: query,
-        limit,
-      });
-      // Extract the inner data object which contains 'results'
-      const innerData = response.data?.data || { results: [], total: 0 };
-      return {
-        results: innerData.results || [],
-        total: innerData.total || innerData.results?.length || 0,
-      };
-    } catch (error) {
-      // If niche search fails, return empty results (non-critical)
-      this.logger.warn(`Niche search failed for "${query}": ${error.message}`);
-      return { results: [], total: 0 };
-    }
+  async searchNicheCommodities(
+    query: string,
+    limit: number = 20,
+  ): Promise<NicheSearchResponse> {
+    this.logger.warn(
+      'searchNicheCommodities is deprecated. Use MongoDB categories instead.',
+    );
+    return { results: [], total: 0 };
   }
 
   /**

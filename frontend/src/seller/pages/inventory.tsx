@@ -4,6 +4,7 @@ import { ProductRow } from "../components/productRowInventory";
 import SelectField from "../../components/SelectField";
 import { SearchHeaderLight } from "../../components/Header";
 import { deleteProduct, getUserProductsWithPagination, updateProductVisibility } from "../../services/products.service";
+import { getImageUrl } from "../../utils/imageUtils";
 
 export const Inventory: React.FC = () => {
     const navigate = useNavigate();
@@ -578,7 +579,7 @@ export const Inventory: React.FC = () => {
                                         return (
                                             <ProductRow
                                                 key={product._id || product.id}
-                                                imageUrl={product.productImages && product.productImages.length > 0 ? process.env.REACT_APP_BACKEND_URL + '/' + product.productImages[0] : undefined}
+                                                imageUrl={product.productImages && product.productImages.length > 0 ? getImageUrl(product.productImages[0]) : undefined}
                                                 productName={product.name}
                                                 hsn={product.hsnCode}
                                                 quantity={product.stock}

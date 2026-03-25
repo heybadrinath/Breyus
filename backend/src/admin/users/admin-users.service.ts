@@ -16,6 +16,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { MailService } from '../../mail/mail.service';
 import { NotificationService } from '../../notification/notification.service';
 import { ActivityLogService } from '../activity/activity-log.service';
+import { emailTemplates } from '../../mail/templates/email.templates';
 
 export interface PaginatedUsersResult {
   users: any[];
@@ -50,7 +51,8 @@ export class AdminUsersService {
     @InjectModel(Trade.name) private tradeModel: Model<Trade>,
     @InjectModel(Product.name) private productModel: Model<Product>,
     @InjectModel(Wishlist.name) private wishlistModel: Model<Wishlist>,
-    @InjectModel(Notification.name) private notificationModel: Model<Notification>,
+    @InjectModel(Notification.name)
+    private notificationModel: Model<Notification>,
     private readonly mailService: MailService,
     private readonly notificationService: NotificationService,
     private readonly activityLogService: ActivityLogService,
@@ -200,7 +202,15 @@ export class AdminUsersService {
     const now = new Date();
     const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    const endOfLastMonth = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
 
     // Current period stats
     const [total, active, suspended, newThisMonth] = await Promise.all([
@@ -211,28 +221,27 @@ export class AdminUsersService {
     ]);
 
     // Previous period stats for comparison
-    const [
-      totalLastMonth,
-      activeLastMonth,
-      suspendedLastMonth,
-      newLastMonth,
-    ] = await Promise.all([
-      this.userModel.countDocuments({ createdAt: { $lt: startOfThisMonth } }),
-      this.userModel.countDocuments({
-        isSuspended: { $ne: true },
-        createdAt: { $lt: startOfThisMonth },
-      }),
-      this.userModel.countDocuments({
-        isSuspended: true,
-        createdAt: { $lt: startOfThisMonth },
-      }),
-      this.userModel.countDocuments({
-        createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth },
-      }),
-    ]);
+    const [totalLastMonth, activeLastMonth, suspendedLastMonth, newLastMonth] =
+      await Promise.all([
+        this.userModel.countDocuments({ createdAt: { $lt: startOfThisMonth } }),
+        this.userModel.countDocuments({
+          isSuspended: { $ne: true },
+          createdAt: { $lt: startOfThisMonth },
+        }),
+        this.userModel.countDocuments({
+          isSuspended: true,
+          createdAt: { $lt: startOfThisMonth },
+        }),
+        this.userModel.countDocuments({
+          createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth },
+        }),
+      ]);
 
     // Calculate percentage changes
-    const calculateChange = (current: number, previous: number): number | undefined => {
+    const calculateChange = (
+      current: number,
+      previous: number,
+    ): number | undefined => {
       if (previous === 0) return current > 0 ? 100 : undefined;
       return Math.round(((current - previous) / previous) * 100);
     };
@@ -344,20 +353,31 @@ export class AdminUsersService {
       { $set: { sellerDeleted: true, sellerDeletedAt: new Date() } },
     );
     const tradesAffected = {
-      modifiedCount: buyerTradesUpdated.modifiedCount + sellerTradesUpdated.modifiedCount,
+      modifiedCount:
+        buyerTradesUpdated.modifiedCount + sellerTradesUpdated.modifiedCount,
     };
 
     // 2. Deactivate products owned by the user (soft delete - preserves trade history)
     const productsDeactivated = await this.productModel.updateMany(
       { userId: userId },
-      { $set: { isActive: false, ownerDeleted: true, ownerDeletedAt: new Date() } },
+      {
+        $set: {
+          isActive: false,
+          ownerDeleted: true,
+          ownerDeletedAt: new Date(),
+        },
+      },
     );
 
     // 3. Delete wishlist items for the user (hard delete - no audit needed)
-    const wishlistDeleted = await this.wishlistModel.deleteMany({ user: userObjectId });
+    const wishlistDeleted = await this.wishlistModel.deleteMany({
+      user: userObjectId,
+    });
 
     // 4. Delete notifications for the user (hard delete - no audit needed)
-    const notificationsDeleted = await this.notificationModel.deleteMany({ userId: userObjectId });
+    const notificationsDeleted = await this.notificationModel.deleteMany({
+      userId: userObjectId,
+    });
 
     // 5. Remove user from company's users array
     await this.companyModel.updateOne(
@@ -441,15 +461,13 @@ export class AdminUsersService {
       priority: 'urgent',
     });
 
-    // Send email notification
+    // Send email notification with professional template
     try {
+      const emailHtml = emailTemplates.accountSuspended(reason, newValue.suspendedAt);
       await this.mailService.sendTradeNotificationEmail(
         user.mail,
         'Account Suspended - Breyus',
-        `<h2>Account Suspended</h2>
-        <p>Your Breyus account has been suspended.</p>
-        <p><strong>Reason:</strong> ${reason}</p>
-        <p>If you believe this is an error, please contact our support team for assistance.</p>`,
+        emailHtml,
       );
     } catch (error) {
       console.error('Failed to send suspension email:', error);
@@ -521,18 +539,18 @@ export class AdminUsersService {
       userId: userId,
       type: 'account_unsuspended',
       title: 'Account Reactivated',
-      message: 'Your account has been reactivated. You can now log in and use the platform.',
+      message:
+        'Your account has been reactivated. You can now log in and use the platform.',
       priority: 'high',
     });
 
-    // Send email notification
+    // Send email notification with professional template
     try {
+      const emailHtml = emailTemplates.accountUnsuspended(new Date());
       await this.mailService.sendTradeNotificationEmail(
         user.mail,
         'Account Reactivated - Breyus',
-        `<h2>Account Reactivated</h2>
-        <p>Good news! Your Breyus account has been reactivated.</p>
-        <p>You can now log in and use the platform as usual.</p>`,
+        emailHtml,
       );
     } catch (error) {
       console.error('Failed to send unsuspension email:', error);
@@ -586,7 +604,8 @@ export class AdminUsersService {
       userId: userId,
       type: 'password_reset_required',
       title: 'Password Reset Required',
-      message: 'An administrator has initiated a password reset for your account. Please check your email for the reset code.',
+      message:
+        'An administrator has initiated a password reset for your account. Please check your email for the reset code.',
       priority: 'urgent',
     });
 

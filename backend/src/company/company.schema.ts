@@ -3,190 +3,225 @@ import { Document, Types } from 'mongoose';
 import { MeanMonthlyRevenue } from 'src/onboarding/dto/onboarding.dto';
 
 export enum Role {
-    BUYER = 'Buyer',
-    SELLER = 'Seller',
-    BOTH = 'Seller and Buyer'
+  BUYER = 'Buyer',
+  SELLER = 'Seller',
+  BOTH = 'Seller and Buyer',
 }
 
 export enum TradeType {
-    INTERNATIONAL = 'international',
-    DOMESTIC = 'domestic',
+  INTERNATIONAL = 'international',
+  DOMESTIC = 'domestic',
 }
 
 // KYC Document Types (Phase 4)
+// Note: passport, tax_certificate, business_registration are legacy types
+// that may exist in old documents but are no longer uploadable via UI
 export enum KycDocumentType {
-    CIS = 'cis',
-    PASSPORT = 'passport',
-    TAX_CERTIFICATE = 'tax_certificate',
-    BUSINESS_REGISTRATION = 'business_registration',
-    OTHER = 'other',
+  CIS = 'cis',
+  PRODUCT_CATALOG = 'product_catalog',
+  OTHER = 'other',
+  // Legacy types (kept for backward compatibility with existing documents)
+  PASSPORT = 'passport',
+  TAX_CERTIFICATE = 'tax_certificate',
+  BUSINESS_REGISTRATION = 'business_registration',
 }
 
 // KYC Document Status (Phase 4)
 export enum KycDocumentStatus {
-    PENDING = 'pending',
-    APPROVED = 'approved',
-    REJECTED = 'rejected',
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
 }
 
 // KYC Document interface for embedded documents (Phase 4)
 export interface KycDocument {
-    _id: Types.ObjectId;
-    type: KycDocumentType;
-    customName: string;           // User-provided name
-    filename: string;
-    originalName: string;
-    path: string;
-    mimeType: string;
-    size: number;
-    status: KycDocumentStatus;    // default: 'pending'
-    uploadedAt: Date;
-    reviewedBy?: Types.ObjectId;  // AdminUser who reviewed
-    reviewedAt?: Date;
-    reviewNotes?: string;         // Admin notes (visible to user)
+  _id: Types.ObjectId;
+  type: KycDocumentType;
+  customName: string; // User-provided name
+  description?: string; // Required for 'other' type documents
+  filename: string;
+  originalName: string;
+  path: string;
+  mimeType: string;
+  size: number;
+  status: KycDocumentStatus; // default: 'pending'
+  uploadedAt: Date;
+  reviewedBy?: Types.ObjectId; // AdminUser who reviewed
+  reviewedAt?: Date;
+  reviewNotes?: string; // Admin notes (visible to user)
 }
 
 // Address interface for delivery addresses
 export interface DeliveryAddress {
-    fullName: string;
-    mobileNumber: string;
-    pincode: string;
-    streetName: string;
-    landmark?: string;
-    city: string;
-    state: string;
-    country: string;
-    additionalDetails?: string;
+  fullName: string;
+  mobileNumber: string;
+  pincode: string;
+  streetName: string;
+  landmark?: string;
+  city: string;
+  state: string;
+  country: string;
+  additionalDetails?: string;
 }
 
 // Bank Information interface
 export interface BankInfo {
-    ifscCode?: string;
-    accountNumber?: string;
-    accountHolderName?: string;
-    bankAddress?: string;
-    bankBranch?: string;
+  ifscCode?: string;
+  accountNumber?: string;
+  accountHolderName?: string;
+  bankAddress?: string;
+  bankBranch?: string;
 }
 
 // Trade Details interface
 export interface TradeDetails {
-    emergingInterest?: string;
-    agreedToTerms?: boolean;
-    cisDocument?: string; // URL to uploaded CIS file
+  emergingInterest?: string;
+  agreedToTerms?: boolean;
+  cisDocument?: string; // URL to uploaded CIS file
 }
 
 // Billing Preferences interface (Settings Page)
 export interface BillingPreferences {
-    invoiceEmail?: string;
-    useExistingEmail?: boolean; // true = use primaryEmail for invoices
+  invoiceEmail?: string;
+  useExistingEmail?: boolean; // true = use primaryEmail for invoices
 }
 
 @Schema({ timestamps: true })
 export class Company extends Document {
+  @Prop()
+  companyName: string;
 
-    @Prop()
-    companyName: string;
+  @Prop()
+  companyAddress: string;
 
-    @Prop()
-    companyAddress: string;
+  @Prop()
+  companyMobile: string;
 
-    @Prop()
-    companyMobile: string;
+  // FIXED: Added unique constraint (Audit Bug #4 - Missing unique constraints)
+  // sparse: true allows null values but enforces uniqueness when present
+  @Prop({ unique: true, sparse: true })
+  taxId: string;
 
-    // FIXED: Added unique constraint (Audit Bug #4 - Missing unique constraints)
-    // sparse: true allows null values but enforces uniqueness when present
-    @Prop({ unique: true, sparse: true })
-    taxId: string;
+  // Country field for company location
+  @Prop()
+  country: string;
 
-    @Prop()
-    role: Role;
+  // GST Verification Fields (for Indian companies)
+  @Prop({ default: false })
+  gstVerified: boolean;
 
-    @Prop()
-    isVerified: boolean;
+  @Prop({ type: Date })
+  gstVerifiedAt?: Date;
 
-    @Prop()
-    tradeType: TradeType;
+  // Flag for admin KYC queue when GST API fails
+  @Prop({ default: false })
+  gstPendingManualReview: boolean;
 
-    @Prop()
-    founderName: string;
+  // Stores GST verification data from Cashfree API
+  @Prop({ type: Object })
+  gstVerificationData?: {
+    legalName: string;
+    tradeName?: string;
+    status: string;
+    registrationDate?: string;
+    stateJurisdiction?: string;
+  };
 
-    @Prop()
-    websiteUrl: string;
+  @Prop()
+  role: Role;
 
-    @Prop()
-    exportedBefore: boolean;
+  @Prop()
+  isVerified: boolean;
 
-    @Prop()
-    referrel: string;
+  @Prop()
+  tradeType: TradeType;
 
-    @Prop()
-    mainLineBusiness: string[];
+  @Prop()
+  founderName: string;
 
-    @Prop()
-    meanMonthlyRevenue: MeanMonthlyRevenue;
+  @Prop()
+  websiteUrl: string;
 
-    @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], required: false })
-    users: Types.ObjectId[]; // Or: User[]
+  @Prop()
+  exportedBefore: boolean;
 
-    @Prop({ default: 0, required: false })
-    onboardingProgress: number;
+  @Prop()
+  referrel: string;
 
-    @Prop({default: false, unique: false})
-    isOnboardingCompleted: boolean;
+  @Prop()
+  mainLineBusiness: string[];
 
-    @Prop({ type: [Object], default: [] })
-    deliveryAddresses: DeliveryAddress[];
+  @Prop()
+  meanMonthlyRevenue: MeanMonthlyRevenue;
 
-    // Bank Information
-    @Prop({ type: Object, default: {} })
-    bankInfo: BankInfo;
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], required: false })
+  users: Types.ObjectId[]; // Or: User[]
 
-    // Trade Details
-    @Prop({ type: Object, default: {} })
-    tradeDetails: TradeDetails;
+  @Prop({ default: 0, required: false })
+  onboardingProgress: number;
 
-    // Contact Information
-    @Prop()
-    whatsappContact: string;
+  @Prop({ default: false, unique: false })
+  isOnboardingCompleted: boolean;
 
-    // FIXED: Added unique constraint with normalization (Audit Bug #4)
-    @Prop({ unique: true, sparse: true, lowercase: true, trim: true })
-    primaryEmail: string;
+  @Prop({ type: [Object], default: [] })
+  deliveryAddresses: DeliveryAddress[];
 
-    @Prop()
-    alternativeSalesEmail: string;
+  // Bank Information
+  @Prop({ type: Object, default: {} })
+  bankInfo: BankInfo;
 
-    // KYC Documents (Phase 4)
-    @Prop({ type: [Object], default: [] })
-    kycDocuments: KycDocument[];
+  // Trade Details
+  @Prop({ type: Object, default: {} })
+  tradeDetails: TradeDetails;
 
-    // Company-level KYC verification (Phase 4)
-    @Prop({ type: Boolean, default: false })
-    isKycVerified: boolean;
+  // Contact Information
+  @Prop()
+  whatsappContact: string;
 
-    @Prop({ type: Types.ObjectId, ref: 'AdminUser' })
-    kycVerifiedBy?: Types.ObjectId;
+  // FIXED: Added unique constraint with normalization (Audit Bug #4)
+  @Prop({ unique: true, sparse: true, lowercase: true, trim: true })
+  primaryEmail: string;
 
-    @Prop({ type: Date })
-    kycVerifiedAt?: Date;
+  @Prop()
+  alternativeSalesEmail: string;
 
-    @Prop({ type: String })
-    kycVerificationNotes?: string;
+  // KYC Documents (Phase 4)
+  @Prop({ type: [Object], default: [] })
+  kycDocuments: KycDocument[];
 
-    // Profile Media (Settings Page)
-    @Prop({ type: String })
-    profilePicture?: string;
+  // Company-level KYC verification (Phase 4)
+  @Prop({ type: Boolean, default: false })
+  isKycVerified: boolean;
 
-    @Prop({ type: String })
-    bannerImage?: string;
+  @Prop({ type: Types.ObjectId, ref: 'AdminUser' })
+  kycVerifiedBy?: Types.ObjectId;
 
-    // Billing Preferences (Settings Page)
-    @Prop({ type: Object, default: { useExistingEmail: true } })
-    billingPreferences: BillingPreferences;
+  @Prop({ type: Date })
+  kycVerifiedAt?: Date;
 
-    // Currency for analytics display (ISO 4217)
-    @Prop({ type: String, default: 'USD' })
-    currency: string;
+  @Prop({ type: String })
+  kycVerificationNotes?: string;
+
+  // Profile Media (Settings Page)
+  @Prop({ type: String })
+  profilePicture?: string;
+
+  @Prop({ type: String })
+  bannerImage?: string;
+
+  // Billing Preferences (Settings Page)
+  @Prop({ type: Object, default: { useExistingEmail: true } })
+  billingPreferences: BillingPreferences;
+
+  // Currency for analytics display (ISO 4217)
+  @Prop({ type: String, default: 'USD' })
+  currency: string;
+
+  // Orphan Cleanup: TTL field for auto-deletion of incomplete onboarding
+  // Set to 7 days from creation. Cleared when onboarding completes.
+  // MongoDB TTL index automatically deletes documents when this date passes.
+  @Prop({ type: Date })
+  onboardingExpiresAt?: Date;
 }
 
 export const CompanySchema = SchemaFactory.createForClass(Company);
@@ -194,3 +229,9 @@ export const CompanySchema = SchemaFactory.createForClass(Company);
 // Add indexes for KYC queries
 CompanySchema.index({ isKycVerified: 1 });
 CompanySchema.index({ 'kycDocuments.status': 1 });
+CompanySchema.index({ gstPendingManualReview: 1 }); // For admin GST review queue
+
+// TTL Index for orphan company cleanup
+// MongoDB automatically deletes documents when onboardingExpiresAt < now
+// expireAfterSeconds: 0 means delete exactly at the specified date
+CompanySchema.index({ onboardingExpiresAt: 1 }, { expireAfterSeconds: 0 });

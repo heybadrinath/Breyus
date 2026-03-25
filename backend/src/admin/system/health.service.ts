@@ -132,7 +132,9 @@ export class HealthService {
           this.logger.warn(`Redis connection error: ${err.message}`);
         });
       } catch (error) {
-        this.logger.warn('Failed to initialize Redis connection for health checks');
+        this.logger.warn(
+          'Failed to initialize Redis connection for health checks',
+        );
       }
     }
   }
@@ -149,19 +151,58 @@ export class HealthService {
     // This is critical because stopped containers can cause DNS resolution hangs
     const INDIVIDUAL_TIMEOUT = 5000; // 5 seconds per service
 
-    const [mongodb, redis, api, postgres, aiService, frontend] = await Promise.all([
-      withTimeout(this.checkMongoDB(), INDIVIDUAL_TIMEOUT, unhealthyFallback('MongoDB'), 'MongoDB'),
-      withTimeout(this.checkRedis(), INDIVIDUAL_TIMEOUT, unhealthyFallback('Redis'), 'Redis'),
-      withTimeout(this.checkApi(), INDIVIDUAL_TIMEOUT, unhealthyFallback('API'), 'API'),
-      withTimeout(this.checkPostgres(), INDIVIDUAL_TIMEOUT, unhealthyFallback('PostgreSQL'), 'PostgreSQL'),
-      withTimeout(this.checkAiService(), INDIVIDUAL_TIMEOUT, unhealthyFallback('AI Service'), 'AI Service'),
-      withTimeout(this.checkFrontend(), INDIVIDUAL_TIMEOUT, unhealthyFallback('Frontend'), 'Frontend'),
-    ]);
+    const [mongodb, redis, api, postgres, aiService, frontend] =
+      await Promise.all([
+        withTimeout(
+          this.checkMongoDB(),
+          INDIVIDUAL_TIMEOUT,
+          unhealthyFallback('MongoDB'),
+          'MongoDB',
+        ),
+        withTimeout(
+          this.checkRedis(),
+          INDIVIDUAL_TIMEOUT,
+          unhealthyFallback('Redis'),
+          'Redis',
+        ),
+        withTimeout(
+          this.checkApi(),
+          INDIVIDUAL_TIMEOUT,
+          unhealthyFallback('API'),
+          'API',
+        ),
+        withTimeout(
+          this.checkPostgres(),
+          INDIVIDUAL_TIMEOUT,
+          unhealthyFallback('PostgreSQL'),
+          'PostgreSQL',
+        ),
+        withTimeout(
+          this.checkAiService(),
+          INDIVIDUAL_TIMEOUT,
+          unhealthyFallback('AI Service'),
+          'AI Service',
+        ),
+        withTimeout(
+          this.checkFrontend(),
+          INDIVIDUAL_TIMEOUT,
+          unhealthyFallback('Frontend'),
+          'Frontend',
+        ),
+      ]);
 
     // WebSocket status is synchronous
     const websocket = this.getWebSocketStatus();
 
-    const services = { api, mongodb, redis, postgres, aiService, frontend, websocket };
+    const services = {
+      api,
+      mongodb,
+      redis,
+      postgres,
+      aiService,
+      frontend,
+      websocket,
+    };
     const overall = this.calculateOverallStatus(services);
 
     return {
@@ -270,29 +311,32 @@ export class HealthService {
 
   private async checkPostgres(): Promise<ServiceHealth> {
     const start = Date.now();
-    const postgresHost = this.configService.get<string>('POSTGRES_HOST') || 'postgres';
-    const postgresPort = this.configService.get<string>('POSTGRES_PORT') || '5432';
+    const postgresHost =
+      this.configService.get<string>('POSTGRES_HOST') || 'postgres';
+    const postgresPort =
+      this.configService.get<string>('POSTGRES_PORT') || '5432';
 
     try {
       // Use a simple TCP connection check via curl (faster than docker exec)
       const { stdout } = await execAsync(
         `curl -sf --connect-timeout 2 "http://${postgresHost}:${postgresPort}" 2>&1 || echo "connection_check"`,
-        { timeout: 3000 }
+        { timeout: 3000 },
       );
 
       const latency = Date.now() - start;
 
       // If curl fails with "connection refused" or similar, postgres is not up
       // If it returns something (even an error page), the port is open
-      const isOpen = stdout.includes('connection_check') ||
-                     stdout.includes('empty reply') ||
-                     stdout.includes('Received HTTP');
+      const isOpen =
+        stdout.includes('connection_check') ||
+        stdout.includes('empty reply') ||
+        stdout.includes('Received HTTP');
 
       // For a more accurate check, use pg_isready via network if available
       try {
         const pgCheck = await execAsync(
           `pg_isready -h ${postgresHost} -p ${postgresPort} 2>/dev/null`,
-          { timeout: 2000 }
+          { timeout: 2000 },
         );
         const pgLatency = Date.now() - start;
         return {
@@ -327,14 +371,16 @@ export class HealthService {
 
   private async checkAiService(): Promise<ServiceHealth> {
     const start = Date.now();
-    const aiServiceUrl = this.configService.get<string>('AI_SERVICE_URL') || 'http://ai-service:8000';
+    const aiServiceUrl =
+      this.configService.get<string>('AI_SERVICE_URL') ||
+      'http://ai-service:8000';
 
     try {
       // Use --connect-timeout to limit DNS + connection time (critical for stopped containers)
       // Use --max-time to limit total transfer time
       const { stdout } = await execAsync(
         `curl -sf "${aiServiceUrl}/health" --connect-timeout 3 --max-time 4 2>/dev/null || echo "unreachable"`,
-        { timeout: 5000 }
+        { timeout: 5000 },
       );
 
       const latency = Date.now() - start;
@@ -368,15 +414,18 @@ export class HealthService {
   private async checkFrontend(): Promise<ServiceHealth> {
     const start = Date.now();
     // In Docker, frontend runs on internal network. Check both internal and external URLs.
-    const internalUrl = this.configService.get<string>('FRONTEND_INTERNAL_URL') || 'http://frontend:80';
-    const externalUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:80';
+    const internalUrl =
+      this.configService.get<string>('FRONTEND_INTERNAL_URL') ||
+      'http://frontend:80';
+    const externalUrl =
+      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:80';
 
     try {
       // Use --connect-timeout to limit DNS + connection time (critical for stopped containers)
       // Try internal Docker network first, then external URL
       const { stdout } = await execAsync(
         `curl -sf "${internalUrl}/health" --connect-timeout 2 --max-time 3 2>/dev/null || curl -sf "${internalUrl}" --connect-timeout 2 --max-time 3 2>/dev/null || echo "unreachable"`,
-        { timeout: 5000 }
+        { timeout: 5000 },
       );
 
       const latency = Date.now() - start;
@@ -428,11 +477,13 @@ export class HealthService {
     }
   }
 
-  private calculateOverallStatus(services: Record<string, ServiceHealth>): HealthStatus {
-    const statuses = Object.values(services).map(s => s.status);
+  private calculateOverallStatus(
+    services: Record<string, ServiceHealth>,
+  ): HealthStatus {
+    const statuses = Object.values(services).map((s) => s.status);
 
-    if (statuses.every(s => s === 'healthy')) return 'healthy';
-    if (statuses.some(s => s === 'unhealthy')) return 'unhealthy';
+    if (statuses.every((s) => s === 'healthy')) return 'healthy';
+    if (statuses.some((s) => s === 'unhealthy')) return 'unhealthy';
     return 'degraded';
   }
 
@@ -451,10 +502,11 @@ export class HealthService {
 
   private async getCpuUsage(): Promise<number> {
     const cpus = os.cpus();
-    const avgIdle = cpus.reduce((acc, cpu) => {
-      const total = Object.values(cpu.times).reduce((a, b) => a + b, 0);
-      return acc + (cpu.times.idle / total);
-    }, 0) / cpus.length;
+    const avgIdle =
+      cpus.reduce((acc, cpu) => {
+        const total = Object.values(cpu.times).reduce((a, b) => a + b, 0);
+        return acc + cpu.times.idle / total;
+      }, 0) / cpus.length;
 
     return Math.round((1 - avgIdle) * 100);
   }
@@ -465,7 +517,7 @@ export class HealthService {
       // This allows admins to see and manage all containers from the portal
       const { stdout } = await execAsync(
         'docker ps -a --format "{{.Names}}|{{.Status}}|{{.Image}}" 2>/dev/null || echo "docker_not_available"',
-        { timeout: 10000 }
+        { timeout: 10000 },
       );
 
       if (stdout.trim() === 'docker_not_available') {
@@ -473,7 +525,10 @@ export class HealthService {
       }
 
       const containers: ContainerInfo[] = [];
-      const lines = stdout.trim().split('\n').filter(l => l);
+      const lines = stdout
+        .trim()
+        .split('\n')
+        .filter((l) => l);
 
       for (const line of lines) {
         const [name, status, image] = line.split('|');
@@ -484,9 +539,14 @@ export class HealthService {
         const statusLower = status?.toLowerCase() || '';
         let containerStatus: ContainerInfo['status'] = 'stopped';
         if (statusLower.includes('up')) containerStatus = 'running';
-        else if (statusLower.includes('restarting')) containerStatus = 'restarting';
+        else if (statusLower.includes('restarting'))
+          containerStatus = 'restarting';
         else if (statusLower.includes('paused')) containerStatus = 'paused';
-        else if (statusLower.includes('exited') || statusLower.includes('created')) containerStatus = 'stopped';
+        else if (
+          statusLower.includes('exited') ||
+          statusLower.includes('created')
+        )
+          containerStatus = 'stopped';
 
         // Only get stats for running containers (docker stats doesn't work on stopped containers)
         let stats: { cpu: string; memory: string } | null = null;
@@ -528,16 +588,21 @@ export class HealthService {
     }
   }
 
-  private async getContainerStats(containerName: string): Promise<{ cpu: string; memory: string } | null> {
+  private async getContainerStats(
+    containerName: string,
+  ): Promise<{ cpu: string; memory: string } | null> {
     try {
       // Add timeout to prevent hanging on stopped containers
       // docker stats on stopped containers can hang indefinitely
       const { stdout } = await execAsync(
         `docker stats ${containerName} --no-stream --format "{{.CPUPerc}}|{{.MemUsage}}" 2>/dev/null`,
-        { timeout: 5000 }
+        { timeout: 5000 },
       );
       const [cpu, memory] = stdout.trim().split('|');
-      return { cpu: cpu || '0%', memory: memory?.split('/')[0]?.trim() || '0MB' };
+      return {
+        cpu: cpu || '0%',
+        memory: memory?.split('/')[0]?.trim() || '0MB',
+      };
     } catch {
       return null;
     }
@@ -546,7 +611,9 @@ export class HealthService {
   async getDiskUsage(): Promise<DiskUsage[]> {
     try {
       // Works on both Linux and macOS
-      const { stdout } = await execAsync('df -h 2>/dev/null || echo "df_not_available"');
+      const { stdout } = await execAsync(
+        'df -h 2>/dev/null || echo "df_not_available"',
+      );
 
       if (stdout.trim() === 'df_not_available') {
         // Try Windows alternative
@@ -584,8 +651,14 @@ export class HealthService {
 
   private async getWindowsDiskUsage(): Promise<DiskUsage[]> {
     try {
-      const { stdout } = await execAsync('wmic logicaldisk get size,freespace,caption');
-      const lines = stdout.trim().split('\n').slice(1).filter(l => l.trim());
+      const { stdout } = await execAsync(
+        'wmic logicaldisk get size,freespace,caption',
+      );
+      const lines = stdout
+        .trim()
+        .split('\n')
+        .slice(1)
+        .filter((l) => l.trim());
       const disks: DiskUsage[] = [];
 
       for (const line of lines) {
@@ -706,12 +779,11 @@ export class HealthService {
         try {
           const serverStatus = await db.admin().serverStatus();
           const opcounters = serverStatus?.opcounters || {};
-          result.mongodb.opsPerSec = (
+          result.mongodb.opsPerSec =
             (opcounters.insert || 0) +
             (opcounters.query || 0) +
             (opcounters.update || 0) +
-            (opcounters.delete || 0)
-          );
+            (opcounters.delete || 0);
         } catch (e) {
           this.logger.warn('Could not get MongoDB server status');
         }
@@ -722,12 +794,17 @@ export class HealthService {
 
     // PostgreSQL stats
     try {
-      const postgresHost = this.configService.get<string>('POSTGRES_HOST') || 'postgres';
-      const postgresPort = this.configService.get<string>('POSTGRES_PORT') || '5432';
+      const postgresHost =
+        this.configService.get<string>('POSTGRES_HOST') || 'postgres';
+      const postgresPort =
+        this.configService.get<string>('POSTGRES_PORT') || '5432';
 
       // Check if postgres is reachable
       try {
-        await execAsync(`pg_isready -h ${postgresHost} -p ${postgresPort} 2>/dev/null`, { timeout: 2000 });
+        await execAsync(
+          `pg_isready -h ${postgresHost} -p ${postgresPort} 2>/dev/null`,
+          { timeout: 2000 },
+        );
         result.postgres.status = 'connected';
         result.postgres.activeConnections = 1; // Basic connectivity confirmed
       } catch {
@@ -773,7 +850,7 @@ export class HealthService {
     try {
       const { stdout } = await execAsync(
         `docker inspect ${containerName} --format "{{.RestartCount}}" 2>/dev/null`,
-        { timeout: 5000 }
+        { timeout: 5000 },
       );
       return parseInt(stdout.trim(), 10) || 0;
     } catch {
@@ -786,18 +863,23 @@ export class HealthService {
 
     // If no SSL_DOMAINS configured, return empty array (local development)
     if (!domainsEnv || domainsEnv.trim() === '') {
-      this.logger.debug('No SSL_DOMAINS configured, skipping SSL certificate check');
+      this.logger.debug(
+        'No SSL_DOMAINS configured, skipping SSL certificate check',
+      );
       return [];
     }
 
-    const domains = domainsEnv.split(',').map(d => d.trim()).filter(d => d);
+    const domains = domainsEnv
+      .split(',')
+      .map((d) => d.trim())
+      .filter((d) => d);
     const certificates: SSLCertificateInfo[] = [];
 
     for (const domain of domains) {
       try {
         const { stdout } = await execAsync(
           `echo | openssl s_client -servername ${domain} -connect ${domain}:443 2>/dev/null | openssl x509 -noout -dates -issuer 2>/dev/null`,
-          { timeout: 10000 }
+          { timeout: 10000 },
         );
 
         const expiryMatch = stdout.match(/notAfter=(.+)/);
@@ -806,7 +888,9 @@ export class HealthService {
         if (expiryMatch) {
           const expiryDate = new Date(expiryMatch[1]);
           const now = new Date();
-          const daysRemaining = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          const daysRemaining = Math.ceil(
+            (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+          );
 
           let status: SSLCertificateInfo['status'] = 'valid';
           if (daysRemaining < 0) {
@@ -824,7 +908,9 @@ export class HealthService {
           });
         }
       } catch (error) {
-        this.logger.warn(`Failed to check SSL certificate for ${domain}: ${error.message}`);
+        this.logger.warn(
+          `Failed to check SSL certificate for ${domain}: ${error.message}`,
+        );
       }
     }
 
@@ -837,10 +923,11 @@ export class HealthService {
     output?: string;
   }> {
     try {
-      const scriptsPath = this.configService.get<string>('SCRIPTS_PATH') || '/opt/breyus/scripts';
+      const scriptsPath =
+        this.configService.get<string>('SCRIPTS_PATH') || '/opt/breyus/scripts';
       const { stdout, stderr } = await execAsync(
         `${scriptsPath}/renew-certs.sh ${domains?.join(' ') || ''} 2>&1`,
-        { timeout: 120000 }
+        { timeout: 120000 },
       );
 
       return {
@@ -856,7 +943,10 @@ export class HealthService {
     }
   }
 
-  async getContainerLogs(containerName: string, lines: number = 100): Promise<{
+  async getContainerLogs(
+    containerName: string,
+    lines: number = 100,
+  ): Promise<{
     success: boolean;
     logs: string;
     containerName: string;
@@ -868,7 +958,7 @@ export class HealthService {
 
       const { stdout } = await execAsync(
         `docker logs --tail ${lines} --timestamps ${sanitizedName} 2>&1`,
-        { timeout: 30000, maxBuffer: 10 * 1024 * 1024 } // 10MB buffer for logs
+        { timeout: 30000, maxBuffer: 10 * 1024 * 1024 }, // 10MB buffer for logs
       );
 
       return {
@@ -878,7 +968,9 @@ export class HealthService {
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      this.logger.warn(`Failed to get logs for container ${containerName}: ${error.message}`);
+      this.logger.warn(
+        `Failed to get logs for container ${containerName}: ${error.message}`,
+      );
       return {
         success: false,
         logs: `Failed to retrieve logs: ${error.message}`,
@@ -901,7 +993,9 @@ export class HealthService {
         message: `Container ${sanitizedName} restarted successfully`,
       };
     } catch (error) {
-      this.logger.error(`Failed to restart container ${containerName}: ${error.message}`);
+      this.logger.error(
+        `Failed to restart container ${containerName}: ${error.message}`,
+      );
       return {
         success: false,
         message: `Failed to restart container: ${error.message}`,
@@ -922,7 +1016,9 @@ export class HealthService {
         message: `Container ${sanitizedName} stopped successfully`,
       };
     } catch (error) {
-      this.logger.error(`Failed to stop container ${containerName}: ${error.message}`);
+      this.logger.error(
+        `Failed to stop container ${containerName}: ${error.message}`,
+      );
       return {
         success: false,
         message: `Failed to stop container: ${error.message}`,
@@ -943,7 +1039,9 @@ export class HealthService {
         message: `Container ${sanitizedName} started successfully`,
       };
     } catch (error) {
-      this.logger.error(`Failed to start container ${containerName}: ${error.message}`);
+      this.logger.error(
+        `Failed to start container ${containerName}: ${error.message}`,
+      );
       return {
         success: false,
         message: `Failed to start container: ${error.message}`,
@@ -959,7 +1057,11 @@ export class HealthService {
       image: string;
       status: string;
       created: string;
-      ports: Array<{ hostPort: string; containerPort: string; protocol: string }>;
+      ports: Array<{
+        hostPort: string;
+        containerPort: string;
+        protocol: string;
+      }>;
       volumes: Array<{ source: string; destination: string; mode: string }>;
       environment: string[];
       networks: string[];
@@ -979,17 +1081,21 @@ export class HealthService {
       const sanitizedName = containerName.replace(/[^a-zA-Z0-9_-]/g, '');
       const { stdout } = await execAsync(
         `docker inspect ${sanitizedName} --format '{{json .}}'`,
-        { timeout: 10000 }
+        { timeout: 10000 },
       );
 
       const data = JSON.parse(stdout);
 
       // Parse ports
-      const ports: Array<{ hostPort: string; containerPort: string; protocol: string }> = [];
+      const ports: Array<{
+        hostPort: string;
+        containerPort: string;
+        protocol: string;
+      }> = [];
       const portBindings = data.HostConfig?.PortBindings || {};
       for (const [containerPort, bindings] of Object.entries(portBindings)) {
         if (Array.isArray(bindings)) {
-          for (const binding of bindings as any[]) {
+          for (const binding of bindings) {
             const [port, protocol] = containerPort.split('/');
             ports.push({
               hostPort: binding.HostPort || 'N/A',
@@ -1001,7 +1107,11 @@ export class HealthService {
       }
 
       // Parse volumes/mounts
-      const volumes: Array<{ source: string; destination: string; mode: string }> = [];
+      const volumes: Array<{
+        source: string;
+        destination: string;
+        mode: string;
+      }> = [];
       const mounts = data.Mounts || [];
       for (const mount of mounts) {
         volumes.push({
@@ -1012,10 +1122,18 @@ export class HealthService {
       }
 
       // Parse environment variables (filter sensitive ones)
-      const sensitiveKeys = ['PASSWORD', 'SECRET', 'KEY', 'TOKEN', 'CREDENTIAL'];
+      const sensitiveKeys = [
+        'PASSWORD',
+        'SECRET',
+        'KEY',
+        'TOKEN',
+        'CREDENTIAL',
+      ];
       const environment = (data.Config?.Env || []).map((env: string) => {
         const [key] = env.split('=');
-        const isSensitive = sensitiveKeys.some(s => key.toUpperCase().includes(s));
+        const isSensitive = sensitiveKeys.some((s) =>
+          key.toUpperCase().includes(s),
+        );
         return isSensitive ? `${key}=********` : env;
       });
 
@@ -1063,7 +1181,9 @@ export class HealthService {
         },
       };
     } catch (error) {
-      this.logger.error(`Failed to inspect container ${containerName}: ${error.message}`);
+      this.logger.error(
+        `Failed to inspect container ${containerName}: ${error.message}`,
+      );
       return {
         success: false,
         details: null,
@@ -1128,8 +1248,12 @@ export class HealthService {
       // List MongoDB backups (versioned)
       const mongoDir = path.join(backupDir, 'mongodb');
       if (fs.existsSync(mongoDir)) {
-        const mongoFiles = fs.readdirSync(mongoDir)
-          .filter((f: string) => f.startsWith('breyus_mongo_') && f.includes('.archive'))
+        const mongoFiles = fs
+          .readdirSync(mongoDir)
+          .filter(
+            (f: string) =>
+              f.startsWith('breyus_mongo_') && f.includes('.archive'),
+          )
           .map((filename: string) => {
             const filePath = path.join(mongoDir, filename);
             const stats = fs.statSync(filePath);
@@ -1191,11 +1315,20 @@ export class HealthService {
       const sanitizedFilename = path.basename(filename);
 
       // Validate the filename matches expected patterns
-      if (type === 'mongodb' && !sanitizedFilename.startsWith('breyus_mongo_')) {
+      if (
+        type === 'mongodb' &&
+        !sanitizedFilename.startsWith('breyus_mongo_')
+      ) {
         return { success: false, message: 'Invalid MongoDB backup filename' };
       }
-      if (type === 'postgresql' && sanitizedFilename !== 'breyus_postgres_latest.sql.gz') {
-        return { success: false, message: 'Invalid PostgreSQL backup filename' };
+      if (
+        type === 'postgresql' &&
+        sanitizedFilename !== 'breyus_postgres_latest.sql.gz'
+      ) {
+        return {
+          success: false,
+          message: 'Invalid PostgreSQL backup filename',
+        };
       }
 
       const subDir = type === 'mongodb' ? 'mongodb' : 'postgresql';
@@ -1211,7 +1344,10 @@ export class HealthService {
       return { success: true, message: `Deleted backup: ${sanitizedFilename}` };
     } catch (error) {
       this.logger.error(`Failed to delete backup: ${error.message}`);
-      return { success: false, message: `Failed to delete backup: ${error.message}` };
+      return {
+        success: false,
+        message: `Failed to delete backup: ${error.message}`,
+      };
     }
   }
 
@@ -1253,7 +1389,8 @@ export class HealthService {
       totalBytes = calculateDirSize(mongoDir) + calculateDirSize(pgDir);
 
       if (fs.existsSync(mongoDir)) {
-        mongoCount = fs.readdirSync(mongoDir)
+        mongoCount = fs
+          .readdirSync(mongoDir)
           .filter((f: string) => f.startsWith('breyus_mongo_')).length;
       }
 
@@ -1262,9 +1399,10 @@ export class HealthService {
       }
 
       // Check if path looks like remote storage (Hetzner, NFS, etc.)
-      const isRemote = backupDir.startsWith('/mnt/') ||
-                       backupDir.includes('hetzner') ||
-                       backupDir.includes('storage-box');
+      const isRemote =
+        backupDir.startsWith('/mnt/') ||
+        backupDir.includes('hetzner') ||
+        backupDir.includes('storage-box');
 
       return {
         path: backupDir,

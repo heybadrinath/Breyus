@@ -10,7 +10,10 @@ import { User, UserSchema } from '../../users/user.schema';
 import { Company, CompanySchema } from '../../company/company.schema';
 import { Trade, TradeSchema } from '../../trade/schema/trade.schema';
 import { Product, ProductSchema } from '../../products/schema/products.schema';
-import { TradeDispute, TradeDisputeSchema } from '../disputes/schemas/trade-dispute.schema';
+import {
+  TradeDispute,
+  TradeDisputeSchema,
+} from '../disputes/schemas/trade-dispute.schema';
 
 @Module({
   imports: [

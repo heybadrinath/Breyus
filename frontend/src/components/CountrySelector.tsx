@@ -94,13 +94,13 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
     return countries.filter(
       (country) =>
         country.name.toLowerCase().includes(term) ||
-        country.code.toLowerCase().includes(term)
+        country.isoCode.toLowerCase().includes(term)
     );
   }, [countries, searchTerm]);
 
   // Get selected country display value
   const selectedCountry = useMemo(() => {
-    return countries.find((c) => c.code === value || c.name === value);
+    return countries.find((c) => c.isoCode === value || c.name === value);
   }, [countries, value]);
 
   // Handle country selection in searchable mode

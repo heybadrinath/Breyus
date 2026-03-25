@@ -33,16 +33,16 @@ export class AdminRolesGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     // Get required roles from decorator metadata
-    const requiredRoles = this.reflector.getAllAndOverride<AdminRole[]>(ROLES_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const requiredRoles = this.reflector.getAllAndOverride<AdminRole[]>(
+      ROLES_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
     // If no roles specified, deny access (fail-safe)
     // Endpoints without @RequireRole decorator cannot be accessed
     if (!requiredRoles || requiredRoles.length === 0) {
       throw new ForbiddenException(
-        'Access denied: No role permissions defined for this endpoint'
+        'Access denied: No role permissions defined for this endpoint',
       );
     }
 
@@ -52,7 +52,7 @@ export class AdminRolesGuard implements CanActivate {
 
     if (!admin) {
       throw new ForbiddenException(
-        'Access denied: Admin authentication required'
+        'Access denied: Admin authentication required',
       );
     }
 
@@ -61,7 +61,7 @@ export class AdminRolesGuard implements CanActivate {
 
     if (!hasRole) {
       throw new ForbiddenException(
-        `Access denied: This action requires one of these roles: ${requiredRoles.join(', ')}`
+        `Access denied: This action requires one of these roles: ${requiredRoles.join(', ')}`,
       );
     }
 

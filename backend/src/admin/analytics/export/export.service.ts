@@ -9,7 +9,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Parser } from 'json2csv';
 import * as PDFDocument from 'pdfkit';
-import { AdminAnalyticsService, PlatformOverview, TradeAnalytics, UserAnalytics, FinancialAnalytics } from '../admin-analytics.service';
+import {
+  AdminAnalyticsService,
+  PlatformOverview,
+  TradeAnalytics,
+  UserAnalytics,
+  FinancialAnalytics,
+} from '../admin-analytics.service';
 
 export interface ExportOptions {
   type: 'csv' | 'pdf';
@@ -24,7 +30,9 @@ export class ExportService {
 
   constructor(private readonly analyticsService: AdminAnalyticsService) {}
 
-  async generateExport(options: ExportOptions): Promise<{ buffer: Buffer; filename: string; mimeType: string }> {
+  async generateExport(
+    options: ExportOptions,
+  ): Promise<{ buffer: Buffer; filename: string; mimeType: string }> {
     const { type, section, startDate, endDate } = options;
     const dateStr = new Date().toISOString().split('T')[0];
 
@@ -36,7 +44,11 @@ export class ExportService {
         mimeType: 'text/csv',
       };
     } else {
-      const pdfBuffer = await this.generatePdfReport(section, startDate, endDate);
+      const pdfBuffer = await this.generatePdfReport(
+        section,
+        startDate,
+        endDate,
+      );
       return {
         buffer: pdfBuffer,
         filename: `breyus-analytics-${section}-${dateStr}.pdf`,
@@ -58,22 +70,34 @@ export class ExportService {
     const dateRangeHeader = `# Date Range: ${startDate || 'Last 30 days'} to ${endDate || 'Today'}\n# Generated: ${new Date().toISOString()}\n\n`;
 
     if (section === 'all' || section === 'overview') {
-      const overview = await this.analyticsService.getOverviewMetrics(startDate, endDate);
+      const overview = await this.analyticsService.getOverviewMetrics(
+        startDate,
+        endDate,
+      );
       csvSections.push(this.overviewToCsv(overview));
     }
 
     if (section === 'all' || section === 'trades') {
-      const trades = await this.analyticsService.getTradeAnalytics(startDate, endDate);
+      const trades = await this.analyticsService.getTradeAnalytics(
+        startDate,
+        endDate,
+      );
       csvSections.push(this.tradeAnalyticsToCsv(trades));
     }
 
     if (section === 'all' || section === 'users') {
-      const users = await this.analyticsService.getUserAnalytics(startDate, endDate);
+      const users = await this.analyticsService.getUserAnalytics(
+        startDate,
+        endDate,
+      );
       csvSections.push(this.userAnalyticsToCsv(users));
     }
 
     if (section === 'all' || section === 'financial') {
-      const financial = await this.analyticsService.getFinancialAnalytics(startDate, endDate);
+      const financial = await this.analyticsService.getFinancialAnalytics(
+        startDate,
+        endDate,
+      );
       csvSections.push(this.financialAnalyticsToCsv(financial));
     }
 
@@ -83,14 +107,34 @@ export class ExportService {
   private overviewToCsv(data: PlatformOverview): string {
     const header = '# PLATFORM OVERVIEW\n';
     const rows = [
-      { Metric: 'Total Users', Value: data.users.total, Change: `${data.users.change}%` },
+      {
+        Metric: 'Total Users',
+        Value: data.users.total,
+        Change: `${data.users.change}%`,
+      },
       { Metric: 'Active Users', Value: data.users.active, Change: '-' },
-      { Metric: 'New Users', Value: data.users.new, Change: `${data.users.change}%` },
-      { Metric: 'Total Trades', Value: data.trades.total, Change: `${data.trades.change}%` },
+      {
+        Metric: 'New Users',
+        Value: data.users.new,
+        Change: `${data.users.change}%`,
+      },
+      {
+        Metric: 'Total Trades',
+        Value: data.trades.total,
+        Change: `${data.trades.change}%`,
+      },
       { Metric: 'Active Trades', Value: data.trades.active, Change: '-' },
       { Metric: 'Completed Trades', Value: data.trades.completed, Change: '-' },
-      { Metric: 'Total Products', Value: data.products.total, Change: `${data.products.change}%` },
-      { Metric: 'Total Revenue', Value: `$${data.revenue.total.toLocaleString()}`, Change: `${data.revenue.change}%` },
+      {
+        Metric: 'Total Products',
+        Value: data.products.total,
+        Change: `${data.products.change}%`,
+      },
+      {
+        Metric: 'Total Revenue',
+        Value: `$${data.revenue.total.toLocaleString()}`,
+        Change: `${data.revenue.change}%`,
+      },
     ];
 
     const parser = new Parser({ fields: ['Metric', 'Value', 'Change'] });
@@ -193,7 +237,9 @@ export class ExportService {
       sections.push(parser.parse(data.byIncoterm));
     }
 
-    sections.push(`# AVERAGE DEAL SIZE: $${data.avgDealSize.toLocaleString()} (${data.avgDealSizeChange >= 0 ? '+' : ''}${data.avgDealSizeChange}%)`);
+    sections.push(
+      `# AVERAGE DEAL SIZE: $${data.avgDealSize.toLocaleString()} (${data.avgDealSizeChange >= 0 ? '+' : ''}${data.avgDealSizeChange}%)`,
+    );
 
     return sections.join('\n\n');
   }
@@ -229,22 +275,34 @@ export class ExportService {
 
         // Sections
         if (section === 'all' || section === 'overview') {
-          const overview = await this.analyticsService.getOverviewMetrics(startDate, endDate);
+          const overview = await this.analyticsService.getOverviewMetrics(
+            startDate,
+            endDate,
+          );
           this.addOverviewSection(doc, overview);
         }
 
         if (section === 'all' || section === 'trades') {
-          const trades = await this.analyticsService.getTradeAnalytics(startDate, endDate);
+          const trades = await this.analyticsService.getTradeAnalytics(
+            startDate,
+            endDate,
+          );
           this.addTradesSection(doc, trades);
         }
 
         if (section === 'all' || section === 'users') {
-          const users = await this.analyticsService.getUserAnalytics(startDate, endDate);
+          const users = await this.analyticsService.getUserAnalytics(
+            startDate,
+            endDate,
+          );
           this.addUsersSection(doc, users);
         }
 
         if (section === 'all' || section === 'financial') {
-          const financial = await this.analyticsService.getFinancialAnalytics(startDate, endDate);
+          const financial = await this.analyticsService.getFinancialAnalytics(
+            startDate,
+            endDate,
+          );
           this.addFinancialSection(doc, financial);
         }
 
@@ -258,28 +316,44 @@ export class ExportService {
     });
   }
 
-  private addPdfHeader(doc: PDFKit.PDFDocument, startDate?: string, endDate?: string): void {
+  private addPdfHeader(
+    doc: PDFKit.PDFDocument,
+    startDate?: string,
+    endDate?: string,
+  ): void {
     // Title
-    doc.fontSize(24).fillColor('#1a1a2e').text('Breyus Analytics Report', { align: 'center' });
+    doc
+      .fontSize(24)
+      .fillColor('#1a1a2e')
+      .text('Breyus Analytics Report', { align: 'center' });
     doc.moveDown(0.5);
 
     // Date range
-    const dateRange = startDate && endDate
-      ? `${startDate} to ${endDate}`
-      : 'Last 30 Days';
-    doc.fontSize(12).fillColor('#666666').text(`Period: ${dateRange}`, { align: 'center' });
-    doc.fontSize(10).text(`Generated: ${new Date().toLocaleString()}`, { align: 'center' });
+    const dateRange =
+      startDate && endDate ? `${startDate} to ${endDate}` : 'Last 30 Days';
+    doc
+      .fontSize(12)
+      .fillColor('#666666')
+      .text(`Period: ${dateRange}`, { align: 'center' });
+    doc
+      .fontSize(10)
+      .text(`Generated: ${new Date().toLocaleString()}`, { align: 'center' });
 
     // Line separator
     doc.moveDown(1);
-    doc.strokeColor('#e0e0e0').lineWidth(1)
+    doc
+      .strokeColor('#e0e0e0')
+      .lineWidth(1)
       .moveTo(50, doc.y)
       .lineTo(doc.page.width - 50, doc.y)
       .stroke();
     doc.moveDown(1);
   }
 
-  private addOverviewSection(doc: PDFKit.PDFDocument, data: PlatformOverview): void {
+  private addOverviewSection(
+    doc: PDFKit.PDFDocument,
+    data: PlatformOverview,
+  ): void {
     this.addSectionTitle(doc, 'Platform Overview');
 
     const metrics = [
@@ -290,20 +364,33 @@ export class ExportService {
       ['Total Trades', data.trades.total.toString(), `${data.trades.change}%`],
       ['Active Trades', data.trades.active.toString(), '-'],
       ['Completed Trades', data.trades.completed.toString(), '-'],
-      ['Total Products', data.products.total.toString(), `${data.products.change}%`],
-      ['Total Revenue', `$${data.revenue.total.toLocaleString()}`, `${data.revenue.change}%`],
+      [
+        'Total Products',
+        data.products.total.toString(),
+        `${data.products.change}%`,
+      ],
+      [
+        'Total Revenue',
+        `$${data.revenue.total.toLocaleString()}`,
+        `${data.revenue.change}%`,
+      ],
     ];
 
     this.addTable(doc, metrics);
     doc.moveDown(1);
   }
 
-  private addTradesSection(doc: PDFKit.PDFDocument, data: TradeAnalytics): void {
+  private addTradesSection(
+    doc: PDFKit.PDFDocument,
+    data: TradeAnalytics,
+  ): void {
     this.checkPageBreak(doc);
     this.addSectionTitle(doc, 'Trade Analytics');
 
     // Completion rate highlight
-    doc.fontSize(11).fillColor('#333333')
+    doc
+      .fontSize(11)
+      .fillColor('#333333')
       .text(`Completion Rate: ${data.completionRate}%`, { continued: false });
     doc.moveDown(0.5);
 
@@ -334,7 +421,10 @@ export class ExportService {
       doc.fontSize(10).fillColor('#666666').text('Top Rejection Reasons:');
       const reasonsTable = [['Reason', 'Count']];
       for (const item of data.rejectionReasons.slice(0, 5)) {
-        reasonsTable.push([item.reason.substring(0, 40), item.count.toString()]);
+        reasonsTable.push([
+          item.reason.substring(0, 40),
+          item.count.toString(),
+        ]);
       }
       this.addTable(doc, reasonsTable);
     }
@@ -347,7 +437,9 @@ export class ExportService {
     this.addSectionTitle(doc, 'User Analytics');
 
     // Activation rate highlight
-    doc.fontSize(11).fillColor('#333333')
+    doc
+      .fontSize(11)
+      .fillColor('#333333')
       .text(`Activation Rate: ${data.activationRate}%`, { continued: false });
     doc.moveDown(0.5);
 
@@ -378,7 +470,11 @@ export class ExportService {
       doc.fontSize(10).fillColor('#666666').text('Onboarding Funnel:');
       const funnelTable = [['Step', 'Count', 'Dropoff']];
       for (const item of data.onboardingFunnel) {
-        funnelTable.push([item.step, item.count.toString(), `${item.dropoff}%`]);
+        funnelTable.push([
+          item.step,
+          item.count.toString(),
+          `${item.dropoff}%`,
+        ]);
       }
       this.addTable(doc, funnelTable);
     }
@@ -386,14 +482,22 @@ export class ExportService {
     doc.moveDown(1);
   }
 
-  private addFinancialSection(doc: PDFKit.PDFDocument, data: FinancialAnalytics): void {
+  private addFinancialSection(
+    doc: PDFKit.PDFDocument,
+    data: FinancialAnalytics,
+  ): void {
     this.checkPageBreak(doc);
     this.addSectionTitle(doc, 'Financial Analytics');
 
     // Average deal size highlight
     const changeSign = data.avgDealSizeChange >= 0 ? '+' : '';
-    doc.fontSize(11).fillColor('#333333')
-      .text(`Average Deal Size: $${data.avgDealSize.toLocaleString()} (${changeSign}${data.avgDealSizeChange}%)`, { continued: false });
+    doc
+      .fontSize(11)
+      .fillColor('#333333')
+      .text(
+        `Average Deal Size: $${data.avgDealSize.toLocaleString()} (${changeSign}${data.avgDealSizeChange}%)`,
+        { continued: false },
+      );
     doc.moveDown(0.5);
 
     // By category
@@ -401,7 +505,10 @@ export class ExportService {
       doc.fontSize(10).fillColor('#666666').text('Value by Category:');
       const catTable = [['Category', 'Value']];
       for (const item of data.byCategory.slice(0, 8)) {
-        catTable.push([item.category.substring(0, 30), `$${item.value.toLocaleString()}`]);
+        catTable.push([
+          item.category.substring(0, 30),
+          `$${item.value.toLocaleString()}`,
+        ]);
       }
       this.addTable(doc, catTable);
       doc.moveDown(0.5);
@@ -412,7 +519,11 @@ export class ExportService {
       doc.fontSize(10).fillColor('#666666').text('Value by Incoterm:');
       const incotermTable = [['Incoterm', 'Value', 'Count']];
       for (const item of data.byIncoterm) {
-        incotermTable.push([item.incoterm, `$${item.value.toLocaleString()}`, item.count.toString()]);
+        incotermTable.push([
+          item.incoterm,
+          `$${item.value.toLocaleString()}`,
+          item.count.toString(),
+        ]);
       }
       this.addTable(doc, incotermTable);
     }
@@ -423,7 +534,9 @@ export class ExportService {
   private addSectionTitle(doc: PDFKit.PDFDocument, title: string): void {
     doc.fontSize(14).fillColor('#1a1a2e').text(title);
     doc.moveDown(0.3);
-    doc.strokeColor('#4a90d9').lineWidth(2)
+    doc
+      .strokeColor('#4a90d9')
+      .lineWidth(2)
       .moveTo(50, doc.y)
       .lineTo(150, doc.y)
       .stroke();
@@ -442,16 +555,18 @@ export class ExportService {
 
       // Background for header
       if (isHeader) {
-        doc.fillColor('#f5f5f5')
+        doc
+          .fillColor('#f5f5f5')
           .rect(startX, y - 2, colWidth * row.length, rowHeight)
           .fill();
       }
 
       // Draw cells
       for (let j = 0; j < row.length; j++) {
-        doc.fontSize(isHeader ? 9 : 9)
+        doc
+          .fontSize(isHeader ? 9 : 9)
           .fillColor(isHeader ? '#333333' : '#555555')
-          .text(row[j], startX + (j * colWidth), y, {
+          .text(row[j], startX + j * colWidth, y, {
             width: colWidth - 10,
             align: j === 0 ? 'left' : 'right',
           });
@@ -473,7 +588,9 @@ export class ExportService {
     const totalPages = doc.bufferedPageRange().count;
     for (let i = 0; i < totalPages; i++) {
       doc.switchToPage(i);
-      doc.fontSize(8).fillColor('#999999')
+      doc
+        .fontSize(8)
+        .fillColor('#999999')
         .text(
           `Page ${i + 1} of ${totalPages} | Breyus Admin Portal`,
           50,

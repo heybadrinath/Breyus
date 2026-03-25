@@ -44,9 +44,7 @@ export class DashboardController {
 
   @Get('activity')
   @AdminAction({ action: 'VIEW_RECENT_ACTIVITY', category: 'DASHBOARD' })
-  async getRecentActivity(
-    @Query('limit') limit?: string,
-  ): Promise<{
+  async getRecentActivity(@Query('limit') limit?: string): Promise<{
     statusCode: number;
     message: string;
     data: {
@@ -100,9 +98,7 @@ export class DashboardController {
 
   @Get('trade-volume')
   @AdminAction({ action: 'VIEW_TRADE_VOLUME', category: 'DASHBOARD' })
-  async getTradeVolumeOverTime(
-    @Query('days') days?: string,
-  ): Promise<{
+  async getTradeVolumeOverTime(@Query('days') days?: string): Promise<{
     statusCode: number;
     message: string;
     data: any[];

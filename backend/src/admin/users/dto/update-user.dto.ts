@@ -6,6 +6,8 @@ export class UpdateUserDto {
   mail?: string;
 
   @IsOptional()
-  @IsIn(['admin', 'user'], { message: 'Role must be either "admin" (Buyer) or "user" (Seller)' })
+  @IsIn(['admin', 'user'], {
+    message: 'Role must be either "admin" (Buyer) or "user" (Seller)',
+  })
   role?: 'admin' | 'user';
 }

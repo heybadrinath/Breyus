@@ -1,4 +1,12 @@
-import { IsString, IsNotEmpty, IsOptional, IsDateString, IsIP, MinLength, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsDateString,
+  IsIP,
+  MinLength,
+  MaxLength,
+} from 'class-validator';
 
 export class BlockIPDto {
   @IsIP()

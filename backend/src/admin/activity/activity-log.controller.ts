@@ -188,10 +188,15 @@ export class ActivityLogController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const start = startDate
+      ? new Date(startDate)
+      : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const end = endDate ? new Date(endDate) : new Date();
 
-    const summary = await this.activityLogService.getActivitySummary(start, end);
+    const summary = await this.activityLogService.getActivitySummary(
+      start,
+      end,
+    );
 
     return {
       statusCode: HttpStatus.OK,

@@ -4,3 +4,7 @@ export { AIResultCard } from './AIResultCard';
 export { ErrorState } from './ErrorState';
 export { EmptyState } from './EmptyState';
 export { AISearchLoading } from './AISearchLoading';
+export { ResultFilters } from './ResultFilters';
+export { ExpandableText } from './ExpandableText';
+export { ExpandableList } from './ExpandableList';
+export type { SortOption, RiskFilter, ProbabilityFilter } from './ResultFilters';

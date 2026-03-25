@@ -1,0 +1,17 @@
+{
+  "theme": "obsidian",
+  "accentColor": "#8A5CF5",
+  "interfaceFontFamily": "Poppins, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  "textFontFamily": "Poppins, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  "monospaceFontFamily": "JetBrains Mono, Fira Code, Consolas, monospace",
+  "baseFontSize": 15,
+  "enabledCssSnippets": [
+    "breyus-headings",
+    "breyus-code-blocks",
+    "breyus-colored-folders",
+    "breyus-tables",
+    "breyus-tag-pills",
+    "breyus-clean-ui"
+  ],
+  "cssTheme": ""
+}

@@ -9,7 +9,9 @@ export class ApproveDocumentDto {
 
 export class RejectDocumentDto {
   @IsString()
-  @MinLength(10, { message: 'Please provide a reason for rejection (at least 10 characters)' })
+  @MinLength(10, {
+    message: 'Please provide a reason for rejection (at least 10 characters)',
+  })
   @MaxLength(500)
   notes: string;
 }

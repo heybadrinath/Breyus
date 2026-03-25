@@ -24,9 +24,7 @@ export class MailService implements OnModuleDestroy {
   private readonly OTP_EXPIRY_SECONDS = 10 * 60;
   private readonly OTP_PREFIX = 'otp:';
 
-  constructor(
-    @Inject(REDIS_CLIENT) private readonly redis: Redis | null,
-  ) {
+  constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis | null) {
     this.initializeTransporter();
   }
 
@@ -41,7 +39,7 @@ export class MailService implements OnModuleDestroy {
     if (!this.isEmailConfigured) {
       this.logger.warn(
         'Email service not configured (SMTP_HOST, SMTP_USER, SMTP_PASS required). ' +
-        'OTPs will be logged to console for development.'
+          'OTPs will be logged to console for development.',
       );
       return;
     }
@@ -59,7 +57,9 @@ export class MailService implements OnModuleDestroy {
     // Verify transporter configuration
     this.transporter.verify((error) => {
       if (error) {
-        this.logger.error(`SMTP transporter verification failed: ${error.message}`);
+        this.logger.error(
+          `SMTP transporter verification failed: ${error.message}`,
+        );
         this.isEmailConfigured = false;
       } else {
         this.logger.log('SMTP transporter is ready to send emails');
@@ -102,11 +102,13 @@ export class MailService implements OnModuleDestroy {
         await this.redis.setex(
           key,
           this.OTP_EXPIRY_SECONDS,
-          JSON.stringify(otpData)
+          JSON.stringify(otpData),
         );
         this.logger.debug(`OTP stored in Redis for: ${normalizedEmail}`);
       } catch (error) {
-        this.logger.error(`Redis storeOtp error, falling back to memory: ${error}`);
+        this.logger.error(
+          `Redis storeOtp error, falling back to memory: ${error}`,
+        );
         this.otpStore[normalizedEmail] = otpData;
       }
     } else {
@@ -156,13 +158,17 @@ export class MailService implements OnModuleDestroy {
           if (ttl > 0) {
             await this.redis.setex(key, ttl, JSON.stringify(otpData));
           }
-          this.logger.debug(`OTP validated successfully for: ${normalizedEmail}`);
+          this.logger.debug(
+            `OTP validated successfully for: ${normalizedEmail}`,
+          );
           return true;
         }
 
         return false;
       } catch (error) {
-        this.logger.error(`Redis validateOtp error, falling back to memory: ${error}`);
+        this.logger.error(
+          `Redis validateOtp error, falling back to memory: ${error}`,
+        );
         return this.validateOtpFromMemory(normalizedEmail, otp);
       }
     } else {
@@ -257,10 +263,16 @@ export class MailService implements OnModuleDestroy {
   /**
    * Send trade notification email
    */
-  async sendTradeNotificationEmail(to: string, subject: string, html: string): Promise<void> {
+  async sendTradeNotificationEmail(
+    to: string,
+    subject: string,
+    html: string,
+  ): Promise<void> {
     // Development mode: log to console
     if (!this.isEmailConfigured) {
-      this.logger.log(`\n📧 [DEV MODE] Trade notification to ${to}: ${subject}\n`);
+      this.logger.log(
+        `\n📧 [DEV MODE] Trade notification to ${to}: ${subject}\n`,
+      );
       return;
     }
 
@@ -273,7 +285,9 @@ export class MailService implements OnModuleDestroy {
 
     try {
       const info = await this.transporter!.sendMail(mailOptions);
-      this.logger.log(`Trade notification email sent to ${to}: ${info.messageId}`);
+      this.logger.log(
+        `Trade notification email sent to ${to}: ${info.messageId}`,
+      );
     } catch (error) {
       this.logger.error(`Error sending trade notification email: ${error}`);
     }

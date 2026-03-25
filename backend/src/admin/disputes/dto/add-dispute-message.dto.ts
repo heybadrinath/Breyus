@@ -1,4 +1,10 @@
-import { IsString, MinLength, MaxLength, IsOptional, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  MinLength,
+  MaxLength,
+  IsOptional,
+  IsBoolean,
+} from 'class-validator';
 
 export class AddDisputeMessageDto {
   @IsString()

@@ -1,8 +1,17 @@
-import { Injectable, NotFoundException, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Feedback, FeedbackType } from './feedback.schema';
-import { CreateFeedbackDto, UpdateFeedbackDto } from './dto/create-feedback.dto';
+import {
+  CreateFeedbackDto,
+  UpdateFeedbackDto,
+} from './dto/create-feedback.dto';
 import { Trade } from '../trade/schema/trade.schema';
 import { AuthService } from '../auth/auth.service';
 
@@ -25,9 +34,13 @@ export class FeedbackService {
     return userId;
   }
 
-  async createFeedback(accountToken: string, createFeedbackDto: CreateFeedbackDto): Promise<Feedback> {
+  async createFeedback(
+    accountToken: string,
+    createFeedbackDto: CreateFeedbackDto,
+  ): Promise<Feedback> {
     const userId = this.extractUserId(accountToken);
-    const { tradeId, feedbackType, rating, comment, tags, details } = createFeedbackDto;
+    const { tradeId, feedbackType, rating, comment, tags, details } =
+      createFeedbackDto;
 
     // Validate the trade exists
     const trade = await this.tradeModel.findById(tradeId).exec();
@@ -45,25 +58,37 @@ export class FeedbackService {
     }
 
     if (trade.tradePhase !== 'COMPLETED') {
-      throw new BadRequestException('Feedback can only be submitted after trade completion');
+      throw new BadRequestException(
+        'Feedback can only be submitted after trade completion',
+      );
     }
 
     // Only buyers can leave seller/delivery/product feedback
-    if (feedbackType === 'seller' || feedbackType === 'delivery' || feedbackType === 'product') {
+    if (
+      feedbackType === 'seller' ||
+      feedbackType === 'delivery' ||
+      feedbackType === 'product'
+    ) {
       if (!isBuyer) {
-        throw new BadRequestException('Only buyers can leave this type of feedback');
+        throw new BadRequestException(
+          'Only buyers can leave this type of feedback',
+        );
       }
     }
 
     // Check if feedback already exists for this trade and type
-    const existingFeedback = await this.feedbackModel.findOne({
-      trade: new Types.ObjectId(tradeId),
-      reviewer: userObjectId,
-      feedbackType,
-    }).exec();
+    const existingFeedback = await this.feedbackModel
+      .findOne({
+        trade: new Types.ObjectId(tradeId),
+        reviewer: userObjectId,
+        feedbackType,
+      })
+      .exec();
 
     if (existingFeedback) {
-      throw new BadRequestException(`You have already submitted ${feedbackType} feedback for this trade`);
+      throw new BadRequestException(
+        `You have already submitted ${feedbackType} feedback for this trade`,
+      );
     }
 
     // Determine the reviewee (the person being reviewed)
@@ -111,12 +136,25 @@ export class FeedbackService {
       .find({ reviewee: new Types.ObjectId(userId) })
       .populate('reviewer', 'mail')
       .populate('product', 'name price currency productImages')
-      .populate({ path: 'trade', select: 'product', populate: { path: 'product', select: 'name price currency productImages' } })
+      .populate({
+        path: 'trade',
+        select: 'product',
+        populate: {
+          path: 'product',
+          select: 'name price currency productImages',
+        },
+      })
       .sort({ createdAt: -1 })
       .exec();
 
     // Calculate average rating and breakdown
-    const ratingBreakdown: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    const ratingBreakdown: Record<number, number> = {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+    };
     let totalRating = 0;
 
     feedbacks.forEach((feedback) => {
@@ -124,7 +162,8 @@ export class FeedbackService {
       totalRating += feedback.rating;
     });
 
-    const averageRating = feedbacks.length > 0 ? totalRating / feedbacks.length : 0;
+    const averageRating =
+      feedbacks.length > 0 ? totalRating / feedbacks.length : 0;
 
     return {
       feedbacks,
@@ -134,7 +173,10 @@ export class FeedbackService {
     };
   }
 
-  async getFeedbackByType(userId: string, feedbackType: FeedbackType): Promise<Feedback[]> {
+  async getFeedbackByType(
+    userId: string,
+    feedbackType: FeedbackType,
+  ): Promise<Feedback[]> {
     return this.feedbackModel
       .find({
         reviewee: new Types.ObjectId(userId),
@@ -145,7 +187,9 @@ export class FeedbackService {
       .exec();
   }
 
-  async getAverageRatingForUser(userId: string): Promise<{ average: number; count: number }> {
+  async getAverageRatingForUser(
+    userId: string,
+  ): Promise<{ average: number; count: number }> {
     const result = await this.feedbackModel.aggregate([
       { $match: { reviewee: new Types.ObjectId(userId) } },
       {
@@ -174,11 +218,13 @@ export class FeedbackService {
   ): Promise<boolean> {
     const userId = this.extractUserId(accountToken);
 
-    const feedback = await this.feedbackModel.findOne({
-      reviewer: new Types.ObjectId(userId),
-      trade: new Types.ObjectId(tradeId),
-      feedbackType,
-    }).exec();
+    const feedback = await this.feedbackModel
+      .findOne({
+        reviewer: new Types.ObjectId(userId),
+        trade: new Types.ObjectId(tradeId),
+        feedbackType,
+      })
+      .exec();
 
     return !!feedback;
   }
@@ -223,18 +269,22 @@ export class FeedbackService {
     }
 
     if (trade.tradePhase !== 'COMPLETED') {
-      throw new BadRequestException('Feedback can only be updated after trade completion');
+      throw new BadRequestException(
+        'Feedback can only be updated after trade completion',
+      );
     }
 
     if (!isBuyer) {
       throw new BadRequestException('Only buyers can update feedback');
     }
 
-    const feedback = await this.feedbackModel.findOne({
-      trade: new Types.ObjectId(tradeId),
-      reviewer: userObjectId,
-      feedbackType,
-    }).exec();
+    const feedback = await this.feedbackModel
+      .findOne({
+        trade: new Types.ObjectId(tradeId),
+        reviewer: userObjectId,
+        feedbackType,
+      })
+      .exec();
 
     if (!feedback) {
       throw new NotFoundException('Feedback not found');
@@ -288,21 +338,42 @@ export class FeedbackService {
       .find({ reviewee: userObjectId })
       .populate('reviewer', 'mail')
       .populate('product', 'name price currency productImages')
-      .populate({ path: 'trade', select: 'product', populate: { path: 'product', select: 'name price currency productImages' } })
+      .populate({
+        path: 'trade',
+        select: 'product',
+        populate: {
+          path: 'product',
+          select: 'name price currency productImages',
+        },
+      })
       .sort({ createdAt: -1 })
       .exec();
 
-    const ratingBreakdown: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    const byType: Record<FeedbackType, { count: number; averageRating: number }> = {
+    const ratingBreakdown: Record<number, number> = {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+    };
+    const byType: Record<
+      FeedbackType,
+      { count: number; averageRating: number }
+    > = {
       seller: { count: 0, averageRating: 0 },
       delivery: { count: 0, averageRating: 0 },
       product: { count: 0, averageRating: 0 },
     };
-    const byTypeTotals: Record<FeedbackType, number> = { seller: 0, delivery: 0, product: 0 };
+    const byTypeTotals: Record<FeedbackType, number> = {
+      seller: 0,
+      delivery: 0,
+      product: 0,
+    };
 
     let totalRating = 0;
     feedbacks.forEach((feedback) => {
-      ratingBreakdown[feedback.rating] = (ratingBreakdown[feedback.rating] || 0) + 1;
+      ratingBreakdown[feedback.rating] =
+        (ratingBreakdown[feedback.rating] || 0) + 1;
       totalRating += feedback.rating;
 
       const type = feedback.feedbackType;
@@ -311,26 +382,32 @@ export class FeedbackService {
     });
 
     (Object.keys(byType) as FeedbackType[]).forEach((type) => {
-      byType[type].averageRating = byType[type].count > 0
-        ? Math.round((byTypeTotals[type] / byType[type].count) * 10) / 10
-        : 0;
+      byType[type].averageRating =
+        byType[type].count > 0
+          ? Math.round((byTypeTotals[type] / byType[type].count) * 10) / 10
+          : 0;
     });
 
-    const productMap = new Map<string, {
-      product: any;
-      totalReviews: number;
-      totalRating: number;
-      ratingBreakdown: Record<number, number>;
-      latestFeedbackAt?: Date;
-    }>();
+    const productMap = new Map<
+      string,
+      {
+        product: any;
+        totalReviews: number;
+        totalRating: number;
+        ratingBreakdown: Record<number, number>;
+        latestFeedbackAt?: Date;
+      }
+    >();
 
     feedbacks
       .filter((feedback) => feedback.feedbackType === 'product')
       .forEach((feedback) => {
-        const populatedProduct = (feedback as any).product || (feedback as any).trade?.product;
+        const populatedProduct =
+          (feedback as any).product || (feedback as any).trade?.product;
         if (!populatedProduct) return;
 
-        const productId = populatedProduct._id?.toString?.() || populatedProduct.toString?.();
+        const productId =
+          populatedProduct._id?.toString?.() || populatedProduct.toString?.();
         if (!productId) return;
 
         if (!productMap.has(productId)) {
@@ -346,8 +423,12 @@ export class FeedbackService {
         const entry = productMap.get(productId)!;
         entry.totalReviews += 1;
         entry.totalRating += feedback.rating;
-        entry.ratingBreakdown[feedback.rating] = (entry.ratingBreakdown[feedback.rating] || 0) + 1;
-        if (!entry.latestFeedbackAt || feedback.createdAt > entry.latestFeedbackAt) {
+        entry.ratingBreakdown[feedback.rating] =
+          (entry.ratingBreakdown[feedback.rating] || 0) + 1;
+        if (
+          !entry.latestFeedbackAt ||
+          feedback.createdAt > entry.latestFeedbackAt
+        ) {
           entry.latestFeedbackAt = feedback.createdAt;
         }
       });
@@ -355,9 +436,10 @@ export class FeedbackService {
     const productBreakdown = Array.from(productMap.values()).map((entry) => ({
       product: entry.product,
       totalReviews: entry.totalReviews,
-      averageRating: entry.totalReviews > 0
-        ? Math.round((entry.totalRating / entry.totalReviews) * 10) / 10
-        : 0,
+      averageRating:
+        entry.totalReviews > 0
+          ? Math.round((entry.totalRating / entry.totalReviews) * 10) / 10
+          : 0,
       ratingBreakdown: entry.ratingBreakdown,
       latestFeedbackAt: entry.latestFeedbackAt,
     }));
@@ -365,11 +447,16 @@ export class FeedbackService {
     return {
       summary: {
         totalReviews: feedbacks.length,
-        averageRating: feedbacks.length > 0 ? Math.round((totalRating / feedbacks.length) * 10) / 10 : 0,
+        averageRating:
+          feedbacks.length > 0
+            ? Math.round((totalRating / feedbacks.length) * 10) / 10
+            : 0,
         ratingBreakdown,
         byType,
       },
-      productBreakdown: productBreakdown.sort((a, b) => b.averageRating - a.averageRating),
+      productBreakdown: productBreakdown.sort(
+        (a, b) => b.averageRating - a.averageRating,
+      ),
       recentFeedback: feedbacks.slice(0, 10),
     };
   }

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { X, Loader2, Send, MessageCircle } from 'lucide-react';
-import { createConversation, getCurrentCompanyId } from '../services/inbox.service';
-import { socketService } from '../services/socket.service';
+import { createConversation, sendMessage } from '../services/inbox.service';
 import { useNavigate } from 'react-router-dom';
 
 interface QueryModalProps {
@@ -40,72 +39,42 @@ export const QueryModal: React.FC<QueryModalProps> = ({
     setError(null);
 
     try {
-    // Create or get existing conversation
-    if (!productId) {
-      throw new Error('Missing product reference');
-    }
-    const conversationResult = await createConversation(productId);
-
-    let conversationId: string | undefined;
-    if (conversationResult.status === 'success') {
-      const data = conversationResult.data;
-      if (typeof data === 'string') {
-        conversationId = data;
-      } else if (data && typeof data === 'object') {
-        conversationId =
-          data._id ||
-          data.conversationId ||
-          data.id ||
-          data.data?._id ||
-          data.data?.conversationId ||
-          data.data;
+      // Create or get existing conversation
+      if (!productId) {
+        throw new Error('Missing product reference');
       }
-    }
-    if (!conversationId && conversationResult.conversationId) {
-      // Conversation already exists
-      conversationId = conversationResult.conversationId;
-    }
+      const conversationResult = await createConversation(productId);
 
-    if (!conversationId) {
-      throw new Error(conversationResult.message || 'Failed to create conversation');
-    }
-
-      const companyResult = await getCurrentCompanyId();
-      if (companyResult.status !== 'success' || !companyResult.companyId) {
-        throw new Error('Failed to resolve company ID');
+      // Extract conversation ID from various response formats
+      let conversationId: string | undefined;
+      if (conversationResult.status === 'success') {
+        const data = conversationResult.data;
+        if (typeof data === 'string') {
+          conversationId = data;
+        } else if (data && typeof data === 'object') {
+          conversationId =
+            data._id ||
+            data.conversationId ||
+            data.id ||
+            data.data?._id ||
+            data.data?.conversationId ||
+            data.data;
+        }
+      }
+      // Fallback: check if conversationId is directly on the result (for existing conversations)
+      if (!conversationId && conversationResult.conversationId) {
+        conversationId = conversationResult.conversationId;
       }
 
-      const ensureConnected = () =>
-        new Promise<void>((resolve, reject) => {
-          if (socketService.isConnected()) {
-            resolve();
-            return;
-          }
+      if (!conversationId) {
+        throw new Error(conversationResult.message || 'Failed to create conversation');
+      }
 
-          let unsubscribe = () => {};
-          const timeout = setTimeout(() => {
-            unsubscribe();
-            reject(new Error('Unable to connect to chat server'));
-          }, 5000);
-
-          unsubscribe = socketService.onInboxStateChange((state) => {
-            if (state === 'connected') {
-              clearTimeout(timeout);
-              unsubscribe();
-              resolve();
-            }
-            if (state === 'failed') {
-              clearTimeout(timeout);
-              unsubscribe();
-              reject(new Error('Unable to connect to chat server'));
-            }
-          });
-
-          socketService.connect();
-        });
-
-      await ensureConnected();
-      socketService.sendMessage(conversationId, companyResult.companyId, query);
+      // Send the message using HTTP API (guarantees message is saved before navigation)
+      const messageResult = await sendMessage(conversationId, query);
+      if (messageResult.status !== 'success') {
+        throw new Error('Failed to send message');
+      }
 
       // Navigate to inbox with the conversation
       const basePath = userRole === 'Seller' ? '/seller/Inbox' : '/buyer/inbox';

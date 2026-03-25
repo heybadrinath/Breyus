@@ -8,8 +8,10 @@ import { getProductById, Product } from "../../services/products.service";
 import { createTradeRequest, CreateTradeRequest, Address as AddressType, PaymentMethod, Incoterms } from "../../services/trade.service";
 import { useNavigate } from "react-router-dom";
 import { IncotermsState, defaultIncotermValues } from "../../types/Incoterms";
-import { getDeliveryAddresses, addDeliveryAddress, DeliveryAddress } from "../../services/company.service";
+import { getDeliveryAddresses, addDeliveryAddress, DeliveryAddress, getCompanyProfile, uploadCisDocument, getKycDocuments } from "../../services/company.service";
+import { getPorts, Port } from "../../services/content.service";
 import { useNotifications } from "../../contexts/NotificationContext";
+import { getImageUrl, getFileUrl } from "../../utils/imageUtils";
 
 // Define step data types
 interface Step1Data {
@@ -30,6 +32,8 @@ interface Step3Data {
     marketCapture?: string;
     tradeYears?: string;
     productUsage?: string;
+    nearestPort?: string;
+    buyerCisDocument?: string;
 }
 
 interface Step4Data {
@@ -93,6 +97,15 @@ export const PurchaseRequest = () => {
     const [marketCapture, setMarketCapture] = useState('');
     const [tradeYears, setTradeYears] = useState('');
     const [productUsage, setProductUsage] = useState('');
+
+    // New state for port and CIS
+    const [nearestPort, setNearestPort] = useState('');
+    const [ports, setPorts] = useState<Port[]>([]);
+    const [portsLoading, setPortsLoading] = useState(false);
+    const [hasCisInProfile, setHasCisInProfile] = useState(false);
+    const [profileCisDocument, setProfileCisDocument] = useState<string | undefined>(undefined);
+    const [uploadedCisDocument, setUploadedCisDocument] = useState<string | undefined>(undefined);
+    const [cisUploadLoading, setCisUploadLoading] = useState(false);
 
     // Lifted state for Payment component
     const [selectedPaymentType, setSelectedPaymentType] = useState<'advance' | 'credit' | 'openAccount' | ''>('');
@@ -330,6 +343,114 @@ export const PurchaseRequest = () => {
         });
     };
 
+    // Handle nearest port change
+    const handleNearestPortChange = (value: string) => {
+        setNearestPort(value);
+        handleStepDataChange(3, {
+            buyerIndustryType: industryType,
+            buyerMarketYears: marketYears,
+            marketCapture: marketCapture,
+            tradeYears: tradeYears,
+            productUsage: productUsage,
+            nearestPort: value
+        });
+    };
+
+    // Handle CIS document upload
+    const handleCisUpload = async (file: File) => {
+        setCisUploadLoading(true);
+        try {
+            const result = await uploadCisDocument(file);
+            if (result.cisDocument) {
+                setUploadedCisDocument(result.cisDocument);
+                // Also update step data
+                handleStepDataChange(3, {
+                    buyerIndustryType: industryType,
+                    buyerMarketYears: marketYears,
+                    marketCapture: marketCapture,
+                    tradeYears: tradeYears,
+                    productUsage: productUsage,
+                    nearestPort: nearestPort,
+                    buyerCisDocument: result.cisDocument
+                });
+                showToast('CIS document uploaded successfully', 'success');
+            }
+        } catch (error) {
+            console.error('Error uploading CIS:', error);
+            showToast(error instanceof Error ? error.message : 'Failed to upload CIS document', 'error');
+        } finally {
+            setCisUploadLoading(false);
+        }
+    };
+
+    // Handle CIS document removal
+    const handleCisRemove = () => {
+        setUploadedCisDocument(undefined);
+        handleStepDataChange(3, {
+            buyerIndustryType: industryType,
+            buyerMarketYears: marketYears,
+            marketCapture: marketCapture,
+            tradeYears: tradeYears,
+            productUsage: productUsage,
+            nearestPort: nearestPort,
+            buyerCisDocument: undefined
+        });
+    };
+
+    // Fetch ports from content service
+    const fetchPorts = async () => {
+        setPortsLoading(true);
+        try {
+            const portsList = await getPorts();
+            setPorts(portsList);
+        } catch (error) {
+            console.error('Error fetching ports:', error);
+            // Non-fatal error - user can still enter custom port
+        } finally {
+            setPortsLoading(false);
+        }
+    };
+
+    // Fetch company profile to check for CIS document
+    // Checks both tradeDetails.cisDocument AND kycDocuments array for CIS type
+    const fetchCompanyProfile = async () => {
+        try {
+            const profile = await getCompanyProfile();
+
+            // First check tradeDetails.cisDocument (old location)
+            if (profile?.tradeDetails?.cisDocument) {
+                setHasCisInProfile(true);
+                setProfileCisDocument(profile.tradeDetails.cisDocument);
+                return;
+            }
+
+            // If not found, check KYC documents for approved CIS
+            try {
+                const kycDocs = await getKycDocuments();
+                // Find the first CIS document (prefer approved, then pending)
+                const approvedCis = kycDocs.find(doc => doc.type === 'cis' && doc.status === 'approved');
+                const pendingCis = kycDocs.find(doc => doc.type === 'cis' && doc.status === 'pending');
+                const cisDoc = approvedCis || pendingCis;
+
+                if (cisDoc) {
+                    setHasCisInProfile(true);
+                    setProfileCisDocument(cisDoc.path);
+                    return;
+                }
+            } catch (kycError) {
+                console.error('Error fetching KYC documents:', kycError);
+                // Continue - will show upload option
+            }
+
+            // No CIS document found in either location
+            setHasCisInProfile(false);
+            setProfileCisDocument(undefined);
+        } catch (error) {
+            console.error('Error fetching company profile:', error);
+            // Non-fatal error - user can upload CIS manually
+        }
+    };
+
     // Handle Payment component state changes
     const handlePaymentTypeChange = (type: 'advance' | 'credit' | 'openAccount') => {
         setSelectedPaymentType(type);
@@ -374,9 +495,11 @@ export const PurchaseRequest = () => {
         }
     }, [negoatiatedIncotermsState]);
 
-    // Fetch addresses when component mounts
+    // Fetch addresses, ports, and company profile when component mounts
     useEffect(() => {
         fetchAddresses();
+        fetchPorts();
+        fetchCompanyProfile();
     }, []);
 
     const handleSubmitPurchaseRequest = async () => {
@@ -424,6 +547,9 @@ export const PurchaseRequest = () => {
         setSubmitting(true);
 
         try {
+            // Determine the CIS document path (from profile or uploaded)
+            const cisDocumentPath = hasCisInProfile ? profileCisDocument : uploadedCisDocument;
+
             const tradeRequest: CreateTradeRequest = {
                 productId: product.id,
                 quantity: quantity,
@@ -440,6 +566,9 @@ export const PurchaseRequest = () => {
                 marketCapture: marketCapture,
                 tradeYears: tradeYears,
                 productUsage: productUsage,
+                // New fields: port and CIS
+                nearestPort: nearestPort || undefined,
+                buyerCisDocument: cisDocumentPath,
                 // Step 4 data
                 paymentMethod: stepData.step4.paymentMethod!
             };
@@ -510,11 +639,11 @@ export const PurchaseRequest = () => {
                         tags: response.data.tags || [],
                         stock: parseInt(response.data.stock) || 0,
                         stockUnit: response.data.stockUnit,
-                        // Fix image URLs by adding backend URL prefix
-                        productImage: response.data.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${response.data.productImages[0]}` : '',
-                        images: response.data.productImages ? response.data.productImages.map((img: string) => `${process.env.REACT_APP_BACKEND_URL}/${img}`) : [],
-                        primaryImage: response.data.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${response.data.productImages[0]}` : '',
-                        testReport: response.data.testReports?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${response.data.testReports[0]}` : '',
+                        // Fix image URLs using centralized utility for local/Docker/production support
+                        productImage: getImageUrl(response.data.productImages?.[0], ''),
+                        images: response.data.productImages ? response.data.productImages.map((img: string) => getImageUrl(img, '')) : [],
+                        primaryImage: getImageUrl(response.data.productImages?.[0], ''),
+                        testReport: getFileUrl(response.data.testReports?.[0]),
                         createdAt: new Date(response.data.createdAt),
                         updatedAt: new Date(response.data.updatedAt),
                         moq: response.data.moq,
@@ -602,8 +731,8 @@ export const PurchaseRequest = () => {
                 );
             case 3:
                 return (
-                    <TradeQueries 
-                        handlestep={handleStep} 
+                    <TradeQueries
+                        handlestep={handleStep}
                         currentStep={step}
                         onDataChange={(data) => handleStepDataChange(3, data)}
                         stepData={stepData.step3}
@@ -617,6 +746,17 @@ export const PurchaseRequest = () => {
                         onMarketCaptureChange={handleMarketCaptureChange}
                         onTradeYearsChange={handleTradeYearsChange}
                         onProductUsageChange={handleProductUsageChange}
+                        // New props for port and CIS
+                        nearestPort={nearestPort}
+                        onNearestPortChange={handleNearestPortChange}
+                        ports={ports}
+                        portsLoading={portsLoading}
+                        hasCisInProfile={hasCisInProfile}
+                        profileCisDocument={profileCisDocument}
+                        uploadedCisDocument={uploadedCisDocument}
+                        onCisUpload={handleCisUpload}
+                        onCisRemove={handleCisRemove}
+                        cisUploadLoading={cisUploadLoading}
                     />
                 );
             case 4:

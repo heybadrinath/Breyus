@@ -4,7 +4,10 @@ import { SystemController } from './system.controller';
 import { SystemService } from './system.service';
 import { HealthService } from './health.service';
 import { ScriptRunnerService } from './script-runner.service';
-import { MaintenanceConfig, MaintenanceConfigSchema } from './schemas/maintenance-config.schema';
+import {
+  MaintenanceConfig,
+  MaintenanceConfigSchema,
+} from './schemas/maintenance-config.schema';
 import { ActivityLogModule } from '../activity/activity-log.module';
 import { AdminAuthModule } from '../auth/admin-auth.module';
 import { AdminGatewayModule } from '../gateway/admin-gateway.module';

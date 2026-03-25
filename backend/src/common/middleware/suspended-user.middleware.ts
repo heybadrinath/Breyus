@@ -31,7 +31,10 @@ export class SuspendedUserMiddleware implements NestMiddleware {
 
     try {
       // Validate the token and extract user info
-      const decoded = this.authService.validateAccountToken(accountToken) as { userId?: string; companyId?: string };
+      const decoded = this.authService.validateAccountToken(accountToken) as {
+        userId?: string;
+        companyId?: string;
+      };
       const userId = decoded?.userId;
 
       if (!userId) {
@@ -56,7 +59,8 @@ export class SuspendedUserMiddleware implements NestMiddleware {
 
         return res.status(HttpStatus.FORBIDDEN).json({
           statusCode: HttpStatus.FORBIDDEN,
-          message: 'Your account has been suspended. Please contact support for assistance.',
+          message:
+            'Your account has been suspended. Please contact support for assistance.',
           error: 'AccountSuspended',
         });
       }

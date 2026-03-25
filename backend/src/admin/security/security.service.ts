@@ -1,8 +1,16 @@
-import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  Logger,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { BlockedIP } from './schemas/blocked-ip.schema';
-import { FailedLoginAttempt, FailedLoginReason } from './schemas/failed-login-attempt.schema';
+import {
+  FailedLoginAttempt,
+  FailedLoginReason,
+} from './schemas/failed-login-attempt.schema';
 import { ActivityLogService } from '../activity/activity-log.service';
 import { BlockIPDto, GetFailedLoginsQueryDto } from './dto';
 
@@ -12,7 +20,8 @@ export class SecurityService {
 
   constructor(
     @InjectModel(BlockedIP.name) private blockedIPModel: Model<BlockedIP>,
-    @InjectModel(FailedLoginAttempt.name) private failedLoginModel: Model<FailedLoginAttempt>,
+    @InjectModel(FailedLoginAttempt.name)
+    private failedLoginModel: Model<FailedLoginAttempt>,
     private readonly activityLogService: ActivityLogService,
   ) {}
 
@@ -41,12 +50,18 @@ export class SecurityService {
       .exec();
   }
 
-  async blockIP(dto: BlockIPDto, adminId: string, adminEmail: string): Promise<BlockedIP> {
+  async blockIP(
+    dto: BlockIPDto,
+    adminId: string,
+    adminEmail: string,
+  ): Promise<BlockedIP> {
     // Check if IP is already blocked
-    const existing = await this.blockedIPModel.findOne({
-      ipAddress: dto.ipAddress,
-      isActive: true,
-    }).exec();
+    const existing = await this.blockedIPModel
+      .findOne({
+        ipAddress: dto.ipAddress,
+        isActive: true,
+      })
+      .exec();
 
     if (existing) {
       throw new ConflictException('IP address is already blocked');
@@ -83,7 +98,11 @@ export class SecurityService {
     return blockedIP;
   }
 
-  async unblockIP(blockedIPId: string, adminId: string, adminEmail: string): Promise<void> {
+  async unblockIP(
+    blockedIPId: string,
+    adminId: string,
+    adminEmail: string,
+  ): Promise<void> {
     const blockedIP = await this.blockedIPModel.findById(blockedIPId).exec();
 
     if (!blockedIP) {
@@ -108,20 +127,24 @@ export class SecurityService {
       },
     });
 
-    this.logger.log(`IP address ${blockedIP.ipAddress} unblocked by ${adminEmail}`);
+    this.logger.log(
+      `IP address ${blockedIP.ipAddress} unblocked by ${adminEmail}`,
+    );
   }
 
   async isIPBlocked(ipAddress: string): Promise<boolean> {
     const now = new Date();
-    const blockedIP = await this.blockedIPModel.findOne({
-      ipAddress,
-      isActive: true,
-      $or: [
-        { expiresAt: { $exists: false } },
-        { expiresAt: null },
-        { expiresAt: { $gt: now } },
-      ],
-    }).exec();
+    const blockedIP = await this.blockedIPModel
+      .findOne({
+        ipAddress,
+        isActive: true,
+        $or: [
+          { expiresAt: { $exists: false } },
+          { expiresAt: null },
+          { expiresAt: { $gt: now } },
+        ],
+      })
+      .exec();
 
     return !!blockedIP;
   }
@@ -144,7 +167,9 @@ export class SecurityService {
       reason,
     });
 
-    this.logger.debug(`Failed login logged: ${email} from ${ipAddress} - ${reason}`);
+    this.logger.debug(
+      `Failed login logged: ${email} from ${ipAddress} - ${reason}`,
+    );
   }
 
   async getFailedLogins(params: GetFailedLoginsQueryDto) {
@@ -196,119 +221,129 @@ export class SecurityService {
     const end = endDate || new Date();
 
     // Total count
-    const total = await this.failedLoginModel.countDocuments({
-      attemptedAt: { $gte: start, $lte: end },
-    }).exec();
+    const total = await this.failedLoginModel
+      .countDocuments({
+        attemptedAt: { $gte: start, $lte: end },
+      })
+      .exec();
 
     // By reason
-    const byReason = await this.failedLoginModel.aggregate([
-      {
-        $match: {
-          attemptedAt: { $gte: start, $lte: end },
+    const byReason = await this.failedLoginModel
+      .aggregate([
+        {
+          $match: {
+            attemptedAt: { $gte: start, $lte: end },
+          },
         },
-      },
-      {
-        $group: {
-          _id: '$reason',
-          count: { $sum: 1 },
+        {
+          $group: {
+            _id: '$reason',
+            count: { $sum: 1 },
+          },
         },
-      },
-      {
-        $project: {
-          reason: '$_id',
-          count: 1,
-          _id: 0,
+        {
+          $project: {
+            reason: '$_id',
+            count: 1,
+            _id: 0,
+          },
         },
-      },
-      {
-        $sort: { count: -1 },
-      },
-    ]).exec();
+        {
+          $sort: { count: -1 },
+        },
+      ])
+      .exec();
 
     // Top IPs
-    const topIPs = await this.failedLoginModel.aggregate([
-      {
-        $match: {
-          attemptedAt: { $gte: start, $lte: end },
+    const topIPs = await this.failedLoginModel
+      .aggregate([
+        {
+          $match: {
+            attemptedAt: { $gte: start, $lte: end },
+          },
         },
-      },
-      {
-        $group: {
-          _id: '$ipAddress',
-          count: { $sum: 1 },
-          emails: { $addToSet: '$email' },
+        {
+          $group: {
+            _id: '$ipAddress',
+            count: { $sum: 1 },
+            emails: { $addToSet: '$email' },
+          },
         },
-      },
-      {
-        $project: {
-          ipAddress: '$_id',
-          count: 1,
-          uniqueEmails: { $size: '$emails' },
-          _id: 0,
+        {
+          $project: {
+            ipAddress: '$_id',
+            count: 1,
+            uniqueEmails: { $size: '$emails' },
+            _id: 0,
+          },
         },
-      },
-      {
-        $sort: { count: -1 },
-      },
-      {
-        $limit: 10,
-      },
-    ]).exec();
+        {
+          $sort: { count: -1 },
+        },
+        {
+          $limit: 10,
+        },
+      ])
+      .exec();
 
     // Top emails
-    const topEmails = await this.failedLoginModel.aggregate([
-      {
-        $match: {
-          attemptedAt: { $gte: start, $lte: end },
+    const topEmails = await this.failedLoginModel
+      .aggregate([
+        {
+          $match: {
+            attemptedAt: { $gte: start, $lte: end },
+          },
         },
-      },
-      {
-        $group: {
-          _id: '$email',
-          count: { $sum: 1 },
+        {
+          $group: {
+            _id: '$email',
+            count: { $sum: 1 },
+          },
         },
-      },
-      {
-        $project: {
-          email: '$_id',
-          count: 1,
-          _id: 0,
+        {
+          $project: {
+            email: '$_id',
+            count: 1,
+            _id: 0,
+          },
         },
-      },
-      {
-        $sort: { count: -1 },
-      },
-      {
-        $limit: 10,
-      },
-    ]).exec();
+        {
+          $sort: { count: -1 },
+        },
+        {
+          $limit: 10,
+        },
+      ])
+      .exec();
 
     // Hourly distribution (last 24 hours)
-    const hourlyDistribution = await this.failedLoginModel.aggregate([
-      {
-        $match: {
-          attemptedAt: { $gte: start, $lte: end },
-        },
-      },
-      {
-        $group: {
-          _id: {
-            $dateToString: { format: '%Y-%m-%d %H:00', date: '$attemptedAt' },
+    const hourlyDistribution = await this.failedLoginModel
+      .aggregate([
+        {
+          $match: {
+            attemptedAt: { $gte: start, $lte: end },
           },
-          count: { $sum: 1 },
         },
-      },
-      {
-        $project: {
-          hour: '$_id',
-          count: 1,
-          _id: 0,
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: '%Y-%m-%d %H:00', date: '$attemptedAt' },
+            },
+            count: { $sum: 1 },
+          },
         },
-      },
-      {
-        $sort: { hour: 1 },
-      },
-    ]).exec();
+        {
+          $project: {
+            hour: '$_id',
+            count: 1,
+            _id: 0,
+          },
+        },
+        {
+          $sort: { hour: 1 },
+        },
+      ])
+      .exec();
 
     return {
       total,

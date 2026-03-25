@@ -1,4 +1,11 @@
-import { IsOptional, IsString, IsNumber, IsIn, Min, IsBoolean } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsIn,
+  Min,
+  IsBoolean,
+} from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 export class GetTradesQueryDto {
@@ -19,11 +26,27 @@ export class GetTradesQueryDto {
   search?: string;
 
   @IsOptional()
-  @IsIn(['pending', 'countered', 'buyer_responded', 'accepted', 'rejected', 'cancelled'])
+  @IsIn([
+    'pending',
+    'countered',
+    'buyer_responded',
+    'accepted',
+    'rejected',
+    'cancelled',
+  ])
   negotiationStatus?: string;
 
   @IsOptional()
-  @IsIn(['PR', 'SCO', 'ICPO', 'SPA', 'PAYMENT', 'BOL', 'COMPLETED', 'CANCELLED'])
+  @IsIn([
+    'PR',
+    'SCO',
+    'ICPO',
+    'SPA',
+    'PAYMENT',
+    'BOL',
+    'COMPLETED',
+    'CANCELLED',
+  ])
   tradePhase?: string;
 
   @IsOptional()

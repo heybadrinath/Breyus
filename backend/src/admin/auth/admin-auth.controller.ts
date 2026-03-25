@@ -47,12 +47,10 @@ export class AdminAuthController {
    * Authenticate admin with email/password
    */
   @Post('login')
-  async login(
-    @Body() loginDto: AdminLoginDto,
-    @Res() response: Response,
-  ) {
+  async login(@Body() loginDto: AdminLoginDto, @Res() response: Response) {
     try {
-      const ipAddress = response.req.ip || response.req.socket.remoteAddress || 'unknown';
+      const ipAddress =
+        response.req.ip || response.req.socket.remoteAddress || 'unknown';
       const userAgent = response.req.headers['user-agent'] || 'unknown';
 
       const { admin, token } = await this.adminAuthService.login(
@@ -81,10 +79,12 @@ export class AdminAuthController {
         data: { admin },
       });
     } catch (error) {
-      return response.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({
-        statusCode: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message || 'Login failed',
-      });
+      return response
+        .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({
+          statusCode: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+          message: error.message || 'Login failed',
+        });
     }
   }
 
@@ -133,10 +133,12 @@ export class AdminAuthController {
         message: 'Logged out successfully',
       });
     } catch (error) {
-      return response.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({
-        statusCode: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message || 'Logout failed',
-      });
+      return response
+        .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({
+          statusCode: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+          message: error.message || 'Logout failed',
+        });
     }
   }
 
@@ -219,10 +221,12 @@ export class AdminAuthController {
         message: 'Password changed successfully',
       });
     } catch (error) {
-      return response.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({
-        statusCode: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message || 'Failed to change password',
-      });
+      return response
+        .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({
+          statusCode: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+          message: error.message || 'Failed to change password',
+        });
     }
   }
 
@@ -243,7 +247,9 @@ export class AdminAuthController {
       }
 
       const admin = await this.adminAuthService.validateToken(token);
-      const sessions = await this.adminAuthService.getSessions(admin._id as any);
+      const sessions = await this.adminAuthService.getSessions(
+        admin._id as any,
+      );
 
       return response.status(HttpStatus.OK).json({
         statusCode: HttpStatus.OK,
@@ -251,10 +257,12 @@ export class AdminAuthController {
         data: sessions,
       });
     } catch (error) {
-      return response.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({
-        statusCode: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message || 'Failed to get sessions',
-      });
+      return response
+        .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({
+          statusCode: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+          message: error.message || 'Failed to get sessions',
+        });
     }
   }
 
@@ -295,10 +303,12 @@ export class AdminAuthController {
         message: 'All other sessions revoked',
       });
     } catch (error) {
-      return response.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({
-        statusCode: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
-        message: error.message || 'Failed to revoke sessions',
-      });
+      return response
+        .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({
+          statusCode: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+          message: error.message || 'Failed to revoke sessions',
+        });
     }
   }
 }

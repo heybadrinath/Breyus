@@ -1,7 +1,7 @@
 # Trade API
 
 ## Overview
-The Trade API manages the complete trade lifecycle including purchase requests, multi-round negotiations, document uploads, and trade completion. It handles all interactions between buyers and sellers from initial offer to final delivery.
+The Trade API manages the complete trade lifecycle including purchase requests, multi-round negotiations, document uploads, trade completion, and disputes. It handles all interactions between buyers and sellers from initial offer to final delivery.
 
 ## Base URL
 ```
@@ -9,7 +9,10 @@ The Trade API manages the complete trade lifecycle including purchase requests, 
 ```
 
 ## Authentication
-All endpoints require authentication via signed cookie.
+All endpoints require authentication via signed cookie. The controller is protected by `AuthGuard` which validates:
+- Cookie-based JWT authentication
+- User existence in database
+- User is not suspended
 
 ---
 
@@ -70,7 +73,8 @@ Creates a new trade/purchase request from a buyer.
     "selectedIncotermData": {
       "Insurance": "Buyer",
       "Freight": "Seller"
-    }
+    },
+    "defaults": {}
   },
   "buyerMessage": "string",
 
@@ -91,6 +95,8 @@ Creates a new trade/purchase request from a buyer.
   "marketCapture": "string",
   "tradeYears": "string",
   "productUsage": "string",
+  "nearestPort": "string",
+  "buyerCisDocument": "string",
 
   "paymentMethod": {
     "type": "advance" | "credit" | "openAccount",
@@ -100,6 +106,24 @@ Creates a new trade/purchase request from a buyer.
   }
 }
 ```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| productId | string | Yes | Product MongoDB ObjectId |
+| quantity | string | Yes | Requested quantity |
+| quantityUnit | string | Yes | Unit for quantity |
+| buyerOfferedPrice | string | No | Initial price offer (Step 1) |
+| buyerIncoterms | object | No | Incoterm terms (Step 1) |
+| buyerMessage | string | No | Message to seller (Step 1) |
+| selectedAddress | object | Yes | Delivery address (Step 2) |
+| buyerIndustryType | string | No | Buyer's industry type (Step 3) |
+| buyerMarketYears | string | Yes | Years in market (Step 3) |
+| marketCapture | string | No | Market capture percentage |
+| tradeYears | string | Yes | Years in trade |
+| productUsage | string | No | Intended product usage |
+| nearestPort | string | No | Nearest importing port |
+| buyerCisDocument | string | No | Buyer's CIS document path |
+| paymentMethod | object | Yes | Payment details (Step 4) |
 
 **Response (201 Created):**
 ```json
@@ -863,7 +887,421 @@ Generates PDF invoice for completed trades.
 
 **Authentication:** Required (signed cookie)
 
-**Response:** PDF File Stream
+**Response:** PDF File Stream with headers:
+- `Content-Type: application/pdf`
+- `Content-Disposition: attachment; filename="invoice-ORD-XXXXXXXX.pdf"`
+
+**Error Responses:**
+
+**401 Unauthorized:**
+```json
+{
+  "statusCode": 401,
+  "message": "No valid cookie found"
+}
+```
+
+**404 Not Found:**
+```json
+{
+  "statusCode": 404,
+  "message": "Trade not found"
+}
+```
+
+**500 Internal Server Error:**
+```json
+{
+  "statusCode": 500,
+  "message": "Failed to generate invoice"
+}
+```
+
+---
+
+#### Generate Purchase Request PDF
+
+Generates PDF of the Purchase Request. Available as soon as a trade is created.
+
+**Endpoint:** `GET /trade/:id/purchase-request-pdf`
+
+**Authentication:** Required (signed cookie)
+
+**Response:** PDF File Stream with headers:
+- `Content-Type: application/pdf`
+- `Content-Disposition: attachment; filename="purchase-request-PR-XXXXXXXX.pdf"`
+
+**Error Responses:**
+
+**401 Unauthorized:**
+```json
+{
+  "statusCode": 401,
+  "message": "No valid cookie found"
+}
+```
+
+**404 Not Found:**
+```json
+{
+  "statusCode": 404,
+  "message": "Trade not found"
+}
+```
+
+**500 Internal Server Error:**
+```json
+{
+  "statusCode": 500,
+  "message": "Failed to generate purchase request PDF"
+}
+```
+
+---
+
+#### Generate Purchase Order PDF
+
+Generates PDF of the Purchase Order. Only available after negotiation is accepted.
+
+**Endpoint:** `GET /trade/:id/purchase-order-pdf`
+
+**Authentication:** Required (signed cookie)
+
+**Response:** PDF File Stream with headers:
+- `Content-Type: application/pdf`
+- `Content-Disposition: attachment; filename="purchase-order-PO-XXXXXXXX.pdf"`
+
+**Error Responses:**
+
+**400 Bad Request:**
+```json
+{
+  "statusCode": 400,
+  "message": "Purchase Order is only available after the trade has been accepted"
+}
+```
+
+**401 Unauthorized:**
+```json
+{
+  "statusCode": 401,
+  "message": "No valid cookie found"
+}
+```
+
+**404 Not Found:**
+```json
+{
+  "statusCode": 404,
+  "message": "Trade not found"
+}
+```
+
+**500 Internal Server Error:**
+```json
+{
+  "statusCode": 500,
+  "message": "Failed to generate purchase order PDF"
+}
+```
+
+---
+
+#### Upload Signed SPA
+
+Buyer uploads their signed copy of the SPA after seller's SPA is approved.
+
+**Endpoint:** `POST /trade/:id/upload-signed-spa`
+
+**Authentication:** Required (signed cookie)
+
+**Content-Type:** `multipart/form-data`
+
+**Request:**
+- File: Document file
+- Body:
+```json
+{
+  "notes": "string",
+  "signingParty": "buyer" | "seller"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "statusCode": 200,
+  "message": "Signed SPA uploaded successfully",
+  "data": {
+    "signedSpaDocument": {...},
+    "tradePhase": "SPA"
+  }
+}
+```
+
+**Flow:** Seller uploads SPA -> Buyer approves -> Buyer uploads signed SPA -> Seller approves
+
+**Permissions:** Only buyer can upload signed SPA
+
+---
+
+### PHASE 4: Dispute Management (User-facing)
+
+#### Raise a Dispute
+
+Creates a new dispute on a trade. Either buyer or seller can raise a dispute.
+
+**Endpoint:** `POST /trade/:id/dispute`
+
+**Authentication:** Required (signed cookie)
+
+**Path Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| id | string | Trade MongoDB ObjectId |
+
+**Request Body:**
+```json
+{
+  "type": "quality" | "delivery" | "payment" | "documentation" | "communication" | "other",
+  "priority": "low" | "medium" | "high" | "critical",
+  "subject": "string",
+  "description": "string"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| type | string | Yes | Type of dispute |
+| priority | string | Yes | Priority level |
+| subject | string | Yes | Brief subject line |
+| description | string | Yes | Detailed description of the issue |
+
+**Response (201 Created):**
+```json
+{
+  "statusCode": 201,
+  "message": "Dispute raised successfully",
+  "data": {
+    "_id": "string",
+    "trade": "string",
+    "raisedBy": "string",
+    "raisedByRole": "buyer" | "seller",
+    "type": "string",
+    "priority": "string",
+    "status": "open",
+    "subject": "string",
+    "description": "string",
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+
+**401 Unauthorized:**
+```json
+{
+  "statusCode": 401,
+  "message": "No valid cookie found"
+}
+```
+
+**403 Forbidden:**
+```json
+{
+  "statusCode": 403,
+  "message": "You are not authorized to raise a dispute on this trade"
+}
+```
+
+**404 Not Found:**
+```json
+{
+  "statusCode": 404,
+  "message": "Trade not found"
+}
+```
+
+---
+
+#### Get Trade Dispute
+
+Returns the active or most recent dispute for a trade.
+
+**Endpoint:** `GET /trade/:id/dispute`
+
+**Authentication:** Required (signed cookie)
+
+**Path Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| id | string | Trade MongoDB ObjectId |
+
+**Response (200 OK - Dispute exists):**
+```json
+{
+  "statusCode": 200,
+  "message": "Dispute retrieved successfully",
+  "data": {
+    "_id": "string",
+    "trade": "string",
+    "type": "string",
+    "priority": "string",
+    "status": "open" | "in_progress" | "resolved" | "escalated" | "closed",
+    "subject": "string",
+    "description": "string",
+    "assignedTo": "string",
+    "resolution": "string",
+    "messages": [...]
+  }
+}
+```
+
+**Response (200 OK - No dispute):**
+```json
+{
+  "statusCode": 200,
+  "message": "No dispute found for this trade",
+  "data": null
+}
+```
+
+**Error Responses:**
+
+**401 Unauthorized:**
+```json
+{
+  "statusCode": 401,
+  "message": "No valid cookie found"
+}
+```
+
+**404 Not Found:**
+```json
+{
+  "statusCode": 404,
+  "message": "Trade not found"
+}
+```
+
+---
+
+#### Add Dispute Message
+
+Adds a message to an existing dispute. Only buyer or seller involved in the trade can add messages.
+
+**Endpoint:** `POST /trade/:id/dispute/message`
+
+**Authentication:** Required (signed cookie)
+
+**Path Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| id | string | Trade MongoDB ObjectId |
+
+**Request Body:**
+```json
+{
+  "content": "string"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "statusCode": 201,
+  "message": "Message added successfully",
+  "data": {
+    "_id": "string",
+    "dispute": "string",
+    "sender": "string",
+    "senderRole": "buyer" | "seller",
+    "content": "string",
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+
+**401 Unauthorized:**
+```json
+{
+  "statusCode": 401,
+  "message": "No valid cookie found"
+}
+```
+
+**403 Forbidden:**
+```json
+{
+  "statusCode": 403,
+  "message": "You are not authorized to add messages to this dispute"
+}
+```
+
+**404 Not Found:**
+```json
+{
+  "statusCode": 404,
+  "message": "No dispute found for this trade"
+}
+```
+
+---
+
+#### Get Dispute Messages
+
+Returns all non-internal messages for the dispute on a trade.
+
+**Endpoint:** `GET /trade/:id/dispute/messages`
+
+**Authentication:** Required (signed cookie)
+
+**Path Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| id | string | Trade MongoDB ObjectId |
+
+**Response (200 OK):**
+```json
+{
+  "statusCode": 200,
+  "message": "Messages retrieved successfully",
+  "data": [
+    {
+      "_id": "string",
+      "sender": "string",
+      "senderRole": "buyer" | "seller" | "admin",
+      "content": "string",
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Error Responses:**
+
+**401 Unauthorized:**
+```json
+{
+  "statusCode": 401,
+  "message": "No valid cookie found"
+}
+```
+
+**404 Not Found:**
+```json
+{
+  "statusCode": 404,
+  "message": "No dispute found for this trade"
+}
+```
+
+**Implementation Notes:**
+- Internal admin messages are excluded from user-facing endpoint
+- Messages are sorted by creation date
 
 ---
 

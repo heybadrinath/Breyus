@@ -11,7 +11,10 @@ import { resolve } from 'path';
 // Load environment variables
 dotenv.config({ path: resolve(__dirname, '../../../.env') });
 
-const MONGODB_URI = process.env.MONGODB_URI_DEV || process.env.MONGODB_URI || 'mongodb://localhost:27017/breyus';
+const MONGODB_URI =
+  process.env.MONGODB_URI_DEV ||
+  process.env.MONGODB_URI ||
+  'mongodb://localhost:27017/breyus';
 
 async function seedTestAdmin() {
   console.log('\n🌱 Seeding Test Admin User...\n');
@@ -31,7 +34,9 @@ async function seedTestAdmin() {
     const collection = db.collection('adminusers');
 
     // Check if admin already exists
-    const existingAdmin = await collection.findOne({ email: 'admin@breyus.com' });
+    const existingAdmin = await collection.findOne({
+      email: 'admin@breyus.com',
+    });
 
     if (existingAdmin) {
       console.log('ℹ️  Admin user already exists: admin@breyus.com');
@@ -43,9 +48,9 @@ async function seedTestAdmin() {
         {
           $set: {
             password: hashedPassword,
-            updatedAt: new Date()
-          }
-        }
+            updatedAt: new Date(),
+          },
+        },
       );
 
       console.log('✅ Password updated successfully!\n');
@@ -74,7 +79,6 @@ async function seedTestAdmin() {
     console.log('║  Email:    admin@breyus.com            ║');
     console.log('║  Password: Admin123!                   ║');
     console.log('╚════════════════════════════════════════╝\n');
-
   } catch (error) {
     console.error('❌ Error seeding admin:', error);
     process.exit(1);

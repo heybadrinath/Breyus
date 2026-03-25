@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   Users,
+  Users2,
   Building2,
   FileText,
   AlertTriangle,
@@ -18,6 +19,10 @@ import {
   Shield,
   X,
   BookOpen,
+  PenTool,
+  Mail,
+  MessageCircle,
+  TrendingUp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -48,8 +53,17 @@ const systemNavItems = [
   { icon: Bell, label: 'Alerts', path: '/alerts' },
 ]
 
+const blogNavItems = [
+  { icon: BookOpen, label: 'Posts', path: '/blog' },
+  { icon: Users2, label: 'Users', path: '/blog/users' },
+  { icon: PenTool, label: 'Writers', path: '/blog/writers' },
+  { icon: Mail, label: 'Invites', path: '/blog/invites' },
+  { icon: MessageCircle, label: 'Comments', path: '/blog/comments' },
+  { icon: TrendingUp, label: 'Analytics', path: '/blog/analytics' },
+  { icon: Mail, label: 'Subscribers', path: '/blog/subscribers' },
+]
+
 const settingsNavItems = [
-  { icon: BookOpen, label: 'Blog', path: '/blog' },
   { icon: Settings, label: 'Content', path: '/content' },
 ]
 
@@ -148,6 +162,37 @@ export function Sidebar({ collapsed, onToggle, mobileOpen = false, onMobileClose
               <li key={item.path}>
                 <NavLink
                   to={item.path}
+                  onClick={onMobileClose}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )
+                  }
+                >
+                  <item.icon className="w-5 h-5 shrink-0" />
+                  {isExpanded && <span>{item.label}</span>}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Blog Section */}
+        <div className="mb-6">
+          {isExpanded && (
+            <span className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Blog
+            </span>
+          )}
+          <ul className="mt-2 space-y-1">
+            {blogNavItems.map((item) => (
+              <li key={item.path}>
+                <NavLink
+                  to={item.path}
+                  end={item.path === '/blog'}
                   onClick={onMobileClose}
                   className={({ isActive }) =>
                     cn(

@@ -20,9 +20,10 @@ dotenv.config({ path: resolve(__dirname, '../../.env') });
 // CONFIGURATION
 // ============================================================================
 
-const MONGODB_URI = process.env.MONGODB_URI_DEV ||
-                    process.env.MONGODB_URI ||
-                    'mongodb://localhost:27017/breyus';
+const MONGODB_URI =
+  process.env.MONGODB_URI_DEV ||
+  process.env.MONGODB_URI ||
+  'mongodb://localhost:27017/breyus';
 
 // ============================================================================
 // ENUM DEFINITIONS (mirror schema enums)
@@ -108,13 +109,38 @@ const ALERT_RULES = [
 // Sample payloads for different event types
 const SAMPLE_PAYLOADS = {
   [AlertEventType.USER_SUSPENDED]: [
-    { userEmail: 'john.smith@example.com', userId: 'user123', reason: 'Policy violation', suspendedBy: 'admin@breyus.com' },
-    { userEmail: 'suspicious.user@test.com', userId: 'user456', reason: 'Fraudulent activity', suspendedBy: 'admin@breyus.com' },
-    { userEmail: 'inactive.account@domain.com', userId: 'user789', reason: 'Inactive for 6 months', suspendedBy: 'system' },
+    {
+      userEmail: 'john.smith@example.com',
+      userId: 'user123',
+      reason: 'Policy violation',
+      suspendedBy: 'admin@breyus.com',
+    },
+    {
+      userEmail: 'suspicious.user@test.com',
+      userId: 'user456',
+      reason: 'Fraudulent activity',
+      suspendedBy: 'admin@breyus.com',
+    },
+    {
+      userEmail: 'inactive.account@domain.com',
+      userId: 'user789',
+      reason: 'Inactive for 6 months',
+      suspendedBy: 'system',
+    },
   ],
   [AlertEventType.KYC_PENDING_THRESHOLD]: [
-    { count: 52, threshold: 50, oldestPending: '2024-01-10', topCompanies: ['Acme Corp', 'Global Trade Ltd'] },
-    { count: 75, threshold: 50, oldestPending: '2024-01-05', topCompanies: ['Import Inc', 'Export Co'] },
+    {
+      count: 52,
+      threshold: 50,
+      oldestPending: '2024-01-10',
+      topCompanies: ['Acme Corp', 'Global Trade Ltd'],
+    },
+    {
+      count: 75,
+      threshold: 50,
+      oldestPending: '2024-01-05',
+      topCompanies: ['Import Inc', 'Export Co'],
+    },
     { count: 60, threshold: 50, oldestPending: '2024-01-08' },
   ],
   [AlertEventType.TRADE_STALLED]: [
@@ -123,14 +149,50 @@ const SAMPLE_PAYLOADS = {
     { count: 8, stalledDays: 14, trades: ['TRD-201'] },
   ],
   [AlertEventType.FAILED_LOGIN_SPIKE]: [
-    { count: 150, timeWindow: '30 minutes', topIPs: ['192.168.1.100', '10.0.0.55'], topEmails: ['test@example.com'] },
-    { count: 120, timeWindow: '30 minutes', topIPs: ['185.220.100.10'], uniqueEmails: 45 },
-    { count: 200, timeWindow: '30 minutes', topIPs: ['91.121.87.12', '77.247.181.165'], suspiciousPattern: 'brute_force' },
+    {
+      count: 150,
+      timeWindow: '30 minutes',
+      topIPs: ['192.168.1.100', '10.0.0.55'],
+      topEmails: ['test@example.com'],
+    },
+    {
+      count: 120,
+      timeWindow: '30 minutes',
+      topIPs: ['185.220.100.10'],
+      uniqueEmails: 45,
+    },
+    {
+      count: 200,
+      timeWindow: '30 minutes',
+      topIPs: ['91.121.87.12', '77.247.181.165'],
+      suspiciousPattern: 'brute_force',
+    },
   ],
   [AlertEventType.NEW_DISPUTE]: [
-    { disputeId: 'DSP-001', tradeId: 'TRD-500', buyer: 'Buyer Corp', seller: 'Seller Inc', amount: 50000, reason: 'Quality issue' },
-    { disputeId: 'DSP-002', tradeId: 'TRD-501', buyer: 'Import Co', seller: 'Export Ltd', amount: 25000, reason: 'Delayed delivery' },
-    { disputeId: 'DSP-003', tradeId: 'TRD-502', buyer: 'Trade Corp', seller: 'Supply Co', amount: 100000, reason: 'Quantity mismatch' },
+    {
+      disputeId: 'DSP-001',
+      tradeId: 'TRD-500',
+      buyer: 'Buyer Corp',
+      seller: 'Seller Inc',
+      amount: 50000,
+      reason: 'Quality issue',
+    },
+    {
+      disputeId: 'DSP-002',
+      tradeId: 'TRD-501',
+      buyer: 'Import Co',
+      seller: 'Export Ltd',
+      amount: 25000,
+      reason: 'Delayed delivery',
+    },
+    {
+      disputeId: 'DSP-003',
+      tradeId: 'TRD-502',
+      buyer: 'Trade Corp',
+      seller: 'Supply Co',
+      amount: 100000,
+      reason: 'Quantity mismatch',
+    },
   ],
 };
 
@@ -142,7 +204,12 @@ function getRandomDate(maxDaysAgo: number = 30): Date {
   const daysBack = Math.floor(Math.random() * maxDaysAgo);
   const date = new Date();
   date.setDate(date.getDate() - daysBack);
-  date.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60), 0, 0);
+  date.setHours(
+    Math.floor(Math.random() * 24),
+    Math.floor(Math.random() * 60),
+    0,
+    0,
+  );
   return date;
 }
 
@@ -200,11 +267,17 @@ async function seedAlertsData() {
 
     console.log('Step 2: Clearing existing seed data...');
 
-    const deletedRules = await alertRulesCollection.deleteMany({ _seedData: true });
-    const deletedHistory = await alertHistoryCollection.deleteMany({ _seedData: true });
+    const deletedRules = await alertRulesCollection.deleteMany({
+      _seedData: true,
+    });
+    const deletedHistory = await alertHistoryCollection.deleteMany({
+      _seedData: true,
+    });
 
     console.log(`  Deleted ${deletedRules.deletedCount} seeded alert rules`);
-    console.log(`  Deleted ${deletedHistory.deletedCount} seeded alert history entries`);
+    console.log(
+      `  Deleted ${deletedHistory.deletedCount} seeded alert history entries`,
+    );
     console.log('');
 
     // ========================================================================
@@ -236,7 +309,8 @@ async function seedAlertsData() {
 
       // Add optional fields if present
       if (ruleTemplate.threshold) rule.threshold = ruleTemplate.threshold;
-      if (ruleTemplate.timeWindowMinutes) rule.timeWindowMinutes = ruleTemplate.timeWindowMinutes;
+      if (ruleTemplate.timeWindowMinutes)
+        rule.timeWindowMinutes = ruleTemplate.timeWindowMinutes;
 
       // Set lastTriggeredAt for some rules
       if (ruleTemplate.isEnabled && Math.random() > 0.3) {
@@ -270,7 +344,9 @@ async function seedAlertsData() {
         ? Math.floor(Math.random() * 6) + 3
         : Math.floor(Math.random() * 2) + 1;
 
-      const payloads = SAMPLE_PAYLOADS[rule.eventType as AlertEventType] || [{ message: 'Test payload' }];
+      const payloads = SAMPLE_PAYLOADS[rule.eventType as AlertEventType] || [
+        { message: 'Test payload' },
+      ];
 
       for (let j = 0; j < numEntries; j++) {
         const triggeredAt = getRecentDate(336); // Last 14 days
@@ -286,7 +362,9 @@ async function seedAlertsData() {
           triggeredAt,
           payload,
           recipientsSent: rule.recipients,
-          emailStatus: isFailed ? AlertEmailStatus.FAILED : AlertEmailStatus.SENT,
+          emailStatus: isFailed
+            ? AlertEmailStatus.FAILED
+            : AlertEmailStatus.SENT,
           errorMessage: isFailed ? 'SMTP connection timeout' : undefined,
           createdAt: triggeredAt,
           updatedAt: triggeredAt,
@@ -326,10 +404,15 @@ async function seedAlertsData() {
     }
 
     // Sort by triggeredAt (newest first)
-    historyToInsert.sort((a, b) => b.triggeredAt.getTime() - a.triggeredAt.getTime());
+    historyToInsert.sort(
+      (a, b) => b.triggeredAt.getTime() - a.triggeredAt.getTime(),
+    );
 
-    const historyResult = await alertHistoryCollection.insertMany(historyToInsert);
-    console.log(`  Created ${historyResult.insertedCount} alert history entries`);
+    const historyResult =
+      await alertHistoryCollection.insertMany(historyToInsert);
+    console.log(
+      `  Created ${historyResult.insertedCount} alert history entries`,
+    );
     console.log('');
 
     // ========================================================================
@@ -343,10 +426,16 @@ async function seedAlertsData() {
 
     // Get counts
     const totalRules = await alertRulesCollection.countDocuments({});
-    const enabledRules = await alertRulesCollection.countDocuments({ isEnabled: true });
+    const enabledRules = await alertRulesCollection.countDocuments({
+      isEnabled: true,
+    });
     const totalHistory = await alertHistoryCollection.countDocuments({});
-    const sentAlerts = await alertHistoryCollection.countDocuments({ emailStatus: AlertEmailStatus.SENT });
-    const failedAlerts = await alertHistoryCollection.countDocuments({ emailStatus: AlertEmailStatus.FAILED });
+    const sentAlerts = await alertHistoryCollection.countDocuments({
+      emailStatus: AlertEmailStatus.SENT,
+    });
+    const failedAlerts = await alertHistoryCollection.countDocuments({
+      emailStatus: AlertEmailStatus.FAILED,
+    });
 
     console.log('  Alert Rules:');
     console.log(`    Total: ${totalRules}`);
@@ -372,7 +461,6 @@ async function seedAlertsData() {
     console.log('='.repeat(60));
     console.log('  SUCCESS!');
     console.log('='.repeat(60));
-
   } catch (error) {
     console.error('');
     console.error('ERROR during seeding:', error);

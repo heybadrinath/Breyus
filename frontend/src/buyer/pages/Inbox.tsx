@@ -392,6 +392,7 @@ const BuyerInbox = () => {
                     searchQuery={searchQuery}
                     handleSearch={handleSearch}
                     onConversationSelect={handleConversationSelect}
+                    currentCompanyId={currentCompanyId}
                     width={sidebarWidth}
                     onResizeStart={handleResizeStart}
                 />
@@ -399,6 +400,8 @@ const BuyerInbox = () => {
                     <InboxConversation
                         name={selectedConversation.companyName}
                         productName={selectedConversation.productName}
+                        companyId={selectedConversation.companyIds?.find(id => id !== currentCompanyId)}
+                        profilePicture={selectedConversation.profilePicture}
                         messages={messages}
                         currentCompanyId={currentCompanyId}
                         onSendMessage={handleSendMessage}

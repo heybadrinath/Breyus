@@ -17,7 +17,7 @@ export class AdminUser extends Document {
   @Prop({
     type: String,
     enum: ['super_admin', 'admin', 'viewer'],
-    default: 'admin'
+    default: 'admin',
   })
   role: AdminRole;
 

@@ -2,16 +2,23 @@ import { IsString, IsOptional, IsNotEmpty, IsEnum } from 'class-validator';
 
 /**
  * Document type enum
+ * PHASE 2 REFACTORING: Added 'signed-spa' for new SPA approval flow
  */
-export type DocumentType = 'sco' | 'icpo' | 'spa' | 'bol' | 'payment-proof';
+export type DocumentType =
+  | 'sco'
+  | 'icpo'
+  | 'spa'
+  | 'signed-spa'
+  | 'bol'
+  | 'payment-proof';
 
 /**
  * Base DTO for all document uploads
  */
 export class BaseUploadDocumentDto {
-    @IsOptional()
-    @IsString()
-    notes?: string;
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }
 
 /**
@@ -19,9 +26,9 @@ export class BaseUploadDocumentDto {
  * Only sellers can upload SCO after negotiation is accepted
  */
 export class UploadSCODto extends BaseUploadDocumentDto {
-    @IsOptional()
-    @IsString()
-    termsAccepted?: string; // Checkbox confirmation
+  @IsOptional()
+  @IsString()
+  termsAccepted?: string; // Checkbox confirmation
 }
 
 /**
@@ -29,9 +36,9 @@ export class UploadSCODto extends BaseUploadDocumentDto {
  * Only buyers can upload ICPO after receiving SCO
  */
 export class UploadICPODto extends BaseUploadDocumentDto {
-    @IsOptional()
-    @IsString()
-    icpoReference?: string; // Reference number for the ICPO
+  @IsOptional()
+  @IsString()
+  icpoReference?: string; // Reference number for the ICPO
 }
 
 /**
@@ -39,9 +46,9 @@ export class UploadICPODto extends BaseUploadDocumentDto {
  * Either party can upload SPA
  */
 export class UploadSPADto extends BaseUploadDocumentDto {
-    @IsOptional()
-    @IsString()
-    signingParty?: 'buyer' | 'seller'; // Who is uploading/signing
+  @IsOptional()
+  @IsString()
+  signingParty?: 'buyer' | 'seller'; // Who is uploading/signing
 }
 
 /**
@@ -49,17 +56,17 @@ export class UploadSPADto extends BaseUploadDocumentDto {
  * Only sellers can upload BoL after payment is verified
  */
 export class UploadBoLDto extends BaseUploadDocumentDto {
-    @IsOptional()
-    @IsString()
-    bolNumber?: string; // Bill of Lading number
+  @IsOptional()
+  @IsString()
+  bolNumber?: string; // Bill of Lading number
 
-    @IsOptional()
-    @IsString()
-    shippingCarrier?: string; // Carrier/shipping company name
+  @IsOptional()
+  @IsString()
+  shippingCarrier?: string; // Carrier/shipping company name
 
-    @IsOptional()
-    @IsString()
-    vesselName?: string; // Ship/vessel name
+  @IsOptional()
+  @IsString()
+  vesselName?: string; // Ship/vessel name
 }
 
 /**
@@ -67,51 +74,52 @@ export class UploadBoLDto extends BaseUploadDocumentDto {
  * Only buyers can upload payment proof
  */
 export class UploadPaymentProofDto extends BaseUploadDocumentDto {
-    @IsOptional()
-    @IsString()
-    amount?: string; // Amount paid
+  @IsOptional()
+  @IsString()
+  amount?: string; // Amount paid
 
-    @IsOptional()
-    @IsString()
-    transactionId?: string; // Bank transaction reference
+  @IsOptional()
+  @IsString()
+  transactionId?: string; // Bank transaction reference
 
-    @IsOptional()
-    @IsString()
-    paymentDate?: string; // Date of payment
+  @IsOptional()
+  @IsString()
+  paymentDate?: string; // Date of payment
 }
 
 /**
  * DTO for advancing trade phase
  */
 export class AdvancePhaseDto {
-    @IsEnum(['PR', 'SCO', 'ICPO', 'SPA', 'PAYMENT', 'BOL', 'COMPLETED'])
-    newPhase: 'PR' | 'SCO' | 'ICPO' | 'SPA' | 'PAYMENT' | 'BOL' | 'COMPLETED';
+  @IsEnum(['PR', 'SCO', 'ICPO', 'SPA', 'PAYMENT', 'BOL', 'COMPLETED'])
+  newPhase: 'PR' | 'SCO' | 'ICPO' | 'SPA' | 'PAYMENT' | 'BOL' | 'COMPLETED';
 
-    @IsOptional()
-    @IsString()
-    reason?: string;
+  @IsOptional()
+  @IsString()
+  reason?: string;
 }
 
 /**
  * DTO for updating document status (admin/verification)
+ * PHASE 2 REFACTORING: Added 'signed-spa' type
  */
 export class UpdateDocumentStatusDto {
-    @IsEnum(['sco', 'icpo', 'spa', 'bol', 'payment-proof'])
-    documentType: DocumentType;
+  @IsEnum(['sco', 'icpo', 'spa', 'signed-spa', 'bol', 'payment-proof'])
+  documentType: DocumentType;
 
-    @IsEnum(['pending', 'uploaded', 'approved', 'rejected'])
-    status: 'pending' | 'uploaded' | 'approved' | 'rejected';
+  @IsEnum(['pending', 'uploaded', 'approved', 'rejected'])
+  status: 'pending' | 'uploaded' | 'approved' | 'rejected';
 
-    @IsOptional()
-    @IsString()
-    verificationNotes?: string;
+  @IsOptional()
+  @IsString()
+  verificationNotes?: string;
 }
 
 /**
  * DTO for signing a document with e-signature
  */
 export class SignDocumentDto {
-    @IsNotEmpty()
-    @IsString()
-    signatureDataUrl: string; // Base64 PNG data URL of the signature
+  @IsNotEmpty()
+  @IsString()
+  signatureDataUrl: string; // Base64 PNG data URL of the signature
 }

@@ -16,6 +16,7 @@ export interface BarGraphData {
 export interface ScatterGraphData {
     x: number;
     y: number;
+    date: string;  // Human-readable date label for X-axis
 }
 
 export interface PieChartData {
@@ -43,6 +44,7 @@ export interface MetricsData {
     totalSales: number;
     totalRevenue: number;
     totalCustomers: number;
+    currency: string;  // ISO 4217 currency code (e.g., 'USD', 'INR', 'EUR')
     comparison: MetricsComparison;
 }
 

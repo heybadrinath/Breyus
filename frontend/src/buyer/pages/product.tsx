@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Heart, Share2, MessageCircle, Package, Shield, Truck, X, Copy, Repeat, FlaskConical } from "lucide-react";
-import { getProductById, Product } from "../../services/products.service";
+import { getProductById, Product, trackProductView } from "../../services/products.service";
 import TestReport from "../../buyer/components/webUrlframe";
 import { Incoterms } from "../../components/incoterms";
 import { createConversation } from "../../services/inbox.service";
@@ -8,6 +8,8 @@ import { useNavigate } from "react-router-dom";
 import { addToWishlist, removeFromWishlist, getWishlist } from '../../services/wishlist.service';
 import { TryBreyusCoreHeader } from "../../components/Header";
 import { useNotifications } from "../../contexts/NotificationContext";
+import { IncotermsState, defaultIncotermValues } from "../../types/Incoterms";
+import { getImageUrl, getFileUrl } from "../../utils/imageUtils";
 
 // import social media icons
 import fb from "../assets/social-icons/fb.svg";
@@ -57,102 +59,7 @@ const ProductPage: React.FC = () => {
     return () => { ignore = true; };
   }, [product]);
 
-  // incoterms state 
-  type Trader = 'Buyer' | 'Seller';
-
-  // Define all possible incoterms
-  type IncotermType = 'EXW' | 'FCA' | 'FAS' | 'FOB' | 'CFR' | 'CIF' | 'CPT' | 'CIP' | 'DAP' | 'DPU' | 'DDP';
-
-  // Define all possible row names
-  type RowName =
-    | 'Charges/Fees'
-    | 'Transfer of risk'
-    | 'Commercial Invoice'
-    | 'Packaging, Quality Control, Marking'
-    | 'Loading & Inland Delivery'
-    | 'Export Duty & Taxes'
-    | 'Origin Terminal Handling'
-    | 'Insurance'
-    | 'Carriage Charges'
-    | '*Destination Terminal Handling'
-    | 'Delivery to Destination'
-    | 'Unloading at Destination'
-    | 'Import Duty & Taxes';
-
-  // Define the structure for each incoterm row
-  interface IncotermRowData {
-    [key: string]: Trader;
-  }
-
-  // Main incoterms state interface
-  interface IncotermsState {
-    // The currently selected incoterm column
-    selectedIncoterm: IncotermType | '';
-
-    // Data for only the selected incoterm (not all incoterms)
-    selectedIncotermData: IncotermRowData;
-
-    // Default values for each incoterm (for reference)
-    defaults: Record<IncotermType, IncotermRowData>;
-  }
-
-  // Initialize the default values for each incoterm
-  const defaultIncotermValues: Record<IncotermType, IncotermRowData> = {
-    EXW: {
-
-      'Origin Terminal Handling': 'Buyer',
-      'Insurance': 'Buyer',
-      'Carriage Charges': 'Buyer',
-      'Unloading at Destination': 'Buyer',
-    },
-    FCA: {
-      'Loading & Inland Delivery': 'Seller',
-      'Insurance': 'Buyer',
-      'Carriage Charges': 'Buyer',
-      'Unloading at Destination': 'Buyer',
-    },
-    FAS: {
-      'Insurance': 'Buyer',
-      'Unloading at Destination': 'Buyer',
-    },
-    FOB: {
-      'Insurance': 'Buyer',
-      'Unloading at Destination': 'Buyer',
-    },
-    CFR: {
-      'Insurance': 'Buyer',
-      'Unloading at Destination': 'Buyer',
-    },
-    CIF: {
-      'Insurance': 'Seller',
-      'Unloading at Destination': 'Buyer',
-    },
-    CPT: {
-      '*Destination Terminal Handling': 'Buyer',
-      'Unloading at Destination': 'Buyer',
-    },
-    CIP: {
-      'Insurance': 'Buyer',
-      '*Destination Terminal Handling': 'Buyer',
-      'Unloading at Destination': 'Buyer',
-
-    },
-    DAP: {
-      'Insurance': 'Buyer',
-      '*Destination Terminal Handling': 'Seller',
-      'Unloading at Destination': 'Buyer',
-    },
-    DPU: {
-      'Insurance': 'Buyer',
-      '*Destination Terminal Handling': 'Seller',
-    },
-    DDP: {
-      'Insurance': 'Buyer',
-      '*Destination Terminal Handling': 'Seller',
-      'Unloading at Destination': 'Buyer',
-    },
-  };
-
+  // Use shared types from types/Incoterms.ts (imported at top)
   const [incotermsState, setIncotermsState] = useState<IncotermsState>({
     selectedIncoterm: "",
     selectedIncotermData: {},
@@ -168,6 +75,16 @@ const ProductPage: React.FC = () => {
       });
     }
   }, [product]);
+
+  // Track product view for analytics (fire and forget)
+  useEffect(() => {
+    if (product?.id) {
+      // Fire and forget - we don't await this
+      trackProductView(product.id).catch(() => {
+        // Silently ignore errors - view tracking is not critical
+      });
+    }
+  }, [product?.id]);
 
   const [showIncoterms, setShowIncoterms] = useState(false);
 
@@ -210,11 +127,11 @@ const ProductPage: React.FC = () => {
             tags: response.data.tags || [],
             stock: parseInt(response.data.stock) || 0,
             stockUnit: response.data.stockUnit,
-            // Fix image URLs by adding backend URL prefix
-            productImage: response.data.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${response.data.productImages[0]}` : '',
-            images: response.data.productImages ? response.data.productImages.map((img: string) => `${process.env.REACT_APP_BACKEND_URL}/${img}`) : [],
-            primaryImage: response.data.productImages?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${response.data.productImages[0]}` : '',
-            testReport: response.data.testReports?.[0] ? `${process.env.REACT_APP_BACKEND_URL}/${response.data.testReports[0]}` : '',
+            // Fix image URLs using centralized utility for local/Docker/production support
+            productImage: getImageUrl(response.data.productImages?.[0], ''),
+            images: response.data.productImages ? response.data.productImages.map((img: string) => getImageUrl(img, '')) : [],
+            primaryImage: getImageUrl(response.data.productImages?.[0], ''),
+            testReport: getFileUrl(response.data.testReports?.[0]),
             createdAt: new Date(response.data.createdAt),
             updatedAt: new Date(response.data.updatedAt),
             moq: response.data.moq,
@@ -222,6 +139,7 @@ const ProductPage: React.FC = () => {
             preciseDescription: response.data.description,
             sellerName: response.data.sellerName || 'Unknown Seller',
             companyName: response.data.companyName || 'Unknown Company',
+            companyId: response.data.companyId || null,
             // trade terms
             revenueMin: response.data.revenueMin,
             revenueMax: response.data.revenueMax,
@@ -376,7 +294,19 @@ const ProductPage: React.FC = () => {
                 {/* Product Title */}
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
-                  <p className="text-gray-600">by {product.companyName || product.sellerName || 'Unknown Company'}</p>
+                  <p className="text-gray-600">
+                    by{' '}
+                    {product.companyId ? (
+                      <button
+                        onClick={() => navigate(`/buyer/seller-profile/${product.companyId}`)}
+                        className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors"
+                      >
+                        {product.companyName || product.sellerName || 'Unknown Company'}
+                      </button>
+                    ) : (
+                      <span>{product.companyName || product.sellerName || 'Unknown Company'}</span>
+                    )}
+                  </p>
                 </div>
 
 
@@ -640,7 +570,8 @@ const ProductPage: React.FC = () => {
                 <h2 className="text-xl font-bold mb-4 text-center">Preferred Inco Terms</h2>
                 <div className="flex-1 overflow-y-auto">
                   <div>
-                    <Incoterms incoterms={incotermsState} setIncoterms={() => { }} />
+                    {/* Read-only view of seller's preferred Incoterm */}
+                    <Incoterms incoterms={incotermsState} setIncoterms={() => { }} readOnly={true} />
                   </div>
                 </div>
               </div>

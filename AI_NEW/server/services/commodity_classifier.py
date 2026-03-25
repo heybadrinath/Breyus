@@ -1,14 +1,13 @@
-"""Commodity classification helper for mainstream vs niche mapping."""
+"""Commodity classification helper - fetches from admin portal API."""
 
 from __future__ import annotations
 
-import json
+import httpx
 import logging
-import re
 import os
+import re
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -27,106 +26,105 @@ def _tokenize(normalized: str) -> List[str]:
 
 @dataclass(frozen=True)
 class CommodityEntry:
+    """Represents a commodity entry with its metadata for classification."""
+
     name: str
     normalized: str
+    aliases: Tuple[str, ...]  # Tuple of alias names
+    normalized_aliases: Tuple[str, ...]  # Tuple of normalized aliases
     category: Optional[str]
+    hs_code_prefix: Optional[str]  # From API
     source: str
 
 
 class CommodityClassifier:
-    """Classify commodities using the mainstream vs niche mapping."""
+    """Classify commodities using admin portal API.
 
-    def __init__(self, mapping_path: Optional[Path] = None) -> None:
-        self.mapping_path = mapping_path or self._default_mapping_path()
-        self.mapping = self._load_mapping()
-        self.mainstream_entries, self.niche_entries = self._build_entries()
+    This classifier fetches commodity data from the NestJS backend's internal
+    endpoint, which serves as the single source of truth for commodity
+    classifications (mainstream vs niche).
 
-    def _default_mapping_path(self) -> Path:
-        resolved = Path(__file__).resolve()
-        env_path = os.getenv("COMMODITY_MAPPING_PATH")
-        candidates = []
-        if env_path:
-            candidates.append(Path(env_path))
-        candidates.append(resolved.parents[3] / "context" / "mainstream-niche-mapping.json")
-        candidates.append(resolved.parents[2] / "context" / "mainstream-niche-mapping.json")
-        candidates.append(resolved.parents[1] / "context" / "mainstream-niche-mapping.json")
-        for candidate in candidates:
-            if candidate.exists():
-                return candidate
-        return candidates[0]
+    The classifier uses lazy loading - it only fetches data when first needed,
+    and caches the results in memory for subsequent calls.
+    """
 
-    def _load_mapping(self) -> Dict[str, Any]:
+    def __init__(self) -> None:
+        self.backend_url = os.getenv("BACKEND_URL", "http://localhost:3001")
+        self.mainstream_entries: List[CommodityEntry] = []
+        self.niche_entries: List[CommodityEntry] = []
+        self._loaded = False
+
+    async def _ensure_loaded(self) -> None:
+        """Lazy load commodities from backend API."""
+        if self._loaded:
+            return
+        await self._fetch_commodities()
+        self._loaded = True
+
+    async def _fetch_commodities(self) -> None:
+        """Fetch commodities from NestJS internal endpoint."""
+        url = f"{self.backend_url}/public/content/internal/commodities"
         try:
-            return json.loads(self.mapping_path.read_text(encoding="utf-8"))
-        except FileNotFoundError:
-            logger.warning("Commodity mapping not found at %s", self.mapping_path)
-        except json.JSONDecodeError as exc:
-            logger.warning("Commodity mapping invalid JSON (%s): %s", self.mapping_path, exc)
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(url)
+                response.raise_for_status()
+                data = response.json().get("data", {})
+
+                self.mainstream_entries = self._build_entries(
+                    data.get("mainstream", []), "mainstream"
+                )
+                self.niche_entries = self._build_entries(
+                    data.get("niche", []), "niche"
+                )
+                logger.info(
+                    "Loaded %d mainstream and %d niche commodities from API",
+                    len(self.mainstream_entries),
+                    len(self.niche_entries),
+                )
+        except httpx.HTTPError as exc:
+            logger.error("HTTP error fetching commodities from %s: %s", url, exc)
         except Exception as exc:
-            logger.warning("Commodity mapping failed to load (%s): %s", self.mapping_path, exc)
-        return {}
+            logger.error("Failed to fetch commodities from %s: %s", url, exc)
 
-    def _build_entries(self) -> Tuple[List[CommodityEntry], List[CommodityEntry]]:
-        mainstream_entries: List[CommodityEntry] = []
-        niche_entries: List[CommodityEntry] = []
-
-        mainstream = self.mapping.get("mainstream", {})
-        for name, category in self._flatten_mainstream(mainstream):
-            mainstream_entries.append(
+    def _build_entries(self, items: List[dict], source: str) -> List[CommodityEntry]:
+        """Build CommodityEntry objects from API response."""
+        entries = []
+        for item in items:
+            name = item.get("name", "")
+            aliases = item.get("aliases", []) or []
+            entries.append(
                 CommodityEntry(
                     name=name,
                     normalized=normalize_text(name),
-                    category=category,
-                    source="mainstream",
+                    aliases=tuple(aliases),
+                    normalized_aliases=tuple(normalize_text(a) for a in aliases),
+                    category=item.get("category"),
+                    hs_code_prefix=item.get("hsCodePrefix"),
+                    source=source,
                 )
             )
-
-        added_for_coverage = self.mapping.get("added_for_coverage", {})
-        for name in added_for_coverage.get("mainstream", []) or []:
-            mainstream_entries.append(
-                CommodityEntry(
-                    name=name,
-                    normalized=normalize_text(name),
-                    category="added_for_coverage",
-                    source="added_for_coverage",
-                )
-            )
-
-        for name in self.mapping.get("niche_overrides", []) or []:
-            niche_entries.append(
-                CommodityEntry(
-                    name=name,
-                    normalized=normalize_text(name),
-                    category="niche_override",
-                    source="niche_override",
-                )
-            )
-
-        for name in added_for_coverage.get("niche", []) or []:
-            niche_entries.append(
-                CommodityEntry(
-                    name=name,
-                    normalized=normalize_text(name),
-                    category="added_for_coverage",
-                    source="added_for_coverage",
-                )
-            )
-
-        return mainstream_entries, niche_entries
-
-    def _flatten_mainstream(self, node: Any, prefix: str = "") -> Iterable[Tuple[str, Optional[str]]]:
-        if isinstance(node, list):
-            for name in node:
-                yield name, prefix or None
-        elif isinstance(node, dict):
-            for key, value in node.items():
-                category = f"{prefix}/{key}" if prefix else key
-                yield from self._flatten_mainstream(value, category)
+        return entries
 
     def normalize(self, text: str) -> str:
+        """Public normalize method for external use."""
         return normalize_text(text)
 
-    def classify(self, commodity: str) -> Dict[str, Optional[str]]:
+    async def classify(self, commodity: str) -> Dict[str, Optional[str]]:
+        """Classify a commodity as mainstream or niche (async).
+
+        Args:
+            commodity: The commodity name to classify.
+
+        Returns:
+            A dictionary containing:
+            - type: "mainstream" or "niche"
+            - match_strategy: How the match was found (exact, contains, within, partial, none)
+            - matched_name: The name of the matched commodity entry
+            - matched_category: The category of the matched commodity
+            - matched_source: The source (mainstream/niche)
+        """
+        await self._ensure_loaded()
+
         normalized = normalize_text(commodity)
         if not normalized:
             return {
@@ -137,6 +135,7 @@ class CommodityClassifier:
                 "matched_source": None,
             }
 
+        # Check niche first (priority - niche classifications take precedence)
         match, strategy = self._find_best_match(normalized, self.niche_entries)
         if match:
             return {
@@ -147,6 +146,7 @@ class CommodityClassifier:
                 "matched_source": match.source,
             }
 
+        # Check mainstream
         match, strategy = self._find_best_match(normalized, self.mainstream_entries)
         if match:
             return {
@@ -157,6 +157,7 @@ class CommodityClassifier:
                 "matched_source": match.source,
             }
 
+        # Default to niche if no match
         return {
             "type": "niche",
             "match_strategy": "none",
@@ -170,20 +171,29 @@ class CommodityClassifier:
         normalized_query: str,
         entries: List[CommodityEntry],
     ) -> Tuple[Optional[CommodityEntry], str]:
+        """Find best matching entry using fuzzy strategies + aliases.
+
+        The matching algorithm checks both the main name and all aliases
+        for each commodity entry, returning the best match across all names.
+        """
         best_entry: Optional[CommodityEntry] = None
         best_score = -1
         best_strategy = "none"
         query_tokens = _tokenize(normalized_query)
 
         for entry in entries:
-            strategy = self._match_strategy(normalized_query, query_tokens, entry)
-            if not strategy:
-                continue
-            score = self._score_match(strategy, entry)
-            if score > best_score:
-                best_score = score
-                best_entry = entry
-                best_strategy = strategy
+            # Check main name AND all aliases
+            names_to_check = [entry.normalized] + list(entry.normalized_aliases)
+
+            for name in names_to_check:
+                strategy = self._match_strategy(normalized_query, query_tokens, name)
+                if not strategy:
+                    continue
+                score = self._score_match(strategy, name)
+                if score > best_score:
+                    best_score = score
+                    best_entry = entry
+                    best_strategy = strategy
 
         return best_entry, best_strategy
 
@@ -191,24 +201,46 @@ class CommodityClassifier:
         self,
         normalized_query: str,
         query_tokens: List[str],
-        entry: CommodityEntry,
+        entry_name: str,
     ) -> Optional[str]:
-        entry_tokens = _tokenize(entry.normalized)
-        if normalized_query == entry.normalized:
+        """Determine match strategy between query and entry name.
+
+        Strategies (in order of priority):
+        - exact: Query exactly matches entry name
+        - contains: Entry name tokens are all present in query
+        - within: Query tokens are all present in entry name
+        - partial: Substring match in either direction
+        """
+        entry_tokens = _tokenize(entry_name)
+        if normalized_query == entry_name:
             return "exact"
         if entry_tokens and all(token in query_tokens for token in entry_tokens):
             return "contains"
         if query_tokens and all(token in entry_tokens for token in query_tokens):
             return "within"
-        if entry.normalized in normalized_query or normalized_query in entry.normalized:
+        if entry_name in normalized_query or normalized_query in entry_name:
             return "partial"
         return None
 
-    def _score_match(self, strategy: str, entry: CommodityEntry) -> int:
+    def _score_match(self, strategy: str, entry_name: str) -> int:
+        """Calculate match score for ranking.
+
+        Higher priority strategies get higher base scores.
+        Longer entry names get slight preference (more specific matches).
+        """
         priority = {
             "exact": 4,
             "contains": 3,
             "within": 2,
             "partial": 1,
         }
-        return priority.get(strategy, 0) * 100 + len(_tokenize(entry.normalized))
+        return priority.get(strategy, 0) * 100 + len(_tokenize(entry_name))
+
+    async def refresh(self) -> None:
+        """Force refresh commodities from API.
+
+        Call this method to reload the commodity data from the backend,
+        useful when admin has updated classifications.
+        """
+        self._loaded = False
+        await self._ensure_loaded()

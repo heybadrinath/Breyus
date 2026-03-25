@@ -32,6 +32,7 @@ interface BadgeCounts {
     po?: number;
     spa?: number;
     ongoing?: number;
+    history?: number;
 }
 
 interface TradeTabsProps {
@@ -68,6 +69,18 @@ export const TradeTabs: React.FC<TradeTabsProps> = ({ tabContent, badgeCounts, o
     // Store the content reference to prevent recreation
     const contentRef = useRef(tabContent);
 
+    // Track if initial mount has triggered onTabChange
+    const hasCalledInitialTabChange = useRef(false);
+
+    // Call onTabChange on initial mount for the default tab
+    useEffect(() => {
+        if (!hasCalledInitialTabChange.current && onTabChange) {
+            hasCalledInitialTabChange.current = true;
+            const tabKey = tabIdToBadgeKey[activeTab];
+            onTabChange(activeTab, tabKey);
+        }
+    }, [onTabChange, activeTab]);
+
     // React to URL param changes (e.g., when navigating from another component on the same page)
     useEffect(() => {
         if (tabParam && tabKeyToId[tabParam]) {
@@ -81,8 +94,12 @@ export const TradeTabs: React.FC<TradeTabsProps> = ({ tabContent, badgeCounts, o
                     return newSet;
                 });
             }
+            // Call onTabChange when URL changes trigger a tab switch
+            if (onTabChange) {
+                onTabChange(newTabId, tabParam);
+            }
         }
-    }, [tabParam]);
+    }, [tabParam, onTabChange]);
 
     const handleTabClick = (tabId: number) => {
         setActiveTab(tabId);

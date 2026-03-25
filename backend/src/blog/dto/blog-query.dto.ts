@@ -9,6 +9,7 @@ import {
   IsBoolean,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
+import { BlogStatus, BlogAccessLevel } from '../schemas/blog-post.schema';
 
 /**
  * DTO for querying published blog posts (public endpoints)
@@ -41,8 +42,13 @@ export class PublicBlogQueryDto {
   tag?: string;
 
   @IsOptional()
-  @IsIn(['publishedAt', 'viewCount', 'title'])
-  sortBy?: 'publishedAt' | 'viewCount' | 'title' = 'publishedAt';
+  @IsIn(['publishedAt', 'viewCount', 'title', 'likeCount', 'commentCount'])
+  sortBy?:
+    | 'publishedAt'
+    | 'viewCount'
+    | 'title'
+    | 'likeCount'
+    | 'commentCount' = 'publishedAt';
 
   @IsOptional()
   @IsIn(['asc', 'desc'])
@@ -91,8 +97,20 @@ export class AdminBlogQueryDto {
   search?: string;
 
   @IsOptional()
-  @IsEnum(['draft', 'published'])
-  status?: 'draft' | 'published';
+  @IsEnum([
+    'draft',
+    'submitted',
+    'in_review',
+    'revision_requested',
+    'approved',
+    'published',
+    'rejected',
+  ])
+  status?: BlogStatus;
+
+  @IsOptional()
+  @IsEnum(['public', 'member_only'])
+  accessLevel?: BlogAccessLevel;
 
   @IsOptional()
   @IsString()
@@ -103,13 +121,32 @@ export class AdminBlogQueryDto {
   authorId?: string;
 
   @IsOptional()
+  @IsString()
+  writerId?: string;
+
+  @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   includeDeleted?: boolean = false;
 
   @IsOptional()
-  @IsIn(['createdAt', 'updatedAt', 'publishedAt', 'title', 'viewCount'])
-  sortBy?: 'createdAt' | 'updatedAt' | 'publishedAt' | 'title' | 'viewCount' = 'createdAt';
+  @IsIn([
+    'createdAt',
+    'updatedAt',
+    'publishedAt',
+    'title',
+    'viewCount',
+    'likeCount',
+    'submittedAt',
+  ])
+  sortBy?:
+    | 'createdAt'
+    | 'updatedAt'
+    | 'publishedAt'
+    | 'title'
+    | 'viewCount'
+    | 'likeCount'
+    | 'submittedAt' = 'createdAt';
 
   @IsOptional()
   @IsIn(['asc', 'desc'])

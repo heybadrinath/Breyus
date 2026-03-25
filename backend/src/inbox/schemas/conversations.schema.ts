@@ -4,13 +4,23 @@ import { Message } from './messages.schema';
 
 @Schema({ timestamps: true })
 export class Conversation extends Document {
-  @Prop({ required: true, type: [MongooseSchema.Types.ObjectId], ref: 'Company' })
+  @Prop({
+    required: true,
+    type: [MongooseSchema.Types.ObjectId],
+    ref: 'Company',
+  })
   participants: MongooseSchema.Types.ObjectId[];
-  @Prop({ required: true, type: MongooseSchema.Types.ObjectId, ref: 'Product' })
-  product: MongooseSchema.Types.ObjectId;    
+
+  // Product reference - optional for direct company-to-company conversations
+  @Prop({
+    required: false,
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Product',
+  })
+  product?: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Message' }] })
-  messages: MongooseSchema.Types.ObjectId[];  // Array of Message references
+  messages: MongooseSchema.Types.ObjectId[]; // Array of Message references
 
   @Prop({ default: Date.now })
   createdAt: Date;

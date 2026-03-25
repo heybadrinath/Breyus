@@ -1,10 +1,20 @@
-import { Injectable, NotFoundException, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { AlertRule, AlertEventType } from './schemas/alert-rule.schema';
 import { AlertHistory, AlertEmailStatus } from './schemas/alert-history.schema';
 import { MailService } from '../../mail/mail.service';
-import { CreateAlertRuleDto, UpdateAlertRuleDto, GetAlertHistoryQueryDto } from './dto';
+import {
+  CreateAlertRuleDto,
+  UpdateAlertRuleDto,
+  GetAlertHistoryQueryDto,
+} from './dto';
 
 @Injectable()
 export class AlertsService implements OnModuleInit, OnModuleDestroy {
@@ -13,7 +23,8 @@ export class AlertsService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     @InjectModel(AlertRule.name) private alertRuleModel: Model<AlertRule>,
-    @InjectModel(AlertHistory.name) private alertHistoryModel: Model<AlertHistory>,
+    @InjectModel(AlertHistory.name)
+    private alertHistoryModel: Model<AlertHistory>,
     private readonly mailService: MailService,
   ) {}
 
@@ -37,7 +48,10 @@ export class AlertsService implements OnModuleInit, OnModuleDestroy {
   // RULE CRUD
   // ============================================================================
 
-  async createRule(dto: CreateAlertRuleDto, adminId: string): Promise<AlertRule> {
+  async createRule(
+    dto: CreateAlertRuleDto,
+    adminId: string,
+  ): Promise<AlertRule> {
     const rule = new this.alertRuleModel({
       ...dto,
       createdBy: new Types.ObjectId(adminId),
@@ -45,7 +59,10 @@ export class AlertsService implements OnModuleInit, OnModuleDestroy {
     return rule.save();
   }
 
-  async getRules(eventType?: AlertEventType, isEnabled?: boolean): Promise<AlertRule[]> {
+  async getRules(
+    eventType?: AlertEventType,
+    isEnabled?: boolean,
+  ): Promise<AlertRule[]> {
     const query: any = {};
     if (eventType) query.eventType = eventType;
     if (isEnabled !== undefined) query.isEnabled = isEnabled;
@@ -61,7 +78,10 @@ export class AlertsService implements OnModuleInit, OnModuleDestroy {
     return rule;
   }
 
-  async updateRule(ruleId: string, dto: UpdateAlertRuleDto): Promise<AlertRule> {
+  async updateRule(
+    ruleId: string,
+    dto: UpdateAlertRuleDto,
+  ): Promise<AlertRule> {
     const rule = await this.alertRuleModel.findById(ruleId).exec();
     if (!rule) {
       throw new NotFoundException('Alert rule not found');
@@ -147,10 +167,12 @@ export class AlertsService implements OnModuleInit, OnModuleDestroy {
     eventType: AlertEventType,
     payload: Record<string, any>,
   ): Promise<void> {
-    const rules = await this.alertRuleModel.find({
-      eventType,
-      isEnabled: true,
-    }).exec();
+    const rules = await this.alertRuleModel
+      .find({
+        eventType,
+        isEnabled: true,
+      })
+      .exec();
 
     for (const rule of rules) {
       await this.processRule(rule, payload);
@@ -184,13 +206,21 @@ export class AlertsService implements OnModuleInit, OnModuleDestroy {
 
     try {
       for (const recipient of rule.recipients) {
-        await this.mailService.sendTradeNotificationEmail(recipient, subject, html);
+        await this.mailService.sendTradeNotificationEmail(
+          recipient,
+          subject,
+          html,
+        );
       }
-      this.logger.log(`Alert "${rule.name}" sent to ${rule.recipients.length} recipients`);
+      this.logger.log(
+        `Alert "${rule.name}" sent to ${rule.recipients.length} recipients`,
+      );
     } catch (error) {
       status = AlertEmailStatus.FAILED;
       errorMessage = error.message;
-      this.logger.error(`Failed to send alert "${rule.name}": ${error.message}`);
+      this.logger.error(
+        `Failed to send alert "${rule.name}": ${error.message}`,
+      );
     }
 
     // Log to history
@@ -210,7 +240,10 @@ export class AlertsService implements OnModuleInit, OnModuleDestroy {
     await rule.save();
   }
 
-  private getAlertSubject(eventType: AlertEventType, payload: Record<string, any>): string {
+  private getAlertSubject(
+    eventType: AlertEventType,
+    payload: Record<string, any>,
+  ): string {
     switch (eventType) {
       case AlertEventType.USER_SUSPENDED:
         return `Alert: User Suspended - ${payload.userEmail || 'Unknown'}`;
@@ -287,7 +320,9 @@ ${JSON.stringify(payload, null, 2)}
   private async checkThresholdAlerts(): Promise<void> {
     this.logger.debug('Running scheduled alert checks...');
 
-    const enabledRules = await this.alertRuleModel.find({ isEnabled: true }).exec();
+    const enabledRules = await this.alertRuleModel
+      .find({ isEnabled: true })
+      .exec();
 
     for (const rule of enabledRules) {
       try {
@@ -309,7 +344,9 @@ ${JSON.stringify(payload, null, 2)}
             break;
         }
       } catch (error) {
-        this.logger.error(`Error checking alert "${rule.name}": ${error.message}`);
+        this.logger.error(
+          `Error checking alert "${rule.name}": ${error.message}`,
+        );
       }
     }
   }
@@ -331,10 +368,18 @@ ${JSON.stringify(payload, null, 2)}
 
     // Force trigger (bypass cooldown for test)
     const subject = `[TEST] ${this.getAlertSubject(rule.eventType, testPayload)}`;
-    const html = this.getAlertEmailHtml(rule.eventType, `[TEST] ${rule.name}`, testPayload);
+    const html = this.getAlertEmailHtml(
+      rule.eventType,
+      `[TEST] ${rule.name}`,
+      testPayload,
+    );
 
     for (const recipient of rule.recipients) {
-      await this.mailService.sendTradeNotificationEmail(recipient, subject, html);
+      await this.mailService.sendTradeNotificationEmail(
+        recipient,
+        subject,
+        html,
+      );
     }
 
     // Log to history

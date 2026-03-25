@@ -6,67 +6,15 @@ import {
   IsEnum,
   MaxLength,
   MinLength,
-  ValidateNested,
   IsNumber,
   Min,
   Max,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-import { BlockType } from '../schemas/blog-post.schema';
+import { BlogStatus, BlogAccessLevel } from '../schemas/blog-post.schema';
+import { IsTiptapDocument } from '../validators/tiptap.validator';
 
 /**
- * DTO for block content within blog posts
- * Validates the structure of Notion-style content blocks
- */
-class BlockMetaDto {
-  @IsOptional()
-  @IsString()
-  alt?: string;
-
-  @IsOptional()
-  @IsString()
-  caption?: string;
-
-  @IsOptional()
-  @IsString()
-  language?: string;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  items?: string[];
-}
-
-class BlockContentDto {
-  @IsString()
-  @IsNotEmpty()
-  id: string;
-
-  @IsEnum([
-    'paragraph',
-    'heading1',
-    'heading2',
-    'heading3',
-    'bulletList',
-    'numberedList',
-    'image',
-    'quote',
-    'divider',
-    'code',
-  ])
-  type: BlockType;
-
-  @IsString()
-  content: string;
-
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => BlockMetaDto)
-  meta?: BlockMetaDto;
-}
-
-/**
- * DTO for creating a new blog post
+ * DTO for creating a new blog post with Tiptap content
  * All fields are validated for proper content creation
  */
 export class CreateBlogPostDto {
@@ -82,10 +30,9 @@ export class CreateBlogPostDto {
   @MaxLength(200)
   slug?: string; // Auto-generated if not provided
 
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => BlockContentDto)
-  content: BlockContentDto[];
+  @IsOptional()
+  @IsTiptapDocument({ message: 'Invalid Tiptap content structure' })
+  tiptapContent?: Record<string, any>; // Tiptap JSON document - validated for proper structure
 
   @IsOptional()
   @IsString()
@@ -97,8 +44,20 @@ export class CreateBlogPostDto {
   featuredImage?: string;
 
   @IsOptional()
-  @IsEnum(['draft', 'published'])
-  status?: 'draft' | 'published';
+  @IsEnum([
+    'draft',
+    'submitted',
+    'in_review',
+    'revision_requested',
+    'approved',
+    'published',
+    'rejected',
+  ])
+  status?: BlogStatus;
+
+  @IsOptional()
+  @IsEnum(['public', 'member_only'])
+  accessLevel?: BlogAccessLevel;
 
   @IsOptional()
   @IsArray()
@@ -120,4 +79,15 @@ export class CreateBlogPostDto {
   @Min(1)
   @Max(120)
   readTimeMinutes?: number; // Auto-calculated if not provided
+
+  // SEO fields
+  @IsOptional()
+  @IsString()
+  @MaxLength(70)
+  metaTitle?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  metaDescription?: string;
 }

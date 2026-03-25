@@ -14,7 +14,7 @@ export interface DocumentInfo {
 }
 
 interface DocumentStatusBadgeProps {
-    documentType: 'sco' | 'icpo' | 'spa' | 'bol' | 'payment';
+    documentType: 'sco' | 'icpo' | 'spa' | 'signed-spa' | 'bol' | 'payment' | 'payment-proof';
     document?: DocumentInfo | null;
     showViewButton?: boolean;
     onView?: () => void;

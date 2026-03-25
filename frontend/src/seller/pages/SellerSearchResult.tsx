@@ -43,6 +43,7 @@ import {
   AISearchInput,
 } from "../../types/aiTypes";
 import { useAnalysisPolling } from "../../hooks/useAnalysisPolling";
+import { createConversationByCompany } from "../../services/inbox.service";
 
 // Components
 import {
@@ -200,7 +201,7 @@ interface TierSectionProps {
   isExpanded: boolean;
   onToggle: () => void;
   badgeClass: string;
-  onSaveContact: (result: EnrichedPartner) => void;
+  onSaveContact: (result: EnrichedPartner | ProductResult) => void;
 }
 
 const TierSection: React.FC<TierSectionProps> = ({
@@ -363,7 +364,10 @@ const SellerSearchResult: React.FC = () => {
   }, []);
 
   // Handle save contact
-  const handleSaveContact = async (partner: EnrichedPartner) => {
+  const handleSaveContact = async (result: EnrichedPartner | ProductResult) => {
+    // Only handle EnrichedPartner type for seller results
+    if (result.resultType !== 'partner') return;
+    const partner = result as EnrichedPartner;
     try {
       await saveAIContact({
         name: partner.name,
@@ -381,9 +385,28 @@ const SellerSearchResult: React.FC = () => {
     }
   };
 
-  // Handle chat navigation
-  const handleChat = (userId: string) => {
-    navigate("/seller/inbox", { state: { targetUserId: userId } });
+  // Handle chat navigation - Create conversation first, then navigate
+  const handleChat = async (companyId: string) => {
+    if (!companyId) {
+      console.warn('No company ID available for chat');
+      return;
+    }
+
+    try {
+      const result = await createConversationByCompany(companyId);
+
+      if (result.conversationId) {
+        navigate(`/seller/inbox?conversationId=${result.conversationId}`);
+      } else if (result.message?.includes('yourself')) {
+        alert("You can't chat with yourself.");
+      } else {
+        // Fallback: navigate to inbox without specific conversation
+        navigate('/seller/inbox');
+      }
+    } catch (error) {
+      console.error('Error starting chat:', error);
+      navigate('/seller/inbox');
+    }
   };
 
   // Handle search again
@@ -619,10 +642,11 @@ const SellerSearchResult: React.FC = () => {
           showProgress
           progress={analysisProgress}
           steps={[
-            { label: "Searching trade history", completed: analysisProgress > 20 },
-            { label: "Identifying buyer patterns", completed: analysisProgress > 50 },
-            { label: "Generating insights", completed: analysisProgress > 80 },
+            { label: "Searching trade history", completed: analysisProgress >= 15 },
+            { label: "Identifying buyer patterns", completed: analysisProgress >= 45 },
+            { label: "Generating insights", completed: analysisProgress >= 75 },
           ]}
+          onDismiss={() => setShowAnalysis(false)}
         />
       )}
     </div>

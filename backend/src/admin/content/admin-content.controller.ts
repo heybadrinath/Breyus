@@ -43,6 +43,7 @@ import {
   ReorderCategoryDto,
   ToggleMainstreamDto,
   ApproveCategoryDto,
+  RejectCategoryDto,
   UpdateIncotermDto,
   GetIncotermsQueryDto,
   // Commodity DTOs removed - functionality merged into Categories
@@ -231,10 +232,7 @@ export class AdminContentController {
    */
   @Patch('countries/:id')
   @AdminAction({ action: 'content.countries.update', category: 'content' })
-  async updateCountry(
-    @Param('id') id: string,
-    @Body() dto: UpdateCountryDto,
-  ) {
+  async updateCountry(@Param('id') id: string, @Body() dto: UpdateCountryDto) {
     const country = await this.countriesService.updateCountry(id, dto);
     return {
       statusCode: HttpStatus.OK,
@@ -488,12 +486,17 @@ export class AdminContentController {
   @Post('hsn-codes/bulk-import')
   @AdminAction({ action: 'content.hsn.bulk_import', category: 'content' })
   async bulkImportHSNCodes(
-    @Body() body: { data: Array<{ code: string; description: string; category?: string }>; skipDuplicates?: boolean },
+    @Body()
+    body: {
+      data: Array<{ code: string; description: string; category?: string }>;
+      skipDuplicates?: boolean;
+    },
   ) {
     if (!body.data || !Array.isArray(body.data)) {
       return {
         statusCode: HttpStatus.BAD_REQUEST,
-        message: 'Invalid data format. Expected array of { code, description, category? }',
+        message:
+          'Invalid data format. Expected array of { code, description, category? }',
       };
     }
 
@@ -573,8 +576,81 @@ export class AdminContentController {
   }
 
   /**
+   * Get categories grouped by mainstream/niche classification
+   * GET /admin/content/categories/grouped-classification
+   * NOTE: This must be defined BEFORE /:id route to avoid route matching conflicts
+   */
+  @Get('categories/grouped-classification')
+  @AdminAction({ action: 'content.categories.grouped', category: 'content' })
+  async getCategoriesGroupedByClassification() {
+    const result =
+      await this.categoriesService.getCategoriesGroupedByClassification();
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Categories grouped by classification retrieved successfully',
+      data: result,
+    };
+  }
+
+  /**
+   * Get pending user-submitted categories for admin review
+   * GET /admin/content/categories/pending
+   * NOTE: This must be defined BEFORE /:id route to avoid route matching conflicts
+   */
+  @Get('categories/pending')
+  @AdminAction({ action: 'content.categories.pending', category: 'content' })
+  async getPendingCategories() {
+    const result = await this.categoriesService.getPendingUserCategories();
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Pending categories retrieved successfully',
+      data: result,
+    };
+  }
+
+  /**
+   * Get pending user-submitted categories with linked product details
+   * GET /admin/content/categories/pending-detailed
+   * NOTE: This must be defined BEFORE /:id route to avoid route matching conflicts
+   */
+  @Get('categories/pending-detailed')
+  @AdminAction({
+    action: 'content.categories.pending_detailed',
+    category: 'content',
+  })
+  async getPendingCategoriesDetailed() {
+    const result =
+      await this.categoriesService.getPendingUserCategoriesDetailed();
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Pending categories with product details retrieved successfully',
+      data: result,
+    };
+  }
+
+  /**
+   * Get commodity/category classification stats
+   * GET /admin/content/categories/commodity-stats
+   * NOTE: This must be defined BEFORE /:id route to avoid route matching conflicts
+   */
+  @Get('categories/commodity-stats')
+  @AdminAction({
+    action: 'content.categories.commodity_stats',
+    category: 'content',
+  })
+  async getCommodityStatsForCategories() {
+    const stats = await this.categoriesService.getCommodityStats();
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Commodity classification stats retrieved successfully',
+      data: stats,
+    };
+  }
+
+  /**
    * Get category by ID
    * GET /admin/content/categories/:id
+   * NOTE: This parameterized route must come AFTER all specific routes like /pending, /tree, etc.
    */
   @Get('categories/:id')
   @AdminAction({ action: 'content.categories.view', category: 'content' })
@@ -623,7 +699,10 @@ export class AdminContentController {
    */
   @Patch('categories/:id')
   @AdminAction({ action: 'content.categories.update', category: 'content' })
-  async updateCategory(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
+  async updateCategory(
+    @Param('id') id: string,
+    @Body() dto: UpdateCategoryDto,
+  ) {
     const category = await this.categoriesService.updateCategory(id, dto);
     return {
       statusCode: HttpStatus.OK,
@@ -664,14 +743,32 @@ export class AdminContentController {
   /**
    * Seed default categories
    * POST /admin/content/categories/seed
+   * Query params:
+   *   - reset: true/false - Delete all existing categories before seeding (fresh start)
+   *   - updateExisting: true/false - Update existing categories with new aliases, HS codes
    */
   @Post('categories/seed')
   @AdminAction({ action: 'content.categories.seed', category: 'content' })
-  async seedCategories() {
-    const result = await this.categoriesService.seedDefaultCategories();
+  async seedCategories(
+    @Query('reset') reset?: string,
+    @Query('updateExisting') updateExisting?: string,
+  ) {
+    const options = {
+      reset: reset === 'true',
+      updateExisting: updateExisting === 'true',
+    };
+
+    const result = await this.categoriesService.seedDefaultCategories(options);
+
+    const messageParts: string[] = [];
+    if (result.deleted > 0) messageParts.push(`${result.deleted} deleted`);
+    if (result.created > 0) messageParts.push(`${result.created} created`);
+    if (result.updated > 0) messageParts.push(`${result.updated} updated`);
+    if (result.skipped > 0) messageParts.push(`${result.skipped} skipped`);
+
     return {
       statusCode: HttpStatus.OK,
-      message: `Seeded categories: ${result.created} created, ${result.skipped} skipped`,
+      message: `Seeded categories: ${messageParts.join(', ')}`,
       data: result,
     };
   }
@@ -682,7 +779,10 @@ export class AdminContentController {
    * POST /admin/content/categories/seed-mainstream
    */
   @Post('categories/seed-mainstream')
-  @AdminAction({ action: 'content.categories.seed_mainstream', category: 'content' })
+  @AdminAction({
+    action: 'content.categories.seed_mainstream',
+    category: 'content',
+  })
   async seedMainstreamClassification() {
     const result = await this.categoriesService.seedMainstreamClassification();
     return {
@@ -701,46 +801,22 @@ export class AdminContentController {
    * POST /admin/content/categories/:id/toggle-mainstream
    */
   @Post('categories/:id/toggle-mainstream')
-  @AdminAction({ action: 'content.categories.toggle_mainstream', category: 'content' })
+  @AdminAction({
+    action: 'content.categories.toggle_mainstream',
+    category: 'content',
+  })
   async toggleCategoryMainstream(
     @Param('id') id: string,
     @Body() dto: ToggleMainstreamDto,
   ) {
-    const category = await this.categoriesService.toggleMainstreamStatus(id, dto);
+    const category = await this.categoriesService.toggleMainstreamStatus(
+      id,
+      dto,
+    );
     return {
       statusCode: HttpStatus.OK,
       message: `Category is now ${category.isMainstream ? 'mainstream' : 'niche'}`,
       data: category,
-    };
-  }
-
-  /**
-   * Get categories grouped by mainstream/niche classification
-   * GET /admin/content/categories/grouped-classification
-   */
-  @Get('categories/grouped-classification')
-  @AdminAction({ action: 'content.categories.grouped', category: 'content' })
-  async getCategoriesGroupedByClassification() {
-    const result = await this.categoriesService.getCategoriesGroupedByClassification();
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Categories grouped by classification retrieved successfully',
-      data: result,
-    };
-  }
-
-  /**
-   * Get pending user-submitted categories for admin review
-   * GET /admin/content/categories/pending
-   */
-  @Get('categories/pending')
-  @AdminAction({ action: 'content.categories.pending', category: 'content' })
-  async getPendingCategories() {
-    const result = await this.categoriesService.getPendingUserCategories();
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Pending categories retrieved successfully',
-      data: result,
     };
   }
 
@@ -764,17 +840,21 @@ export class AdminContentController {
   }
 
   /**
-   * Get commodity/category classification stats
-   * GET /admin/content/categories/commodity-stats
+   * Reject a user-submitted category with product reassignment
+   * POST /admin/content/categories/:id/reject
+   * Body must include: replacementCategoryId (leaf category), optional rejectionReason
    */
-  @Get('categories/commodity-stats')
-  @AdminAction({ action: 'content.categories.commodity_stats', category: 'content' })
-  async getCommodityStatsForCategories() {
-    const stats = await this.categoriesService.getCommodityStats();
+  @Post('categories/:id/reject')
+  @AdminAction({ action: 'content.categories.reject', category: 'content' })
+  async rejectCategory(
+    @Param('id') id: string,
+    @Body() dto: RejectCategoryDto,
+  ) {
+    const result = await this.categoriesService.rejectPendingCategory(id, dto);
     return {
       statusCode: HttpStatus.OK,
-      message: 'Commodity classification stats retrieved successfully',
-      data: stats,
+      message: `Category rejected. ${result.affectedProductCount} products reassigned.`,
+      data: result,
     };
   }
 
@@ -1067,8 +1147,12 @@ export class AdminContentController {
     ]);
 
     // Calculate active counts
-    const activeCurrencies = currenciesData.currencies.filter((c: any) => c.isActive).length;
-    const activeCountries = countriesData.countries.filter((c: any) => c.isActive).length;
+    const activeCurrencies = currenciesData.currencies.filter(
+      (c: any) => c.isActive,
+    ).length;
+    const activeCountries = countriesData.countries.filter(
+      (c: any) => c.isActive,
+    ).length;
 
     return {
       statusCode: HttpStatus.OK,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Newspaper, Sparkles, Loader2, RefreshCw, BookOpen } from 'lucide-react';
+import { Newspaper, Sparkles, Loader2, RefreshCw, BookOpen, ArrowRight } from 'lucide-react';
 import { blogService } from '../../services/blog.service';
 import BlogCard from './BlogCard';
 import BlogDetailModal from './BlogDetailModal';
@@ -111,6 +111,16 @@ const MarketNewsSection: React.FC<MarketNewsSectionProps> = ({ userName }) => {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Visit Breyus Blog link */}
+            <a
+              href="/blog"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#B8860B] hover:text-[#9A7209] hover:bg-[#B8860B]/5 rounded-lg transition-colors group"
+            >
+              Visit Breyus Blog
+              <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+            </a>
             {/* Refresh Button */}
             <button
               onClick={() => fetchPosts(true)}

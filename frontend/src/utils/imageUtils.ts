@@ -2,6 +2,67 @@
  * Utility functions for image handling and optimization
  */
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
+
+/**
+ * Get the full URL for a file stored via StorageService.
+ * Handles both local development and Docker/production environments.
+ *
+ * Path formats supported:
+ * - /uploads/folder/file.jpg (with leading slash - new format)
+ * - uploads/folder/file.jpg (without leading slash - legacy format)
+ * - https://example.com/image.jpg (external URLs - returned as-is)
+ * - blob:... or data:... (local blobs - returned as-is)
+ *
+ * Environment handling:
+ * - Local dev: BACKEND_URL = http://localhost:3001
+ * - Docker/Prod: BACKEND_URL = /api, but /uploads is served directly by nginx
+ */
+export const getStorageUrl = (storagePath?: string | null, fallback?: string): string => {
+  // Handle null/undefined
+  if (!storagePath) {
+    return fallback || '/placeholder-product.svg';
+  }
+
+  // External URLs, data URLs, and blob URLs are returned as-is
+  if (
+    storagePath.startsWith('http://') ||
+    storagePath.startsWith('https://') ||
+    storagePath.startsWith('data:') ||
+    storagePath.startsWith('blob:')
+  ) {
+    return storagePath;
+  }
+
+  // Normalize the path to always have a leading slash
+  const normalizedPath = storagePath.startsWith('/') ? storagePath : `/${storagePath}`;
+
+  // In Docker/production, /uploads/ is served directly by nginx (not through /api)
+  // So we only prepend BACKEND_URL for non-Docker environments
+  // Docker detection: BACKEND_URL starts with "/" (relative path like "/api")
+  if (BACKEND_URL.startsWith('/') && normalizedPath.startsWith('/uploads')) {
+    // Docker/production: return path directly (nginx will route it)
+    return normalizedPath;
+  }
+
+  // Local development: prepend the full backend URL
+  return `${BACKEND_URL}${normalizedPath}`;
+};
+
+/**
+ * Alias for getStorageUrl - specifically for image URLs
+ */
+export const getImageUrl = (imagePath?: string | null, fallback?: string): string => {
+  return getStorageUrl(imagePath, fallback || '/placeholder-product.svg');
+};
+
+/**
+ * Alias for getStorageUrl - specifically for document/file URLs
+ */
+export const getFileUrl = (filePath?: string | null): string => {
+  return getStorageUrl(filePath, '');
+};
+
 export interface ImageOptions {
   width?: number;
   height?: number;

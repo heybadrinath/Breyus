@@ -72,7 +72,8 @@ export type ResultType = 'partner' | 'product';
 export interface EnrichedPartner {
   /** Discriminant for type narrowing: if (result.resultType === 'partner') */
   resultType: 'partner';
-  id: string;
+  /** Optional ID from AI service - may be undefined for external results */
+  id?: string;
   name: string;
   matchScore: number;
   matchReason?: string;
@@ -85,6 +86,8 @@ export interface EnrichedPartner {
   sourceType: SourceType;
   probability: number;
   riskLevel: RiskLevel;
+  /** Price fluctuation prediction: positive = increase, negative = decrease */
+  priceFluctuation?: number;
   tradeCount?: number;
   totalQuantity?: number;
   lastTradeDate?: string;
@@ -112,6 +115,8 @@ export interface ProductResult {
   sellerName?: string;
   sellerCompanyId?: string;
   sellerCountry?: string;
+  /** Seller contact info (for display and saving to wishlist) */
+  contactInfo?: ContactInfo;
   productImages?: string[];
   selectedIncoterm?: string;
   nearestPort?: string;
@@ -120,6 +125,14 @@ export interface ProductResult {
   sourceType: SourceType;
   aiMatchScore?: number;
   aiMatchReason?: string;
+  /** Company ID for navigating to seller profile */
+  companyId?: string;
+  /** Calculated probability of successful trade with this seller (0-100) */
+  probability?: number;
+  /** Risk level assessment based on seller verification, trade history, etc. */
+  riskLevel?: RiskLevel;
+  /** Price fluctuation prediction: positive = increase, negative = decrease */
+  priceFluctuation?: number;
 }
 
 /**
@@ -138,18 +151,29 @@ export interface MergedSearchResult {
     port?: string;
     priceRange?: PriceRange;
   };
+  /** Warning message when country filter falls back to global results */
+  warning?: string;
 }
 
 // ═══════════════════════════════════════════════════════════════
 // COMMODITY TYPES
 // ═══════════════════════════════════════════════════════════════
 
-export type CommoditySource = 'mainstream' | 'platform' | 'ai';
+/**
+ * Commodity source type - all commodities now come from platform database
+ *
+ * NOTE: 'mainstream' and 'ai' are deprecated but kept for backwards compatibility.
+ * All new commodities will use 'platform' as their source.
+ * The AI_NEW commodity search has been removed - all commodities are managed
+ * through the admin category system (which users can suggest additions to).
+ */
+export type CommoditySource = 'platform' | 'mainstream' | 'ai';
 
 export interface CommodityOption {
   name: string;
   hsCode?: string;
   category?: string;
+  /** Source is now always 'platform' - all commodities come from MongoDB categories */
   source: CommoditySource;
   isMainstream: boolean;
 }
@@ -200,6 +224,11 @@ export interface CountryTradeVolume {
   percentage: number;
 }
 
+export interface ChartData {
+  labels: string[];
+  data: number[];
+}
+
 export interface AnalysisResult {
   commodity: string;
   hsCode?: string;
@@ -218,6 +247,14 @@ export interface AnalysisResult {
   };
   riskFactors?: string[];
   opportunities?: string[];
+  /** Enhanced chart data for visualization */
+  chartData?: {
+    demandForecast?: ChartData;
+    capitalRequired?: ChartData;
+    priceVolatility?: ChartData;
+  };
+  /** Key insights for summary display */
+  keyInsights?: string[];
 }
 
 export interface AnalysisResultResponse {
@@ -275,6 +312,7 @@ export interface AnalysisState {
 // ═══════════════════════════════════════════════════════════════
 
 export interface SavedContact {
+  id?: string;          // MongoDB _id from backend
   name: string;
   email?: string;
   phone?: string;
@@ -285,6 +323,7 @@ export interface SavedContact {
   matchScore?: number;
   role?: 'buyer' | 'seller';
   notes?: string;
+  dateAdded?: string;   // Timestamp from backend
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -317,6 +356,7 @@ export interface SellerInventoryItem {
   productImages?: string[];
   selectedIncoterm?: string;
   nearestPort?: string;
+  isNicheCommodity: boolean;
 }
 
 export interface SellerInventoryResult {

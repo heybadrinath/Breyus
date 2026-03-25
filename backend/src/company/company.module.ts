@@ -10,10 +10,10 @@ import { StorageModule } from '../common/storage/storage.module';
   imports: [
     MongooseModule.forFeature([{ name: Company.name, schema: CompanySchema }]),
     AuthModule,
-    StorageModule
+    StorageModule,
   ],
   providers: [CompanyService],
   controllers: [CompanyController],
-  exports: [CompanyService]
+  exports: [CompanyService],
 })
 export class CompanyModule {}

@@ -613,6 +613,23 @@ CREATE INDEX idx_trade_records_product_embedding ON trade_records
     USING hnsw (product_embedding vector_cosine_ops)
     WITH (m = 16, ef_construction = 64);
 
+-- ============================================================================
+-- PERFORMANCE OPTIMIZATION INDEXES (Added for AI query performance)
+-- ============================================================================
+-- Composite index for exporter + hs_code filtering (link_predictor enrichment queries)
+CREATE INDEX idx_trade_records_exporter_hs ON trade_records (exporter_id, hs_code)
+    WHERE exporter_id IS NOT NULL;
+
+-- Composite index for importer + hs_code filtering (buyer-side queries)
+CREATE INDEX idx_trade_records_importer_hs ON trade_records (importer_id, hs_code)
+    WHERE importer_id IS NOT NULL;
+
+-- Composite index for HS code + date with price columns (volatility/price trend queries)
+-- Uses INCLUDE clause for index-only scans on price data
+CREATE INDEX idx_trade_records_hs_date ON trade_records (hs_code, sb_date DESC)
+    INCLUDE (unit_price_usd, unit_price)
+    WHERE unit_price_usd IS NOT NULL OR unit_price IS NOT NULL;
+
 -- Products indexes
 CREATE INDEX idx_products_name ON products USING gin (name gin_trgm_ops);
 CREATE INDEX idx_products_hs_code ON products (hs_code);
@@ -634,15 +651,14 @@ CREATE INDEX idx_entities_embedding ON entities
 -- Trade links indexes
 CREATE INDEX idx_trade_links_source ON trade_links (source_company_id);
 CREATE INDEX idx_trade_links_target ON trade_links (target_company_id);
-CREATE INDEX idx_trade_links_type ON trade_links (link_type);
-CREATE INDEX idx_trade_links_active ON trade_links (is_active);
+-- NOTE: idx_trade_links_type and idx_trade_links_active removed (low selectivity on small table)
 
 -- Predicted partners indexes
 CREATE INDEX idx_predicted_partners_company ON predicted_partners (company_id);
 CREATE INDEX idx_predicted_partners_partner ON predicted_partners (partner_company_id);
 CREATE INDEX idx_predicted_partners_type ON predicted_partners (prediction_type);
 CREATE INDEX idx_predicted_partners_commodity ON predicted_partners (for_commodity);
-CREATE INDEX idx_predicted_partners_score ON predicted_partners (probability_score DESC);
+-- NOTE: idx_predicted_partners_score removed (standalone score index not useful without company filter)
 
 -- Data import log indexes
 CREATE INDEX idx_import_log_file_hash ON data_import_log (file_hash);

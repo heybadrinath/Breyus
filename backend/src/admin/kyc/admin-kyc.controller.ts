@@ -12,7 +12,10 @@ import {
 import { Response } from 'express';
 import { AdminKycService } from './admin-kyc.service';
 import { GetKycDocumentsQueryDto } from './dto/get-kyc-documents-query.dto';
-import { ApproveDocumentDto, RejectDocumentDto } from './dto/review-document.dto';
+import {
+  ApproveDocumentDto,
+  RejectDocumentDto,
+} from './dto/review-document.dto';
 import { AdminAuthGuard } from '../auth/admin-auth.guard';
 import { AdminAction } from '../activity/admin-action.decorator';
 

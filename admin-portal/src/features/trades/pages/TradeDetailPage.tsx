@@ -15,6 +15,8 @@ import {
   CheckCircle,
   XCircle,
   RefreshCw,
+  Mail,
+  Send,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -59,12 +61,14 @@ import {
   useVerifyDocument,
   useForcePhaseChange,
   useDownloadDocument,
+  useSendTradeReminder,
 } from '../hooks/useTrades'
 import type {
   AdminNote,
   TradeTimelineEvent,
   VerifiableDocumentType,
   TradePhaseType,
+  ReminderRecipientType,
 } from '../types'
 import {
   DOCUMENT_TYPE_LABELS,
@@ -146,6 +150,10 @@ export function TradeDetailPage() {
   const [phaseReason, setPhaseReason] = useState('')
   const [notifyParties, setNotifyParties] = useState(false)
 
+  // Send reminder state
+  const [reminderRecipient, setReminderRecipient] = useState<ReminderRecipientType>('both')
+  const [reminderMessage, setReminderMessage] = useState('')
+
   // Queries and mutations
   const { data: trade, isLoading, error } = useTrade(id!)
   const { data: timeline } = useTradeTimeline(id!)
@@ -155,6 +163,7 @@ export function TradeDetailPage() {
   const verifyDocMutation = useVerifyDocument()
   const forcePhaseChangeMutation = useForcePhaseChange()
   const downloadDocMutation = useDownloadDocument()
+  const sendReminderMutation = useSendTradeReminder()
 
   const handleAddNote = async () => {
     if (!newNote.trim() || !id) return
@@ -266,6 +275,32 @@ export function TradeDetailPage() {
       toast({
         title: 'Error',
         description: err?.response?.data?.message || 'Failed to change phase',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  // Send reminder handler
+  const handleSendReminder = async () => {
+    if (!id) return
+
+    try {
+      const result = await sendReminderMutation.mutateAsync({
+        tradeId: id,
+        data: {
+          recipientType: reminderRecipient,
+          customMessage: reminderMessage.trim() || undefined,
+        },
+      })
+      toast({
+        title: 'Reminder sent',
+        description: `Reminder email sent to ${result.data?.sentTo?.join(', ') || 'recipients'}.`,
+      })
+      setReminderMessage('')
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err?.response?.data?.message || 'Failed to send reminder',
         variant: 'destructive',
       })
     }
@@ -749,6 +784,63 @@ export function TradeDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Send Reminder Card - Only for stalled trades */}
+          {trade.isStalled && (
+            <Card className="border-amber-500/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base text-amber-600">
+                  <Mail className="h-4 w-4" />
+                  Send Reminder
+                </CardTitle>
+                <CardDescription>
+                  This trade has been inactive for {trade.daysSincePhaseChange} days
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reminder-recipient">Send to</Label>
+                  <Select
+                    value={reminderRecipient}
+                    onValueChange={(value) => setReminderRecipient(value as ReminderRecipientType)}
+                  >
+                    <SelectTrigger id="reminder-recipient">
+                      <SelectValue placeholder="Select recipient" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="both">Both Parties</SelectItem>
+                      <SelectItem value="buyer">Buyer Only</SelectItem>
+                      <SelectItem value="seller">Seller Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="reminder-message">Custom Message (Optional)</Label>
+                  <Textarea
+                    id="reminder-message"
+                    placeholder="Add a custom message to include in the reminder email..."
+                    value={reminderMessage}
+                    onChange={(e) => setReminderMessage(e.target.value)}
+                    rows={3}
+                    maxLength={500}
+                  />
+                  <p className="text-xs text-muted-foreground text-right">
+                    {reminderMessage.length}/500
+                  </p>
+                </div>
+
+                <Button
+                  className="w-full bg-amber-600 hover:bg-amber-700"
+                  onClick={handleSendReminder}
+                  disabled={sendReminderMutation.isPending}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {sendReminderMutation.isPending ? 'Sending...' : 'Send Reminder Email'}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Force Phase Change Card */}
           {trade.tradePhase !== 'COMPLETED' && trade.tradePhase !== 'CANCELLED' && (

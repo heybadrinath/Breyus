@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Filter, MessageCircle, Loader2 } from "lucide-react";
-import { getUserTrades, Trade, TradePhase, PaymentMethod } from "../../services/trade.service";
+import { getUserTrades, Trade, TradePhase, PaymentMethod, SPADocumentInfo } from "../../services/trade.service";
 import { createConversation } from "../../services/inbox.service";
 import SelectField from "../../components/SelectField";
 import TrackTrade from "../../components/TrackTrade";
+import TradeAbbreviation from "../../components/ui/TradeAbbreviation";
 import { useNotifications } from "../../contexts/NotificationContext";
 
 interface TradeWithProduct extends Omit<Trade, 'paymentMethod'> {
@@ -21,6 +22,7 @@ interface TradeWithProduct extends Omit<Trade, 'paymentMethod'> {
     };
     tradePhase?: TradePhase;
     paymentMethod?: PaymentMethod;
+    spaDocument?: SPADocumentInfo;
 }
 
 // Document phases to filter for - strict SPA phase only
@@ -110,54 +112,40 @@ export const BuyerSPAStatus: React.FC = () => {
     };
 
     const getStatusBadge = (trade: TradeWithProduct) => {
-        const phase = trade.tradePhase;
+        const spaDoc = trade.spaDocument;
 
-        // Check if we're waiting for the other party or if document is received
-        if (phase === 'BOL') {
+        // SPA uploaded and approved
+        if (spaDoc?.status === 'approved') {
             return (
                 <span className="flex items-center gap-1 text-green-600">
                     <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
-                    Received
+                    Approved
                 </span>
             );
         }
-        if (phase === 'PAYMENT') {
-            return (
-                <span className="flex items-center gap-1 text-yellow-600">
-                    <span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
-                    Pending
-                </span>
-            );
-        }
-        if (phase === 'SPA') {
-            return (
-                <span className="flex items-center gap-1 text-yellow-600">
-                    <span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
-                    Pending
-                </span>
-            );
-        }
-        if (phase === 'ICPO') {
+        // SPA uploaded, under review
+        if (spaDoc?.status === 'uploaded') {
             return (
                 <span className="flex items-center gap-1 text-blue-600">
                     <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                    In Progress
+                    Under Review
                 </span>
             );
         }
-        if (phase === 'SCO') {
+        // SPA rejected
+        if (spaDoc?.status === 'rejected') {
             return (
-                <span className="flex items-center gap-1 text-green-600">
-                    <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
-                    Received
+                <span className="flex items-center gap-1 text-red-600">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                    Rejected
                 </span>
             );
         }
-
+        // No SPA uploaded yet — waiting for seller
         return (
-            <span className="flex items-center gap-1 text-gray-600">
-                <span className="w-2.5 h-2.5 rounded-full bg-gray-400"></span>
-                Unknown
+            <span className="flex items-center gap-1 text-yellow-600">
+                <span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
+                Awaiting Upload
             </span>
         );
     };
@@ -222,8 +210,8 @@ export const BuyerSPAStatus: React.FC = () => {
             <div className="p-8 flex-col flex">
                 <div className="flex">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-700">Ongoing trade</h1>
-                        <span className="text-gray-500">Check whether the things are legit using bill of lading</span>
+                        <h1 className="text-2xl font-bold text-gray-700"><TradeAbbreviation abbreviation="SPA" /> Document Status</h1>
+                        <span className="text-gray-500">Review and manage Sales Purchase Agreement documents</span>
                     </div>
                     <Filter className="ml-auto cursor-pointer hover:text-gray-600" />
                 </div>
@@ -256,8 +244,8 @@ export const BuyerSPAStatus: React.FC = () => {
                             <th className="text-gray-500 font-normal py-3 text-sm">Product name</th>
                             <th className="text-gray-500 font-normal py-3 text-sm">Seller name</th>
                             <th className="text-gray-500 font-normal py-3 text-sm">Mode of payment</th>
-                            <th className="text-gray-500 font-normal py-3 text-sm">Bill of lading status</th>
-                            <th className="text-gray-500 font-normal py-3 text-sm">Bill of lading</th>
+                            <th className="text-gray-500 font-normal py-3 text-sm">SPA Status</th>
+                            <th className="text-gray-500 font-normal py-3 text-sm">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -282,38 +270,26 @@ export const BuyerSPAStatus: React.FC = () => {
                                     {getStatusBadge(trade)}
                                 </td>
                                 <td className="py-4 text-center">
-                                    {trade.tradePhase === 'BOL' ? (
-                                        <button
-                                            onClick={() => handleTrack(trade._id)}
-                                            className="px-4 py-1.5 border border-gray-800 text-gray-800 rounded hover:bg-gray-100 text-sm"
-                                        >
-                                            Verify
-                                        </button>
-                                    ) : trade.tradePhase === 'SCO' || trade.tradePhase === 'ICPO' || trade.tradePhase === 'SPA' || trade.tradePhase === 'PAYMENT' ? (
+                                    <div className="flex items-center justify-center gap-2 flex-wrap">
                                         <button
                                             onClick={() => handleTrack(trade._id)}
                                             className="px-4 py-1.5 border border-blue-500 text-blue-500 rounded hover:bg-blue-50 text-sm"
                                         >
                                             Track
                                         </button>
-                                    ) : (
-                                        <span className="text-gray-400">---------</span>
-                                    )}
-                                    {/* Show chat option for any issues */}
-                                    {trade.tradePhase && (
                                         <button
                                             onClick={() => handleChat(trade.product._id)}
                                             disabled={chattingProductIds.has(trade.product._id)}
-                                            className="ml-2 text-blue-600 hover:underline text-sm flex items-center gap-1 inline-flex"
+                                            className="text-blue-600 hover:underline text-sm flex items-center gap-1"
                                         >
                                             {chattingProductIds.has(trade.product._id) ? (
                                                 <Loader2 className="w-3 h-3 animate-spin" />
                                             ) : (
                                                 <MessageCircle className="w-3 h-3" />
                                             )}
-                                            Chat with seller
+                                            Chat
                                         </button>
-                                    )}
+                                    </div>
                                 </td>
                             </tr>
                         ))}

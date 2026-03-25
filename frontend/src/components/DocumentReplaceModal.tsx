@@ -12,7 +12,7 @@ interface DocumentReplaceModalProps {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: (reason: string) => void;
-    documentType: 'sco' | 'icpo' | 'spa' | 'bol' | 'payment';
+    documentType: 'sco' | 'icpo' | 'spa' | 'signed-spa' | 'bol' | 'payment' | 'payment-proof';
     currentDocument?: DocumentInfo;
     loading?: boolean;
 }

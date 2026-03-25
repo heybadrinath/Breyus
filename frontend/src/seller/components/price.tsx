@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import SelectField from "../../components/SelectField";
+import { getCurrencies, Currency } from "../../services/content.service";
 
 interface PriceProps {
   priceData: {
@@ -30,15 +31,35 @@ interface PriceProps {
   category: string;
 }
 
-const CURRENCY_OPTIONS = [
-  { value: "INR", label: "INR" },
-  { value: "USD", label: "USD" },
-  { value: "EUR", label: "EUR" },
-  { value: "GBP", label: "GBP" },
+// Fallback currencies if API fails
+const FALLBACK_CURRENCIES = [
+  { value: "INR", label: "INR (₹)" },
+  { value: "USD", label: "USD ($)" },
+  { value: "EUR", label: "EUR (€)" },
+  { value: "GBP", label: "GBP (£)" },
 ];
 
 const Price: React.FC<PriceProps> = ({ priceData, setPriceData, moq, category }) => {
   const hasGeneratedSku = useRef(false);
+
+  // Admin-controlled currencies
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
+  const [currenciesLoading, setCurrenciesLoading] = useState(true);
+
+  // Fetch currencies from admin portal on mount
+  useEffect(() => {
+    const fetchCurrencies = async () => {
+      try {
+        const data = await getCurrencies();
+        setCurrencies(data);
+      } catch (error) {
+        console.error('Failed to fetch currencies:', error);
+      } finally {
+        setCurrenciesLoading(false);
+      }
+    };
+    fetchCurrencies();
+  }, []);
   const categoryCode = (value: string) => {
     if (!value) return 'GEN';
     const cleaned = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
@@ -75,9 +96,12 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData, moq, category })
   }, [priceData.sku, setPriceData]);
 
   // Helper to check if a value is a valid positive number
-  const isValidNumber = (val: string) => {
-    const num = Number(val);
-    return !isNaN(num) && val.trim() !== '';
+  // Handles both string and number inputs (backend may return numbers)
+  const isValidNumber = (val: string | number | undefined | null) => {
+    if (val === undefined || val === null) return false;
+    const strVal = String(val);
+    const num = Number(strVal);
+    return !isNaN(num) && strVal.trim() !== '';
   };
 
   // Calculate pricing (actual price considering sale)
@@ -100,7 +124,8 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData, moq, category })
   // Calculate sale price from discount
   useEffect(() => {
     if (priceData.onSale && isValidNumber(priceData.price) && priceData.discount) {
-      const discountValue = Number(priceData.discount.replace('%', ''));
+      // Convert to string first in case backend returns a number
+      const discountValue = Number(String(priceData.discount).replace('%', ''));
       if (!isNaN(discountValue) && discountValue > 0) {
         const salePrice = Number(priceData.price) - (discountValue / 100) * Number(priceData.price);
         setPriceData(prev => ({
@@ -177,14 +202,24 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData, moq, category })
               name="currency"
               value={priceData.currency}
               onChange={handleChange}
-              wrapperClassName="h-full min-w-[80px]"
+              wrapperClassName="h-full min-w-[100px]"
               className="select-field--inline h-full bg-gray-50 border-l border-gray-300 text-gray-600 px-3"
             >
-              {CURRENCY_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
+              {currenciesLoading ? (
+                <option value="">...</option>
+              ) : currencies.length === 0 ? (
+                FALLBACK_CURRENCIES.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))
+              ) : (
+                currencies.map((currency) => (
+                  <option key={currency._id} value={currency.code}>
+                    {`${currency.code} ${currency.symbol}`}
+                  </option>
+                ))
+              )}
             </SelectField>
           </div>
         </div>
@@ -235,10 +270,10 @@ const Price: React.FC<PriceProps> = ({ priceData, setPriceData, moq, category })
             onChange={handleChange}
             disabled={!priceData.onSale}
             onBlur={() => {
-              if (priceData.discount && !priceData.discount.endsWith('%')) {
+              if (priceData.discount && !String(priceData.discount).endsWith('%')) {
                 setPriceData(prev => ({
                   ...prev,
-                  discount: priceData.discount + '%',
+                  discount: String(priceData.discount) + '%',
                 }));
               }
             }}

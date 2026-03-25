@@ -1,14 +1,13 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, model, Types } from 'mongoose';
 
-
 // FIXED: Role enum values now match Company schema (Bug #3 from audit)
 // NOTE: User.role field is DEPRECATED - Company.role should be used for authorization
 // The User.role field remains for backwards compatibility but may be removed in future
 export enum Role {
   BUYER = 'Buyer',
   SELLER = 'Seller',
-  BOTH = 'Seller and Buyer'
+  BOTH = 'Seller and Buyer',
 }
 
 // Notification preferences interface
@@ -23,6 +22,11 @@ export interface NotificationPreferences {
     phaseAdvanced: boolean;
     tradeCompleted: boolean;
     tradeCancelled: boolean;
+    // PHASE 2 REFACTORING: Document rejection tracking notifications
+    documentRejected: boolean;
+    lastAttemptWarning: boolean;
+    tradeAutoCancelled: boolean;
+    signedSpaRequired: boolean;
   };
   realtime: {
     tradeCreated: boolean;
@@ -34,6 +38,11 @@ export interface NotificationPreferences {
     phaseAdvanced: boolean;
     tradeCompleted: boolean;
     tradeCancelled: boolean;
+    // PHASE 2 REFACTORING: Document rejection tracking notifications
+    documentRejected: boolean;
+    lastAttemptWarning: boolean;
+    tradeAutoCancelled: boolean;
+    signedSpaRequired: boolean;
   };
 }
 
@@ -55,6 +64,11 @@ export const defaultNotificationPreferences: NotificationPreferences = {
     phaseAdvanced: true,
     tradeCompleted: true,
     tradeCancelled: true,
+    // PHASE 2 REFACTORING: Document rejection tracking notifications
+    documentRejected: true,
+    lastAttemptWarning: true,
+    tradeAutoCancelled: true,
+    signedSpaRequired: true,
   },
   realtime: {
     tradeCreated: true,
@@ -66,6 +80,11 @@ export const defaultNotificationPreferences: NotificationPreferences = {
     phaseAdvanced: true,
     tradeCompleted: true,
     tradeCancelled: true,
+    // PHASE 2 REFACTORING: Document rejection tracking notifications
+    documentRejected: true,
+    lastAttemptWarning: true,
+    tradeAutoCancelled: true,
+    signedSpaRequired: true,
   },
 };
 

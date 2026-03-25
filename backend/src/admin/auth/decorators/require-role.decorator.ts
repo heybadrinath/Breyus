@@ -19,7 +19,8 @@ import { AdminRole } from '../schemas/admin-user.schema';
  */
 export const ROLES_KEY = 'roles';
 
-export const RequireRole = (...roles: AdminRole[]) => SetMetadata(ROLES_KEY, roles);
+export const RequireRole = (...roles: AdminRole[]) =>
+  SetMetadata(ROLES_KEY, roles);
 
 // Convenience decorators for common role patterns
 export const SuperAdminOnly = () => RequireRole('super_admin');

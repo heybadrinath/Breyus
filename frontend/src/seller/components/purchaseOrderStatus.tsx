@@ -1,14 +1,32 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Filter, Check, X, Loader2, Eye, FileUp, FileText, Search, Calendar, CheckCircle, Clock } from "lucide-react";
-import { getSellerTrades, verifyDocument, uploadSCO, Trade, DocumentInfo } from "../../services/trade.service";
+import { Filter, Check, X, Loader2, Eye, FileUp, FileText, Search, Calendar, CheckCircle, Clock, Download, MessageCircle } from "lucide-react";
+import { getSellerTrades, verifyDocument, uploadSCO, Trade, DocumentInfo, downloadPurchaseRequest, downloadPurchaseOrder } from "../../services/trade.service";
+import { createConversation, sendMessage } from "../../services/inbox.service";
 import TradeDetailsModal from "../../components/TradeDetailsModal";
 import ViewDocumentModal from "../../components/ViewDocumentModal";
 import DocumentUploadModal from "../../components/DocumentUploadModal";
 import SelectField from "../../components/SelectField";
 import { useNotifications } from "../../contexts/NotificationContext";
+import CompanyAvatar from "../../components/ui/CompanyAvatar";
+import ClickableCompanyName from "../../components/ui/ClickableCompanyName";
 
 type POStatusFilter = 'all' | 'received' | 'pending' | 'cancelled';
+
+// PHASE 2 REFACTORING: Cancelled trade 2-day visibility filter
+const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
+const shouldShowCancelledTrade = (trade: any): boolean => {
+    // Always show non-cancelled trades
+    if (trade.tradePhase !== 'CANCELLED' && trade.negotiationStatus !== 'cancelled') {
+        return true;
+    }
+    // For cancelled trades, show only if cancelled within last 2 days
+    const cancelledAt = trade.cancelledAt || trade.autoCancelledAt;
+    if (!cancelledAt) return true; // No cancellation date, show it
+    const cancelledDate = new Date(cancelledAt);
+    const twoDaysAgo = new Date(Date.now() - TWO_DAYS_MS);
+    return cancelledDate > twoDaysAgo;
+};
 
 interface TradeWithProduct extends Omit<Trade, 'purchaseOrderStatus' | 'purchaseRequestStatus' | 'negotiationStatus'> {
     product: {
@@ -21,6 +39,10 @@ interface TradeWithProduct extends Omit<Trade, 'purchaseOrderStatus' | 'purchase
     buyer: {
         _id: string;
         mail: string;
+        company?: {
+            _id: string;
+            name?: string;
+        };
     };
     purchaseOrderStatus?: string;
     purchaseRequestStatus?: string;
@@ -58,6 +80,65 @@ export const PurchaseOrderStatus = () => {
     // SCO Upload Modal state
     const [scoUploadModalOpen, setScoUploadModalOpen] = useState(false);
     const [scoUploadTradeId, setScoUploadTradeId] = useState<string | null>(null);
+
+    // Document download states
+    const [downloadingPRId, setDownloadingPRId] = useState<string | null>(null);
+    const [downloadingPOId, setDownloadingPOId] = useState<string | null>(null);
+
+    const handleDownloadPR = async (tradeId: string) => {
+        setDownloadingPRId(tradeId);
+        try {
+            await downloadPurchaseRequest(tradeId);
+        } catch (err) {
+            console.error('Failed to download purchase request:', err);
+            showToast('Failed to download purchase request. Please try again.', 'error');
+        } finally {
+            setDownloadingPRId(null);
+        }
+    };
+
+    const handleDownloadPO = async (tradeId: string) => {
+        setDownloadingPOId(tradeId);
+        try {
+            await downloadPurchaseOrder(tradeId);
+        } catch (err) {
+            console.error('Failed to download purchase order:', err);
+            showToast('Failed to download purchase order. Please try again.', 'error');
+        } finally {
+            setDownloadingPOId(null);
+        }
+    };
+
+    // Chat with buyer state
+    const [chattingWithBuyerId, setChattingWithBuyerId] = useState<string | null>(null);
+
+    // Handle chat with buyer - finds existing or creates new conversation
+    const handleChatWithBuyer = async (trade: TradeWithProduct) => {
+        const productId = trade.product?._id;
+        if (!productId) {
+            showToast('Product information not available', 'warning');
+            return;
+        }
+
+        setChattingWithBuyerId(trade._id);
+        try {
+            // Create conversation (or get existing one) - the backend handles both cases
+            const result = await createConversation(productId);
+            const conversationId = result.conversationId;
+
+            if (conversationId) {
+                // Navigate to inbox with the conversation
+                navigate(`/seller/inbox?conversationId=${conversationId}`);
+            } else {
+                showToast('Failed to open chat. Please try again.', 'error');
+            }
+        } catch (err) {
+            console.error('Failed to start chat:', err);
+            showToast('Failed to start chat with buyer', 'error');
+        } finally {
+            setChattingWithBuyerId(null);
+        }
+    };
 
     const handleNavigateToNegotiation = (tradeId: string) => {
         navigate(`/seller/negotiation/${tradeId}`);
@@ -169,8 +250,10 @@ export const PurchaseOrderStatus = () => {
                 trade => trade.purchaseRequestStatus === 'accepted' || trade.negotiationStatus === 'accepted'
             );
             // Strict phase filtering: PO tab shows only SCO and ICPO phases
+            // PHASE 2 REFACTORING: Include cancelled trade 2-day visibility filter
             const poTrades = acceptedTrades.filter(trade =>
-                trade.tradePhase === 'SCO' || trade.tradePhase === 'ICPO'
+                shouldShowCancelledTrade(trade) &&
+                (trade.tradePhase === 'SCO' || trade.tradePhase === 'ICPO')
             );
             setTrades(poTrades);
         } catch (err) {
@@ -395,6 +478,7 @@ export const PurchaseOrderStatus = () => {
                         <tr className="border-b-2">
                             <th className="text-gray-600 font-medium py-2">Buyer</th>
                             <th className="text-gray-600 font-medium py-2">Product</th>
+                            <th className="text-gray-600 font-medium py-2">Documents</th>
                             <th className="text-gray-600 font-medium py-2">SCO Status</th>
                             <th className="text-gray-600 font-medium py-2">ICPO Status</th>
                             <th className="text-gray-600 font-medium py-2">Actions</th>
@@ -414,13 +498,37 @@ export const PurchaseOrderStatus = () => {
                                 <tr key={trade._id} className="border-b hover:bg-gray-50">
                                     {/* Buyer */}
                                     <td className="py-4 text-center">
-                                        <div className="flex items-center justify-center gap-2">
-                                            <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                                                <span className="text-xs font-medium text-gray-600">
-                                                    {trade.buyer?.mail?.charAt(0).toUpperCase() || 'B'}
-                                                </span>
+                                        <div className="flex flex-col items-center gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <CompanyAvatar
+                                                    companyId={(trade.buyer as any)?.company?._id}
+                                                    companyName={(trade.buyer as any)?.company?.companyName || trade.buyer?.mail || 'Buyer'}
+                                                    profilePicture={(trade.buyer as any)?.company?.profilePicture}
+                                                    size="sm"
+                                                    clickable={!!(trade.buyer as any)?.company?._id}
+                                                    viewerRole="seller"
+                                                />
+                                                <ClickableCompanyName
+                                                    companyId={(trade.buyer as any)?.company?._id}
+                                                    companyName={(trade.buyer as any)?.company?.companyName || trade.buyer?.mail || 'N/A'}
+                                                    className="text-sm"
+                                                    viewerRole="seller"
+                                                />
                                             </div>
-                                            <span className="text-sm">{trade.buyer?.mail || 'N/A'}</span>
+                                            {/* Chat with Buyer button */}
+                                            <button
+                                                onClick={() => handleChatWithBuyer(trade)}
+                                                disabled={chattingWithBuyerId === trade._id}
+                                                className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded border border-blue-200 transition-colors disabled:opacity-50"
+                                                title="Chat with buyer"
+                                            >
+                                                {chattingWithBuyerId === trade._id ? (
+                                                    <Loader2 size={12} className="animate-spin" />
+                                                ) : (
+                                                    <MessageCircle size={12} />
+                                                )}
+                                                Chat
+                                            </button>
                                         </div>
                                     </td>
                                     {/* Product */}
@@ -432,28 +540,74 @@ export const PurchaseOrderStatus = () => {
                                             </span>
                                         </div>
                                     </td>
+                                    {/* Documents */}
+                                    <td className="py-4 text-center">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <button
+                                                onClick={() => handleDownloadPR(trade._id)}
+                                                disabled={downloadingPRId === trade._id}
+                                                className="px-2 py-1 text-xs border border-blue-200 text-blue-600 rounded hover:bg-blue-50 flex items-center gap-1 disabled:opacity-50"
+                                                title="Download Purchase Request"
+                                            >
+                                                {downloadingPRId === trade._id ? (
+                                                    <Loader2 size={12} className="animate-spin" />
+                                                ) : (
+                                                    <Download size={12} />
+                                                )}
+                                                PR
+                                            </button>
+                                            <button
+                                                onClick={() => handleDownloadPO(trade._id)}
+                                                disabled={downloadingPOId === trade._id}
+                                                className="px-2 py-1 text-xs border border-green-200 text-green-600 rounded hover:bg-green-50 flex items-center gap-1 disabled:opacity-50"
+                                                title="Download Purchase Order"
+                                            >
+                                                {downloadingPOId === trade._id ? (
+                                                    <Loader2 size={12} className="animate-spin" />
+                                                ) : (
+                                                    <Download size={12} />
+                                                )}
+                                                PO
+                                            </button>
+                                        </div>
+                                    </td>
                                     {/* SCO Status */}
                                     <td className="py-4 text-center">
                                         {hasSCO ? (
                                             <div className="flex flex-col items-center gap-1">
                                                 {trade.scoDocument?.status === 'rejected' ? (
-                                                    <>
-                                                        <div className="flex items-center gap-1 text-red-600">
-                                                            <X size={14} />
-                                                            <span className="text-sm font-medium">SCO Rejected</span>
-                                                        </div>
-                                                        {trade.scoDocument?.verificationNotes && (
-                                                            <span className="text-xs text-red-500 max-w-[120px] truncate" title={trade.scoDocument.verificationNotes}>
-                                                                "{trade.scoDocument.verificationNotes}"
-                                                            </span>
-                                                        )}
-                                                        <button
-                                                            onClick={() => handleOpenSCOUpload(trade._id)}
-                                                            className="mt-1 px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 flex items-center gap-1"
-                                                        >
-                                                            <FileUp size={12} /> Re-upload SCO
-                                                        </button>
-                                                    </>
+                                                    (() => {
+                                                        // PHASE 2: Get rejection tracking info
+                                                        const tracking = (trade as any).scoRejectionTracking;
+                                                        const rejectionCount = tracking?.rejectionCount || 0;
+                                                        const maxAttempts = tracking?.maxAttempts || 2;
+                                                        const remainingAttempts = maxAttempts - rejectionCount;
+                                                        const isLastAttempt = remainingAttempts === 1;
+
+                                                        return (
+                                                            <>
+                                                                <div className="flex items-center gap-1 text-red-600">
+                                                                    <X size={14} />
+                                                                    <span className="text-sm font-medium">SCO Rejected</span>
+                                                                </div>
+                                                                {/* PHASE 2: Show attempt tracking */}
+                                                                <div className={`text-xs px-2 py-0.5 rounded ${isLastAttempt ? 'bg-orange-100 text-orange-700' : 'bg-red-50 text-red-600'}`}>
+                                                                    {isLastAttempt ? '⚠️ Final Attempt!' : `Attempt ${rejectionCount + 1}/${maxAttempts}`}
+                                                                </div>
+                                                                {trade.scoDocument?.verificationNotes && (
+                                                                    <span className="text-xs text-red-500 max-w-[120px] truncate" title={trade.scoDocument.verificationNotes}>
+                                                                        "{trade.scoDocument.verificationNotes}"
+                                                                    </span>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => handleOpenSCOUpload(trade._id)}
+                                                                    className={`mt-1 px-2 py-1 text-xs rounded flex items-center gap-1 ${isLastAttempt ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' : 'bg-red-100 text-red-600 hover:bg-red-200'}`}
+                                                                >
+                                                                    <FileUp size={12} /> Re-upload SCO
+                                                                </button>
+                                                            </>
+                                                        );
+                                                    })()
                                                 ) : trade.scoDocument?.status === 'approved' ? (
                                                     <>
                                                         <div className="flex items-center gap-1 text-green-600">
@@ -498,10 +652,31 @@ export const PurchaseOrderStatus = () => {
                                                         <CheckCircle size={14} />
                                                         <span className="text-sm font-medium">ICPO Approved</span>
                                                     </div>
+                                                ) : trade.icpoDocument?.status === 'rejected' ? (
+                                                    (() => {
+                                                        // PHASE 2: Get ICPO rejection tracking info
+                                                        const tracking = (trade as any).icpoRejectionTracking;
+                                                        const rejectionCount = tracking?.rejectionCount || 0;
+                                                        const maxAttempts = tracking?.maxAttempts || 2;
+                                                        const remainingAttempts = maxAttempts - rejectionCount;
+                                                        const isLastAttempt = remainingAttempts === 1;
+
+                                                        return (
+                                                            <>
+                                                                <div className="flex items-center gap-1 text-red-600">
+                                                                    <X size={14} />
+                                                                    <span className="text-sm font-medium">ICPO Rejected</span>
+                                                                </div>
+                                                                <div className={`text-xs px-2 py-0.5 rounded ${isLastAttempt ? 'bg-orange-100 text-orange-700' : 'bg-red-50 text-red-600'}`}>
+                                                                    {isLastAttempt ? '⚠️ Final!' : `${rejectionCount + 1}/${maxAttempts}`}
+                                                                </div>
+                                                            </>
+                                                        );
+                                                    })()
                                                 ) : isCancelled ? (
                                                     <div className="flex items-center gap-1 text-red-600">
                                                         <X size={14} />
-                                                        <span className="text-sm font-medium">ICPO Rejected</span>
+                                                        <span className="text-sm font-medium">Cancelled</span>
                                                     </div>
                                                 ) : (
                                                     <div className="flex items-center gap-1 text-blue-600">
@@ -560,16 +735,37 @@ export const PurchaseOrderStatus = () => {
                                         ) : isCancelled ? (
                                             <span className="text-red-500 text-xs">Rejected</span>
                                         ) : !hasSCO || trade.scoDocument?.status === 'rejected' ? (
-                                            <button
-                                                onClick={() => handleOpenSCOUpload(trade._id)}
-                                                className={`px-3 py-1.5 text-xs rounded flex items-center gap-1 mx-auto ${
-                                                    trade.scoDocument?.status === 'rejected'
-                                                        ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                                                        : 'bg-black text-white hover:bg-gray-800'
-                                                }`}
-                                            >
-                                                <FileUp size={12} /> {trade.scoDocument?.status === 'rejected' ? 'Re-upload SCO' : 'Upload SCO'}
-                                            </button>
+                                            (() => {
+                                                // PHASE 2: Get SCO rejection tracking for Actions column
+                                                const tracking = (trade as any).scoRejectionTracking;
+                                                const rejectionCount = tracking?.rejectionCount || 0;
+                                                const maxAttempts = tracking?.maxAttempts || 2;
+                                                const remainingAttempts = maxAttempts - rejectionCount;
+                                                const isLastAttempt = remainingAttempts === 1;
+                                                const isRejected = trade.scoDocument?.status === 'rejected';
+
+                                                return (
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        {isRejected && (
+                                                            <span className={`text-xs px-2 py-0.5 rounded ${isLastAttempt ? 'bg-orange-100 text-orange-700' : 'bg-red-50 text-red-600'}`}>
+                                                                {isLastAttempt ? '⚠️ Final!' : `${rejectionCount + 1}/${maxAttempts}`}
+                                                            </span>
+                                                        )}
+                                                        <button
+                                                            onClick={() => handleOpenSCOUpload(trade._id)}
+                                                            className={`px-3 py-1.5 text-xs rounded flex items-center gap-1 ${
+                                                                isRejected
+                                                                    ? isLastAttempt
+                                                                        ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                                                                        : 'bg-red-100 text-red-600 hover:bg-red-200'
+                                                                    : 'bg-black text-white hover:bg-gray-800'
+                                                            }`}
+                                                        >
+                                                            <FileUp size={12} /> {isRejected ? 'Re-upload SCO' : 'Upload SCO'}
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })()
                                         ) : trade.scoDocument?.status !== 'approved' ? (
                                             <span className="text-blue-500 text-xs text-center block">Awaiting Buyer Review</span>
                                         ) : (

@@ -13,6 +13,8 @@ import type {
   VerifyDocumentResponse,
   ForcePhaseChangeDto,
   ForcePhaseChangeResponse,
+  SendReminderDto,
+  SendReminderResponse,
 } from '../types'
 
 // Get paginated list of trades
@@ -188,6 +190,29 @@ export function useDownloadDocument() {
         responseType: 'blob',
       })
       return response
+    },
+  })
+}
+
+// ========================
+// Stalled Trade Reminder
+// ========================
+
+// Send reminder email to buyer/seller for stalled trade
+export function useSendTradeReminder() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ tradeId, data }: { tradeId: string; data: SendReminderDto }) => {
+      const response = await api.post<ApiResponse<SendReminderResponse>>(
+        `/admin/trades/${tradeId}/send-reminder`,
+        data
+      )
+      return response.data
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'trades', variables.tradeId] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'trades', variables.tradeId, 'timeline'] })
     },
   })
 }

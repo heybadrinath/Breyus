@@ -13,13 +13,13 @@ import { REDIS_CLIENT } from '../../mail/redis.provider';
 export class CacheService {
   private readonly logger = new Logger(CacheService.name);
 
-  constructor(
-    @Inject(REDIS_CLIENT) private readonly redis: Redis | null,
-  ) {
+  constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis | null) {
     if (this.redis) {
       this.logger.log('CacheService initialized with Redis');
     } else {
-      this.logger.warn('CacheService initialized without Redis - caching disabled');
+      this.logger.warn(
+        'CacheService initialized without Redis - caching disabled',
+      );
     }
   }
 
@@ -105,10 +105,14 @@ export class CacheService {
       }
 
       await this.redis.del(...keys);
-      this.logger.log(`Cache invalidated ${keys.length} keys matching pattern: ${pattern}`);
+      this.logger.log(
+        `Cache invalidated ${keys.length} keys matching pattern: ${pattern}`,
+      );
       return keys.length;
     } catch (error) {
-      this.logger.error(`Cache invalidate pattern error for "${pattern}": ${error}`);
+      this.logger.error(
+        `Cache invalidate pattern error for "${pattern}": ${error}`,
+      );
       return 0;
     }
   }
@@ -131,7 +135,7 @@ export class CacheService {
     if (extraParams) {
       const sortedParams = Object.keys(extraParams)
         .sort()
-        .map(k => `${k}=${extraParams[k]}`)
+        .map((k) => `${k}=${extraParams[k]}`)
         .join(':');
       if (sortedParams) {
         key += `:${sortedParams}`;

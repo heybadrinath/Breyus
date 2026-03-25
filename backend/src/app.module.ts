@@ -1,4 +1,10 @@
-import { Module, Logger, MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/common';
+import {
+  Module,
+  Logger,
+  MiddlewareConsumer,
+  NestModule,
+  RequestMethod,
+} from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -24,7 +30,10 @@ import { SystemModule } from './admin/system/system.module';
 import { SuspendedUserMiddleware } from './common/middleware';
 import { CommoditiesModule } from './commodities/commodities.module';
 import { AIModule } from './ai/ai.module';
+import { ScheduleModule } from '@nestjs/schedule';
 import { BlogModule } from './blog/blog.module';
+import { BlogPortalModule } from './blog-portal/blog-portal.module';
+import { GstModule } from './gst/gst.module';
 import { User, UserSchema } from './users/user.schema';
 import mongoose from 'mongoose';
 
@@ -43,20 +52,22 @@ const logger = new Logger('MongoDB');
     ThrottlerModule.forRoot([
       {
         name: 'short',
-        ttl: 1000,    // 1 second
-        limit: 3,     // 3 requests per second
+        ttl: 1000, // 1 second
+        limit: 3, // 3 requests per second
       },
       {
         name: 'medium',
-        ttl: 10000,   // 10 seconds
-        limit: 20,    // 20 requests per 10 seconds
+        ttl: 10000, // 10 seconds
+        limit: 20, // 20 requests per 10 seconds
       },
       {
         name: 'long',
-        ttl: 60000,   // 1 minute
-        limit: 100,   // 100 requests per minute
+        ttl: 60000, // 1 minute
+        limit: 100, // 100 requests per minute
       },
     ]),
+    // Enable @Cron, @Interval, @Timeout decorators for scheduled tasks
+    ScheduleModule.forRoot(),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
@@ -114,6 +125,8 @@ const logger = new Logger('MongoDB');
     CommoditiesModule,
     AIModule,
     BlogModule,
+    BlogPortalModule,
+    GstModule,
     // Import User model for SuspendedUserMiddleware
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
   ],
@@ -130,6 +143,8 @@ export class AppModule implements NestModule {
         { path: 'admin/(.*)', method: RequestMethod.ALL },
         { path: 'login', method: RequestMethod.ALL },
         { path: 'login/(.*)', method: RequestMethod.ALL },
+        { path: 'blog-portal/(.*)', method: RequestMethod.ALL }, // Blog portal has its own suspension check
+        { path: 'blog/(.*)', method: RequestMethod.ALL }, // Public blog routes
       )
       .forRoutes({ path: '*', method: RequestMethod.ALL });
   }

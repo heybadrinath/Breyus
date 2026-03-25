@@ -2,10 +2,14 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Pencil, Reply, Send, Smile, X } from "lucide-react";
 import EmojiPicker, { EmojiClickData, EmojiStyle } from "emoji-picker-react";
 import { InboxConversationProps, Message, MessageReaction } from "../types/inboxTypes";
+import CompanyAvatar from "./ui/CompanyAvatar";
+import ClickableCompanyName from "./ui/ClickableCompanyName";
 
 const InboxConversation: React.FC<InboxConversationProps> = ({
     name,
     productName,
+    companyId,
+    profilePicture,
     messages,
     currentCompanyId,
     onSendMessage,
@@ -322,11 +326,19 @@ const InboxConversation: React.FC<InboxConversationProps> = ({
         <div className="flex-1 flex flex-col bg-white">
             {/* Chat Header */}
             <div className="p-4 border-b border-gray-200 bg-white flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-white font-semibold">
-                    {name.charAt(0)}
-                </div>
+                <CompanyAvatar
+                    companyId={companyId}
+                    companyName={name}
+                    profilePicture={profilePicture}
+                    size="md"
+                    clickable={true}
+                />
                 <div>
-                    <h3 className="m-0 text-lg font-semibold text-gray-900">{name}</h3>
+                    <ClickableCompanyName
+                        companyId={companyId}
+                        companyName={name}
+                        className="m-0 text-lg font-semibold"
+                    />
                     <p className="m-0 text-xs text-[#867C5B]">Product: {productName}</p>
                 </div>
             </div>

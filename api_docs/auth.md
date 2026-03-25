@@ -11,6 +11,13 @@ The Authentication API handles user session validation, retrieval of user inform
 ## Authentication
 Most endpoints use cookie-based authentication via signed cookies named `account`. Some endpoints (forgot-password, reset-password) are public.
 
+## Rate Limiting
+The Auth module uses rate limiting (ThrottlerGuard) to prevent abuse:
+- **Forgot Password:** 3 requests per minute (prevents email spam)
+- **Reset Password:** 3 requests per minute (prevents OTP brute force)
+- **Change Password:** 5 requests per minute
+- **Validate Cookie & Me:** No rate limiting (called frequently by frontend)
+
 ---
 
 ## Endpoints
@@ -22,6 +29,8 @@ Validates the authentication cookie and returns the user's role.
 **Endpoint:** `GET /auth/validate-cookie`
 
 **Authentication:** Required (signed cookie)
+
+**Rate Limiting:** Skipped (no limit)
 
 **Request:**
 - No request body required
@@ -61,11 +70,13 @@ or
 
 ### 2. Get Current User Info
 
-Returns the current authenticated user's company ID.
+Returns the current authenticated user's ID and company ID.
 
 **Endpoint:** `GET /auth/me`
 
 **Authentication:** Required (signed cookie)
+
+**Rate Limiting:** Skipped (no limit)
 
 **Request:**
 - No request body required
@@ -76,6 +87,7 @@ Returns the current authenticated user's company ID.
 **Success (200 OK):**
 ```json
 {
+  "userId": "string",
   "companyId": "string"
 }
 ```
@@ -97,14 +109,14 @@ or
 or
 ```json
 {
-  "message": "No companyId in token"
+  "message": "Invalid token structure"
 }
 ```
 
 **Implementation Notes:**
 - Validates the account token
-- Extracts and returns the `companyId` from the JWT payload
-- Used by frontend to identify the current user's company
+- Extracts and returns BOTH `userId` and `companyId` from the JWT payload
+- Used by frontend for WebSocket connections and API calls
 
 ---
 
@@ -115,6 +127,8 @@ Clears the authentication cookie and logs the user out.
 **Endpoint:** `POST /auth/logout`
 
 **Authentication:** None required (clears any existing cookie)
+
+**Rate Limiting:** Default throttle
 
 **Request:**
 - No request body required
@@ -138,6 +152,7 @@ Clears the authentication cookie and logs the user out.
 **Implementation Notes:**
 - Clears the `account` cookie with matching settings (httpOnly, signed, secure, sameSite)
 - Cookie is cleared regardless of whether it exists
+- Cookie settings are environment-aware (secure/sameSite based on NODE_ENV)
 
 ---
 
@@ -148,6 +163,8 @@ Initiates the password reset flow by sending an OTP to the user's email.
 **Endpoint:** `POST /auth/forgot-password`
 
 **Authentication:** None required (public endpoint)
+
+**Rate Limiting:** 3 requests per minute
 
 **Request Body:**
 ```json
@@ -179,6 +196,14 @@ Initiates the password reset flow by sending an OTP to the user's email.
 }
 ```
 
+**429 Too Many Requests:**
+```json
+{
+  "statusCode": 429,
+  "message": "ThrottlerException: Too Many Requests"
+}
+```
+
 **500 Internal Server Error:**
 ```json
 {
@@ -202,6 +227,8 @@ Completes the password reset using the OTP received via email.
 
 **Authentication:** None required (public endpoint)
 
+**Rate Limiting:** 3 requests per minute
+
 **Request Body:**
 ```json
 {
@@ -215,8 +242,8 @@ Completes the password reset using the OTP received via email.
 | Field | Type | Rules | Error Messages |
 |-------|------|-------|----------------|
 | email | string | Required, valid email format | "Email is required!", "Invalid Email address" |
-| otp | string | Required, exactly 6 characters | "OTP is required!", "OTP must be 6 digits!" |
-| newPassword | string | Required, min 8 chars, must contain uppercase, lowercase, number, special char | See password requirements below |
+| otp | string | Required, exactly 6 characters | "OTP is required!", "OTP must be a string!", "OTP must be 6 digits!" |
+| newPassword | string | Required, min 8 chars, complexity requirements | "New password is required!", "Password must be a string!", "Password must be at least 8 characters long!", complexity message |
 
 **Password Requirements:**
 - Minimum 8 characters
@@ -256,6 +283,14 @@ or
 }
 ```
 
+**429 Too Many Requests:**
+```json
+{
+  "statusCode": 429,
+  "message": "ThrottlerException: Too Many Requests"
+}
+```
+
 **500 Internal Server Error:**
 ```json
 {
@@ -279,6 +314,8 @@ Allows authenticated users to change their password.
 
 **Authentication:** Required (signed cookie)
 
+**Rate Limiting:** 5 requests per minute
+
 **Request Body:**
 ```json
 {
@@ -290,8 +327,8 @@ Allows authenticated users to change their password.
 **Validation Rules (ChangePasswordDto):**
 | Field | Type | Rules | Error Messages |
 |-------|------|-------|----------------|
-| currentPassword | string | Required | "Current password is required!" |
-| newPassword | string | Required, min 8 chars, must contain uppercase, lowercase, number, special char | See password requirements below |
+| currentPassword | string | Required | "Current password is required!", "Current password must be a string!" |
+| newPassword | string | Required, min 8 chars, complexity requirements | "New password is required!", "New password must be a string!", "New password must be at least 8 characters long!", complexity message |
 
 **Password Requirements:**
 - Minimum 8 characters
@@ -344,6 +381,14 @@ or
 }
 ```
 
+**429 Too Many Requests:**
+```json
+{
+  "statusCode": 429,
+  "message": "ThrottlerException: Too Many Requests"
+}
+```
+
 **500 Internal Server Error:**
 ```json
 {
@@ -379,9 +424,9 @@ or
 ### Account Cookie
 - **Name:** `account`
 - **Type:** Signed HTTP-only cookie
-- **Expiry:** Configured via `COOKIE_EXPIRY_LOGIN` environment variable (default: 1 hour)
-- **Secure:** `true` in production
-- **SameSite:** `strict` in production, `none` in development
+- **Expiry:** Configured via `COOKIE_EXPIRY_LOGIN` environment variable (default: 24 hours)
+- **Secure:** `true` in production or when `COOKIE_SECURE=true`
+- **SameSite:** `strict` in production, `none` when secure in dev, `lax` otherwise
 
 ---
 
@@ -390,6 +435,7 @@ or
 All endpoints follow a consistent error handling pattern:
 - **400 Bad Request:** Invalid input or validation errors
 - **401 Unauthorized:** Invalid or missing authentication
+- **429 Too Many Requests:** Rate limit exceeded
 - **500 Internal Server Error:** Unexpected server errors
 
 ---
@@ -413,6 +459,11 @@ All endpoints follow a consistent error handling pattern:
 - Secure flag in production (HTTPS only)
 - SameSite attribute (CSRF prevention)
 
+### Rate Limiting
+- Prevents brute force attacks
+- Prevents email spam
+- Different limits for sensitive vs frequent endpoints
+
 ---
 
 ## Frontend Integration Notes
@@ -421,7 +472,7 @@ All endpoints follow a consistent error handling pattern:
 
 2. **Role-Based Access:** Use the `/auth/validate-cookie` endpoint to determine user role and conditionally render UI elements.
 
-3. **Company Context:** Use `/auth/me` to get the current user's company ID for other API calls.
+3. **Company Context:** Use `/auth/me` to get both the current user's ID and company ID for other API calls and WebSocket connections.
 
 4. **Session Validation:** Call `/auth/validate-cookie` on app initialization to verify if the user is authenticated.
 
@@ -433,6 +484,8 @@ All endpoints follow a consistent error handling pattern:
 6. **Password Change Flow:**
    - User must be authenticated
    - Call `/auth/change-password` with current and new password
+
+7. **Rate Limit Handling:** Handle 429 responses by showing a "too many attempts" message and suggesting the user wait before retrying.
 
 ---
 

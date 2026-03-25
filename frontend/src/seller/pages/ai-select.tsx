@@ -71,7 +71,8 @@ const SellerAISelectPage: React.FC = () => {
   const handleContinue = () => {
     if (!selectedCommodity) return;
 
-    navigate('/seller/search-result', {
+    // Route to new ai-result page for real AI analytics (not legacy search-result)
+    navigate('/seller/ai-result', {
       state: {
         commodity: selectedCommodity.name,
         hsCode: selectedCommodity.hsCode,
@@ -83,6 +84,7 @@ const SellerAISelectPage: React.FC = () => {
         isNiche: !selectedCommodity.isMainstream || aiMode === 'niche',
         aiMode,
         source: selectedCommodity.source,
+        loading: true,
       },
     });
   };
