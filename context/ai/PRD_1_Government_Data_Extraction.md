@@ -533,6 +533,9 @@ A **Run** represents a single execution of the commodity discovery pipeline.
 
 ### 6.2 Run Status State Machine
 
+> **IMPORTANT:** LLM analysis is NOT part of the run pipeline. LLM generation is a
+> separate, per-candidate admin action (see Section 10). The run pipeline ends at SCORING.
+
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
 │                         RUN STATUS STATE MACHINE                            │
@@ -554,30 +557,25 @@ A **Run** represents a single execution of the commodity discovery pipeline.
 │  │   │              │    │              │    │              │        │   │
 │  │   │ Fetching raw │    │ Normalizing  │    │ Applying 3   │        │   │
 │  │   │ data files   │    │ records      │    │ scoring rules│        │   │
-│  │   └──────────────┘    └──────────────┘    └──────┬───────┘        │   │
-│  │                                                   │                │   │
-│  │                                                   ▼                │   │
-│  │                                           ┌──────────────┐        │   │
-│  │                                           │  VALIDATING  │        │   │
-│  │                                           │              │        │   │
-│  │                                           │ LLM analysis │        │   │
-│  │                                           │ generation   │        │   │
-│  │                                           └──────┬───────┘        │   │
-│  │                                                   │                │   │
-│  └───────────────────────────────────────────────────┼────────────────┘   │
-│                                                      │                     │
-│                   ┌──────────────────────────────────┼───────────────┐    │
-│                   │                                  │               │    │
-│                   ▼                                  ▼               ▼    │
-│           ┌──────────────┐                  ┌──────────────┐ ┌───────────┐│
-│           │  COMPLETED   │                  │PARTIAL_FAILURE│ │  FAILED  ││
-│           │              │                  │              │ │          ││
-│           │ All sources  │                  │ Some sources │ │ Critical ││
-│           │ successful   │                  │ had errors   │ │ error    ││
-│           └──────────────┘                  └──────────────┘ └───────────┘│
+│  │   └──────────────┘    └──────────────┘    └──────────────┘        │   │
+│  │                                                                     │   │
+│  └────────────────────────────────────────────────────────────────────┘   │
+│                                         │                                  │
+│                   ┌─────────────────────┼───────────────────┐             │
+│                   │                     │                   │             │
+│                   ▼                     ▼                   ▼             │
+│           ┌──────────────┐     ┌──────────────┐     ┌───────────┐        │
+│           │  COMPLETED   │     │PARTIAL_FAILURE│     │  FAILED   │        │
+│           │              │     │              │     │           │        │
+│           │ All sources  │     │ Some sources │     │ Critical  │        │
+│           │ successful   │     │ had errors   │     │ error     │        │
+│           └──────────────┘     └──────────────┘     └───────────┘        │
 │                                                                            │
 │  TERMINAL STATES: COMPLETED, PARTIAL_FAILURE, FAILED                      │
 │  Runs are immutable once in a terminal state                              │
+│                                                                            │
+│  NOTE: After COMPLETED/PARTIAL_FAILURE, candidates are available for      │
+│  admin review. LLM analysis is triggered separately per-candidate.        │
 │                                                                            │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -588,8 +586,6 @@ A **Run** represents a single execution of the commodity discovery pipeline.
 |--------|------|---------|-------------|
 | `sources` | string[] | ["apeda", "dgft", "spice_board"] | Sources to scrape |
 | `include_supplementary` | boolean | true | Include Reddit, News scrapers |
-| `llm_detail_level` | enum | "standard" | LLM analysis depth |
-| `skip_llm_validation` | boolean | false | Skip LLM enrichment |
 | `volume_threshold_mt` | number | 100000 | Override Rule 1 threshold |
 | `volatility_threshold_pct` | number | 20 | Override Rule 2 threshold |
 | `priority` | enum | "normal" | Job queue priority |
@@ -733,7 +729,20 @@ Raw files are stored immutably with full metadata.
 │                                                                             │
 │  Implementation:                                                           │
 │  ┌─────────────────────────────────────────────────────────────────────┐  │
-│  │  def calculate_volume_score(annual_volume_mt: float) -> int:        │  │
+│  │  def calculate_volume_score(monthly_volumes: List[float])           │  │
+│  │      -> Optional[int]:                                              │  │
+│  │      """                                                            │  │
+│  │      Volume Aggregation Rules:                                      │  │
+│  │      - Uses rolling 12-month window from current date               │  │
+│  │      - Requires minimum 3 months of data                            │  │
+│  │      - Sums available months only (NO extrapolation)                │  │
+│  │      - Returns None if < 3 months available                         │  │
+│  │      """                                                            │  │
+│  │      if len(monthly_volumes) < 3:                                   │  │
+│  │          return None  # Insufficient data — weight redistributes   │  │
+│  │                                                                      │  │
+│  │      annual_volume_mt = sum(monthly_volumes)                        │  │
+│  │                                                                      │  │
 │  │      if annual_volume_mt < 10_000:                                  │  │
 │  │          return 100  # Micro-niche                                  │  │
 │  │      elif annual_volume_mt < 50_000:                                │  │
@@ -745,7 +754,9 @@ Raw files are stored immutably with full metadata.
 │  └─────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
 │  Data Source: APEDA annual export statistics                               │
-│  Aggregation: Sum of export volumes across all months in rolling 12 months │
+│  Aggregation: Sum of available months in rolling 12-month window           │
+│  Minimum Data: 3 months required. Show admin "X MT over Y months".        │
+│  NO extrapolation: Never multiply partial data to estimate annual total.  │
 │                                                                             │
 │  ────────────────────────────────────────────────────────────────────────  │
 │                                                                             │
@@ -754,15 +765,32 @@ Raw files are stored immutably with full metadata.
 │                                                                             │
 │  Purpose: High volatility = predictions matter more to traders             │
 │                                                                             │
+│  Price Data Sources (Priority Order):                                      │
+│  1. Spice Board spot prices (for spices only — highest accuracy)          │
+│  2. Derived unit price from APEDA: value_usd / volume_mt = $/MT           │
+│     (available for ALL commodities that have both value and volume)        │
+│  3. B2B marketplace price signals (future — IndiaMART, TradeKey)          │
+│                                                                             │
+│  NOTE: Derived unit price (source #2) captures real trade price movements │
+│  even though it's not spot price. It reflects actual FOB export pricing.   │
+│                                                                             │
 │  Implementation:                                                           │
 │  ┌─────────────────────────────────────────────────────────────────────┐  │
-│  │  def calculate_volatility_score(prices: List[float]) -> int:        │  │
+│  │  def calculate_volatility_score(prices: List[float])                │  │
+│  │      -> Optional[int]:                                              │  │
+│  │      """                                                            │  │
+│  │      Prices = monthly unit prices ($/MT) over rolling 12 months.   │  │
+│  │      Returns None if < 3 data points — weight redistributes.       │  │
+│  │      """                                                            │  │
 │  │      if len(prices) < 3:                                            │  │
-│  │          return 0  # Insufficient data                              │  │
+│  │          return None  # Insufficient data — weight redistributes   │  │
 │  │                                                                      │  │
 │  │      max_price = max(prices)                                        │  │
 │  │      min_price = min(prices)                                        │  │
 │  │      avg_price = sum(prices) / len(prices)                          │  │
+│  │                                                                      │  │
+│  │      if avg_price == 0:                                             │  │
+│  │          return None  # Invalid data                                │  │
 │  │                                                                      │  │
 │  │      volatility_pct = ((max_price - min_price) / avg_price) * 100   │  │
 │  │                                                                      │  │
@@ -776,8 +804,9 @@ Raw files are stored immutably with full metadata.
 │  │          return 0    # Stable (no prediction value)                 │  │
 │  └─────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
-│  Data Source: Commodity price tracker, Spice Board price data              │
+│  Data Source: Spice Board spot prices OR derived unit price (value/volume) │
 │  Timeframe: Rolling 12 months of price data                                │
+│  Minimum Data: 3 monthly data points required.                            │
 │                                                                             │
 │  ────────────────────────────────────────────────────────────────────────  │
 │                                                                             │
@@ -819,13 +848,40 @@ Raw files are stored immutably with full metadata.
 │  FINAL SCORE CALCULATION                                                   │
 │  ═══════════════════════                                                   │
 │                                                                             │
+│  When a rule returns None (insufficient data), its weight is               │
+│  redistributed proportionally to the rules that DO have data.              │
+│                                                                             │
+│  Example: Rule 2 = None (no price data)                                    │
+│    Active weights: Rule1=0.40, Rule3=0.25 → total=0.65                    │
+│    Redistributed:  Rule1=0.40/0.65=0.615, Rule3=0.25/0.65=0.385          │
+│    final_score = (rule1 * 0.615) + (rule3 * 0.385)                        │
+│                                                                             │
+│  If ALL rules return None → final_score = 0 (NOT_NICHE)                   │
+│  At least 1 rule must have data for a meaningful score.                    │
+│                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐  │
 │  │  def calculate_niche_score(commodity: Commodity) -> NicheScore:     │  │
-│  │      rule1 = calculate_volume_score(commodity.annual_volume_mt)     │  │
+│  │      rule1 = calculate_volume_score(commodity.monthly_volumes)      │  │
 │  │      rule2 = calculate_volatility_score(commodity.price_history)    │  │
 │  │      rule3 = calculate_emergence_score(commodity.signals)           │  │
 │  │                                                                      │  │
-│  │      final_score = (rule1 * 0.40) + (rule2 * 0.35) + (rule3 * 0.25) │  │
+│  │      # Build active rules (exclude None scores)                     │  │
+│  │      weights = {                                                    │  │
+│  │          'rule1': (rule1, 0.40),                                    │  │
+│  │          'rule2': (rule2, 0.35),                                    │  │
+│  │          'rule3': (rule3, 0.25),                                    │  │
+│  │      }                                                              │  │
+│  │      active = {k: v for k, v in weights.items()                     │  │
+│  │                if v[0] is not None}                                  │  │
+│  │                                                                      │  │
+│  │      if not active:                                                 │  │
+│  │          final_score = 0                                            │  │
+│  │      else:                                                          │  │
+│  │          total_weight = sum(w for _, w in active.values())          │  │
+│  │          final_score = sum(                                         │  │
+│  │              (score * (weight / total_weight))                       │  │
+│  │              for score, weight in active.values()                    │  │
+│  │          )                                                          │  │
 │  │                                                                      │  │
 │  │      # Determine classification                                     │  │
 │  │      if final_score >= 60:                                          │  │
@@ -835,12 +891,21 @@ Raw files are stored immutably with full metadata.
 │  │      else:                                                          │  │
 │  │          status = "NOT_NICHE"        # Excluded                     │  │
 │  │                                                                      │  │
+│  │      # Track data coverage for admin visibility                     │  │
+│  │      data_coverage = {                                              │  │
+│  │          'rules_with_data': len(active),                            │  │
+│  │          'rules_total': 3,                                          │  │
+│  │          'missing_rules': [k for k in weights                       │  │
+│  │                            if weights[k][0] is None],               │  │
+│  │      }                                                              │  │
+│  │                                                                      │  │
 │  │      return NicheScore(                                             │  │
-│  │          rule1_score=rule1,                                         │  │
-│  │          rule2_score=rule2,                                         │  │
-│  │          rule3_score=rule3,                                         │  │
+│  │          rule1_score=rule1,  # None if insufficient data            │  │
+│  │          rule2_score=rule2,  # None if insufficient data            │  │
+│  │          rule3_score=rule3,  # None if insufficient data            │  │
 │  │          final_score=final_score,                                   │  │
-│  │          status=status                                              │  │
+│  │          status=status,                                              │  │
+│  │          data_coverage=data_coverage,                                │  │
 │  │      )                                                              │  │
 │  └─────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
@@ -851,10 +916,97 @@ Raw files are stored immutably with full metadata.
 
 | Component | Min | Max | Notes |
 |-----------|-----|-----|-------|
-| Rule 1 Score | 0 | 100 | Discrete values: 0, 50, 75, 100 |
-| Rule 2 Score | 0 | 100 | Discrete values: 0, 50, 75, 100 |
-| Rule 3 Score | 0 | 100 | Discrete values: 0, 50, 75, 100 |
-| Final Score | 0 | 100 | Weighted sum |
+| Rule 1 Score | 0 or None | 100 | Discrete values: 0, 50, 75, 100, or None (< 3 months data) |
+| Rule 2 Score | 0 or None | 100 | Discrete values: 0, 50, 75, 100, or None (< 3 price points) |
+| Rule 3 Score | 0 | 100 | Discrete values: 0, 50, 75, 100 (always calculable, 0 if no signals) |
+| Final Score | 0 | 100 | Weighted sum with proportional redistribution for None rules |
+
+### 9.3 Cross-Run Candidate Deduplication
+
+> **Problem Solved:** Government data updates monthly but runs execute weekly.
+> Without deduplication, the same commodity enters the review queue every run.
+
+After scoring, before presenting candidates to admin, run a **deduplication check** against existing records:
+
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│                     CROSS-RUN DEDUPLICATION LOGIC                           │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  For each scored candidate in the current run:                             │
+│                                                                             │
+│  STEP 1: MATCH against existing records                                    │
+│  ──────────────────────────────────────                                    │
+│  Match by: 8-digit HS code (exact) OR normalized name (>90% similarity)   │
+│                                                                             │
+│  STEP 2: ASSIGN STATUS based on match result                               │
+│  ────────────────────────────────────────────                              │
+│                                                                             │
+│  ┌───────────────────────┬───────────────────────────────────────────────┐ │
+│  │ Match Result          │ Action                                        │ │
+│  ├───────────────────────┼───────────────────────────────────────────────┤ │
+│  │ No match found        │ status = "pending_review" (normal flow)       │ │
+│  │ Matches APPROVED item │ status = "already_approved" (auto-skip)       │ │
+│  │                       │ Log: "Skipped — approved in Run #X"           │ │
+│  │ Matches REJECTED item │ If rejected < 90 days ago:                    │ │
+│  │ (within 90 days)      │   status = "recently_rejected" (auto-skip)   │ │
+│  │                       │   Log: "Skipped — rejected in Run #X"         │ │
+│  │ Matches REJECTED item │ If rejected >= 90 days ago:                   │ │
+│  │ (older than 90 days)  │   status = "pending_review" (re-evaluate)     │ │
+│  │                       │   Flag: "Previously rejected — new data"      │ │
+│  │ Matches WATCHLIST item│ status = "watchlist_rescore" (see 9.4)        │ │
+│  │                       │ Show: old score vs new score side by side     │ │
+│  └───────────────────────┴───────────────────────────────────────────────┘ │
+│                                                                             │
+│  ADMIN QUEUE shows only: pending_review + watchlist_rescore candidates     │
+│  Auto-skipped items visible in Run Details > "Skipped" tab                 │
+│                                                                             │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 9.4 Watchlist Re-evaluation Mechanism
+
+> **Problem Solved:** Watchlist was previously a label with no operational consequence.
+> Now it actively monitors commodities and surfaces them when new data arrives.
+
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│                     WATCHLIST RE-EVALUATION                                  │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  WHEN watchlisted commodity appears in a new run:                          │
+│  ────────────────────────────────────────────────                          │
+│  1. Re-score with fresh data from current run                              │
+│  2. Set status = "watchlist_rescore"                                       │
+│  3. Admin sees BOTH scores in review UI:                                   │
+│                                                                             │
+│     ┌──────────────────────────────────────────────────────────────────┐  │
+│     │  📋 WATCHLIST RE-EVALUATION: Cardamom (Small)                    │  │
+│     │                                                                   │  │
+│     │  Previous Score (Run #48, Jan 15):  48/100                       │  │
+│     │  Current Score  (Run #52, Feb 12):  67/100  ↑ +19               │  │
+│     │                                                                   │  │
+│     │  Score Delta Breakdown:                                          │  │
+│     │  • Volume:    50 → 50  (unchanged)                               │  │
+│     │  • Volatility: 0 → 75  (price spike detected)                   │  │
+│     │  • Emergence: 50 → 75  (3 new signals)                          │  │
+│     │                                                                   │  │
+│     │  [✓ Approve]  [✗ Reject]  [👁 Keep on Watchlist]                │  │
+│     └──────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│  WHEN watchlisted commodity does NOT appear in 3 consecutive runs:         │
+│  ──────────────────────────────────────────────────────────────────        │
+│  • Auto-transition to status = "watchlist_expired"                         │
+│  • Notify admin: "Cardamom — no fresh data in 3 runs, watchlist expired"  │
+│  • If it reappears later, treated as a new candidate (pending_review)      │
+│                                                                             │
+│  WATCHLIST SECTION in Admin Review Queue:                                  │
+│  ────────────────────────────────────────                                  │
+│  Separate section at top of Commodities tab showing only re-scored        │
+│  watchlist items with score deltas. Distinct from new candidates.         │
+│                                                                             │
+└────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -926,11 +1078,121 @@ The LLM generates **explanatory content for admin decision-making**. This is NOT
 
 Admins choose detail level **per candidate** or **batch default**:
 
-| Level | When to Use | Tokens | Cost |
-|-------|-------------|--------|------|
-| **Short** | High-confidence scores (>75), clear-cut cases | 200-400 | ~$0.01 |
-| **Full** | Borderline scores (50-75), complex commodities | 800-1200 | ~$0.04 |
-| **Comprehensive** | Disputed cases, strategic importance | 2000-3000 | ~$0.10 |
+| Level | When to Use | Tokens | Cost (Haiku) | Cost (Sonnet) | Cost (Opus) |
+|-------|-------------|--------|-------------|--------------|-------------|
+| **Short** | High-confidence scores (>75), clear-cut cases | 200-400 | ~$0.001 | ~$0.01 | ~$0.03 |
+| **Full** | Borderline scores (50-75), complex commodities | 800-1200 | ~$0.003 | ~$0.04 | ~$0.10 |
+| **Comprehensive** | Disputed cases, strategic importance | 2000-3000 | ~$0.008 | ~$0.10 | ~$0.25 |
+
+> **Note:** Costs above are estimates based on the selected model. Actual costs depend on prompt length + output tokens. The Settings page shows the currently selected model so admins can estimate costs before generating analysis.
+
+### 10.3 LLM Model Configuration
+
+Admins select which LLM model to use for niche validation analysis via the Settings page. This allows cost/quality optimization — use cheap models for routine validation, expensive models for strategic decisions.
+
+#### 10.3.1 Available Model Registry
+
+> **IMPORTANT:** This model registry is shared across the entire Niche Commodity Finder system.
+> Stage 4 (Market Intelligence) references this same registry for prediction model selection.
+> When adding new models, update this table AND the Stage 4 PRD reference.
+
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│                        LLM MODEL REGISTRY                                   │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────────┬───────────┬────────────────────┬──────┬────────────┐ │
+│  │ Model ID         │ Provider  │ Display Name       │ Cost │ Best For   │ │
+│  ├──────────────────┼───────────┼────────────────────┼──────┼────────────┤ │
+│  │ claude-opus-4    │ Anthropic │ Claude Opus 4      │ $$$  │ Complex/   │ │
+│  │                  │           │                    │      │ strategic  │ │
+│  ├──────────────────┼───────────┼────────────────────┼──────┼────────────┤ │
+│  │ claude-sonnet-4-6│ Anthropic │ Claude Sonnet 4.6  │ $$   │ Balanced   │ │
+│  │                  │           │                    │      │ analysis   │ │
+│  ├──────────────────┼───────────┼────────────────────┼──────┼────────────┤ │
+│  │ claude-haiku-4-5 │ Anthropic │ Claude Haiku 4.5   │ $    │ Routine    │ │
+│  │                  │           │                    │      │ validation │ │
+│  ├──────────────────┼───────────┼────────────────────┼──────┼────────────┤ │
+│  │ gemini-2.0-flash │ Google    │ Gemini 2.0 Flash   │ $    │ Fast       │ │
+│  │                  │           │                    │      │ structured │ │
+│  ├──────────────────┼───────────┼────────────────────┼──────┼────────────┤ │
+│  │ gemini-2.5-pro   │ Google    │ Gemini 2.5 Pro     │ $$   │ Complex    │ │
+│  │                  │           │                    │      │ reasoning  │ │
+│  └──────────────────┴───────────┴────────────────────┴──────┴────────────┘ │
+│                                                                             │
+│  DEFAULT for Niche Validation: claude-haiku-4-5 (cheapest Claude)          │
+│  DEFAULT for Market Predictions: gemini-2.0-flash (cheapest Gemini)        │
+│                                                                             │
+│  Cost Tiers:                                                               │
+│  $   = < $1/M input tokens  (Haiku, Flash)                                │
+│  $$  = $1-5/M input tokens  (Sonnet, Gemini Pro)                          │
+│  $$$ = > $5/M input tokens  (Opus)                                         │
+│                                                                             │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### 10.3.2 Model Selection Flow
+
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│                    MODEL SELECTION FLOW                                      │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. Admin sets "Niche Validation Model" in Settings page                   │
+│     └── Stored in: niche_settings table (PostgreSQL)                       │
+│         Key: "niche_validation_model"                                      │
+│         Value: "claude-haiku-4-5"                                          │
+│                                                                             │
+│  2. Admin triggers LLM generation for a candidate                          │
+│     └── API call includes: candidate_id, detail_level                     │
+│     └── Model is read from settings (NOT passed by admin per request)     │
+│                                                                             │
+│  3. Backend reads model from niche_settings                                │
+│     └── Determines provider from model ID prefix:                         │
+│         "claude-*" → provider = "claude"                                   │
+│         "gemini-*" → provider = "gemini"                                   │
+│                                                                             │
+│  4. Calls ai_factory.get_client(provider=provider, model=model_id)        │
+│     └── Factory creates appropriate client with specified model            │
+│     └── Overrides the global AI_PROVIDER / LLM_MODEL env vars             │
+│                                                                             │
+│  5. LLM analysis generated + stored with metadata                          │
+│     └── llm_metadata.model = "claude-haiku-4-5"                           │
+│     └── llm_metadata.tokens_used = 1247                                    │
+│     └── llm_metadata.cost_usd = 0.003                                      │
+│                                                                             │
+│  NOTE: The global AI_PROVIDER env var remains as the FALLBACK.            │
+│  If no model is configured in settings, the system uses the env var.       │
+│                                                                             │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### 10.3.3 Database: niche_settings Table
+
+```sql
+CREATE TABLE niche_settings (
+    setting_key     VARCHAR(100) PRIMARY KEY,
+    setting_value   JSONB NOT NULL,
+    updated_by      VARCHAR(100),      -- admin_id
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Default settings inserted on first deploy:
+INSERT INTO niche_settings (setting_key, setting_value) VALUES
+('niche_validation_model', '"claude-haiku-4-5"'),
+('market_predictions_model', '"gemini-2.0-flash"'),
+('auto_publish_threshold', '75'),
+('default_detail_level', '"short"'),
+('cost_alert_threshold_usd', '50');
+```
+
+#### 10.3.4 API: Settings Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/admin/niche/settings` | Get all niche settings |
+| `PUT` | `/admin/niche/settings/{key}` | Update a setting |
+| `GET` | `/admin/niche/models` | List available models with cost info |
 
 ### 10.4 Prompt Templates
 
@@ -1073,594 +1335,27 @@ Since analysis is admin-triggered rather than automatic, costs are controlled by
 
 ## 11. Admin Portal UI Specifications
 
-### 11.1 Sidebar Navigation Structure
+> **Full wireframes and user flows have been migrated to the dedicated UI spec.**
+> See [[ai/NICHE_COMMODITY_FINDER_UI_SPEC]] for all admin portal wireframes.
 
-The Niche Commodity Finder has its own section in the Admin Portal sidebar:
+### 11.1 Pages Summary
 
-```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                     ADMIN PORTAL SIDEBAR                                    │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────┐                                   │
-│  │  📊 Dashboard                        │  (Existing admin dashboard)       │
-│  │  👥 Users                            │                                   │
-│  │  🏢 Companies                        │                                   │
-│  │  📄 KYC                              │                                   │
-│  │  📦 Trades                           │                                   │
-│  │  ⚙️ System                           │                                   │
-│  │                                      │                                   │
-│  │  ─────────────────────────────────  │                                   │
-│  │                                      │                                   │
-│  │  🔮 NICHE COMMODITY FINDER           │  ← Collapsible section           │
-│  │     │                                │                                   │
-│  │     ├── Dashboard      (⚠️ 3)        │  Badge = items needing attention │
-│  │     │                                │                                   │
-│  │     ├── Niche Discovery              │                                   │
-│  │     │     ├── Runs                   │                                   │
-│  │     │     ├── Commodities   (23)     │  Badge = pending review          │
-│  │     │     └── Approved               │                                   │
-│  │     │                                │                                   │
-│  │     ├── Contacts                     │                                   │
-│  │     │     ├── Buyers                 │                                   │
-│  │     │     └── Sellers                │                                   │
-│  │     │                                │                                   │
-│  │     ├── Outreach                     │                                   │
-│  │     │                                │                                   │
-│  │     ├── Predictions     (⚠️ 2)       │  Badge = needs review            │
-│  │     │                                │                                   │
-│  │     ├── Job Logs        (❌ 1)       │  Badge = failed jobs             │
-│  │     │                                │                                   │
-│  │     ├── Analytics                    │                                   │
-│  │     │                                │                                   │
-│  │     └── Settings                     │                                   │
-│  │                                      │                                   │
-│  └─────────────────────────────────────┘                                   │
-│                                                                             │
-└────────────────────────────────────────────────────────────────────────────┘
-```
+The admin portal includes the following pages for Stage 1 (Government Data Extraction):
 
-### 11.2 Dashboard (Hub Page)
+| Page | Purpose | UI Spec Section |
+|------|---------|-----------------|
+| **Niche Dashboard** | Hub with alerts, pipeline metrics, recent activity | [[NICHE_COMMODITY_FINDER_UI_SPEC#4.1]] |
+| **Discovery > Runs** | Run history, trigger new runs, retry failed | [[NICHE_COMMODITY_FINDER_UI_SPEC#4.2]] |
+| **Discovery > Commodities** | Pending review queue with LLM generation controls | [[NICHE_COMMODITY_FINDER_UI_SPEC#4.3]] |
+| **Discovery > Approved** | Active niche registry with CRUD actions | [[NICHE_COMMODITY_FINDER_UI_SPEC#4.4]] |
+| **Candidate Review** | Score breakdown, LLM analysis panel, approve/reject/watchlist | [[NICHE_COMMODITY_FINDER_UI_SPEC#4.5]] |
+| **Job Logs** | Real-time streaming + historical audit trail | [[NICHE_COMMODITY_FINDER_UI_SPEC#4.12]] |
+| **Settings** | LLM model selection, scoring thresholds, scraper schedules | [[NICHE_COMMODITY_FINDER_UI_SPEC#4.14]] |
 
-**Purpose:** Quick overview with status + alerts. No actions, just visibility and links.
 
-```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                      NICHE COMMODITY DASHBOARD                              │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Niche Commodity Finder > Dashboard               Last updated: 2m   │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  ALERTS (Needs Attention)                                                  │
-│  ─────────────────────────                                                 │
-│  ┌────────────────────────────────────────────────────────────────────┐   │
-│  │  ⚠️ 23 candidates pending review (Run #48)           [Go to Review]│   │
-│  │  ❌ Discovery job failed 2h ago (APEDA timeout)      [View Logs]   │   │
-│  │  🔍 2 predictions flagged for review (Week 5)        [Review Now]  │   │
-│  └────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  PIPELINE METRICS                                                          │
-│  ─────────────────                                                         │
-│  ┌────────────────┐ ┌────────────────┐ ┌────────────────┐ ┌─────────────┐ │
-│  │ Pending Review │ │ Approved This  │ │ Total Contacts │ │ Predictions │ │
-│  │       23       │ │    Month: 8    │ │  Buyers: 1,247 │ │  Sent: 156  │ │
-│  │ ─────────────  │ │ ─────────────  │ │  Sellers: 892  │ │ ──────────  │ │
-│  │ [Review →]     │ │ [View All →]   │ │ [Contacts →]   │ │ [View →]    │ │
-│  └────────────────┘ └────────────────┘ └────────────────┘ └─────────────┘ │
-│                                                                             │
-│  PERFORMANCE METRICS                                                       │
-│  ───────────────────                                                       │
-│  ┌────────────────┐ ┌────────────────┐ ┌────────────────┐ ┌─────────────┐ │
-│  │ Prediction     │ │ Email Open     │ │ Conversion     │ │ Active      │ │
-│  │ Accuracy: 89%  │ │ Rate: 34%      │ │ Rate: 2.3%     │ │ Niches: 47  │ │
-│  │ (last 12 mo)   │ │ (last 30 days) │ │ (contacts→$)   │ │ commodities │ │
-│  └────────────────┘ └────────────────┘ └────────────────┘ └─────────────┘ │
-│                                                                             │
-│  RECENT ACTIVITY                                                           │
-│  ───────────────                                                           │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  10:30 AM  Discovery Run #48 completed - 23 new candidates          │   │
-│  │  10:15 AM  Admin John approved "Spirulina Extract"                  │   │
-│  │  09:45 AM  Weekly predictions generated for 47 commodities          │   │
-│  │  09:00 AM  Buyer scrape completed - 156 new contacts                │   │
-│  │                                            [View Full Activity Log →]│   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-└────────────────────────────────────────────────────────────────────────────┘
-```
+### 11.2 Approval/Rejection Workflow
 
-### 11.3 Niche Discovery Page
-
-**Tabs:** Runs | Commodities | Approved
-
-#### 11.3.1 Runs Tab
-
-```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                        NICHE DISCOVERY - RUNS TAB                           │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Niche Discovery > Runs                           [+ Trigger New Run]│   │
-│  │  [Runs] [Commodities (23)] [Approved]                                │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  FILTERS: [All Statuses ▼] [All Sources ▼] [Date Range ▼]                 │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │ Run # │ Date         │ Status     │ Sources    │ Records │ Candidates│   │
-│  ├───────┼──────────────┼────────────┼────────────┼─────────┼───────────┤   │
-│  │ 48    │ Feb 3, 10:00 │ ✅ Complete │ APEDA ✓    │ 147     │ 23 pending│   │
-│  │       │              │            │ DGFT ✓     │         │           │   │
-│  │       │              │            │ Spice ✓    │         │ [View →]  │   │
-│  ├───────┼──────────────┼────────────┼────────────┼─────────┼───────────┤   │
-│  │ 47    │ Feb 2, 10:00 │ ⚠️ Partial  │ APEDA ✓    │ 132     │ 19 done   │   │
-│  │       │              │            │ DGFT ⚠️    │         │           │   │
-│  │       │              │            │ Spice ✓    │         │ [View →]  │   │
-│  ├───────┼──────────────┼────────────┼────────────┼─────────┼───────────┤   │
-│  │ 46    │ Feb 1, 10:00 │ ❌ Failed   │ APEDA ❌   │ --      │ --        │   │
-│  │       │              │            │ (timeout)  │         │ [Retry →] │   │
-│  └───────┴──────────────┴────────────┴────────────┴─────────┴───────────┘   │
-│                                                                             │
-│  Click row to open Run Detail page with tabs:                              │
-│  • Overview (summary, alerts)                                              │
-│  • Raw Data (files with download)                                          │
-│  • Commodities (discovered in this run)                                    │
-│  • Errors (if any)                                                         │
-│                                                                             │
-│  [< Previous]                    Page 1 of 12                 [Next >]     │
-│                                                                             │
-└────────────────────────────────────────────────────────────────────────────┘
-```
-
-#### 11.3.2 Commodities Tab (Pending Review)
-
-```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                    NICHE DISCOVERY - COMMODITIES TAB                        │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Niche Discovery > Commodities                                       │   │
-│  │  [Runs] [Commodities (23)] [Approved]                                │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  [☐ Select All]  [Generate Analysis ▼]  Selected: 0                 │   │
-│  │                  └── Generate Short for Selected                    │   │
-│  │                  └── Generate Full for Selected                     │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │☐│ Commodity       │HS Code    │Score│ Vol│Vola│Emrg│LLM Status│Action│  │
-│  ├──┼─────────────────┼───────────┼─────┼────┼────┼────┼──────────┼──────┤  │
-│  │☐ │ Moringa Leaf    │1211.90.90 │ 78  │ 75 │100 │ 50 │ ✅ Full   │[Rev.]│  │
-│  │☐ │ Spirulina Ext.  │1212.29.00 │ 72  │100 │ 50 │ 75 │ ⚠️ None   │[Rev.]│  │
-│  │☐ │ Ashwagandha     │1211.90.99 │ 65  │ 50 │ 75 │ 75 │ ✅ Short  │[Rev.]│  │
-│  │☐ │ Neem Extract    │3301.90.90 │ 62  │ 50 │ 75 │ 50 │ ⚠️ None   │[Rev.]│  │
-│  │☐ │ Cardamom (Sm)   │0908.31.00 │ 48  │ 50 │ 50 │ 50 │ ⚠️ None   │[View]│  │
-│  └──┴─────────────────┴───────────┴─────┴────┴────┴────┴──────────┴──────┘  │
-│                                                                             │
-│  LLM STATUS LEGEND:                                                        │
-│  ✅ Full = Comprehensive analysis generated                                │
-│  ✅ Short = Summary analysis generated                                     │
-│  ⚠️ None = No analysis (admin can still approve with warning)             │
-│                                                                             │
-│  ACTIONS PER ROW:                                                          │
-│  • Dropdown: [Generate Short ▼] / [Generate Full]                         │
-│  • [Review] opens Candidate Review modal/page                              │
-│                                                                             │
-└────────────────────────────────────────────────────────────────────────────┘
-```
-
-#### 11.3.3 Approved Tab
-
-```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                    NICHE DISCOVERY - APPROVED TAB                           │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Niche Discovery > Approved Commodities                              │   │
-│  │  [Runs] [Commodities (23)] [Approved]                                │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  FILTERS: [All Statuses ▼] [Category ▼] [Search commodity...]             │
-│                                                                             │
-│  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │ Commodity       │ HS Code    │Approved   │Status   │Last Pred│Actions│  │
-│  ├─────────────────┼────────────┼───────────┼─────────┼─────────┼───────┤  │
-│  │ Moringa Leaf    │ 1211.90.90 │ Jan 15    │ Active  │ Week 5  │ [···] │  │
-│  │ Spirulina       │ 1212.29.00 │ Jan 10    │ Active  │ Week 5  │ [···] │  │
-│  │ Ashwagandha     │ 1211.90.99 │ Jan 8     │ Active  │ Week 5  │ [···] │  │
-│  │ Saffron         │ 0910.20.00 │ Dec 15    │ Archived│ --      │ [···] │  │
-│  └─────────────────┴────────────┴───────────┴─────────┴─────────┴───────┘  │
-│                                                                             │
-│  [...] ACTIONS MENU:                                                       │
-│  • Edit details                                                            │
-│  • Archive (with notes) - removes from active predictions                  │
-│  • Reactivate (if archived)                                                │
-│  • Delete permanently (requires confirmation)                              │
-│  • View prediction history                                                 │
-│  • View contact discovery status                                           │
-│                                                                             │
-└────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 11.4 Candidate Review Interface (Updated with LLM Trigger)
-
-```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                    CANDIDATE REVIEW INTERFACE                               │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  ← Back to Commodities    Moringa Leaf Powder        [◀ Prev] [▶ Next]│   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  ┌──────────────────────────────────┬────────────────────────────────────┐ │
-│  │  COMMODITY DATA                  │  LLM ANALYSIS                      │ │
-│  │  ─────────────────               │  ────────────                      │ │
-│  │                                  │                                    │ │
-│  │  Name: Moringa Leaf Powder       │  ┌────────────────────────────────┐│ │
-│  │  HS Code: 1211.90.90             │  │ ⚠️ No analysis generated       ││ │
-│  │  Source: APEDA (Run #48)         │  │                                ││ │
-│  │  Data Period: January 2026       │  │ [Generate Short] [Generate Full]││ │
-│  │                                  │  └────────────────────────────────┘│ │
-│  │  ─────────────────────────────   │                                    │ │
-│  │                                  │  OR (if generated):                │ │
-│  │  NICHE SCORE: 78/100             │                                    │ │
-│  │                                  │  Classification: NICHE             │ │
-│  │  ┌─────────────────────────────┐ │  Confidence: 87%                   │ │
-│  │  │ Rule 1 (Volume)    [███░░] │ │                                    │ │
-│  │  │ Score: 75/100               │ │  Summary:                          │ │
-│  │  │ 45,000 MT (< 100K threshold)│ │  Moringa qualifies as niche due   │ │
-│  │  └─────────────────────────────┘ │  to low export volume, high price │ │
-│  │                                  │  volatility, and emerging pharma  │ │
-│  │  ┌─────────────────────────────┐ │  applications.                     │ │
-│  │  │ Rule 2 (Volatility)[█████] │ │                                    │ │
-│  │  │ Score: 100/100              │ │  Evidence:                         │ │
-│  │  │ 72% volatility (> 50%)      │ │  • Volume: 45,000 MT annual        │ │
-│  │  └─────────────────────────────┘ │  • Volatility: 72% (high)          │ │
-│  │                                  │  • 8 emerging signals detected     │ │
-│  │  ┌─────────────────────────────┐ │                                    │ │
-│  │  │ Rule 3 (Emergence) [██░░░] │ │  Risks:                            │ │
-│  │  │ Score: 50/100               │ │  • Seasonal availability           │ │
-│  │  │ 2 signals in 90 days        │ │  • EU certification requirements  │ │
-│  │  └─────────────────────────────┘ │                                    │ │
-│  │                                  │  LLM Recommendation: APPROVE        │ │
-│  └──────────────────────────────────┴────────────────────────────────────┘ │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  ADMIN DECISION                                                      │   │
-│  │  ───────────────                                                     │   │
-│  │                                                                      │   │
-│  │  [✓ Approve]   [✗ Reject]   [👁 Watchlist]                          │   │
-│  │                                                                      │   │
-│  │  ⚠️ Note: No LLM analysis generated. You can still decide, but      │   │
-│  │     consider generating analysis for better insight.                 │   │
-│  │                                                                      │   │
-│  │  Admin Notes (optional):                                             │   │
-│  │  ┌─────────────────────────────────────────────────────────────────┐│   │
-│  │  │                                                                 ││   │
-│  │  └─────────────────────────────────────────────────────────────────┘│   │
-│  │                                                                      │   │
-│  │  If rejecting, select reason: (required)                            │   │
-│  │  ○ Market too mainstream     ○ Insufficient data                    │   │
-│  │  ○ Data quality concerns     ○ Strategic exclusion                  │   │
-│  │  ○ Other: _______________                                           │   │
-│  │                                                                      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-└────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 11.5 Contacts Page
-
-**Tabs:** Buyers | Sellers
-
-```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                         CONTACTS PAGE                                       │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Contacts > Buyers                             [Export Selected ↓]   │   │
-│  │  [Buyers (1,247)] [Sellers (892)]                                    │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  FILTERS: [Commodity ▼] [Quality Score ▼] [Status ▼] [Search...]          │
-│                                                                             │
-│  ┌──────────────────────────────────────────────────────────────────────┐  │
-│  │☐│Company     │Contact  │Email         │Phone      │Score│Status│Act.│  │
-│  ├──┼────────────┼─────────┼──────────────┼───────────┼─────┼──────┼────┤  │
-│  │☐ │ ABC Corp   │ John D. │ john@abc.com │ +1-555... │ 85  │ ✓    │[···]│  │
-│  │☐ │ XYZ Ltd    │ Jane S. │ jane@xyz.co  │ --        │ 62  │ ⚠️   │[···]│  │
-│  │☐ │ ImportCo   │ --      │ info@imp.com │ +44-20... │ 45  │ ❌   │[···]│  │
-│  └──┴────────────┴─────────┴──────────────┴───────────┴─────┴──────┴────┘  │
-│                                                                             │
-│  STATUS: ✓ Verified | ⚠️ Unverified | ❌ Flagged Invalid                  │
-│                                                                             │
-│  [...] ACTIONS:                                                            │
-│  • Mark as Verified ✓                                                      │
-│  • Edit contact details                                                    │
-│  • Flag as invalid                                                         │
-│  • Remove duplicate                                                        │
-│  • View source details                                                     │
-│                                                                             │
-│  Curate & Edit: Admins verify contacts, edit details, remove duplicates   │
-│                                                                             │
-└────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 11.6 Outreach Page
-
-```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                         OUTREACH PAGE                                       │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Outreach Management                            [Pause All Outreach]│   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  BY COMMODITY:                                                             │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  MORINGA LEAF POWDER                                                │   │
-│  │  ─────────────────────────────────────────────────────────────────  │   │
-│  │  Total Contacts: 500 | Current Phase: Day 8 (WhatsApp)              │   │
-│  │  Status: 120 sent, 45 opened, 12 converted                          │   │
-│  │                                                                      │   │
-│  │  [▶ Active]  [Pause]                           [View Contacts ▼]    │   │
-│  │                                                                      │   │
-│  │  Expanded contact view:                                             │   │
-│  │  ┌────────────────────────────────────────────────────────────────┐ │   │
-│  │  │ Contact     │ Day 1 Email │ Day 8 WhatsApp │ Status            │ │   │
-│  │  ├─────────────┼─────────────┼────────────────┼───────────────────┤ │   │
-│  │  │ John @ ABC  │ ✓ Sent      │ ✓ Sent         │ Opened            │ │   │
-│  │  │ Jane @ XYZ  │ ✓ Sent      │ Pending        │ --                │ │   │
-│  │  │ Bob @ Imp   │ ✓ Sent      │ ✓ Sent         │ Converted ★       │ │   │
-│  │  └─────────────┴─────────────┴────────────────┴───────────────────┘ │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  SPIRULINA EXTRACT                                                  │   │
-│  │  ─────────────────────────────────────────────────────────────────  │   │
-│  │  Total Contacts: 320 | Current Phase: Day 1 (Email)                 │   │
-│  │  Status: 45 sent, 12 opened, 2 converted                            │   │
-│  │                                                                      │   │
-│  │  [▶ Active]  [Pause]                           [View Contacts ▼]    │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  DRIP SEQUENCE: Day 1 Email → Day 8 WhatsApp → Day 15 Follow-up           │
-│  Trigger: Weekly automated batch (per PRD)                                 │
-│                                                                             │
-└────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 11.7 Predictions Page
-
-**Views:** All Predictions | Calendar | Review Queue
-
-```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                       PREDICTIONS PAGE                                      │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Predictions                                  [Generate This Week's]│   │
-│  │  [All Predictions] [Calendar] [Review Queue (2)]                     │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  FILTERS: [Week ▼] [Status ▼] [Commodity ▼] [Search...]                   │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  WEEK 5 (Feb 3-9, 2026)                         Status: Published   │   │
-│  │  ─────────────────────────────────────────────────────────────────  │   │
-│  │                                                                      │   │
-│  │  │ Commodity      │ Direction │ Confidence │ Status     │ Actions  │ │   │
-│  │  ├────────────────┼───────────┼────────────┼────────────┼──────────┤ │   │
-│  │  │ Moringa Leaf   │ ↑ +12%    │ 78%        │ Published  │ [View]   │ │   │
-│  │  │ Saffron        │ ↓ -15%    │ 92%        │ Published  │ [View]   │ │   │
-│  │  │ Cardamom       │ → 0%      │ 65%        │ Published  │ [View]   │ │   │
-│  │  │ Spirulina      │ ↑ +8%     │ 45%        │ ⚠️ Review  │ [Review] │ │   │
-│  │                                                                      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  REVIEW QUEUE TAB:                                                         │
-│  Shows only predictions flagged for review (low confidence, high risk)     │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  ⚠️ Spirulina Extract - Week 5                                      │   │
-│  │  Flagged: Low confidence (45%)                                      │   │
-│  │                                                                      │   │
-│  │  Prediction: ↑ +8% price increase                                   │   │
-│  │  Data Quality: Limited news sources (only 3 articles)               │   │
-│  │                                                                      │   │
-│  │  Admin Options:                                                      │   │
-│  │  [✓ Approve & Publish] [✎ Edit] [✗ Reject (don't send)]           │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-└────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 11.8 Job Logs Page (Centralized Audit Trail)
-
-**Purpose:** Full trace audit logging for ALL pipelines with real-time + historical view.
-
-```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                         JOB LOGS PAGE                                       │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Job Logs                        [Trigger Run ▼] [Refresh] [Export] │   │
-│  │                                  └── Discovery Run                  │   │
-│  │                                  └── Contact Scrape (Buyers)        │   │
-│  │                                  └── Contact Scrape (Sellers)       │   │
-│  │                                  └── Prediction Generation          │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  FILTERS: [Job Type ▼] [Status ▼] [Date Range ▼] [Search logs...]         │
-│                                                                             │
-│  LIVE JOBS (streaming):                                                    │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  🔄 Discovery Run #49                              Running (2m 34s) │   │
-│  │  ─────────────────────────────────────────────────────────────────  │   │
-│  │  10:32:15  Starting APEDA scraper...                               │   │
-│  │  10:32:18  Downloaded: exports_feb2026.xlsx (2.6MB)                │   │
-│  │  10:32:20  Parsing 156 records...                                  │   │
-│  │  10:32:45  ⏳ Processing...                                         │   │
-│  │                                                          [Cancel]  │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  COMPLETED JOBS:                                                           │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                                                                      │   │
-│  │  ✓ APEDA Scraper                              10:30:15 AM           │   │
-│  │  ──────────────────────────────────────────────────────────────     │   │
-│  │  Downloaded: exports_jan2026.xlsx (2.4MB)                           │   │
-│  │  Records found: 147                                                 │   │
-│  │  [▼ Expand for details]                                             │   │
-│  │                                                                      │   │
-│  │  Expanded:                                                          │   │
-│  │  ├── File checksum: sha256:abc123def456...                         │   │
-│  │  ├── Sample records: Moringa (45K MT), Saffron (12K MT)...         │   │
-│  │  └── Parse warnings: 3 rows skipped (invalid format)               │   │
-│  │                                                                      │   │
-│  ├─────────────────────────────────────────────────────────────────────┤   │
-│  │                                                                      │   │
-│  │  ❌ DGFT Scraper                              10:25:02 AM           │   │
-│  │  ──────────────────────────────────────────────────────────────     │   │
-│  │  Error: Connection timeout after 60s                                │   │
-│  │  [▼ Expand for stack trace]                      [Retry]            │   │
-│  │                                                                      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  PIPELINES LOGGED:                                                         │
-│  • Stage 1: Niche Discovery (scrapers, parsing, scoring)                  │
-│  • Stage 2/3: Contact Discovery (buyer/seller scraping)                   │
-│  • Stage 3: Outreach (email sends, drip status)                           │
-│  • Stage 4: Prediction Generation                                         │
-│                                                                             │
-│  JOB CONTROL:                                                              │
-│  • Trigger new runs manually                                               │
-│  • Retry failed jobs                                                       │
-│  • Cancel running jobs                                                     │
-│  • Adjust schedules (in Settings)                                         │
-│                                                                             │
-└────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 11.9 Analytics Page
-
-```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                         ANALYTICS PAGE                                      │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Niche Commodity Analytics                   [Export Report ↓]      │   │
-│  │  Time Period: [Last 30 Days ▼]                                      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  PREDICTION PERFORMANCE                                                    │
-│  ─────────────────────────                                                 │
-│  ┌────────────────┐ ┌────────────────┐ ┌────────────────┐ ┌─────────────┐ │
-│  │ Direction      │ │ Price Range    │ │ User Ratings   │ │ Accuracy    │ │
-│  │ Accuracy: 89%  │ │ Accuracy: 76%  │ │ Avg: 4.2/5     │ │ Trend: ↑    │ │
-│  └────────────────┘ └────────────────┘ └────────────────┘ └─────────────┘ │
-│                                                                             │
-│  ENGAGEMENT METRICS (Aggregate Only)                                       │
-│  ───────────────────────────────────                                       │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Views per Prediction                                               │   │
-│  │  ┌──────────────────────────────────────────────────────────────┐  │   │
-│  │  │                    [Chart: Bar graph]                         │  │   │
-│  │  │    Moringa: ████████████ 245                                  │  │   │
-│  │  │    Saffron: ██████████ 198                                    │  │   │
-│  │  │    Cardamom: ████████ 156                                     │  │   │
-│  │  └──────────────────────────────────────────────────────────────┘  │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  CATEGORY ENGAGEMENT                                                       │
-│  ───────────────────                                                       │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  [Pie Chart: Category breakdown]                                    │   │
-│  │  • Spices: 45%                                                      │   │
-│  │  • Botanicals: 28%                                                  │   │
-│  │  • Pharma Ingredients: 18%                                          │   │
-│  │  • Other: 9%                                                        │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  Note: No individual user tracking. All metrics are aggregate.             │
-│                                                                             │
-└────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 11.10 Settings Page
-
-```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                         SETTINGS PAGE                                       │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  Niche Commodity Finder Settings                         [Save All] │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  LLM SETTINGS                                                              │
-│  ─────────────                                                             │
-│  │ Default Detail Level:  [Short ▼]                                       │
-│  │ Cost Alert Threshold:  $50/month                                       │
-│  │ LLM Provider:          [Claude ▼]                                      │
-│                                                                             │
-│  SCORING THRESHOLDS                                                        │
-│  ───────────────────                                                       │
-│  │ Volume Threshold:      [100,000] MT                                    │
-│  │ Volatility Threshold:  [20] %                                          │
-│  │ Emergence Signal Min:  [2] signals                                     │
-│  │ Candidate Score Min:   [40] /100                                       │
-│                                                                             │
-│  SCRAPER SCHEDULES                                                         │
-│  ─────────────────                                                         │
-│  │ ☑ APEDA           Every [Sunday  ▼] at [00:00 ▼]                      │
-│  │ ☑ DGFT            Every [Sunday  ▼] at [00:30 ▼]                      │
-│  │ ☑ Spice Board     Every [Sunday  ▼] at [01:00 ▼]                      │
-│  │ ☐ Reddit (disabled)                                                    │
-│                                                                             │
-│  OUTREACH SETTINGS                                                         │
-│  ─────────────────                                                         │
-│  │ Drip Day 1: Email                                                      │
-│  │ Drip Day 8: WhatsApp                                                   │
-│  │ Drip Day 15: Follow-up Email                                           │
-│  │ [Pause All Outreach]                                                   │
-│                                                                             │
-│  EMAIL TEMPLATES                                                           │
-│  ───────────────                                                           │
-│  │ [View/Edit Day 1 Email Template]                                       │
-│  │ [View/Edit Day 8 WhatsApp Template]                                    │
-│  │ [View/Edit Prediction Email Template]                                  │
-│                                                                             │
-│  PREDICTION REVIEW THRESHOLDS                                              │
-│  ────────────────────────────                                              │
-│  │ Auto-flag if confidence < [50] %                                       │
-│  │ Auto-flag if data sources < [5]                                        │
-│  │ Auto-flag high-risk predictions: [☑]                                   │
-│                                                                             │
-│  ADMIN NOTIFICATIONS                                                       │
-│  ───────────────────                                                       │
-│  │ ☑ Alert on job failure (Dashboard badge)                              │
-│  │ ☐ Email on job failure                                                 │
-│  │ ☑ Alert on pending reviews > 24h                                      │
-│                                                                             │
-└────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 11.11 Approval/Rejection Workflow Summary
+This workflow is preserved here because it defines business logic (not just UI). For the visual wireframe of the review interface, see [[NICHE_COMMODITY_FINDER_UI_SPEC#4.5]].
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
@@ -1950,6 +1645,7 @@ All layers emit structured logs:
 *This PRD defines the Government Data Extraction module of the Breyus Niche Commodity Finder AI. For the complete system architecture covering all 4 stages, see NICHE_COMMODITY_FINDER_TECHNICAL_ARCHITECTURE.md.*
 
 ## Related
-- [[ai/BREYUS_NICHE_COMMODITY_FINDER_AI_PRD]]
+- [[NICHE_COMMODITY_FINDER_PRD]]
 - [[ai/NICHE_COMMODITY_FINDER_TECHNICAL_ARCHITECTURE]]
+- [[PRD_4_Market_Intelligence]]
 - [[MOC-AI]]

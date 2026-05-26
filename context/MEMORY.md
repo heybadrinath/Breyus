@@ -27,7 +27,7 @@ tags: [memory, index, keystone]
 | Product vision | [[breyus_product_doc]] |
 | Technical architecture | [[Breyus_Technical_Documentation]] |
 | API reference | [[MOC-API]] |
-| AI system | [[BREYUS_NICHE_COMMODITY_FINDER_AI_PRD]] |
+| AI system | [[ai/NICHE_COMMODITY_FINDER_PRD]] |
 | Deployment | [[DEPLOYMENT]] |
 | Server setup | [[SERVER_SETUP]] |
 
@@ -40,9 +40,6 @@ tags: [memory, index, keystone]
 | `operations/` | Deployment, hosting, backup, capacity |
 | `development/` | Dev guidelines and agent configs |
 | `changelog/` | Dated change entries |
-| `daily-notes/` | Session daily notes |
-| `decisions/` | Architecture Decision Records |
-| `templates/` | Note templates for Obsidian |
 
 ## Quick Reference
 

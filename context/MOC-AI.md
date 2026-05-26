@@ -7,9 +7,16 @@ tags: [moc, ai, index]
 > PRDs and architecture documents for the Breyus AI server (AI_NEW).
 
 ## Documents
-- [[BREYUS_NICHE_COMMODITY_FINDER_AI_PRD|Niche Commodity Finder PRD]] -- Product requirements for AI-powered niche commodity discovery
-- [[NICHE_COMMODITY_FINDER_TECHNICAL_ARCHITECTURE|Technical Architecture]] -- System design for commodity search, embeddings, link prediction
-- [[PRD_Government_Data_Extraction|Government Data Extraction PRD]] -- Requirements for government trade data ingestion
+- [[ai/NICHE_COMMODITY_FINDER_PRD|Niche Commodity Finder PRD]] -- Product requirements for AI-powered niche commodity discovery
+- [[ai/NICHE_COMMODITY_FINDER_TECHNICAL_ARCHITECTURE|Technical Architecture]] -- System design for commodity search, embeddings, link prediction
+- [[ai/NICHE_COMMODITY_FINDER_UI_SPEC|UI/Design Specification]] -- Consolidated UI spec for admin portal and buyer frontend (all wireframes)
+- [[ai/PRD_1_Government_Data_Extraction|Government Data Extraction PRD]] -- Requirements for government trade data ingestion (Stage 1)
+- [[ai/PRD_2_3_Contact_Discovery|Contact Discovery PRD]] -- Buyer discovery (Stage 2) and seller discovery (Stage 3) with scraping, dedup, quality scoring
+- [[ai/PRD_4_Market_Intelligence|Market Intelligence PRD]] -- Monthly predictions, confidence scoring, buyer dashboard (Stage 4)
+- [[ai/PRD_5_Outreach|Outreach & Trader Acquisition PRD]] -- Email drip campaigns to convert discovered contacts into platform signups (Stage 5)
+
+## Reviews
+- [[ai/AI_PLANS_GAP_REVIEW_2026-04-02|AI Plans Gap Review]] -- Cross-check of AI plans against product docs, API docs, and live code
 
 ## AI Capabilities Summary
 | Capability | Description |
@@ -28,7 +35,7 @@ tags: [moc, ai, index]
 - **Cache:** Redis
 
 ## API Reference
-- [[ai|AI API Documentation]] -- REST endpoints for AI features
+- [[api/ai|AI API Documentation]] -- REST endpoints for AI features
 
 ## Dataview: AI Docs
 

@@ -2076,10 +2076,10 @@ CREATE TABLE job_runs (
 
 ---
 
-*This document provides the complete technical architecture for the Breyus Niche Commodity Finder AI system. It should be read in conjunction with the main PRD (BREYUS_NICHE_COMMODITY_FINDER_AI_PRD.md) and the Government Data Extraction PRD (PRD_Government_Data_Extraction.md) for full context.*
+*This document provides the complete technical architecture for the Breyus Niche Commodity Finder AI system. It should be read in conjunction with the [[ai/NICHE_COMMODITY_FINDER_PRD|main PRD]] and the [[ai/PRD_1_Government_Data_Extraction|Government Data Extraction PRD]] for full context.*
 
 ## Related
-- [[ai/BREYUS_NICHE_COMMODITY_FINDER_AI_PRD]]
+- [[NICHE_COMMODITY_FINDER_PRD]]
 - [[api/ai]]
 - [[api/commodities]]
 - [[MOC-AI]]

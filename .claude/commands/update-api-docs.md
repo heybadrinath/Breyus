@@ -105,7 +105,7 @@ Use `context/api/feedback.md` as the canonical reference for doc structure. Key 
 After all modules are processed:
 
 1. **MOC Update:** If any new API doc files were created, add them to `context/MOC-API.md`.
-2. **Changelog:** Create `context/changelog/YYYY-MM-DD-api-docs-sync.md` with a summary of what changed per module. Use today's date. Follow the template format from `context/templates/template-changelog.md`. MAX 60 lines.
+2. **Changelog:** Create `context/changelog/YYYY-MM-DD-api-docs-sync.md` with a summary of what changed per module. Use today's date. Include YAML frontmatter (`type: changelog`, `date`, `change_type`, `scope`, `tags`) and Summary/Changes/Files Modified/Related sections. MAX 60 lines.
 3. **Summary Table:** Print a markdown table to the user showing:
 
 | Module | Status | Changes |

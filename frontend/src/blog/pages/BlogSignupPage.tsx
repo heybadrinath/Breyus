@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { User, Eye, EyeOff, ArrowRight, Loader2, Check, Building2 } from 'lucide-react';
 import { useBlogAuth } from '../context/BlogAuthContext';
 import { blogAuthService } from '../services/blog-portal.service';
@@ -18,14 +18,19 @@ import { blogAuthService } from '../services/blog-portal.service';
  */
 export function BlogSignupPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, signup } = useBlogAuth();
+  const redirectParam = new URLSearchParams(location.search).get('redirect');
+  const redirectTarget = redirectParam && redirectParam.startsWith('/') ? redirectParam : '/blog';
+  const loginHref =
+    redirectTarget === '/blog' ? '/blog/login' : `/blog/login?redirect=${encodeURIComponent(redirectTarget)}`;
 
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/blog', { replace: true });
+      navigate(redirectTarget, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, redirectTarget]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -43,31 +48,44 @@ export function BlogSignupPage() {
   const [isBreyusMember, setIsBreyusMember] = useState<boolean | null>(null);
   const [checkingEmail, setCheckingEmail] = useState(false);
 
-  // Check if email is a Breyus member
-  const checkEmail = async (email: string) => {
-    if (!email || !email.includes('@')) return;
+  useEffect(() => {
+    const email = formData.email.trim();
 
-    setCheckingEmail(true);
-    try {
-      const result = await blogAuthService.checkEmail(email);
-      setIsBreyusMember(result.isBrèyusMember);
-    } catch {
-      setIsBreyusMember(false);
-    } finally {
+    if (!email || !email.includes('@')) {
+      setIsBreyusMember(null);
       setCheckingEmail(false);
+      return;
     }
-  };
+
+    let isActive = true;
+    const timer = window.setTimeout(async () => {
+      setCheckingEmail(true);
+      try {
+        const result = await blogAuthService.checkEmail(email);
+        if (isActive) {
+          setIsBreyusMember(result.isBrèyusMember);
+        }
+      } catch {
+        if (isActive) {
+          setIsBreyusMember(false);
+        }
+      } finally {
+        if (isActive) {
+          setCheckingEmail(false);
+        }
+      }
+    }, 500);
+
+    return () => {
+      isActive = false;
+      window.clearTimeout(timer);
+    };
+  }, [formData.email]);
 
   // Handle form change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-
-    // Check email when it changes
-    if (name === 'email') {
-      const timer = setTimeout(() => checkEmail(value), 500);
-      return () => clearTimeout(timer);
-    }
   };
 
   // Handle form submission
@@ -179,7 +197,7 @@ export function BlogSignupPage() {
                     As a Breyus member, you get instant access to ALL content with no password needed.
                   </p>
                   <Link
-                    to="/blog/login"
+                    to={loginHref}
                     className="inline-flex items-center mt-3 btn-editorial-accent !py-2 !px-4 group"
                   >
                     Continue with Breyus
@@ -353,7 +371,7 @@ export function BlogSignupPage() {
             {/* Login Link */}
             <div className="mt-5 text-center">
               <span className="text-gray-400">Already have an account?</span>{' '}
-              <Link to="/blog/login" className="text-[#B8860B] hover:text-[#9A7209] font-semibold transition-colors">
+              <Link to={loginHref} className="text-[#B8860B] hover:text-[#9A7209] font-semibold transition-colors">
                 Sign in
               </Link>
             </div>

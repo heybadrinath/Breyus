@@ -137,7 +137,7 @@ export class MiscNotificationService {
 
       // Find all wishlists that contain this product
       const wishlists = await this.wishlistModel
-        .find({ products: new Types.ObjectId(productId) })
+        .find({ product: new Types.ObjectId(productId) })
         .populate('user', 'mail _id')
         .lean();
 
@@ -232,7 +232,7 @@ export class MiscNotificationService {
 
       // Find all wishlists that contain this product
       const wishlists = await this.wishlistModel
-        .find({ products: new Types.ObjectId(productId) })
+        .find({ product: new Types.ObjectId(productId) })
         .populate('user', 'mail _id')
         .lean();
 

@@ -25,6 +25,11 @@ export function BlogLoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, login, loginWithBreyusOtp, loginWithSSO } = useBlogAuth();
+  const redirectParam = new URLSearchParams(location.search).get('redirect');
+  const redirectTarget =
+    redirectParam && redirectParam.startsWith('/') ? redirectParam : (location.state as any)?.from?.pathname || '/blog';
+  const signupHref =
+    redirectTarget === '/blog' ? '/blog/signup' : `/blog/signup?redirect=${encodeURIComponent(redirectTarget)}`;
 
   // SSO State
   const [isCheckingSession, setIsCheckingSession] = useState(true);
@@ -40,10 +45,9 @@ export function BlogLoginPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      const from = (location.state as any)?.from?.pathname || '/blog';
-      navigate(from, { replace: true });
+      navigate(redirectTarget, { replace: true });
     }
-  }, [isAuthenticated, navigate, location]);
+  }, [isAuthenticated, navigate, redirectTarget]);
 
   // Check for active Breyus session on mount
   useEffect(() => {
@@ -550,7 +554,7 @@ export function BlogLoginPage() {
 
                   <div className="mt-5 text-center">
                     <span className="text-gray-400">Don't have an account?</span>{' '}
-                    <Link to="/blog/signup" className="text-[#B8860B] hover:text-[#9A7209] font-semibold transition-colors">
+                    <Link to={signupHref} className="text-[#B8860B] hover:text-[#9A7209] font-semibold transition-colors">
                       Sign up
                     </Link>
                   </div>

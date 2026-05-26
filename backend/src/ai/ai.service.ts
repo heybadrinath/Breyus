@@ -35,6 +35,7 @@ import {
  */
 interface AnalysisJobInfo {
   userId: string;
+  userRole: 'Buyer' | 'Seller';
   commodity: string;
   hsCode?: string;
   notified: boolean;
@@ -937,6 +938,7 @@ export class AIService {
   async startAnalysis(
     input: MarketAnalysisDto,
     userId?: string,
+    userRole?: 'Buyer' | 'Seller',
   ): Promise<AnalysisInitiateResponse> {
     const hasCountry = input.destinationCountry || input.sourceCountry;
 
@@ -956,6 +958,7 @@ export class AIService {
     if (userId && response.jobId) {
       this.analysisJobs.set(response.jobId, {
         userId,
+        userRole: userRole || 'Buyer',
         commodity: input.commodity,
         hsCode: input.hsCode,
         notified: false,
@@ -1024,7 +1027,7 @@ export class AIService {
         title: 'Market Analysis Ready',
         message: `Your market analysis for ${jobInfo.commodity} is ready to view.`,
         priority: 'normal',
-        actionUrl: `/buyer/ai-result?jobId=${jobId}`,
+        actionUrl: `/${jobInfo.userRole === 'Seller' ? 'seller' : 'buyer'}/ai-result?jobId=${jobId}`,
         metadata: {
           jobId,
           commodity: jobInfo.commodity,

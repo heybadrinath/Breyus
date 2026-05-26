@@ -2,5 +2,6 @@
   "defaultViewMode": "preview",
   "useMarkdownLinks": false,
   "newLinkFormat": "relative",
-  "showFrontmatter": true
+  "showFrontmatter": true,
+  "alwaysUpdateLinks": true
 }

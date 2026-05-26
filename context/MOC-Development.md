@@ -8,6 +8,7 @@ tags: [moc, development, index]
 
 ## Documents
 - [[AGENTS|Repository Guidelines]] -- Build commands, test commands, code conventions, module organization
+- [[development/CODEX_SETUP|Codex Setup]] -- Codex-facing repo configuration, Claude-to-Codex mapping, and limitations
 
 ## Conventions
 | Area | Convention |

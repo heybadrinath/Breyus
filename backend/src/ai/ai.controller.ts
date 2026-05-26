@@ -88,7 +88,8 @@ export class AIController {
   @HttpCode(HttpStatus.ACCEPTED)
   async startAnalysis(@Body() input: MarketAnalysisDto, @Request() req: any) {
     const userId = req.user?._id?.toString();
-    const result = await this.aiService.startAnalysis(input, userId);
+    const userRole = req.user?.role;
+    const result = await this.aiService.startAnalysis(input, userId, userRole);
 
     return {
       statusCode: HttpStatus.ACCEPTED,

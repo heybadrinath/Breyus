@@ -8,6 +8,10 @@ tags: [moc, changelog, index]
 
 ## Recent Changes
 
+- [[2026-04-11-blog-auth-regression-fixes]] — Blog auth redirect fix and signup email debounce repair
+- [[2026-04-10-ai-vault-sync]] — AI vault reindex, stale reference fixes, and handoff refresh
+- [[2026-04-07-codex-setup]] — Codex repository guide refresh and development-doc sync
+- [[2026-04-07-api-docs-sync]] — API docs sync: AI analysis routing, blog personalization, wishlist alert wiring
 - [[2026-03-11-docs-sync]] — Docs sync: MOC-Changelog backfill, session context update
 - [[2026-03-10-production-code-checklist]] — Docker proxy migration guide + 25-item production code audit
 - [[2026-03-10-production-hardening-checklist]] — Pre-production security and reliability checklist (13 items)
@@ -22,8 +26,8 @@ tags: [moc, changelog, index]
 ## How to Add a Changelog Entry
 
 1. Create a new file in `changelog/` named `YYYY-MM-DD-brief-description.md`
-2. Use the [[template-changelog]] template
-3. Fill in summary, changes, and files modified
+2. Include YAML frontmatter: `type: changelog`, `date`, `change_type`, `scope`, `tags`
+3. Add Summary, Changes, Files Modified, and Related sections
 4. Link to related docs with wikilinks
 
 ## Dataview: All Changelog Entries

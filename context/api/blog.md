@@ -230,7 +230,7 @@ Returns blog posts personalized based on user's product interests from multiple 
 
 **Interest Sources (weighted):**
 1. **Trade history (3x)** - Products bought/sold = actual business intent
-2. **Own products (2x)** - Seller's inventory = core business focus
+2. **Own products (2x)** - Seller's inventory resolved from `Product.userId` ownership = core business focus
 3. **Wishlist products (1.5x)** - Saved for later = active interest
 4. **AI contacts (1x)** - Saved commodities from AI search = exploration
 
@@ -267,6 +267,8 @@ Returns blog posts personalized based on user's product interests from multiple 
 ```
 
 **Note:** If no authentication or no user interests found, falls back to recent published posts with `isPersonalized: false`.
+
+**Implementation Note:** For seller accounts, `interestSources.hasOwnProducts` is driven by products whose `userId` matches the authenticated user.
 
 ---
 

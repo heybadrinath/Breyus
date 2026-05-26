@@ -304,7 +304,7 @@ export class BlogService {
   ): Promise<ExtractedInterests> {
     try {
       const userProducts = await this.productModel
-        .find({ userId: new Types.ObjectId(userId) })
+        .find({ userId })
         .select('category tags hsnCode')
         .lean();
 

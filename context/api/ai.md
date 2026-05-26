@@ -346,7 +346,8 @@ Initiates an async market analysis job. Returns a jobId for polling.
 
 **Implementation Notes:**
 - The job runs asynchronously on the AI server
-- User is tracked for notification when analysis completes
+- If neither `destinationCountry` nor `sourceCountry` is provided, the backend forwards a minimal empty `market_context` to satisfy AI_NEW validation
+- The authenticated user's ID and role are tracked so the completion notification can deep-link to the correct results page
 - Jobs expire after 24 hours
 
 ---
@@ -498,7 +499,8 @@ Poll for analysis job results.
 | FAILED | Analysis failed | N/A |
 
 **Implementation Notes:**
-- When status is COMPLETED, a notification is sent to the user
+- When status is COMPLETED, a single `analysis_completed` notification is sent with metadata `{ jobId, commodity, hsCode }`
+- The notification `actionUrl` is role-aware: buyers are linked to `/buyer/ai-result?jobId=...`, sellers to `/seller/ai-result?jobId=...`
 - Frontend should poll every 3-5 seconds until completion
 - Recommended polling timeout: 5 minutes
 

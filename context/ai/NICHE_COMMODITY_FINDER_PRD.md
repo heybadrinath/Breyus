@@ -576,7 +576,7 @@ Based on the document, example niche commodities include:
 
 ## Related
 - [[ai/NICHE_COMMODITY_FINDER_TECHNICAL_ARCHITECTURE]]
-- [[ai/PRD_Government_Data_Extraction]]
+- [[PRD_1_Government_Data_Extraction]]
 - [[api/ai]]
 - [[api/commodities]]
 - [[MOC-AI]]
