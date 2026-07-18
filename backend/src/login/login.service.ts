@@ -1,12 +1,13 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { User, UserSchema } from '../users/user.schema';
 import { Company, CompanySchema } from 'src/company/company.schema';
 import { AuthService } from 'src/auth/auth.service';
 import { loginDto, otpDto } from './login.dto';
 import { MailService } from 'src/mail/mail.service';
+import { getOnboardingResumeStep } from 'src/onboarding/onboarding-progress';
 
 @Injectable()
 export class LoginService {
@@ -20,9 +21,9 @@ export class LoginService {
   async Login(loginDto: loginDto) {
     const { mail, password } = loginDto;
 
-    const user = await this.userSchema
-      .findOne({ mail })
-      .populate<{ company: Company }>('company', 'role');
+    const user = await this.userSchema.findOne({ mail }).populate<{
+      company: Company;
+    }>('company', 'role isOnboardingCompleted onboardingProgress');
     if (!user) {
       throw new HttpException(
         'No account found with this email. Please sign up first.',
@@ -46,12 +47,31 @@ export class LoginService {
       );
     }
 
+    if (!user.company) {
+      throw new HttpException(
+        'Your account setup is incomplete. Please sign up again.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
     // TESTING BYPASS: Skip OTP and return token directly
     // TODO: Remove this bypass and uncomment OTP logic below for production
     const AccountToken = this.authService.generateAccountToken(
       user._id.toString(),
-      (user.company as any)._id.toString(),
+      (user.company as Company & { _id: Types.ObjectId })._id.toString(),
     );
+
+    if (!user.company.isOnboardingCompleted) {
+      return {
+        AccountToken,
+        onboardingRequired: true,
+        onboardingProgress: user.company.onboardingProgress || 0,
+        onboardingStep: getOnboardingResumeStep(
+          user.company.onboardingProgress || 0,
+        ),
+      };
+    }
+
     return { AccountToken, role: user.company.role, bypassOtp: true };
 
     /* ORIGINAL OTP LOGIC - Uncomment for production
@@ -71,9 +91,9 @@ export class LoginService {
   async ValidateOtp(otpDto: otpDto) {
     const { mail, otp } = otpDto;
 
-    const user = await this.userSchema
-      .findOne({ mail })
-      .populate<{ company: Company }>('company', 'role');
+    const user = await this.userSchema.findOne({ mail }).populate<{
+      company: Company;
+    }>('company', 'role isOnboardingCompleted onboardingProgress');
     if (!user) {
       throw new HttpException(
         'No account found with this email. Please sign up first.',
@@ -98,10 +118,28 @@ export class LoginService {
       );
     }
 
+    if (!user.company) {
+      throw new HttpException(
+        'Your account setup is incomplete. Please sign up again.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
     const AccountToken = this.authService.generateAccountToken(
       user._id.toString(),
-      (user.company as any)._id.toString(),
+      (user.company as Company & { _id: Types.ObjectId })._id.toString(),
     );
+
+    if (!user.company.isOnboardingCompleted) {
+      return {
+        AccountToken,
+        onboardingRequired: true,
+        onboardingProgress: user.company.onboardingProgress || 0,
+        onboardingStep: getOnboardingResumeStep(
+          user.company.onboardingProgress || 0,
+        ),
+      };
+    }
 
     return { AccountToken, role: user.company.role };
   }

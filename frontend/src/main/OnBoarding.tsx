@@ -6,1222 +6,1465 @@ import SelectField from "../components/SelectField";
 import CountrySelector from "../components/CountrySelector";
 
 // import service (backend integration)
-import { sendOtpService, verifyOtpService, validateTokenService, setPasswordService, continueOnboardingService, step2Service, step3Service, MeanMonthlyRevenueEnum, step4Service, step5Service, getOnboardingProgressService } from '../services/onboarding.service';
+import {
+  sendOtpService,
+  verifyOtpService,
+  validateTokenService,
+  setPasswordService,
+  continueOnboardingService,
+  step2Service,
+  step3Service,
+  MeanMonthlyRevenueEnum,
+  step4Service,
+  step5Service,
+  getOnboardingProgressService,
+} from "../services/onboarding.service";
 import { useNavigate } from "react-router-dom";
-
-
-
-
-
+import {
+  clearOnboardingSession,
+  getResumeStep,
+  readOnboardingSession,
+  saveOnboardingSession,
+} from "../utils/onboardingSession";
 
 const OnBoarding: React.FC = () => {
-    const [onboarding, setonboarding] = React.useState<{ token?: string, onboardingStatus?: boolean }>({});
-    const [ismailverified, setIsMailverified] = React.useState(false);
-    const [currentStep, setCurrentStep] = React.useState(1);
-    const [errorMessage, setErrorMessage] = React.useState('');
-    const [successMessage, setSuccessMessage] = React.useState('');
-    const [emailOtpStatus, setEmailOtpStatus] = useState<'idle' | 'success' | 'error'>('idle');
-    const [isSendingEmailOtp, setIsSendingEmailOtp] = useState(false);
-    const [isVerifyingEmailOtp, setIsVerifyingEmailOtp] = useState(false);
-    const [accountExists, setAccountExists] = React.useState(false);
-    const [createAccount, setCreateAccount] = React.useState(false)
-    const [isPasswordVerified, setIsPasswordVerified] = useState(false);
-    const [AccountToken, setAccountToken] = useState('');
+  const [onboarding, setonboarding] = React.useState<{
+    token?: string;
+    onboardingStatus?: boolean;
+  }>({});
+  const [ismailverified, setIsMailverified] = React.useState(false);
+  const [currentStep, setCurrentStep] = React.useState(1);
+  const [errorMessage, setErrorMessage] = React.useState("");
+  const [successMessage, setSuccessMessage] = React.useState("");
+  const [emailOtpStatus, setEmailOtpStatus] = useState<
+    "idle" | "success" | "error"
+  >("idle");
+  const [isSendingEmailOtp, setIsSendingEmailOtp] = useState(false);
+  const [isVerifyingEmailOtp, setIsVerifyingEmailOtp] = useState(false);
+  const [accountExists, setAccountExists] = React.useState(false);
+  const [createAccount, setCreateAccount] = React.useState(false);
+  const [isPasswordVerified, setIsPasswordVerified] = useState(false);
+  const [AccountToken, setAccountToken] = useState("");
 
-    const isSendingEmailOtpRef = useRef(false);
-    const isVerifyingEmailOtpRef = useRef(false);
-    const isEmailOtpBusy = isSendingEmailOtp || isVerifyingEmailOtp;
+  const isSendingEmailOtpRef = useRef(false);
+  const isVerifyingEmailOtpRef = useRef(false);
+  const isEmailOtpBusy = isSendingEmailOtp || isVerifyingEmailOtp;
 
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-   
-    const [companyDetails, setCompanyDetails] = useState<{ [key: string]: any }>({});
+  const [companyDetails, setCompanyDetails] = useState<{ [key: string]: any }>(
+    {},
+  );
 
+  React.useEffect(() => {
+    const session = readOnboardingSession();
+    if (!session?.token) return;
 
-
-    //animation variants
-    const containerVariants = {
-        hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.1
-            }
-        }
-    };
-
-    const itemVariants: Variants = {
-        hidden: { opacity: 0, y: 20 },
-        visible: {
-            opacity: 1,
-            y: 0,
-            transition: {
-                duration: 0.5,
-                ease: "easeOut"
-            }
-        }
-    };
-
-
-    // step 1 
-
-    // handle mail input
-    const [mail, setMail] = useState('');
-    const handleChangeMail = (e: ChangeEvent<HTMLInputElement>) => {
-        setMail(e.target.value);
-    };
-
-    // mail onblur to make otp visible 
-    const [ismailentered, setIsMailEntered] = useState(false);
-    const handleMailBlur = async () => {
-        if (ismailentered || isSendingEmailOtpRef.current) {
-            return;
+    const restoreOnboarding = async () => {
+      try {
+        const details = await getOnboardingProgressService(session.token);
+        if (details.company?.isOnboardingCompleted) {
+          clearOnboardingSession();
+          navigate("/login");
+          return;
         }
 
-        isSendingEmailOtpRef.current = true;
-        setIsSendingEmailOtp(true);
+        const resumeStep = Math.max(
+          session.step || 2,
+          getResumeStep(details.company?.onboardingProgress || 0),
+        );
+        setAccountToken(session.token);
+        setMail(session.email || "");
+        setCompanyDetails(details.company || {});
+        setAccountExists(true);
+        setIsPasswordVerified(true);
         setIsMailEntered(true);
-        setErrorMessage('');
-        setSuccessMessage('');
+        setIsMailverified(true);
+        setCurrentStep(resumeStep);
+        saveOnboardingSession({ ...session, step: resumeStep });
+      } catch {
+        clearOnboardingSession();
+      }
+    };
 
-        try {
-            await sendOtpService(mail);
-            setSuccessMessage("Email successfully sent to your mail");
-            setEmailOtpStatus('idle');
-        } catch (error: any) {
-            setErrorMessage(error?.message || "Failed to send OTP. Please try again.");
-        } finally {
-            isSendingEmailOtpRef.current = false;
-            setIsSendingEmailOtp(false);
-        }
+    void restoreOnboarding();
+  }, [navigate]);
+
+  //animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        ease: "easeOut",
+      },
+    },
+  };
+
+  // step 1
+
+  // handle mail input
+  const [mail, setMail] = useState("");
+  const handleChangeMail = (e: ChangeEvent<HTMLInputElement>) => {
+    setMail(e.target.value);
+  };
+
+  // mail onblur to make otp visible
+  const [ismailentered, setIsMailEntered] = useState(false);
+  const handleMailBlur = async () => {
+    if (ismailentered || isSendingEmailOtpRef.current) {
+      return;
     }
 
+    isSendingEmailOtpRef.current = true;
+    setIsSendingEmailOtp(true);
+    setIsMailEntered(true);
+    setErrorMessage("");
+    setSuccessMessage("");
 
-    // handle otp 
-    const [emailOtp, setEmailOtp] = useState<string[]>(new Array(6).fill(''));
+    try {
+      await sendOtpService(mail);
+      setSuccessMessage("Email successfully sent to your mail");
+      setEmailOtpStatus("idle");
+    } catch (error: any) {
+      setErrorMessage(
+        error?.message || "Failed to send OTP. Please try again.",
+      );
+    } finally {
+      isSendingEmailOtpRef.current = false;
+      setIsSendingEmailOtp(false);
+    }
+  };
 
+  // handle otp
+  const [emailOtp, setEmailOtp] = useState<string[]>(new Array(6).fill(""));
 
-    const emailOtpRefs = useRef<Array<HTMLInputElement | null>>([]);
-    const handleOtpChange = (
-        e: ChangeEvent<HTMLInputElement>,
-        index: number,
-        otpArray: string[],
-        setOtpArray: React.Dispatch<React.SetStateAction<string[]>>,
-        otpRefs: React.MutableRefObject<Array<HTMLInputElement | null>>
-    ) => {
-        const { value } = e.target;
-        if (/[^0-9]/.test(value)) return; // Only allow numbers
+  const emailOtpRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const handleOtpChange = (
+    e: ChangeEvent<HTMLInputElement>,
+    index: number,
+    otpArray: string[],
+    setOtpArray: React.Dispatch<React.SetStateAction<string[]>>,
+    otpRefs: React.MutableRefObject<Array<HTMLInputElement | null>>,
+  ) => {
+    const { value } = e.target;
+    if (/[^0-9]/.test(value)) return; // Only allow numbers
 
-        const newOtp = [...otpArray];
-        newOtp[index] = value;
-        setOtpArray(newOtp);
+    const newOtp = [...otpArray];
+    newOtp[index] = value;
+    setOtpArray(newOtp);
 
-        // Move to next input if current is filled
-        if (value && index < otpArray.length - 1) {
-            otpRefs.current[index + 1]?.focus();
-        }
-        // Move to previous input if backspace is pressed and current is empty
-        if (!value && index > 0 && (e.nativeEvent as InputEvent).inputType === 'deleteContentBackward') {
-            otpRefs.current[index - 1]?.focus();
-        }
-    };
+    // Move to next input if current is filled
+    if (value && index < otpArray.length - 1) {
+      otpRefs.current[index + 1]?.focus();
+    }
+    // Move to previous input if backspace is pressed and current is empty
+    if (
+      !value &&
+      index > 0 &&
+      (e.nativeEvent as InputEvent).inputType === "deleteContentBackward"
+    ) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
 
-    const handlePaste = (
-        e: React.ClipboardEvent<HTMLInputElement>,
-        otpArray: string[],
-        setOtpArray: React.Dispatch<React.SetStateAction<string[]>>,
-        otpRefs: React.MutableRefObject<Array<HTMLInputElement | null>>
-    ) => {
-        e.preventDefault(); // Prevent default paste behavior
-        const paste = e.clipboardData.getData('text');
-        if (!/^\d{6}$/.test(paste)) return;
+  const handlePaste = (
+    e: React.ClipboardEvent<HTMLInputElement>,
+    otpArray: string[],
+    setOtpArray: React.Dispatch<React.SetStateAction<string[]>>,
+    otpRefs: React.MutableRefObject<Array<HTMLInputElement | null>>,
+  ) => {
+    e.preventDefault(); // Prevent default paste behavior
+    const paste = e.clipboardData.getData("text");
+    if (!/^\d{6}$/.test(paste)) return;
 
-        const newOtp = paste.split('');
-        setOtpArray(newOtp);
+    const newOtp = paste.split("");
+    setOtpArray(newOtp);
 
-        // Focus on the last input after state update
-        setTimeout(() => {
-            otpRefs.current[5]?.focus();
-        }, 0);
-    };
+    // Focus on the last input after state update
+    setTimeout(() => {
+      otpRefs.current[5]?.focus();
+    }, 0);
+  };
 
-
-
-    const verifyOtp = (
-        otp: string[],
-        setOtpStatus: React.Dispatch<React.SetStateAction<'idle' | 'success' | 'error'>>,
-        type: 'email'
-    ) => {
-        const otpCode = otp.join('');
-        if (otpCode.length !== 6 || !/^\d{6}$/.test(otpCode)) {
-            return;
-        }
-
-        if (isSendingEmailOtpRef.current || isSendingEmailOtp || ismailverified || isVerifyingEmailOtpRef.current || isVerifyingEmailOtp) {
-            return;
-        }
-
-        // verify otp function call service
-        (async () => {
-            try {
-                isVerifyingEmailOtpRef.current = true;
-                setIsVerifyingEmailOtp(true);
-                setonboarding(await verifyOtpService(mail, otpCode));
-                setOtpStatus('success');
-                setSuccessMessage('OTP verified successfully!');
-                setErrorMessage('');
-                // todo disable duplicate submissions and disable email and otp input
-                setIsMailverified(true);
-            } catch (error: any) {
-                setOtpStatus('error');
-                const errorMsg = error?.message || error?.response?.data?.message;
-                setErrorMessage(errorMsg || 'Invalid or expired OTP. Please check your code and try again.');
-                setSuccessMessage('');
-            } finally {
-                isVerifyingEmailOtpRef.current = false;
-                setIsVerifyingEmailOtp(false);
-            }
-        })();
-    };
-
-
-
-
-    // Resend OTP handler for email
-    const handleResendEmailOtp = async () => {
-        if (!mail || ismailverified || isEmailOtpBusy || isSendingEmailOtpRef.current) return;
-        try {
-            isSendingEmailOtpRef.current = true;
-            setIsSendingEmailOtp(true);
-            setSuccessMessage('');
-            setErrorMessage('');
-            await sendOtpService(mail);
-            setSuccessMessage('Verification code resent to your email.');
-            setEmailOtpStatus('idle');
-            setEmailOtp(new Array(6).fill(''));
-            emailOtpRefs.current[0]?.focus();
-        } catch (error: any) {
-            setErrorMessage(error?.message || 'Failed to resend OTP. Please try again.');
-        } finally {
-            isSendingEmailOtpRef.current = false;
-            setIsSendingEmailOtp(false);
-        }
-    };
-
-
-    //validate token sent during otp validation and check if user already onboarded
-    if (ismailverified) {
-
-        (async () => {
-            try {
-                const response = await validateTokenService(onboarding.token as string);
-                const responseObject = await response.json();
-                const UserExists = responseObject.status;
-                setSuccessMessage('');
-                if (UserExists === 'accountExists') {
-                    setAccountExists(true);
-                } else {
-                    setCreateAccount(true);
-                }
-
-
-            } catch (e) {
-                setErrorMessage("Unauthorised Access");
-                setSuccessMessage('');
-
-            }
-        })();
+  const verifyOtp = (
+    otp: string[],
+    setOtpStatus: React.Dispatch<
+      React.SetStateAction<"idle" | "success" | "error">
+    >,
+    type: "email",
+  ) => {
+    const otpCode = otp.join("");
+    if (otpCode.length !== 6 || !/^\d{6}$/.test(otpCode)) {
+      return;
     }
 
-
-
-
-
-    // handle password
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [passwordError, setPasswordError] = useState('');
-
-    const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
-        setPassword(e.target.value);
-        validatePasswords(e.target.value, confirmPassword);
-    };
-
-    const handleConfirmPasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
-        setConfirmPassword(e.target.value);
-        validatePasswords(password, e.target.value);
-    };
-
-    const validatePasswords = (pwd1: string, pwd2: string) => {
-        if (pwd1.length < 8) {
-            setPasswordError('Password must be at least 8 characters long.');
-        } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).+$/.test(pwd1)) {
-            setPasswordError('Password must contain uppercase, lowercase, number, and special character.');
-        } else if (pwd1 !== pwd2) {
-            setPasswordError('Passwords do not match.');
-        } else {
-            setPasswordError('');
-        }
-    };
-
-
-    // fetch details of the onboarding progress if not already fetched
-    const fetchOnboardingDetails = async (token?: string) => {
-        try {
-            const usedToken = token || AccountToken;
-            if (usedToken) {
-                const details = await getOnboardingProgressService(usedToken);
-                setCompanyDetails(details.company || {});
-            }
-        } catch (error) {
-            console.error("Failed to fetch onboarding progress:", error);
-        }
-    };
-
-  
-
-
-    //handle password to create account
-    const [isPasswordSubmitted, setIsPasswordSubmitted] = useState(false);
-
-    const ServiceCreateAccount = async () => {
-        if (isPasswordSubmitted) return;
-        try {
-            const response = await setPasswordService(onboarding.token as string, password, confirmPassword);
-            setSuccessMessage("Account created successfully!");
-            setErrorMessage('');
-            setIsPasswordSubmitted(true);
-            setAccountToken(response.data)
-        } catch (e: any) {
-            const errorMsg = e?.message || e?.response?.data?.message;
-            setErrorMessage(errorMsg || "Failed to create account. Please try again.");
-            setSuccessMessage('');
-        }
+    if (
+      isSendingEmailOtpRef.current ||
+      isSendingEmailOtp ||
+      ismailverified ||
+      isVerifyingEmailOtpRef.current ||
+      isVerifyingEmailOtp
+    ) {
+      return;
     }
 
-    // handle current password if user exists with partial onboarding
-    const [currentPassword, setCurrentPassword] = useState('');
-
-    const handleCurrentPasswordChange = async (e: ChangeEvent<HTMLInputElement>) => {
-        setCurrentPassword(e.target.value);
-    }
-
-    const ServiceCurrentPasswordChange = async () => {
-        if (isPasswordVerified) return true;
-        try {
-            const data = await continueOnboardingService(onboarding.token as string, currentPassword);
-            setSuccessMessage("Verified successfully!");
-            setErrorMessage('');
-            setIsPasswordVerified(true);
-            const json = await data.json();
-            setAccountToken(json.data)
-            await fetchOnboardingDetails(json.data);
-            return true;
-        } catch (e: any) {
-            const errorMsg = e?.message || e?.response?.data?.message;
-            setErrorMessage(errorMsg || "Incorrect password. Please try again.");
-            return false;
-        }
-    }
-
-
-
-
-
-
-
-
-    // step 2 logic
-    const [step2Form, setStep2Form] = useState({
-        companyName: companyDetails.companyName ?? '',
-        companyLocation: companyDetails.companyAddress ?? '',
-        country: companyDetails.country ?? '', // Track country separately for GST validation
-        contactNumber: companyDetails.companyMobile ?? '',
-        taxId: companyDetails.taxId ?? '',
-    });
-
-    // GSTIN format regex for Indian companies
-    const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-
-    // Update step2Form when companyDetails changes and fields are empty
-    React.useEffect(() => {
-        setStep2Form(prev => ({
-            companyName: prev.companyName || companyDetails.companyName || '',
-            companyLocation: prev.companyLocation || companyDetails.companyAddress || '',
-            country: prev.country || companyDetails.country || '',
-            contactNumber: prev.contactNumber || companyDetails.companyMobile || '',
-            taxId: prev.taxId || companyDetails.taxId || '',
-        }));
-    }, [companyDetails]);
-    const handleStep2InputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setStep2Form((prevState) => {
-            const updated = { ...prevState, [name]: value };
-            // If country selector (companyLocation) changes, also update country field
-            if (name === 'companyLocation') {
-                updated.country = value;
-            }
-            return updated;
-        });
-    };
-
-    const handleStep2Service = async () => {
-        setErrorMessage('');
-        setSuccessMessage('');
-        try {
-            const result = await step2Service(
-                AccountToken as string,
-                step2Form.companyName,
-                step2Form.companyLocation,
-                step2Form.country, // Pass country for GST verification
-                step2Form.contactNumber,
-                step2Form.country === 'India' ? step2Form.taxId.toUpperCase() : step2Form.taxId
-            );
-
-            // Show verification message if present
-            if (result?.gstVerificationMessage) {
-                setSuccessMessage(result.gstVerificationMessage);
-            } else {
-                setSuccessMessage('Company details updated successfully!');
-            }
-            setCurrentStep(prev => prev + 1);
-        } catch (error: any) {
-            // Display backend error message (GST validation errors)
-            const errorMsg = error?.message || error?.response?.data?.message || "Failed to save company details. Please try again.";
-            setErrorMessage(errorMsg);
-        }
-    };
-
-
-
-    // step 3 logic
-    const [mainlineOfBusiness, setmainLineOfBusiness] = useState<string[]>([]);
-    const handleMainLineOfBusinessChange = (e: ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        if (e.target.checked) {
-
-            setmainLineOfBusiness((prevState) => [...prevState, value]);
-        } else {
-
-            setmainLineOfBusiness((prevState) => prevState.filter((item) => item !== value));
-        }
-    };
-
-    // Step 3: Main Line of Business & Revenue
-    // Sync mainlineOfBusiness and meanMonthlyRevenue with companyDetails if available
-    const [meanMonthlyRevenue, setmeanMonthlyRevenue] = useState<MeanMonthlyRevenueEnum | ''>('');
-    React.useEffect(() => {
-        // Only update if companyDetails has values and local state is empty
-        if (companyDetails.mainLineBusiness && Array.isArray(companyDetails.mainLineBusiness) && mainlineOfBusiness.length === 0) {
-            setmainLineOfBusiness(companyDetails.mainLineBusiness);
-        }
-        if (companyDetails.meanMonthlyRevenue && !meanMonthlyRevenue) {
-            setmeanMonthlyRevenue(companyDetails.meanMonthlyRevenue as MeanMonthlyRevenueEnum);
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [companyDetails]);
-
-    const handleFinancialRangeChange = (e: ChangeEvent<HTMLInputElement>) => {
-        setmeanMonthlyRevenue(e.target.value as MeanMonthlyRevenueEnum);
-    };
-
-   
-
-    const handleStep3Service = async () => {
-        setErrorMessage('');
-        setSuccessMessage('');
-        try {
-            // Ensure meanMonthlyRevenue is a valid enum value
-            if (meanMonthlyRevenue && Object.values(MeanMonthlyRevenueEnum).includes(meanMonthlyRevenue)) {
-                await step3Service(AccountToken, {
-                    mainLineBusiness: mainlineOfBusiness,
-                    meanMonthlyRevenue: meanMonthlyRevenue as MeanMonthlyRevenueEnum
-                });
-                setSuccessMessage('Company details updated successfully!');
-                setCurrentStep(prev => prev + 1);
-            } else {
-                setErrorMessage("Please select your monthly revenue range.");
-            }
-        } catch (e: any) {
-            // Show backend error if available
-            setErrorMessage(e?.message || "Error updating company details. Please try again.");
-        }
-    }
-
-
-    // step 4 logic
-    const [step4Form, setStep4Form] = useState({
-        companyWebsiteUrl: companyDetails.websiteUrl ?? '',
-        founderName: companyDetails.founderName ?? '',
-        exporedBefore: typeof companyDetails.exportedBefore === 'boolean'
-            ? (companyDetails.exportedBefore ? 'Yes' : 'No')
-            : '',
-        referrel: companyDetails.referrel ?? '',
-    });
-
-    // Sync step4Form with companyDetails when companyDetails changes
-    React.useEffect(() => {
-        setStep4Form(prev => ({
-            companyWebsiteUrl: prev.companyWebsiteUrl || companyDetails.websiteUrl || '',
-            founderName: prev.founderName || companyDetails.founderName || '',
-            exporedBefore:
-                prev.exporedBefore ||
-                (typeof companyDetails.exportedBefore === 'boolean'
-                    ? (companyDetails.exportedBefore ? 'Yes' : 'No')
-                    : ''),
-            referrel: prev.referrel || companyDetails.referrel || '',
-        }));
-    }, [companyDetails]);
-    const handleStep4InputChange = (
-        e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLSelectElement>
-    ) => {
-        const { name, value } = e.target;
-        setStep4Form((prevState) => ({
-            ...prevState,
-            [name]: value,
-        }));
-    };
-
-    const handleStep4Service = async () => {
-        setErrorMessage('');
-        setSuccessMessage('');
-        try {
-
-            await step4Service(AccountToken, {
-                websiteUrl: step4Form.companyWebsiteUrl,
-                founderName: step4Form.founderName,
-                exportedBefore: step4Form.exporedBefore === 'Yes',
-                referrel: step4Form.referrel
-            });
-            setCurrentStep(prev => prev + 1);
-
-        } catch (e: any) {
-            // Show backend error if available
-            setErrorMessage(e?.message || "Error updating company details. Please try again.");
-        }
-    }
-
-    // step 5 logic
-    const [role, setRole] = useState(companyDetails.role ?? '');
-
-    // Sync role with companyDetails when companyDetails changes and local role is empty
-    React.useEffect(() => {
-        if (companyDetails.role && !role) {
-            setRole(companyDetails.role);
-        }
-    }, [companyDetails, role]);
-    const handleRoleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setRole(e.target.value);
-    }
-
-    const handleStep5Service = async () => {
-        setErrorMessage('');
-        setSuccessMessage('');
-
-        try {
-
-            await step5Service(AccountToken, {
-                role
-            });
-            if (role === "Buyer") {
-                navigate("/login");
-            } else {
-                navigate("/schedule-meeting");
-            }
-
-        } catch (e: any) {
-            setErrorMessage(e?.message || "Error updating company details. Please try again.");
-        }
-    }
-
-
-
-
-
-    // render step ui content dynamically
-    const renderStepContent = () => {
-        switch (currentStep) {
-            case 1:
-                return (
-                    <motion.div
-                        key={currentStep}
-                        variants={containerVariants}
-                        initial="hidden"
-                        animate="visible"
-                        className="space-y-8"
-                    >
-
-
-
-                        <motion.div>
-                            <label htmlFor="companyEmail" className="block text-2xl font-bold text-black">
-                                Company Email Address<span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="email"
-                                name="mail"
-                                id="companyEmail"
-                                value={mail}
-                                required
-                                onChange={handleChangeMail}
-                                disabled={ismailverified || isSendingEmailOtp}
-                                onBlur={(e) => {
-                                    const value = e.target.value.trim();
-                                    // Simple email validation regex
-                                    const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-                                    if (value !== '' && isValidEmail) {
-                                        handleMailBlur();
-                                    }
-                                }}
-                                className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${(ismailverified || isSendingEmailOtp) ? 'cursor-not-allowed' : 'cursor-auto'}`}
-                                placeholder="Enter your company email address"
-                            />
-                        </motion.div>
-
-
-                        <AnimatePresence>
-                            {ismailentered && (
-                                <motion.div
-                                    variants={itemVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="hidden"
-                                    className=""
-                                >
-
-                                    <p className="mt-1 text-xs text-gray-500">
-                                        Check your inbox for a verification code to continue setting up your Breyus account. Didn't get it?{" "}
-                                        <a
-                                            href="#"
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                handleResendEmailOtp();
-                                            }}
-                                            className={`text-blue-600 hover:underline ${(ismailverified || isEmailOtpBusy) ? 'cursor-not-allowed pointer-events-none' : 'cursor-pointer'}`}
-                                        >
-                                            Resend Code
-                                        </a>
-                                    </p>
-                                    <div className="mt-2 flex space-x-2">
-                                        {emailOtp.map((digit, index) => (
-                                            <input
-                                                key={index}
-                                                type="text"
-                                                maxLength={1}
-                                                value={digit}
-                                                disabled={ismailverified || isEmailOtpBusy}
-                                                onChange={(e) => handleOtpChange(e, index, emailOtp, setEmailOtp, emailOtpRefs)}
-                                                onFocus={(e) => e.target.select()}
-                                                onBlur={() => verifyOtp(emailOtp, setEmailOtpStatus, 'email')}
-                                                onPaste={(e) => handlePaste(e, emailOtp, setEmailOtp, emailOtpRefs)}
-                                                ref={el => { emailOtpRefs.current[index] = el; }}
-                                                className={`w-12 h-12 text-center text-xl border rounded-md focus:outline-none focus:ring-1 ${emailOtpStatus === 'success'
-                                                    ? 'border-green-500 focus:ring-green-500'
-                                                    : emailOtpStatus === 'error'
-                                                        ? 'border-red-500 focus:ring-red-500'
-                                                        : 'border-gray-300 focus:ring-black'
-                                                    }  ${(ismailverified || isEmailOtpBusy) ? 'cursor-not-allowed' : 'cursor-auto'}`}
-                                            />
-                                        ))}
-                                    </div>
-                                    <div></div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
-                        {accountExists && (
-                            <motion.div variants={itemVariants}>
-                                <label htmlFor="currentPassword" className="block text-2xl font-bold text-black">Enter Your password<span className="text-red-500">*</span></label>
-                                <input
-                                    type="password"
-                                    name="currentPassword"
-                                    id="currentPassword"
-                                    className={`mt-3 block w-full p-2 sm:text-sm  !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? '!border-red-500' : ''} ${isPasswordVerified ? 'cursor-not-allowed' : 'cursor-auto'}`}
-                                    placeholder="Enter Your Password"
-                                    value={currentPassword}
-                                    onChange={handleCurrentPasswordChange}
-                                    disabled={isPasswordVerified}
-                                />
-                                {passwordError && <p className="mt-1 text-xs text-red-500">{passwordError}</p>}
-                            </motion.div>
-                        )}
-
-                        {createAccount && (
-                            <>
-                                <motion.div variants={itemVariants}>
-                                    <label htmlFor="password" className="block text-2xl font-bold text-black">Set Your Password<span className="text-red-500">*</span></label>
-                                    <input
-                                        type="password"
-                                        name="password"
-                                        id="password"
-                                        className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? '!border-red-500' : ''} ${isPasswordSubmitted ? 'cursor-not-allowed' : 'cursor-auto'}`}
-                                        placeholder="Password"
-                                        value={password}
-                                        disabled={isPasswordSubmitted}
-                                        onChange={handlePasswordChange}
-                                    />
-                                    {/* {passwordError && <p className="mt-1 text-xs text-red-500">{passwordError}</p>} */}
-                                </motion.div>
-
-                                <motion.div variants={itemVariants}>
-                                    <label htmlFor="confirmPassword" className="block text-2xl font-bold text-black">Confirm Password<span className="text-red-500">*</span></label>
-                                    <input
-                                        type="password"
-                                        name="confirmPassword"
-                                        id="confirmPassword"
-                                        className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? '!border-red-500' : ''} ${isPasswordSubmitted ? 'cursor-not-allowed' : 'cursor-auto'}`}
-                                        placeholder="Confirm Password"
-                                        disabled={isPasswordSubmitted}
-                                        value={confirmPassword}
-                                        onChange={handleConfirmPasswordChange}
-                                    />
-                                </motion.div>
-                            </>
-                        )}
-
-
-                    </motion.div>
-                );
-            case 2:
-                return (
-                    <motion.div
-                        variants={containerVariants}
-                        initial="hidden"
-                        animate="visible"
-                        className="space-y-8"
-                    >
-
-                        <motion.div variants={itemVariants}>
-                            <label htmlFor="companyName" className="block text-2xl font-bold text-black">Company Name <span className="text-red-500">*</span></label>
-                            <input
-                                type="text"
-                                name="companyName"
-                                id="companyName"
-                                value={step2Form.companyName}
-                                required
-                                onChange={handleStep2InputChange}
-                                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
-                                placeholder="Enter your company name"
-                            />
-                        </motion.div>
-
-                        <motion.div variants={itemVariants}>
-                            <label htmlFor="companyLocation" className="block text-2xl font-bold text-black">Company Location <span className="text-red-500">*</span></label>
-                            <CountrySelector
-                                name="companyLocation"
-                                value={step2Form.companyLocation}
-                                onChange={handleStep2InputChange}
-                                wrapperClassName="mt-3"
-                                className="w-full p-2 sm:text-sm !border !border-gray-200 rounded-lg"
-                                placeholder="Select your country"
-                                searchable
-                            />
-                        </motion.div>
-
-                        <motion.div variants={itemVariants}>
-                            <label htmlFor="whatsappNumber" className="block text-2xl font-bold text-black">What your Whatsapp Number ? <span className="text-red-500">*</span></label>
-                            <div className="mt-1 flex rounded-md shadow-sm">
-                                <input
-                                    type="text"
-                                    name="contactNumber"
-                                    id="whatsappNumber"
-                                    value={step2Form.contactNumber}
-                                    required
-                                    onChange={handleStep2InputChange}
-                                    className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
-                                    placeholder="+91 8xxxxxxxxxx"
-                                />
-                            </div>
-                        </motion.div>
-
-                        <motion.div variants={itemVariants}>
-                            <label htmlFor="taxId" className="block text-2xl font-bold text-black">
-                                {step2Form.country === 'India' ? 'GST Number' : 'Tax ID'} <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                name="taxId"
-                                id="taxId"
-                                value={step2Form.taxId}
-                                required
-                                onChange={handleStep2InputChange}
-                                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
-                                placeholder={step2Form.country === 'India'
-                                    ? "Enter 15-digit GST number (e.g., 27AABCT1234H1Z5)"
-                                    : "Enter your company tax ID"
-                                }
-                                maxLength={step2Form.country === 'India' ? 15 : undefined}
-                            />
-                            {/* Real-time GST format validation hint for Indian companies */}
-                            {step2Form.country === 'India' && step2Form.taxId && (
-                                <p className={`mt-1 text-sm ${
-                                    GSTIN_REGEX.test(step2Form.taxId.toUpperCase())
-                                        ? 'text-green-600'
-                                        : 'text-gray-500'
-                                }`}>
-                                    {GSTIN_REGEX.test(step2Form.taxId.toUpperCase())
-                                        ? '✓ Valid GST format'
-                                        : 'GST format: 2 digits (state) + 5 letters + 4 digits + 1 letter + 1 alphanumeric + Z + 1 alphanumeric'
-                                    }
-                                </p>
-                            )}
-                        </motion.div>
-
-                    </motion.div>
-                );
-            case 3:
-                return (
-                    <motion.div
-                        variants={containerVariants}
-                        initial="hidden"
-                        animate="visible"
-                        className="space-y-8"
-                    >
-                        <motion.div variants={itemVariants}>
-                            <label className="block text-2xl font-bold text-black ">What best describes {step2Form.companyName}'s main line of business? <span className="text-red-500">*</span></label>
-                            <div className="mt-2 space-y-2">
-                                {[
-                                    'Import/Export Company',
-                                    'Producer/Manufacturer',
-                                    'Commodity Trader',
-                                    'International Freight Forwarder',
-                                    'Domestic Trucking Company',
-                                    "I'm none of the above",
-                                    'Broker/Intermediary/Agent',
-                                    'Other',
-                                ].map((option) => (
-                                    <div key={option} className="flex items-center">
-                                        <input
-                                            id={option.replace(/\s/g, '')}
-                                            name="mainlineOfBusiness"
-                                            type="checkbox"
-                                            value={option}
-                                            checked={mainlineOfBusiness.includes(option)} // Check if this option is selected
-                                            onChange={handleMainLineOfBusinessChange} // Handle change
-                                            className="focus:ring-black h-4 w-4 text-black border-gray-300 rounded"
-                                        />
-                                        <label htmlFor={option.replace(/\s/g, '')} className="ml-3 block text-sm font-medium text-gray-700">
-                                            {option}
-                                        </label>
-                                    </div>
-                                ))}
-                            </div>
-                        </motion.div>
-                        <motion.div variants={itemVariants}>
-                            <label className="block text-2xl font-bold text-black">
-                                What's {step2Form.companyName}'s average monthly revenue? <span className="text-red-500">*</span>
-                            </label>
-                            <div className="mt-2 space-y-2">
-                                {Object.values(MeanMonthlyRevenueEnum).map((option) => (
-                                    <motion.div
-                                        key={option}
-                                        className="flex items-center"
-                                        variants={itemVariants}
-                                    >
-                                        <input
-                                            id={option.replace(/\s/g, '')}
-                                            name="meanMonthlyRevenue"
-                                            type="radio"
-                                            value={option}
-                                            checked={meanMonthlyRevenue === option}
-                                            onChange={handleFinancialRangeChange}
-                                            className="focus:ring-black h-4 w-4 text-black border-gray-300"
-                                        />
-                                        <label
-                                            htmlFor={option.replace(/\s/g, '')}
-                                            className="ml-3 block text-sm font-medium text-gray-700"
-                                        >
-                                            {option}
-                                        </label>
-                                    </motion.div>
-                                ))}
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                );
-            case 4:
-                return (
-                    <motion.div
-                        variants={containerVariants}
-                        initial="hidden"
-                        animate="visible"
-                        className="space-y-8"
-                    >
-                        <motion.div variants={itemVariants}>
-                            <label htmlFor="companyWebsite" className="block text-2xl font-bold text-black">What is Company website URL?</label>
-                            <p className="mt-1 text-xs text-gray-500">Remember to put https:// in front of it. Make sure the website is yours & valid, otherwise we won't be able to give you free trial access.</p>
-                            <input
-                                type="text"
-                                name="companyWebsiteUrl"
-                                id="companyWebsite"
-                                value={step4Form.companyWebsiteUrl}
-                                onChange={handleStep4InputChange}
-                                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
-                                placeholder="Enter your company website"
-                            />
-                        </motion.div>
-                        <motion.div variants={itemVariants}>
-                            <label htmlFor="name" className="block text-2xl font-bold text-black">Founder Name <span className="text-red-500">*</span></label>
-                            <p className="mt-1 text-xs text-gray-500">Put your first and second name. Please make sure you put all correct information.</p>
-                            <input
-                                type="text"
-                                name="founderName"
-                                id="name"
-                                value={step4Form.founderName}
-                                onChange={handleStep4InputChange}
-                                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
-                                placeholder="Enter Founder Name"
-                            />
-                        </motion.div>
-
-
-                        <motion.div variants={itemVariants}>
-                            <label htmlFor="exporedBefore" className="block text-2xl font-bold text-black">
-                                Has your company exported before?
-                            </label>
-                            <SelectField
-                                name="exporedBefore"
-                                id="exporedBefore"
-                                value={step4Form.exporedBefore}
-                                onChange={handleStep4InputChange}
-                                wrapperClassName="w-full mt-3"
-                            >
-                                <option value="">Select</option>
-                                <option value="Yes">Yes</option>
-                                <option value="No">No</option>
-                            </SelectField>
-                        </motion.div>
-
-
-                        <motion.div variants={itemVariants}>
-                            <label htmlFor="referrel" className="block text-2xl font-bold text-black">How do you get to know about Breyus? <span className="text-red-500">*</span></label>
-                            <SelectField
-                                id="referrel"
-                                name="referrel"
-                                value={step4Form.referrel}
-                                onChange={handleStep4InputChange}
-                                wrapperClassName="w-full mt-3"
-                            >
-                                <option value="">Select an option</option>
-                                <option value="Partner company">Partner company</option>
-                                <option value="Ad campaign">Ad campaign</option>
-                                <option value="Other">Other</option>
-                            </SelectField>
-                        </motion.div>
-                    </motion.div>
-                );
-            case 5:
-                return (
-                    <motion.div
-                        variants={containerVariants}
-                        initial="hidden"
-                        animate="visible"
-                        className="space-y-8"
-                    >
-                        <motion.div variants={itemVariants}>
-                            <label className="block text-2xl font-bold text-black">What's your business roll in the market?<span className="text-red-500">*</span></label>
-                            <div className="mt-4 space-y-4">
-                                {['Seller', 'Buyer', 'Seller and Buyer'].map((option, index) => (
-                                    <motion.div
-                                        key={option}
-                                        className="flex items-center"
-                                        variants={itemVariants}
-                                    >
-                                        <input
-                                            id={option.replace(/\s/g, '')}
-                                            name="role"
-                                            type="radio"
-                                            value={option}
-                                            checked={role === option}
-                                            onChange={handleRoleInputChange}
-                                            className="focus:ring-black h-4 w-4 text-black border-gray-300"
-                                        />
-                                        <label htmlFor={option.replace(/\s/g, '')} className="ml-3 block text-sm text-black font-semibold">
-                                            {option}
-                                        </label>
-                                    </motion.div>
-                                ))}
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                );
-            default:
-                return null;
-        }
-    };
-
-    // Validation for each step
-    const validateStep = (step: number): boolean => {
+    // verify otp function call service
+    (async () => {
+      try {
+        isVerifyingEmailOtpRef.current = true;
+        setIsVerifyingEmailOtp(true);
+        setonboarding(await verifyOtpService(mail, otpCode));
+        setOtpStatus("success");
+        setSuccessMessage("OTP verified successfully!");
         setErrorMessage("");
-        if (step === 1) {
-            if (!mail) {
-                setErrorMessage("Email is required.");
-                return false;
-            }
-            const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail);
-            if (!isValidEmail) {
-                setErrorMessage("Please enter a valid email address.");
-                return false;
-            }
-            if (isSendingEmailOtp || isSendingEmailOtpRef.current) {
-                setErrorMessage("Sending OTP. Please wait.");
-                return false;
-            }
-            if (isVerifyingEmailOtp || isVerifyingEmailOtpRef.current) {
-                setErrorMessage("Verifying OTP. Please wait.");
-                return false;
-            }
-            if (!ismailentered) {
-                setErrorMessage("Please enter your email and request OTP.");
-                return false;
-            }
-            if (!ismailverified) {
-                if (emailOtp.join("").length !== 6 || !/^\d{6}$/.test(emailOtp.join(""))) {
-                    setErrorMessage("Please enter a valid 6-digit OTP.");
-                    return false;
-                }
-                setErrorMessage("Please verify the OTP sent to your email.");
-                return false;
-            }
-            if (accountExists && !currentPassword) {
-                setErrorMessage("Password is required.");
-                return false;
-            }
-            if (createAccount) {
-                if (!password || !confirmPassword) {
-                    setErrorMessage("Password and confirm password are required.");
-                    return false;
-                }
-                if (password.length < 8) {
-                    setErrorMessage("Password must be at least 8 characters long.");
-                    return false;
-                }
-                // Password must have uppercase, lowercase, number, special char
-                const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).+$/;
-                if (!strongPassword.test(password)) {
-                    setErrorMessage("Password must contain uppercase, lowercase, number, and special character.");
-                    return false;
-                }
-                if (password !== confirmPassword) {
-                    setErrorMessage("Passwords do not match.");
-                    return false;
-                }
-            }
+        // todo disable duplicate submissions and disable email and otp input
+        setIsMailverified(true);
+      } catch (error: any) {
+        setOtpStatus("error");
+        const errorMsg = error?.message || error?.response?.data?.message;
+        setErrorMessage(
+          errorMsg ||
+            "Invalid or expired OTP. Please check your code and try again.",
+        );
+        setSuccessMessage("");
+      } finally {
+        isVerifyingEmailOtpRef.current = false;
+        setIsVerifyingEmailOtp(false);
+      }
+    })();
+  };
+
+  // Resend OTP handler for email
+  const handleResendEmailOtp = async () => {
+    if (
+      !mail ||
+      ismailverified ||
+      isEmailOtpBusy ||
+      isSendingEmailOtpRef.current
+    )
+      return;
+    try {
+      isSendingEmailOtpRef.current = true;
+      setIsSendingEmailOtp(true);
+      setSuccessMessage("");
+      setErrorMessage("");
+      await sendOtpService(mail);
+      setSuccessMessage("Verification code resent to your email.");
+      setEmailOtpStatus("idle");
+      setEmailOtp(new Array(6).fill(""));
+      emailOtpRefs.current[0]?.focus();
+    } catch (error: any) {
+      setErrorMessage(
+        error?.message || "Failed to resend OTP. Please try again.",
+      );
+    } finally {
+      isSendingEmailOtpRef.current = false;
+      setIsSendingEmailOtp(false);
+    }
+  };
+
+  //validate token sent during otp validation and check if user already onboarded
+  if (ismailverified) {
+    (async () => {
+      try {
+        const response = await validateTokenService(onboarding.token as string);
+        const responseObject = await response.json();
+        const UserExists = responseObject.status;
+        setSuccessMessage("");
+        if (UserExists === "accountExists") {
+          setAccountExists(true);
+        } else {
+          setCreateAccount(true);
         }
-        // Step 2: Company Info
-        if (step === 2) {
-            if (!step2Form.companyName || step2Form.companyName.length < 2) {
-                setErrorMessage("Company name is required (min 2 characters).");
-                return false;
-            }
-            if (!step2Form.companyLocation || step2Form.companyLocation.length < 2) {
-                setErrorMessage("Company location is required.");
-                return false;
-            }
-            if (
-                !step2Form.contactNumber ||
-                !/^\+?\d[\d\s]{9,19}$/.test(step2Form.contactNumber.replace(/ {2,}/g, ' '))
-            ) {
-                setErrorMessage("Please enter a valid Whatsapp number (10-15 digits, with or without country code, spaces allowed).");
-                return false;
-            }
+      } catch (e) {
+        setErrorMessage("Unauthorised Access");
+        setSuccessMessage("");
+      }
+    })();
+  }
 
-            // GST validation for Indian companies
-            if (step2Form.country === 'India') {
-                if (!step2Form.taxId) {
-                    setErrorMessage("GST Number is required for Indian companies.");
-                    return false;
+  // handle password
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
+  const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+    validatePasswords(e.target.value, confirmPassword);
+  };
+
+  const handleConfirmPasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setConfirmPassword(e.target.value);
+    validatePasswords(password, e.target.value);
+  };
+
+  const validatePasswords = (pwd1: string, pwd2: string) => {
+    if (pwd1.length < 8) {
+      setPasswordError("Password must be at least 8 characters long.");
+    } else if (
+      !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).+$/.test(
+        pwd1,
+      )
+    ) {
+      setPasswordError(
+        "Password must contain uppercase, lowercase, number, and special character.",
+      );
+    } else if (pwd1 !== pwd2) {
+      setPasswordError("Passwords do not match.");
+    } else {
+      setPasswordError("");
+    }
+  };
+
+  // fetch details of the onboarding progress if not already fetched
+  const fetchOnboardingDetails = async (token?: string) => {
+    try {
+      const usedToken = token || AccountToken;
+      if (usedToken) {
+        const details = await getOnboardingProgressService(usedToken);
+        setCompanyDetails(details.company || {});
+      }
+    } catch (error) {
+      console.error("Failed to fetch onboarding progress:", error);
+    }
+  };
+
+  //handle password to create account
+  const [isPasswordSubmitted, setIsPasswordSubmitted] = useState(false);
+
+  const ServiceCreateAccount = async (): Promise<boolean> => {
+    if (isPasswordSubmitted) return true;
+    try {
+      const response = await setPasswordService(
+        onboarding.token as string,
+        password,
+        confirmPassword,
+      );
+      setSuccessMessage("Account created successfully!");
+      setErrorMessage("");
+      setIsPasswordSubmitted(true);
+      setAccountToken(response.data);
+      saveOnboardingSession({ token: response.data, email: mail, step: 2 });
+      return true;
+    } catch (e: any) {
+      const errorMsg = e?.message || e?.response?.data?.message;
+      setErrorMessage(
+        errorMsg || "Failed to create account. Please try again.",
+      );
+      setSuccessMessage("");
+      return false;
+    }
+  };
+
+  // handle current password if user exists with partial onboarding
+  const [currentPassword, setCurrentPassword] = useState("");
+
+  const handleCurrentPasswordChange = async (
+    e: ChangeEvent<HTMLInputElement>,
+  ) => {
+    setCurrentPassword(e.target.value);
+  };
+
+  const ServiceCurrentPasswordChange = async () => {
+    if (isPasswordVerified) return true;
+    try {
+      const data = await continueOnboardingService(
+        onboarding.token as string,
+        currentPassword,
+      );
+      setSuccessMessage("Verified successfully!");
+      setErrorMessage("");
+      setIsPasswordVerified(true);
+      const json = await data.json();
+      setAccountToken(json.data);
+      saveOnboardingSession({ token: json.data, email: mail, step: 2 });
+      await fetchOnboardingDetails(json.data);
+      return true;
+    } catch (e: any) {
+      const errorMsg = e?.message || e?.response?.data?.message;
+      setErrorMessage(errorMsg || "Incorrect password. Please try again.");
+      return false;
+    }
+  };
+
+  // step 2 logic
+  const [step2Form, setStep2Form] = useState({
+    companyName: companyDetails.companyName ?? "",
+    companyLocation: companyDetails.companyAddress ?? "",
+    country: companyDetails.country ?? "", // Track country separately for GST validation
+    contactNumber: companyDetails.companyMobile ?? "",
+    taxId: companyDetails.taxId ?? "",
+  });
+
+  // GSTIN format regex for Indian companies
+  const GSTIN_REGEX =
+    /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+
+  // Update step2Form when companyDetails changes and fields are empty
+  React.useEffect(() => {
+    setStep2Form((prev) => ({
+      companyName: prev.companyName || companyDetails.companyName || "",
+      companyLocation:
+        prev.companyLocation || companyDetails.companyAddress || "",
+      country: prev.country || companyDetails.country || "",
+      contactNumber: prev.contactNumber || companyDetails.companyMobile || "",
+      taxId: prev.taxId || companyDetails.taxId || "",
+    }));
+  }, [companyDetails]);
+  const handleStep2InputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
+    const { name, value } = e.target;
+    setStep2Form((prevState) => {
+      const updated = { ...prevState, [name]: value };
+      // If country selector (companyLocation) changes, also update country field
+      if (name === "companyLocation") {
+        updated.country = value;
+      }
+      return updated;
+    });
+  };
+
+  const handleStep2Service = async () => {
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      const result = await step2Service(
+        AccountToken as string,
+        step2Form.companyName,
+        step2Form.companyLocation,
+        step2Form.country, // Pass country for GST verification
+        step2Form.contactNumber,
+        step2Form.country === "India"
+          ? step2Form.taxId.toUpperCase()
+          : step2Form.taxId,
+      );
+
+      // Show verification message if present
+      if (result?.gstVerificationMessage) {
+        setSuccessMessage(result.gstVerificationMessage);
+      } else {
+        setSuccessMessage("Company details updated successfully!");
+      }
+      setCurrentStep((prev) => prev + 1);
+      saveOnboardingSession({ token: AccountToken, email: mail, step: 3 });
+    } catch (error: any) {
+      // Display backend error message (GST validation errors)
+      const errorMsg =
+        error?.message ||
+        error?.response?.data?.message ||
+        "Failed to save company details. Please try again.";
+      setErrorMessage(errorMsg);
+    }
+  };
+
+  // step 3 logic
+  const [mainlineOfBusiness, setmainLineOfBusiness] = useState<string[]>([]);
+  const handleMainLineOfBusinessChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (e.target.checked) {
+      setmainLineOfBusiness((prevState) => [...prevState, value]);
+    } else {
+      setmainLineOfBusiness((prevState) =>
+        prevState.filter((item) => item !== value),
+      );
+    }
+  };
+
+  // Step 3: Main Line of Business & Revenue
+  // Sync mainlineOfBusiness and meanMonthlyRevenue with companyDetails if available
+  const [meanMonthlyRevenue, setmeanMonthlyRevenue] = useState<
+    MeanMonthlyRevenueEnum | ""
+  >("");
+  React.useEffect(() => {
+    // Only update if companyDetails has values and local state is empty
+    if (
+      companyDetails.mainLineBusiness &&
+      Array.isArray(companyDetails.mainLineBusiness) &&
+      mainlineOfBusiness.length === 0
+    ) {
+      setmainLineOfBusiness(companyDetails.mainLineBusiness);
+    }
+    if (companyDetails.meanMonthlyRevenue && !meanMonthlyRevenue) {
+      setmeanMonthlyRevenue(
+        companyDetails.meanMonthlyRevenue as MeanMonthlyRevenueEnum,
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyDetails]);
+
+  const handleFinancialRangeChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setmeanMonthlyRevenue(e.target.value as MeanMonthlyRevenueEnum);
+  };
+
+  const handleStep3Service = async () => {
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      // Ensure meanMonthlyRevenue is a valid enum value
+      if (
+        meanMonthlyRevenue &&
+        Object.values(MeanMonthlyRevenueEnum).includes(meanMonthlyRevenue)
+      ) {
+        await step3Service(AccountToken, {
+          mainLineBusiness: mainlineOfBusiness,
+          meanMonthlyRevenue: meanMonthlyRevenue as MeanMonthlyRevenueEnum,
+        });
+        setSuccessMessage("Company details updated successfully!");
+        setCurrentStep((prev) => prev + 1);
+        saveOnboardingSession({ token: AccountToken, email: mail, step: 4 });
+      } else {
+        setErrorMessage("Please select your monthly revenue range.");
+      }
+    } catch (e: any) {
+      // Show backend error if available
+      setErrorMessage(
+        e?.message || "Error updating company details. Please try again.",
+      );
+    }
+  };
+
+  // step 4 logic
+  const [step4Form, setStep4Form] = useState({
+    companyWebsiteUrl: companyDetails.websiteUrl ?? "",
+    founderName: companyDetails.founderName ?? "",
+    exporedBefore:
+      typeof companyDetails.exportedBefore === "boolean"
+        ? companyDetails.exportedBefore
+          ? "Yes"
+          : "No"
+        : "",
+    referrel: companyDetails.referrel ?? "",
+  });
+
+  // Sync step4Form with companyDetails when companyDetails changes
+  React.useEffect(() => {
+    setStep4Form((prev) => ({
+      companyWebsiteUrl:
+        prev.companyWebsiteUrl || companyDetails.websiteUrl || "",
+      founderName: prev.founderName || companyDetails.founderName || "",
+      exporedBefore:
+        prev.exporedBefore ||
+        (typeof companyDetails.exportedBefore === "boolean"
+          ? companyDetails.exportedBefore
+            ? "Yes"
+            : "No"
+          : ""),
+      referrel: prev.referrel || companyDetails.referrel || "",
+    }));
+  }, [companyDetails]);
+  const handleStep4InputChange = (
+    e:
+      | React.ChangeEvent<HTMLInputElement>
+      | React.ChangeEvent<HTMLSelectElement>,
+  ) => {
+    const { name, value } = e.target;
+    setStep4Form((prevState) => ({
+      ...prevState,
+      [name]: value,
+    }));
+  };
+
+  const handleStep4Service = async () => {
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      await step4Service(AccountToken, {
+        websiteUrl: step4Form.companyWebsiteUrl,
+        founderName: step4Form.founderName,
+        exportedBefore: step4Form.exporedBefore === "Yes",
+        referrel: step4Form.referrel,
+      });
+      setCurrentStep((prev) => prev + 1);
+      saveOnboardingSession({ token: AccountToken, email: mail, step: 5 });
+    } catch (e: any) {
+      // Show backend error if available
+      setErrorMessage(
+        e?.message || "Error updating company details. Please try again.",
+      );
+    }
+  };
+
+  // step 5 logic
+  const [role, setRole] = useState(companyDetails.role ?? "");
+
+  // Sync role with companyDetails when companyDetails changes and local role is empty
+  React.useEffect(() => {
+    if (companyDetails.role && !role) {
+      setRole(companyDetails.role);
+    }
+  }, [companyDetails, role]);
+  const handleRoleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRole(e.target.value);
+  };
+
+  const handleStep5Service = async () => {
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      await step5Service(AccountToken, {
+        role,
+      });
+      clearOnboardingSession();
+      navigate("/login");
+    } catch (e: any) {
+      setErrorMessage(
+        e?.message || "Error updating company details. Please try again.",
+      );
+    }
+  };
+
+  // render step ui content dynamically
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <motion.div
+            key={currentStep}
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-8"
+          >
+            <motion.div>
+              <label
+                htmlFor="companyEmail"
+                className="block text-2xl font-bold text-black"
+              >
+                Company Email Address<span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                name="mail"
+                id="companyEmail"
+                value={mail}
+                required
+                onChange={handleChangeMail}
+                disabled={ismailverified || isSendingEmailOtp}
+                onBlur={(e) => {
+                  const value = e.target.value.trim();
+                  // Simple email validation regex
+                  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+                  if (value !== "" && isValidEmail) {
+                    handleMailBlur();
+                  }
+                }}
+                className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${ismailverified || isSendingEmailOtp ? "cursor-not-allowed" : "cursor-auto"}`}
+                placeholder="Enter your company email address"
+              />
+            </motion.div>
+
+            <AnimatePresence>
+              {ismailentered && (
+                <motion.div
+                  variants={itemVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
+                  className=""
+                >
+                  <p className="mt-1 text-xs text-gray-500">
+                    Check your inbox for a verification code to continue setting
+                    up your Breyus account. Didn't get it?{" "}
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleResendEmailOtp();
+                      }}
+                      className={`text-blue-600 hover:underline ${ismailverified || isEmailOtpBusy ? "cursor-not-allowed pointer-events-none" : "cursor-pointer"}`}
+                    >
+                      Resend Code
+                    </a>
+                  </p>
+                  <div className="mt-2 flex space-x-2">
+                    {emailOtp.map((digit, index) => (
+                      <input
+                        key={index}
+                        type="text"
+                        maxLength={1}
+                        value={digit}
+                        disabled={ismailverified || isEmailOtpBusy}
+                        onChange={(e) =>
+                          handleOtpChange(
+                            e,
+                            index,
+                            emailOtp,
+                            setEmailOtp,
+                            emailOtpRefs,
+                          )
+                        }
+                        onFocus={(e) => e.target.select()}
+                        onBlur={() =>
+                          verifyOtp(emailOtp, setEmailOtpStatus, "email")
+                        }
+                        onPaste={(e) =>
+                          handlePaste(e, emailOtp, setEmailOtp, emailOtpRefs)
+                        }
+                        ref={(el) => {
+                          emailOtpRefs.current[index] = el;
+                        }}
+                        className={`w-12 h-12 text-center text-xl border rounded-md focus:outline-none focus:ring-1 ${
+                          emailOtpStatus === "success"
+                            ? "border-green-500 focus:ring-green-500"
+                            : emailOtpStatus === "error"
+                              ? "border-red-500 focus:ring-red-500"
+                              : "border-gray-300 focus:ring-black"
+                        }  ${ismailverified || isEmailOtpBusy ? "cursor-not-allowed" : "cursor-auto"}`}
+                      />
+                    ))}
+                  </div>
+                  <div></div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {accountExists && (
+              <motion.div variants={itemVariants}>
+                <label
+                  htmlFor="currentPassword"
+                  className="block text-2xl font-bold text-black"
+                >
+                  Enter Your password<span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  name="currentPassword"
+                  id="currentPassword"
+                  className={`mt-3 block w-full p-2 sm:text-sm  !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? "!border-red-500" : ""} ${isPasswordVerified ? "cursor-not-allowed" : "cursor-auto"}`}
+                  placeholder="Enter Your Password"
+                  value={currentPassword}
+                  onChange={handleCurrentPasswordChange}
+                  disabled={isPasswordVerified}
+                />
+                {passwordError && (
+                  <p className="mt-1 text-xs text-red-500">{passwordError}</p>
+                )}
+              </motion.div>
+            )}
+
+            {createAccount && (
+              <>
+                <motion.div variants={itemVariants}>
+                  <label
+                    htmlFor="password"
+                    className="block text-2xl font-bold text-black"
+                  >
+                    Set Your Password<span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    id="password"
+                    className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? "!border-red-500" : ""} ${isPasswordSubmitted ? "cursor-not-allowed" : "cursor-auto"}`}
+                    placeholder="Password"
+                    value={password}
+                    disabled={isPasswordSubmitted}
+                    onChange={handlePasswordChange}
+                  />
+                  {/* {passwordError && <p className="mt-1 text-xs text-red-500">{passwordError}</p>} */}
+                </motion.div>
+
+                <motion.div variants={itemVariants}>
+                  <label
+                    htmlFor="confirmPassword"
+                    className="block text-2xl font-bold text-black"
+                  >
+                    Confirm Password<span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    id="confirmPassword"
+                    className={`mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none ${passwordError ? "!border-red-500" : ""} ${isPasswordSubmitted ? "cursor-not-allowed" : "cursor-auto"}`}
+                    placeholder="Confirm Password"
+                    disabled={isPasswordSubmitted}
+                    value={confirmPassword}
+                    onChange={handleConfirmPasswordChange}
+                  />
+                </motion.div>
+              </>
+            )}
+          </motion.div>
+        );
+      case 2:
+        return (
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-8"
+          >
+            <motion.div variants={itemVariants}>
+              <label
+                htmlFor="companyName"
+                className="block text-2xl font-bold text-black"
+              >
+                Company Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="companyName"
+                id="companyName"
+                value={step2Form.companyName}
+                required
+                onChange={handleStep2InputChange}
+                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
+                placeholder="Enter your company name"
+              />
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <label
+                htmlFor="companyLocation"
+                className="block text-2xl font-bold text-black"
+              >
+                Company Location <span className="text-red-500">*</span>
+              </label>
+              <CountrySelector
+                name="companyLocation"
+                value={step2Form.companyLocation}
+                onChange={handleStep2InputChange}
+                wrapperClassName="mt-3"
+                className="w-full p-2 sm:text-sm !border !border-gray-200 rounded-lg"
+                placeholder="Select your country"
+                searchable
+              />
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <label
+                htmlFor="whatsappNumber"
+                className="block text-2xl font-bold text-black"
+              >
+                What your Whatsapp Number ?{" "}
+                <span className="text-red-500">*</span>
+              </label>
+              <div className="mt-1 flex rounded-md shadow-sm">
+                <input
+                  type="text"
+                  name="contactNumber"
+                  id="whatsappNumber"
+                  value={step2Form.contactNumber}
+                  required
+                  onChange={handleStep2InputChange}
+                  className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
+                  placeholder="+91 8xxxxxxxxxx"
+                />
+              </div>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <label
+                htmlFor="taxId"
+                className="block text-2xl font-bold text-black"
+              >
+                {step2Form.country === "India" ? "GST Number" : "Tax ID"}{" "}
+                <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="taxId"
+                id="taxId"
+                value={step2Form.taxId}
+                required
+                onChange={handleStep2InputChange}
+                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
+                placeholder={
+                  step2Form.country === "India"
+                    ? "Enter 15-digit GST number (e.g., 27AABCT1234H1Z5)"
+                    : "Enter your company tax ID"
                 }
-                if (!GSTIN_REGEX.test(step2Form.taxId.toUpperCase())) {
-                    setErrorMessage("Please enter a valid 15-character GST number (e.g., 27AABCT1234H1Z5).");
-                    return false;
-                }
-            } else {
-                // Non-Indian companies: standard tax ID validation
-                if (!step2Form.taxId || step2Form.taxId.length < 8) {
-                    setErrorMessage("Tax ID is required (min 8 characters).");
-                    return false;
-                }
-            }
+                maxLength={step2Form.country === "India" ? 15 : undefined}
+              />
+              {/* Real-time GST format validation hint for Indian companies */}
+              {step2Form.country === "India" && step2Form.taxId && (
+                <p
+                  className={`mt-1 text-sm ${
+                    GSTIN_REGEX.test(step2Form.taxId.toUpperCase())
+                      ? "text-green-600"
+                      : "text-gray-500"
+                  }`}
+                >
+                  {GSTIN_REGEX.test(step2Form.taxId.toUpperCase())
+                    ? "✓ Valid GST format"
+                    : "GST format: 2 digits (state) + 5 letters + 4 digits + 1 letter + 1 alphanumeric + Z + 1 alphanumeric"}
+                </p>
+              )}
+            </motion.div>
+          </motion.div>
+        );
+      case 3:
+        return (
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-8"
+          >
+            <motion.div variants={itemVariants}>
+              <label className="block text-2xl font-bold text-black ">
+                What best describes {step2Form.companyName}'s main line of
+                business? <span className="text-red-500">*</span>
+              </label>
+              <div className="mt-2 space-y-2">
+                {[
+                  "Import/Export Company",
+                  "Producer/Manufacturer",
+                  "Commodity Trader",
+                  "International Freight Forwarder",
+                  "Domestic Trucking Company",
+                  "I'm none of the above",
+                  "Broker/Intermediary/Agent",
+                  "Other",
+                ].map((option) => (
+                  <div key={option} className="flex items-center">
+                    <input
+                      id={option.replace(/\s/g, "")}
+                      name="mainlineOfBusiness"
+                      type="checkbox"
+                      value={option}
+                      checked={mainlineOfBusiness.includes(option)} // Check if this option is selected
+                      onChange={handleMainLineOfBusinessChange} // Handle change
+                      className="focus:ring-black h-4 w-4 text-black border-gray-300 rounded"
+                    />
+                    <label
+                      htmlFor={option.replace(/\s/g, "")}
+                      className="ml-3 block text-sm font-medium text-gray-700"
+                    >
+                      {option}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+            <motion.div variants={itemVariants}>
+              <label className="block text-2xl font-bold text-black">
+                What's {step2Form.companyName}'s average monthly revenue?{" "}
+                <span className="text-red-500">*</span>
+              </label>
+              <div className="mt-2 space-y-2">
+                {Object.values(MeanMonthlyRevenueEnum).map((option) => (
+                  <motion.div
+                    key={option}
+                    className="flex items-center"
+                    variants={itemVariants}
+                  >
+                    <input
+                      id={option.replace(/\s/g, "")}
+                      name="meanMonthlyRevenue"
+                      type="radio"
+                      value={option}
+                      checked={meanMonthlyRevenue === option}
+                      onChange={handleFinancialRangeChange}
+                      className="focus:ring-black h-4 w-4 text-black border-gray-300"
+                    />
+                    <label
+                      htmlFor={option.replace(/\s/g, "")}
+                      className="ml-3 block text-sm font-medium text-gray-700"
+                    >
+                      {option}
+                    </label>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        );
+      case 4:
+        return (
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-8"
+          >
+            <motion.div variants={itemVariants}>
+              <label
+                htmlFor="companyWebsite"
+                className="block text-2xl font-bold text-black"
+              >
+                What is Company website URL?
+              </label>
+              <p className="mt-1 text-xs text-gray-500">
+                Remember to put https:// in front of it. Make sure the website
+                is yours & valid, otherwise we won't be able to give you free
+                trial access.
+              </p>
+              <input
+                type="text"
+                name="companyWebsiteUrl"
+                id="companyWebsite"
+                value={step4Form.companyWebsiteUrl}
+                onChange={handleStep4InputChange}
+                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
+                placeholder="Enter your company website"
+              />
+            </motion.div>
+            <motion.div variants={itemVariants}>
+              <label
+                htmlFor="name"
+                className="block text-2xl font-bold text-black"
+              >
+                Founder Name <span className="text-red-500">*</span>
+              </label>
+              <p className="mt-1 text-xs text-gray-500">
+                Put your first and second name. Please make sure you put all
+                correct information.
+              </p>
+              <input
+                type="text"
+                name="founderName"
+                id="name"
+                value={step4Form.founderName}
+                onChange={handleStep4InputChange}
+                className="mt-3 block w-full p-2 sm:text-sm !border-b !border-gray-200 !outline-none !shadow-none !focus:shadow-none !focus:outline-none"
+                placeholder="Enter Founder Name"
+              />
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <label
+                htmlFor="exporedBefore"
+                className="block text-2xl font-bold text-black"
+              >
+                Has your company exported before?
+              </label>
+              <SelectField
+                name="exporedBefore"
+                id="exporedBefore"
+                value={step4Form.exporedBefore}
+                onChange={handleStep4InputChange}
+                wrapperClassName="w-full mt-3"
+              >
+                <option value="">Select</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </SelectField>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <label
+                htmlFor="referrel"
+                className="block text-2xl font-bold text-black"
+              >
+                How do you get to know about Breyus?{" "}
+                <span className="text-red-500">*</span>
+              </label>
+              <SelectField
+                id="referrel"
+                name="referrel"
+                value={step4Form.referrel}
+                onChange={handleStep4InputChange}
+                wrapperClassName="w-full mt-3"
+              >
+                <option value="">Select an option</option>
+                <option value="Partner company">Partner company</option>
+                <option value="Ad campaign">Ad campaign</option>
+                <option value="Other">Other</option>
+              </SelectField>
+            </motion.div>
+          </motion.div>
+        );
+      case 5:
+        return (
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-8"
+          >
+            <motion.div variants={itemVariants}>
+              <label className="block text-2xl font-bold text-black">
+                What's your business roll in the market?
+                <span className="text-red-500">*</span>
+              </label>
+              <div className="mt-4 space-y-4">
+                {["Seller", "Buyer", "Seller and Buyer"].map(
+                  (option, index) => (
+                    <motion.div
+                      key={option}
+                      className="flex items-center"
+                      variants={itemVariants}
+                    >
+                      <input
+                        id={option.replace(/\s/g, "")}
+                        name="role"
+                        type="radio"
+                        value={option}
+                        checked={role === option}
+                        onChange={handleRoleInputChange}
+                        className="focus:ring-black h-4 w-4 text-black border-gray-300"
+                      />
+                      <label
+                        htmlFor={option.replace(/\s/g, "")}
+                        className="ml-3 block text-sm text-black font-semibold"
+                      >
+                        {option}
+                      </label>
+                    </motion.div>
+                  ),
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // Validation for each step
+  const validateStep = (step: number): boolean => {
+    setErrorMessage("");
+    if (step === 1) {
+      if (!mail) {
+        setErrorMessage("Email is required.");
+        return false;
+      }
+      const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail);
+      if (!isValidEmail) {
+        setErrorMessage("Please enter a valid email address.");
+        return false;
+      }
+      if (isSendingEmailOtp || isSendingEmailOtpRef.current) {
+        setErrorMessage("Sending OTP. Please wait.");
+        return false;
+      }
+      if (isVerifyingEmailOtp || isVerifyingEmailOtpRef.current) {
+        setErrorMessage("Verifying OTP. Please wait.");
+        return false;
+      }
+      if (!ismailentered) {
+        setErrorMessage("Please enter your email and request OTP.");
+        return false;
+      }
+      if (!ismailverified) {
+        if (
+          emailOtp.join("").length !== 6 ||
+          !/^\d{6}$/.test(emailOtp.join(""))
+        ) {
+          setErrorMessage("Please enter a valid 6-digit OTP.");
+          return false;
         }
-        // Step 3: Business Info
-        if (step === 3) {
-            if (mainlineOfBusiness.length === 0) {
-                setErrorMessage("Please select at least one business type.");
-                return false;
-            }
-            if (!meanMonthlyRevenue) {
-                setErrorMessage("Please select your monthly revenue range.");
-                return false;
-            }
+        setErrorMessage("Please verify the OTP sent to your email.");
+        return false;
+      }
+      if (accountExists && !currentPassword) {
+        setErrorMessage("Password is required.");
+        return false;
+      }
+      if (createAccount) {
+        if (!password || !confirmPassword) {
+          setErrorMessage("Password and confirm password are required.");
+          return false;
         }
-        // Step 4: More Info
-        if (step === 4) {
-            // if (!step4Form.companyWebsiteUrl || !/^https?:\/\/.+\..+/.test(step4Form.companyWebsiteUrl)) {
-            //     setErrorMessage("Please enter a valid company website URL (must start with http/https).");
-            //     return false;
-            // }
-            if (!step4Form.founderName || step4Form.founderName.length < 2) {
-                setErrorMessage("Founder name is required (min 2 characters).");
-                return false;
-            }
-            if (!step4Form.exporedBefore) {
-                setErrorMessage("Please select if your company has exported before.");
-                return false;
-            }
-            if (!step4Form.referrel || step4Form.referrel === "Select an option" || step4Form.referrel === "") {
-                setErrorMessage("Please select how you got to know about Breyus.");
-                return false;
-            }
+        if (password.length < 8) {
+          setErrorMessage("Password must be at least 8 characters long.");
+          return false;
         }
-        // Step 5: Role
-        if (step === 5) {
-            if (!role) {
-                setErrorMessage("Please select your business role in the market.");
-                return false;
-            }
+        // Password must have uppercase, lowercase, number, special char
+        const strongPassword =
+          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).+$/;
+        if (!strongPassword.test(password)) {
+          setErrorMessage(
+            "Password must contain uppercase, lowercase, number, and special character.",
+          );
+          return false;
         }
-        return true;
-    };
+        if (password !== confirmPassword) {
+          setErrorMessage("Passwords do not match.");
+          return false;
+        }
+      }
+    }
+    // Step 2: Company Info
+    if (step === 2) {
+      if (!step2Form.companyName || step2Form.companyName.length < 2) {
+        setErrorMessage("Company name is required (min 2 characters).");
+        return false;
+      }
+      if (!step2Form.companyLocation || step2Form.companyLocation.length < 2) {
+        setErrorMessage("Company location is required.");
+        return false;
+      }
+      if (
+        !step2Form.contactNumber ||
+        !/^\+?\d[\d\s]{9,19}$/.test(
+          step2Form.contactNumber.replace(/ {2,}/g, " "),
+        )
+      ) {
+        setErrorMessage(
+          "Please enter a valid Whatsapp number (10-15 digits, with or without country code, spaces allowed).",
+        );
+        return false;
+      }
 
-    return (
-        <div className="flex min-h-screen">
-            {/* Left side - Progress Bar */}
-            <div className="w-[430px] min-w-[400px] bg-gray-100 px-auto py-8 flex flex-col items-center">
-                <div className="my-10">
-                    <img src={BreyusLogo} className="h-14" alt="Breyus Logo" />
-                </div>
-                <OnboardingProgress currentStep={currentStep} />
-            </div>
+      // GST validation for Indian companies
+      if (step2Form.country === "India") {
+        if (!step2Form.taxId) {
+          setErrorMessage("GST Number is required for Indian companies.");
+          return false;
+        }
+        if (!GSTIN_REGEX.test(step2Form.taxId.toUpperCase())) {
+          setErrorMessage(
+            "Please enter a valid 15-character GST number (e.g., 27AABCT1234H1Z5).",
+          );
+          return false;
+        }
+      } else {
+        // Non-Indian companies: standard tax ID validation
+        if (!step2Form.taxId || step2Form.taxId.length < 8) {
+          setErrorMessage("Tax ID is required (min 8 characters).");
+          return false;
+        }
+      }
+    }
+    // Step 3: Business Info
+    if (step === 3) {
+      if (mainlineOfBusiness.length === 0) {
+        setErrorMessage("Please select at least one business type.");
+        return false;
+      }
+      if (!meanMonthlyRevenue) {
+        setErrorMessage("Please select your monthly revenue range.");
+        return false;
+      }
+    }
+    // Step 4: More Info
+    if (step === 4) {
+      // if (!step4Form.companyWebsiteUrl || !/^https?:\/\/.+\..+/.test(step4Form.companyWebsiteUrl)) {
+      //     setErrorMessage("Please enter a valid company website URL (must start with http/https).");
+      //     return false;
+      // }
+      if (!step4Form.founderName || step4Form.founderName.length < 2) {
+        setErrorMessage("Founder name is required (min 2 characters).");
+        return false;
+      }
+      if (!step4Form.exporedBefore) {
+        setErrorMessage("Please select if your company has exported before.");
+        return false;
+      }
+      if (
+        !step4Form.referrel ||
+        step4Form.referrel === "Select an option" ||
+        step4Form.referrel === ""
+      ) {
+        setErrorMessage("Please select how you got to know about Breyus.");
+        return false;
+      }
+    }
+    // Step 5: Role
+    if (step === 5) {
+      if (!role) {
+        setErrorMessage("Please select your business role in the market.");
+        return false;
+      }
+    }
+    return true;
+  };
 
-            {/* Right side - Content */}
-            <div className="flex-1 flex items-center justify-center p-4">
-                <div className="border border-gray-300 bg-white p-8 rounded-lg w-full max-w-[900px]">
-                    <div className="w-full max-w-[800px] mx-auto">
-                        {renderStepContent()}
-                    </div>
-
-                    <>
-
-                        <div className="mt-3 mx-6 text-red-600 text-sm"> {errorMessage}</div>
-                        <div className="mt-3 mx-6 text-green-600 text-sm"> {successMessage}</div>
-
-                        <div className="flex justify-between max-w-[800px] mx-auto">
-
-                            {currentStep > 1 && (
-                                <button
-                                    onClick={() => setCurrentStep(prev => prev - 1)}
-                                    className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors h-fit mt-12"
-                                >
-                                    Previous
-                                </button>
-                            )}
-                            {currentStep < 5 ? (
-                                <button
-                                    onClick={async () => {
-                                        // Step 1: Handle email and OTP flow
-                                        if (currentStep === 1) {
-                                            // Validate email format first
-                                            if (!mail) {
-                                                setErrorMessage("Email is required.");
-                                                return;
-                                            }
-                                            const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail);
-                                            if (!isValidEmail) {
-                                                setErrorMessage("Please enter a valid email address.");
-                                                return;
-                                            }
-
-                                            // If OTP not sent yet, trigger it and wait
-                                            if (!ismailentered && !isSendingEmailOtp && !isSendingEmailOtpRef.current) {
-                                                await handleMailBlur();
-                                                return; // Return and let user enter OTP
-                                            }
-
-                                            // If OTP is currently being sent, show message and wait
-                                            if (isSendingEmailOtp || isSendingEmailOtpRef.current) {
-                                                setErrorMessage("Sending verification code... Please wait.");
-                                                return;
-                                            }
-
-                                            // If OTP is being verified, wait
-                                            if (isVerifyingEmailOtp || isVerifyingEmailOtpRef.current) {
-                                                setErrorMessage("Verifying OTP... Please wait.");
-                                                return;
-                                            }
-                                        }
-
-                                        // If password is required and not verified, try to verify first
-                                        if (currentStep === 1 && accountExists && !isPasswordVerified) {
-                                            const verified = await ServiceCurrentPasswordChange();
-                                            if (verified) {
-                                                setCurrentStep(prev => prev + 1);
-                                            }
-                                            return;
-                                        }
-                                        if (!validateStep(currentStep)) return;
-                                        if (currentStep === 2) {
-                                            await handleStep2Service();
-                                            return;
-                                        }
-                                        if (currentStep === 3) {
-                                            await handleStep3Service();
-                                            return;
-                                        }
-                                        if (currentStep === 4) {
-                                            await handleStep4Service();
-                                            return;
-                                        }
-
-                                        if (currentStep === 1) {
-                                            setCurrentStep(prev => prev + 1);
-                                        }
-
-
-                                        if (currentStep === 1 && createAccount && !isPasswordSubmitted) ServiceCreateAccount();
-                                    }}
-                                    disabled={currentStep === 1 && isEmailOtpBusy}
-                                    className={`px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors ml-auto mt-12 flex items-center gap-2 ${currentStep === 1 && isEmailOtpBusy ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                >
-                                    {currentStep === 1 && isSendingEmailOtp ? (
-                                        <>
-                                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            Sending OTP...
-                                        </>
-                                    ) : currentStep === 1 && isVerifyingEmailOtp ? (
-                                        <>
-                                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            Verifying...
-                                        </>
-                                    ) : (
-                                        'Next'
-                                    )}
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={async () => {
-                                        if (currentStep === 5) {
-                                            await handleStep5Service();
-                                            return;
-                                        }
-                                    }}
-                                    className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors mt-12"
-                                >
-                                    Next
-                                </button>
-                            )}
-                        </div>
-                    </>
-                </div>
-            </div>
+  return (
+    <div className="flex min-h-screen">
+      {/* Left side - Progress Bar */}
+      <div className="w-[430px] min-w-[400px] bg-gray-100 px-auto py-8 flex flex-col items-center">
+        <div className="my-10">
+          <img src={BreyusLogo} className="h-14" alt="Breyus Logo" />
         </div>
-    );
+        <OnboardingProgress currentStep={currentStep} />
+      </div>
+
+      {/* Right side - Content */}
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="border border-gray-300 bg-white p-8 rounded-lg w-full max-w-[900px]">
+          <div className="w-full max-w-[800px] mx-auto">
+            {renderStepContent()}
+          </div>
+
+          <>
+            <div className="mt-3 mx-6 text-red-600 text-sm">
+              {" "}
+              {errorMessage}
+            </div>
+            <div className="mt-3 mx-6 text-green-600 text-sm">
+              {" "}
+              {successMessage}
+            </div>
+
+            <div className="flex justify-between max-w-[800px] mx-auto">
+              {currentStep > 1 && (
+                <button
+                  onClick={() => setCurrentStep((prev) => prev - 1)}
+                  className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors h-fit mt-12"
+                >
+                  Previous
+                </button>
+              )}
+              {currentStep < 5 ? (
+                <button
+                  onClick={async () => {
+                    // Step 1: Handle email and OTP flow
+                    if (currentStep === 1) {
+                      // Validate email format first
+                      if (!mail) {
+                        setErrorMessage("Email is required.");
+                        return;
+                      }
+                      const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+                        mail,
+                      );
+                      if (!isValidEmail) {
+                        setErrorMessage("Please enter a valid email address.");
+                        return;
+                      }
+
+                      // If OTP not sent yet, trigger it and wait
+                      if (
+                        !ismailentered &&
+                        !isSendingEmailOtp &&
+                        !isSendingEmailOtpRef.current
+                      ) {
+                        await handleMailBlur();
+                        return; // Return and let user enter OTP
+                      }
+
+                      // If OTP is currently being sent, show message and wait
+                      if (isSendingEmailOtp || isSendingEmailOtpRef.current) {
+                        setErrorMessage(
+                          "Sending verification code... Please wait.",
+                        );
+                        return;
+                      }
+
+                      // If OTP is being verified, wait
+                      if (
+                        isVerifyingEmailOtp ||
+                        isVerifyingEmailOtpRef.current
+                      ) {
+                        setErrorMessage("Verifying OTP... Please wait.");
+                        return;
+                      }
+                    }
+
+                    // If password is required and not verified, try to verify first
+                    if (
+                      currentStep === 1 &&
+                      accountExists &&
+                      !isPasswordVerified
+                    ) {
+                      const verified = await ServiceCurrentPasswordChange();
+                      if (verified) {
+                        setCurrentStep((prev) => prev + 1);
+                      }
+                      return;
+                    }
+                    if (!validateStep(currentStep)) return;
+                    if (currentStep === 2) {
+                      await handleStep2Service();
+                      return;
+                    }
+                    if (currentStep === 3) {
+                      await handleStep3Service();
+                      return;
+                    }
+                    if (currentStep === 4) {
+                      await handleStep4Service();
+                      return;
+                    }
+
+                    if (currentStep === 1 && createAccount) {
+                      const created = await ServiceCreateAccount();
+                      if (created) setCurrentStep(2);
+                    }
+                  }}
+                  disabled={currentStep === 1 && isEmailOtpBusy}
+                  className={`px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors ml-auto mt-12 flex items-center gap-2 ${currentStep === 1 && isEmailOtpBusy ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  {currentStep === 1 && isSendingEmailOtp ? (
+                    <>
+                      <svg
+                        className="animate-spin h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Sending OTP...
+                    </>
+                  ) : currentStep === 1 && isVerifyingEmailOtp ? (
+                    <>
+                      <svg
+                        className="animate-spin h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Verifying...
+                    </>
+                  ) : (
+                    "Next"
+                  )}
+                </button>
+              ) : (
+                <button
+                  onClick={async () => {
+                    if (currentStep === 5) {
+                      await handleStep5Service();
+                      return;
+                    }
+                  }}
+                  className="px-6 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors mt-12"
+                >
+                  Next
+                </button>
+              )}
+            </div>
+          </>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export { OnBoarding };

@@ -31,6 +31,7 @@ import { response, Response } from 'express';
 import { decode } from 'punycode';
 import { GstService } from 'src/gst/gst.service';
 import { MiscNotificationService } from 'src/notification/misc-notification.service';
+import { ONBOARDING_PROGRESS } from './onboarding-progress';
 
 @Injectable()
 export class OnboardingService {
@@ -209,6 +210,7 @@ export class OnboardingService {
 
       const company = new this.companySchema({
         onboardingExpiresAt: expiryDate,
+        onboardingProgress: ONBOARDING_PROGRESS.ACCOUNT_CREATED,
       });
       savedCompany = await company.save();
     } catch (e) {
@@ -447,7 +449,12 @@ export class OnboardingService {
 
       const updateCompany = await this.companySchema.findByIdAndUpdate(
         companyId,
-        updateData,
+        {
+          $set: updateData,
+          $max: {
+            onboardingProgress: ONBOARDING_PROGRESS.COMPANY_DETAILS,
+          },
+        },
         { new: true },
       );
 
@@ -538,8 +545,13 @@ export class OnboardingService {
       const updateCompany = await this.companySchema.findByIdAndUpdate(
         companyId,
         {
-          mainLineBusiness,
-          meanMonthlyRevenue,
+          $set: {
+            mainLineBusiness,
+            meanMonthlyRevenue,
+          },
+          $max: {
+            onboardingProgress: ONBOARDING_PROGRESS.BUSINESS_DETAILS,
+          },
         },
         { new: true },
       );
@@ -605,10 +617,15 @@ export class OnboardingService {
       const updateCompany = await this.companySchema.findByIdAndUpdate(
         companyId,
         {
-          websiteUrl,
-          founderName,
-          exportedBefore,
-          referrel,
+          $set: {
+            websiteUrl,
+            founderName,
+            exportedBefore,
+            referrel,
+          },
+          $max: {
+            onboardingProgress: ONBOARDING_PROGRESS.COMPANY_PROFILE,
+          },
         },
         { new: true },
       );
@@ -674,8 +691,11 @@ export class OnboardingService {
       const updateCompany = await this.companySchema.findByIdAndUpdate(
         companyId,
         {
-          role,
-          isOnboardingCompleted: true,
+          $set: {
+            role,
+            isOnboardingCompleted: true,
+            onboardingProgress: ONBOARDING_PROGRESS.COMPLETED,
+          },
           // Clear TTL expiry - company is now permanent (onboarding completed)
           $unset: { onboardingExpiresAt: 1 },
         },

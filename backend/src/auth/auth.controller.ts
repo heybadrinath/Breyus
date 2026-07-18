@@ -22,6 +22,7 @@ import {
   ResetPasswordDto,
   ChangePasswordDto,
 } from './dto/password-reset.dto';
+import { getOnboardingResumeStep } from 'src/onboarding/onboarding-progress';
 
 /**
  * Auth Controller
@@ -62,14 +63,30 @@ export class AuthController {
       }
       const user = await this.userSchema
         .findById(userId)
-        .populate('company', 'role')
+        .populate('company', 'role isOnboardingCompleted onboardingProgress')
         .lean();
       if (!user) {
         return response.status(401).send('User not found');
       }
       // Ensure company is populated and has a role property
-      const company = user.company as { role?: string };
-      return response.status(200).json({ valid: true, role: company?.role });
+      const company = user.company as {
+        role?: string;
+        isOnboardingCompleted?: boolean;
+        onboardingProgress?: number;
+      };
+
+      if (!company?.isOnboardingCompleted) {
+        return response.status(200).json({
+          valid: true,
+          onboardingRequired: true,
+          onboardingProgress: company?.onboardingProgress || 0,
+          onboardingStep: getOnboardingResumeStep(
+            company?.onboardingProgress || 0,
+          ),
+        });
+      }
+
+      return response.status(200).json({ valid: true, role: company.role });
     } catch (error) {
       return response.status(401).send('Invalid or expired cookie');
     }

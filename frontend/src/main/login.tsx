@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
-import { login, validateOtp } from '../services/login.service';
-
+import { login, validateOtp } from "../services/login.service";
+import {
+  readOnboardingSession,
+  saveOnboardingSession,
+} from "../utils/onboardingSession";
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -12,12 +15,14 @@ const Login: React.FC = () => {
       try {
         const response = await fetch(
           process.env.REACT_APP_BACKEND_URL + "/auth/validate-cookie",
-          { credentials: "include" }
+          { credentials: "include" },
         );
         if (response.ok) {
           const data = await response.json();
           if (data.valid) {
-            if (data.role === "Seller and Buyer") {
+            if (data.onboardingRequired && readOnboardingSession()?.token) {
+              navigate("/onboarding");
+            } else if (data.role === "Seller and Buyer") {
               navigate("/select-role");
             } else if (data.role === "Buyer") {
               navigate("/buyer/homepage");
@@ -68,14 +73,24 @@ const Login: React.FC = () => {
     try {
       const response = await login(formData.email, formData.password);
 
+      if (response.onboardingRequired && response.AccountToken) {
+        saveOnboardingSession({
+          token: response.AccountToken,
+          email: formData.email,
+          step: response.onboardingStep || 2,
+        });
+        navigate("/onboarding");
+        return;
+      }
+
       // TESTING BYPASS: If backend returns bypassOtp, navigate directly
       if (response.bypassOtp && response.role) {
         if (response.role === "Buyer") {
-          navigate('/buyer/homepage');
+          navigate("/buyer/homepage");
         } else if (response.role === "Seller") {
-          navigate('/seller/dashboard');
+          navigate("/seller/dashboard");
         } else {
-          navigate('/select-role');
+          navigate("/select-role");
         }
         return;
       }
@@ -86,7 +101,10 @@ const Login: React.FC = () => {
     } catch (e: any) {
       // Use backend error message if available, otherwise show specific fallback
       const errorMessage = e?.message || e?.response?.data?.message;
-      setError(errorMessage || "Unable to send OTP. Please check your credentials and try again.");
+      setError(
+        errorMessage ||
+          "Unable to send OTP. Please check your credentials and try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -98,21 +116,31 @@ const Login: React.FC = () => {
     try {
       const response = await validateOtp(formData.email, otp);
       setIsOtpSent(true);
-      if (response.role === "Buyer") {
-        navigate('/buyer/homepage');
+      if (response.onboardingRequired && response.AccountToken) {
+        saveOnboardingSession({
+          token: response.AccountToken,
+          email: formData.email,
+          step: response.onboardingStep || 2,
+        });
+        navigate("/onboarding");
+      } else if (response.role === "Buyer") {
+        navigate("/buyer/homepage");
       } else if (response.role === "Seller") {
-        navigate('/seller/dashboard');
+        navigate("/seller/dashboard");
       } else {
-        navigate('/select-role');
+        navigate("/select-role");
       }
     } catch (e: any) {
       // Use backend error message if available, otherwise show specific fallback
       const errorMessage = e?.message || e?.response?.data?.message;
-      setError(errorMessage || "Invalid or expired OTP. Please check your code and try again.");
+      setError(
+        errorMessage ||
+          "Invalid or expired OTP. Please check your code and try again.",
+      );
     } finally {
       setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="flex h-screen w-screen bg-white text-black">
@@ -124,9 +152,13 @@ const Login: React.FC = () => {
         </div>
 
         <div className="w-full max-w-md">
-          <h2 className="text-3xl font-bold mb-2">{isOtpSent ? "Enter OTP" : "Sign In"}</h2>
+          <h2 className="text-3xl font-bold mb-2">
+            {isOtpSent ? "Enter OTP" : "Sign In"}
+          </h2>
           <p className="text-gray-600 mb-6">
-            {isOtpSent ? "We've sent an OTP to your email." : "Fill the fields to continue."}
+            {isOtpSent
+              ? "We've sent an OTP to your email."
+              : "Fill the fields to continue."}
           </p>
 
           {!isOtpSent ? (
@@ -159,14 +191,21 @@ const Login: React.FC = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-4 text-gray-500 hover:text-black"
                 >
-                  {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                  {showPassword ? (
+                    <EyeSlashIcon className="h-5 w-5" />
+                  ) : (
+                    <EyeIcon className="h-5 w-5" />
+                  )}
                 </button>
               </div>
 
               {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
 
               <div className="text-right text-sm mt-2">
-                <Link to="/forgot-password" className="text-gray-500 hover:underline">
+                <Link
+                  to="/forgot-password"
+                  className="text-gray-500 hover:underline"
+                >
                   Forgot Password?
                 </Link>
               </div>
@@ -183,14 +222,22 @@ const Login: React.FC = () => {
               {/* Don't have an account? Sign up */}
               <div className="text-center text-sm mt-4">
                 Don't have an account?{" "}
-                <Link to="/onboarding" className="text-blue-500 hover:underline">
+                <Link
+                  to="/onboarding"
+                  className="text-blue-500 hover:underline"
+                >
                   Sign up
                 </Link>
               </div>
             </form>
           ) : (
             // otp form
-            <form onSubmit={(e) => { e.preventDefault() }} className="w-full">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+              }}
+              className="w-full"
+            >
               <label className="block text-gray-700">OTP</label>
               <input
                 type="text"
@@ -214,12 +261,15 @@ const Login: React.FC = () => {
 
               <button
                 type="button"
-                className={`mt-4 w-full bg-gray-600 text-white py-3 rounded-full text-lg font-semibold transition-all duration-300 hover:bg-gray-700 shadow-md ${resendTimer > 0 ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
+                className={`mt-4 w-full bg-gray-600 text-white py-3 rounded-full text-lg font-semibold transition-all duration-300 hover:bg-gray-700 shadow-md ${
+                  resendTimer > 0 ? "opacity-50 cursor-not-allowed" : ""
+                }`}
                 disabled={resendTimer > 0}
                 onClick={handlelogin}
               >
-                {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : "Resend OTP"}
+                {resendTimer > 0
+                  ? `Resend OTP in ${resendTimer}s`
+                  : "Resend OTP"}
               </button>
             </form>
           )}
@@ -228,7 +278,11 @@ const Login: React.FC = () => {
 
       {/* Right Section (Image) */}
       <div className="w-1/2 h-full hidden lg:flex items-center justify-center">
-        <img src="/assets/side-photo.png" alt="Side Illustration" className="w-full h-full object-cover" />
+        <img
+          src="/assets/side-photo.png"
+          alt="Side Illustration"
+          className="w-full h-full object-cover"
+        />
       </div>
     </div>
   );
