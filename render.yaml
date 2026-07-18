@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: breyus-showcase
+    name: breyus
     runtime: docker
     plan: free
     region: singapore
@@ -17,11 +17,11 @@ services:
       - key: STATIC_SITE_ROOT
         value: /app/public
       - key: CORS_ORIGIN
-        value: https://breyus-showcase.onrender.com
+        value: https://breyus.onrender.com
       - key: FRONTEND_URL
-        value: https://breyus-showcase.onrender.com
+        value: https://breyus.onrender.com
       - key: ADMIN_PORTAL_URL
-        value: https://breyus-showcase.onrender.com/admin
+        value: https://breyus.onrender.com/admin
       - key: COOKIE_SECURE
         value: "true"
       - key: COOKIE_EXPIRY_LOGIN
