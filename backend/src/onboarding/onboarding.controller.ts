@@ -206,6 +206,24 @@ export class OnboardingController {
   ): Promise<void> {
     try {
       const result = await this.onboardingService.step5(step5dto, AccountToken);
+
+      const cookieSecure =
+        process.env.COOKIE_SECURE === 'true' ||
+        process.env.NODE_ENV === 'production';
+      const sameSite = cookieSecure
+        ? process.env.NODE_ENV === 'production'
+          ? 'strict'
+          : 'none'
+        : 'lax';
+
+      // Completing onboarding always returns the user to a clean sign-in state.
+      response.clearCookie('account', {
+        httpOnly: true,
+        signed: true,
+        secure: cookieSecure,
+        sameSite,
+      });
+
       await response
         .status(HttpStatus.OK)
         .json({ message: 'Step 5 completed successfully', data: result });
