@@ -88,7 +88,10 @@ export function UsersPage() {
   const handleRoleFilter = (value: string) => {
     setParams(prev => ({
       ...prev,
-      role: value === 'all' ? undefined : (value as 'Buyer' | 'Seller'),
+      role:
+        value === 'all'
+          ? undefined
+          : (value as 'Buyer' | 'Seller' | 'Seller and Buyer'),
       page: 1,
     }))
   }
@@ -247,6 +250,7 @@ export function UsersPage() {
                 <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="Buyer">Buyer</SelectItem>
                 <SelectItem value="Seller">Seller</SelectItem>
+                <SelectItem value="Seller and Buyer">Seller and Buyer</SelectItem>
               </SelectContent>
             </Select>
 

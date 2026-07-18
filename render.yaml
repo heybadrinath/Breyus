@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: breyus-showcase
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile.showcase
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_NAME
+        value: Breyus
+      - key: API_GLOBAL_PREFIX
+        value: api
+      - key: STATIC_SITE_ROOT
+        value: /app/public
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_EXPIRY_LOGIN
+        value: "86400000"
+      - key: ADMIN_SESSION_EXPIRY
+        value: "86400000"
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: COOKIE_SECRET
+        generateValue: true
+      - key: MONGODB_URI_PROD
+        sync: false
+      - key: STORAGE_PROVIDER
+        value: s3
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_REGION
+        value: auto
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
+      - key: S3_BUCKET
+        value: breyus-showcase
+      - key: S3_PUBLIC_URL
+        value: /uploads

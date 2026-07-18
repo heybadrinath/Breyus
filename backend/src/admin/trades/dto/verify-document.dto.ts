@@ -13,6 +13,7 @@ export const VERIFIABLE_DOCUMENT_TYPES = [
   'sco',
   'icpo',
   'spa',
+  'signed-spa',
   'bol',
   'payment-proof',
 ] as const;

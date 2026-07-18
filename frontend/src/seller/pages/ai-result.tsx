@@ -708,6 +708,7 @@ const SellerAiResult: React.FC = () => {
       } else if (state?.commodity) {
         // Direct commodity search
         const searchInput: AISearchInput = {
+          role: 'Seller',
           commodity: state.commodity,
           hsCode: state.hsCode,
           country: state.country,
@@ -733,6 +734,7 @@ const SellerAiResult: React.FC = () => {
         try {
           const commodity = state?.productName || state?.commodity || 'commodity';
           const analysisResponse = await startAnalysis({
+            role: 'Seller',
             commodity,
             hsCode: state?.hsCode,
           });

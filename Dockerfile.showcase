@@ -1,0 +1,66 @@
+FROM node:20-bookworm-slim AS frontend-build
+
+WORKDIR /src/frontend
+
+COPY frontend/package*.json ./
+RUN npm ci --legacy-peer-deps
+
+COPY frontend/ ./
+ENV REACT_APP_BACKEND_URL=/api
+ENV GENERATE_SOURCEMAP=false
+RUN npm run build
+
+
+FROM node:20-bookworm-slim AS admin-build
+
+WORKDIR /src/admin-portal
+
+COPY admin-portal/package*.json ./
+RUN npm ci
+
+COPY admin-portal/ ./
+ENV VITE_API_URL=/api
+RUN npm run build
+
+
+FROM node:20-bookworm-slim AS backend-build
+
+WORKDIR /src/backend
+
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+
+COPY backend/package*.json ./
+RUN npm ci
+
+COPY backend/ ./
+RUN npm run build && npm prune --omit=dev
+
+
+FROM node:20-bookworm-slim AS runtime
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=10000
+ENV API_GLOBAL_PREFIX=api
+ENV STATIC_SITE_ROOT=/app/public
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      chromium \
+      fonts-liberation \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=backend-build /src/backend/package*.json ./
+COPY --from=backend-build /src/backend/node_modules ./node_modules
+COPY --from=backend-build /src/backend/dist ./dist
+COPY --from=frontend-build /src/frontend/build ./public
+COPY --from=admin-build /src/admin-portal/dist ./public/admin
+
+RUN mkdir -p /app/uploads
+
+EXPOSE 10000
+
+CMD ["node", "dist/main.js"]

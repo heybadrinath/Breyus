@@ -310,6 +310,7 @@ const SellerSearchResult: React.FC = () => {
 
     try {
       const searchInput: AISearchInput = {
+        role: 'Seller',
         commodity: state.commodity,
         hsCode: state.hsCode,
         country: state.country,
@@ -331,6 +332,7 @@ const SellerSearchResult: React.FC = () => {
       if (response.data.totalMatches > 0) {
         try {
           const analysisResponse = await startAnalysis({
+            role: 'Seller',
             commodity: state.commodity,
             hsCode: state.hsCode,
             sourceCountry: state.country,

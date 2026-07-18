@@ -219,9 +219,8 @@ const PiChart = ({ data, loading, error }: { data: PieChartData[], loading: bool
   if (error) return <ErrorMessage message={error} />;
   if (!data || data.length === 0) return <NoSalesData />;
 
-  // Check if there's real customer data (not just the default 1:1 placeholder)
   const total = data.reduce((sum, d) => sum + d.value, 0);
-  const hasRealData = !(data.length === 2 && data[0].value === 1 && data[1].value === 1);
+  const hasRealData = total > 0;
 
   if (!hasRealData) {
     return (

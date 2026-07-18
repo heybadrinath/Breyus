@@ -13,6 +13,7 @@ export interface PriceRange {
 }
 
 export interface AISearchInput {
+  role?: 'Buyer' | 'Seller';
   commodity: string;
   country?: string;
   port?: string;
@@ -27,6 +28,7 @@ export interface CommoditySearchInput {
 }
 
 export interface MarketAnalysisInput {
+  role?: 'Buyer' | 'Seller';
   commodity: string;
   hsCode?: string;
   destinationCountry?: string;

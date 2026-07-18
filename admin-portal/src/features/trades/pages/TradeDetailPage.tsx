@@ -346,6 +346,7 @@ export function TradeDetailPage() {
       scoDocument: 'sco',
       icpoDocument: 'icpo',
       spaDocument: 'spa',
+      signedSpaDocument: 'signed-spa',
       bolDocument: 'bol',
       paymentProof: 'payment-proof',
     }
@@ -598,7 +599,14 @@ export function TradeDetailPage() {
 
                 <TabsContent value="documents" className="mt-0">
                   <div className="space-y-4">
-                    {['scoDocument', 'icpoDocument', 'spaDocument', 'bolDocument', 'paymentProof'].map((docField) => {
+                    {[
+                      'scoDocument',
+                      'icpoDocument',
+                      'spaDocument',
+                      'signedSpaDocument',
+                      'bolDocument',
+                      'paymentProof',
+                    ].map((docField) => {
                       const doc = (trade as any)[docField]
                       const docTypeKey = getDocTypeKey(docField)
                       const docInfo = DOCUMENT_TYPE_LABELS[docTypeKey]

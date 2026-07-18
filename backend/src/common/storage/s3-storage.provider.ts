@@ -30,6 +30,7 @@ import {
  */
 interface S3Config {
   endpoint?: string; // Custom endpoint for S3-compatible storage (DigitalOcean, Vultr, etc.)
+  publicUrl?: string; // Public delivery URL when the API endpoint is private (for example, R2)
   region: string;
   accessKeyId: string;
   secretAccessKey: string;
@@ -47,6 +48,7 @@ export class S3StorageProvider implements IStorageService {
     // Load configuration from environment
     this.config = {
       endpoint: process.env.S3_ENDPOINT, // undefined for AWS, set for DigitalOcean/Vultr/etc
+      publicUrl: process.env.S3_PUBLIC_URL,
       region: process.env.S3_REGION || 'us-east-1',
       accessKeyId: process.env.S3_ACCESS_KEY || '',
       secretAccessKey: process.env.S3_SECRET_KEY || '',
@@ -225,6 +227,10 @@ export class S3StorageProvider implements IStorageService {
   private buildUrl(key: string): string {
     // Remove leading slash if present
     const cleanKey = key.replace(/^\//, '');
+
+    if (this.config.publicUrl) {
+      return `${this.config.publicUrl.replace(/\/$/, '')}/${cleanKey}`;
+    }
 
     if (this.config.endpoint) {
       // For S3-compatible services (Vultr, DigitalOcean, etc.)

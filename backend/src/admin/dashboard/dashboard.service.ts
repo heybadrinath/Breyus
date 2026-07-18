@@ -81,7 +81,10 @@ export class DashboardService {
       // Pending KYC (companies with unverified documents)
       this.companyModel
         .countDocuments({
-          $or: [{ isVerified: false }, { 'documents.status': 'pending' }],
+          $or: [
+            { isKycVerified: false },
+            { 'kycDocuments.status': 'pending' },
+          ],
         })
         .exec(),
       // Stalled trades (no activity for 7+ days)
@@ -237,10 +240,16 @@ export class DashboardService {
           { isKycVerified: false, kycDocuments: { $exists: true, $ne: [] } },
         ],
       })
-      .select('companyName email createdAt kycDocuments')
+      .select('companyName primaryEmail createdAt kycDocuments')
       .sort({ createdAt: -1 })
       .limit(10)
+      .lean()
       .exec();
+
+    const pendingKycItems = pendingKycCompanies.map((company: any) => {
+      const { primaryEmail, ...item } = company;
+      return { ...item, email: primaryEmail };
+    });
 
     // Get stalled trades (no activity for 7+ days)
     const stalledTradesRaw = await this.tradeModel
@@ -283,8 +292,8 @@ export class DashboardService {
 
     return {
       kyc: {
-        count: pendingKycCompanies.length,
-        items: pendingKycCompanies,
+        count: pendingKycItems.length,
+        items: pendingKycItems,
       },
       disputes: {
         count: disputes.length,

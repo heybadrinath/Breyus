@@ -1,8 +1,10 @@
 import {
+  BadRequestException,
   Injectable,
   NestInterceptor,
   ExecutionContext,
   CallHandler,
+  HttpException,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -31,7 +33,10 @@ export class FileUploadInterceptor implements NestInterceptor {
         ) {
           cb(null, true);
         } else {
-          cb(new Error('Only images and PDF files are allowed'), false);
+          cb(
+            new BadRequestException('Only images and PDF files are allowed'),
+            false,
+          );
         }
       },
     });
@@ -46,7 +51,11 @@ export class FileUploadInterceptor implements NestInterceptor {
         request.res,
         (err: any) => {
           if (err) {
-            observer.error(err);
+            observer.error(
+              err instanceof HttpException
+                ? err
+                : new BadRequestException(err.message),
+            );
             return;
           }
 

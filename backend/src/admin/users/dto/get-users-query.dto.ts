@@ -26,8 +26,8 @@ export class GetUsersQueryDto {
   search?: string;
 
   @IsOptional()
-  @IsIn(['Buyer', 'Seller'])
-  role?: 'Buyer' | 'Seller';
+  @IsIn(['Buyer', 'Seller', 'Seller and Buyer'])
+  role?: 'Buyer' | 'Seller' | 'Seller and Buyer';
 
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)

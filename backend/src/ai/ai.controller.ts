@@ -46,7 +46,7 @@ export class AIController {
   @HttpCode(HttpStatus.OK)
   async search(@Body() input: AISearchInputDto, @Request() req: any) {
     const user = req.user;
-    const userRole = user.role as 'Buyer' | 'Seller';
+    const userRole = this.resolvePortalRole(user.role, input.role);
 
     const result = await this.aiService.search(input, user, userRole);
 
@@ -88,7 +88,7 @@ export class AIController {
   @HttpCode(HttpStatus.ACCEPTED)
   async startAnalysis(@Body() input: MarketAnalysisDto, @Request() req: any) {
     const userId = req.user?._id?.toString();
-    const userRole = req.user?.role;
+    const userRole = this.resolvePortalRole(req.user?.role, input.role);
     const result = await this.aiService.startAnalysis(input, userId, userRole);
 
     return {
@@ -218,5 +218,16 @@ export class AIController {
       message: 'AI server health check',
       data: result,
     };
+  }
+
+  private resolvePortalRole(
+    accountRole: string,
+    requestedRole?: 'Buyer' | 'Seller',
+  ): 'Buyer' | 'Seller' {
+    if (accountRole === 'Seller and Buyer') {
+      return requestedRole || 'Buyer';
+    }
+
+    return accountRole === 'Seller' ? 'Seller' : 'Buyer';
   }
 }

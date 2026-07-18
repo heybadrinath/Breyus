@@ -3,6 +3,7 @@ import {
   IsOptional,
   IsNumber,
   IsObject,
+  IsIn,
   ValidateNested,
   Min,
   Max,
@@ -35,6 +36,10 @@ export class PriceRangeDto {
  * Used for both buyer and seller searches
  */
 export class AISearchInputDto {
+  @IsOptional()
+  @IsIn(['Buyer', 'Seller'])
+  role?: 'Buyer' | 'Seller';
+
   @IsString()
   commodity: string;
 
@@ -80,6 +85,10 @@ export class CommoditySearchDto {
  * Market Analysis DTO
  */
 export class MarketAnalysisDto {
+  @IsOptional()
+  @IsIn(['Buyer', 'Seller'])
+  role?: 'Buyer' | 'Seller';
+
   @IsString()
   commodity: string;
 

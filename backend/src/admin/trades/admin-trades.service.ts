@@ -673,6 +673,7 @@ export class AdminTradesService {
       sco: 'scoDocument',
       icpo: 'icpoDocument',
       spa: 'spaDocument',
+      'signed-spa': 'signedSpaDocument',
       bol: 'bolDocument',
       'payment-proof': 'paymentProof',
     };
@@ -871,7 +872,14 @@ export class AdminTradesService {
     }
 
     // Validate document type
-    const validTypes = ['sco', 'icpo', 'spa', 'bol', 'payment-proof'];
+    const validTypes = [
+      'sco',
+      'icpo',
+      'spa',
+      'signed-spa',
+      'bol',
+      'payment-proof',
+    ];
     if (!validTypes.includes(documentType)) {
       throw new BadRequestException(
         `Invalid document type. Must be one of: ${validTypes.join(', ')}`,

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, ArrowRight } from 'lucide-react';
 import { WriterCard } from '../cards';
+import { blogWritersService } from '../../services/blog-portal.service';
 import type { PublicBlogUser, BlogPost } from '../../types';
 
 interface SpotlightWriter {
@@ -25,8 +26,33 @@ export function WriterSpotlight() {
   useEffect(() => {
     const fetchSpotlight = async () => {
       try {
-        // TODO: Implement /blog-portal/writers/spotlight endpoint
-        setWriters([]);
+        const { writers: writerSummaries } = await blogWritersService.getAll(1, 3);
+        const spotlightWriters = await Promise.all(
+          writerSummaries.map(async (writerSummary): Promise<SpotlightWriter> => {
+            const { posts, total } = await blogWritersService.getPosts(
+              writerSummary._id,
+              1,
+              2
+            );
+
+            return {
+              writer: {
+                _id: writerSummary._id,
+                firstName: writerSummary.firstName,
+                lastName: writerSummary.lastName,
+                companyName: writerSummary.companyName,
+                isBrèyusMember: writerSummary.isBrèyusMember,
+                isWriter: true,
+                writerBio: writerSummary.writerBio,
+                writerAvatar: writerSummary.writerAvatar || undefined,
+              },
+              recentPosts: posts,
+              totalPosts: total,
+            };
+          })
+        );
+
+        setWriters(spotlightWriters);
       } catch (err) {
         console.error('Error fetching spotlight writers:', err);
       } finally {

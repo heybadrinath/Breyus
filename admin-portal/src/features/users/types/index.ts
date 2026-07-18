@@ -1,8 +1,8 @@
 export interface User {
   _id: string
   mail: string
-  role: 'admin' | 'user'
-  displayRole: 'Buyer' | 'Seller'
+  role?: 'Buyer' | 'Seller' | 'Seller and Buyer'
+  displayRole: 'Buyer' | 'Seller' | 'Seller and Buyer' | 'Unknown'
   company?: {
     _id: string
     companyName: string
@@ -28,7 +28,7 @@ export interface UsersQueryParams {
   page?: number
   limit?: number
   search?: string
-  role?: 'Buyer' | 'Seller'
+  role?: 'Buyer' | 'Seller' | 'Seller and Buyer'
   isSuspended?: boolean
   sortBy?: 'createdAt' | 'mail' | 'updatedAt'
   sortOrder?: 'asc' | 'desc'

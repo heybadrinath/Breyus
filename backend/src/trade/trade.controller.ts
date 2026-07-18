@@ -33,7 +33,7 @@ import {
 import { TradePaginationDto } from './dto/trade-pagination.dto';
 import { CreateDisputeDto } from '../admin/disputes/dto/create-dispute.dto';
 import { AddDisputeMessageDto } from '../admin/disputes/dto/add-dispute-message.dto';
-import { FileUploadInterceptor } from '../products/file-upload.interceptor';
+import { DocumentUploadInterceptor } from '../common/interceptors/document-upload.interceptor';
 import { AuthGuard } from '../auth/auth.guard';
 
 /**
@@ -533,7 +533,7 @@ export class TradeController {
    * Only sellers can upload SCO after negotiation is accepted
    */
   @Post(':id/upload-sco')
-  @UseInterceptors(FileUploadInterceptor)
+  @UseInterceptors(DocumentUploadInterceptor)
   async uploadSCO(
     @Param('id') id: string,
     @Body() uploadDto: UploadSCODto,
@@ -575,7 +575,7 @@ export class TradeController {
    * Only buyers can upload ICPO after receiving SCO
    */
   @Post(':id/upload-icpo')
-  @UseInterceptors(FileUploadInterceptor)
+  @UseInterceptors(DocumentUploadInterceptor)
   async uploadICPO(
     @Param('id') id: string,
     @Body() uploadDto: UploadICPODto,
@@ -620,7 +620,7 @@ export class TradeController {
    * Either party can upload SPA
    */
   @Post(':id/upload-spa')
-  @UseInterceptors(FileUploadInterceptor)
+  @UseInterceptors(DocumentUploadInterceptor)
   async uploadSPA(
     @Param('id') id: string,
     @Body() uploadDto: UploadSPADto,
@@ -668,7 +668,7 @@ export class TradeController {
    * Flow: Seller uploads SPA → Buyer approves → Buyer uploads signed SPA → Seller approves
    */
   @Post(':id/upload-signed-spa')
-  @UseInterceptors(FileUploadInterceptor)
+  @UseInterceptors(DocumentUploadInterceptor)
   async uploadSignedSPA(
     @Param('id') id: string,
     @Body() uploadDto: UploadSPADto, // Reuse SPA DTO
@@ -712,7 +712,7 @@ export class TradeController {
    * Only sellers can upload BoL after payment is verified
    */
   @Post(':id/upload-bol')
-  @UseInterceptors(FileUploadInterceptor)
+  @UseInterceptors(DocumentUploadInterceptor)
   async uploadBoL(
     @Param('id') id: string,
     @Body() uploadDto: UploadBoLDto,
@@ -757,7 +757,7 @@ export class TradeController {
    * Only buyers can upload payment proof
    */
   @Post(':id/upload-payment-proof')
-  @UseInterceptors(FileUploadInterceptor)
+  @UseInterceptors(DocumentUploadInterceptor)
   async uploadPaymentProof(
     @Param('id') id: string,
     @Body() uploadDto: UploadPaymentProofDto,
@@ -845,7 +845,14 @@ export class TradeController {
         });
       }
 
-      const validTypes = ['sco', 'icpo', 'spa', 'bol', 'payment-proof'];
+      const validTypes = [
+        'sco',
+        'icpo',
+        'spa',
+        'signed-spa',
+        'bol',
+        'payment-proof',
+      ];
       if (!validTypes.includes(type)) {
         return response.status(400).json({
           statusCode: 400,
@@ -900,7 +907,14 @@ export class TradeController {
         });
       }
 
-      const validTypes = ['sco', 'icpo', 'spa', 'bol', 'payment-proof'];
+      const validTypes = [
+        'sco',
+        'icpo',
+        'spa',
+        'signed-spa',
+        'bol',
+        'payment-proof',
+      ];
       if (!validTypes.includes(type)) {
         return response.status(400).json({
           statusCode: 400,
@@ -947,7 +961,14 @@ export class TradeController {
         });
       }
 
-      const validTypes = ['sco', 'icpo', 'spa', 'bol', 'payment-proof'];
+      const validTypes = [
+        'sco',
+        'icpo',
+        'spa',
+        'signed-spa',
+        'bol',
+        'payment-proof',
+      ];
       if (!validTypes.includes(type)) {
         return response.status(400).json({
           statusCode: 400,

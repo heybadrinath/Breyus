@@ -779,8 +779,8 @@ export class AnalyticsService {
 
           if (productIds.length === 0) {
             return [
-              { category: 'New Customers', value: 1 },
-              { category: 'Returning', value: 1 },
+              { category: 'New Customers', value: 0 },
+              { category: 'Returning', value: 0 },
             ];
           }
 
@@ -811,14 +811,14 @@ export class AnalyticsService {
           }
 
           return [
-            { category: 'New Customers', value: newCustomers || 1 },
-            { category: 'Returning', value: returningCustomers || 1 },
+            { category: 'New Customers', value: newCustomers },
+            { category: 'Returning', value: returningCustomers },
           ];
         } catch (error) {
           this.logger.error('Error fetching pie chart data:', error);
           return [
-            { category: 'New Customers', value: 1 },
-            { category: 'Returning', value: 1 },
+            { category: 'New Customers', value: 0 },
+            { category: 'Returning', value: 0 },
           ];
         }
       },

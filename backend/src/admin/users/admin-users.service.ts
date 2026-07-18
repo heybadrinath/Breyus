@@ -58,6 +58,17 @@ export class AdminUsersService {
     private readonly activityLogService: ActivityLogService,
   ) {}
 
+  private getDisplayRole(
+    user: any,
+  ): 'Buyer' | 'Seller' | 'Seller and Buyer' | 'Unknown' {
+    const companyRole =
+      user?.company && typeof user.company === 'object'
+        ? user.company.role
+        : undefined;
+
+    return companyRole || user?.role || 'Unknown';
+  }
+
   /**
    * Get paginated list of users with filters
    */
@@ -81,9 +92,10 @@ export class AdminUsersService {
       filter.mail = { $regex: search, $options: 'i' };
     }
 
-    // Filter by role (map display role to internal role)
+    // Company.role is the source of truth for user authorization and display.
     if (role) {
-      filter.role = role === 'Buyer' ? 'admin' : 'user';
+      const companyIds = await this.companyModel.distinct('_id', { role });
+      filter.company = { $in: companyIds };
     }
 
     // Filter by suspension status
@@ -121,7 +133,7 @@ export class AdminUsersService {
     // Map role for display
     const mappedUsers = users.map((user) => ({
       ...user,
-      displayRole: user.role === 'Buyer' ? 'Buyer' : 'Seller',
+      displayRole: this.getDisplayRole(user),
     }));
 
     return {
@@ -154,7 +166,7 @@ export class AdminUsersService {
 
     return {
       ...user,
-      displayRole: user.role === 'Buyer' ? 'Buyer' : 'Seller',
+      displayRole: this.getDisplayRole(user),
     };
   }
 
@@ -166,25 +178,27 @@ export class AdminUsersService {
       throw new BadRequestException('Invalid user ID');
     }
 
-    const user = await this.userModel.findById(userId).select('company').lean();
+    const user = await this.userModel.findById(userId).select('_id').lean();
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    const companyId = user.company;
+    const userObjectId = new Types.ObjectId(userId);
+    const participantFilter = {
+      $or: [{ buyer: userObjectId }, { seller: userObjectId }],
+    };
 
-    // Count trades where user's company is either buyer or seller
+    // Trade buyer/seller fields reference users, not companies.
     const [totalTrades, activeTrades, completedTrades] = await Promise.all([
+      this.tradeModel.countDocuments(participantFilter),
       this.tradeModel.countDocuments({
-        $or: [{ buyer: companyId }, { seller: companyId }],
+        ...participantFilter,
+        tradePhase: { $nin: ['COMPLETED', 'CANCELLED'] },
+        negotiationStatus: { $nin: ['rejected', 'cancelled'] },
       }),
       this.tradeModel.countDocuments({
-        $or: [{ buyer: companyId }, { seller: companyId }],
-        status: { $in: ['pending', 'accepted', 'in_progress'] },
-      }),
-      this.tradeModel.countDocuments({
-        $or: [{ buyer: companyId }, { seller: companyId }],
-        status: 'completed',
+        ...participantFilter,
+        tradePhase: 'COMPLETED',
       }),
     ]);
 
@@ -294,6 +308,7 @@ export class AdminUsersService {
 
     const updatedUser = await this.userModel
       .findByIdAndUpdate(userId, { $set: updateDto }, { new: true })
+      .populate('company', 'companyName role isVerified')
       .select('-password -passwordResetToken -passwordResetExpires')
       .lean();
 
@@ -314,7 +329,7 @@ export class AdminUsersService {
 
     return {
       ...updatedUser,
-      displayRole: updatedUser?.role === 'Buyer' ? 'Buyer' : 'Seller',
+      displayRole: this.getDisplayRole(updatedUser),
     };
   }
 
@@ -449,6 +464,7 @@ export class AdminUsersService {
 
     const updatedUser = await this.userModel
       .findByIdAndUpdate(userId, { $set: newValue }, { new: true })
+      .populate('company', 'companyName role isVerified')
       .select('-password -passwordResetToken -passwordResetExpires')
       .lean();
 
@@ -490,7 +506,7 @@ export class AdminUsersService {
 
     return {
       ...updatedUser,
-      displayRole: updatedUser?.role === 'Buyer' ? 'Buyer' : 'Seller',
+      displayRole: this.getDisplayRole(updatedUser),
     };
   }
 
@@ -531,6 +547,7 @@ export class AdminUsersService {
 
     const updatedUser = await this.userModel
       .findByIdAndUpdate(userId, { $set: newValue }, { new: true })
+      .populate('company', 'companyName role isVerified')
       .select('-password -passwordResetToken -passwordResetExpires')
       .lean();
 
@@ -573,7 +590,7 @@ export class AdminUsersService {
 
     return {
       ...updatedUser,
-      displayRole: updatedUser?.role === 'Buyer' ? 'Buyer' : 'Seller',
+      displayRole: this.getDisplayRole(updatedUser),
     };
   }
 
@@ -656,7 +673,7 @@ export class AdminUsersService {
       exportedAt: new Date().toISOString(),
       user: {
         email: user.mail,
-        role: user.role === 'Buyer' ? 'Buyer' : 'Seller',
+        role: this.getDisplayRole(user),
         createdAt: (user as any).createdAt,
         notificationPreferences: user.notificationPreferences,
         isSuspended: user.isSuspended,

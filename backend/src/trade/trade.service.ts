@@ -1726,6 +1726,7 @@ export class TradeService {
         sco: 'scoDocument',
         icpo: 'icpoDocument',
         spa: 'spaDocument',
+        'signed-spa': 'signedSpaDocument',
         bol: 'bolDocument',
         'payment-proof': 'paymentProof',
       };

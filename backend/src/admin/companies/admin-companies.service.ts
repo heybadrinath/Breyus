@@ -194,18 +194,22 @@ export class AdminCompaniesService {
       .lean()
       .exec();
 
+    const userIds = users.map((user) => user._id);
+    const participantFilter = {
+      $or: [{ buyer: { $in: userIds } }, { seller: { $in: userIds } }],
+    };
+
     // Get trade stats
     const [totalTrades, activeTrades, completedTrades] = await Promise.all([
+      this.tradeModel.countDocuments(participantFilter),
       this.tradeModel.countDocuments({
-        $or: [{ buyer: companyId }, { seller: companyId }],
+        ...participantFilter,
+        tradePhase: { $nin: ['COMPLETED', 'CANCELLED'] },
+        negotiationStatus: { $nin: ['rejected', 'cancelled'] },
       }),
       this.tradeModel.countDocuments({
-        $or: [{ buyer: companyId }, { seller: companyId }],
-        status: { $in: ['pending', 'accepted', 'in_progress'] },
-      }),
-      this.tradeModel.countDocuments({
-        $or: [{ buyer: companyId }, { seller: companyId }],
-        status: 'completed',
+        ...participantFilter,
+        tradePhase: 'COMPLETED',
       }),
     ]);
 
@@ -699,27 +703,33 @@ export class AdminCompaniesService {
       throw new NotFoundException('Company not found');
     }
 
-    const [totalTrades, activeTrades, completedTrades, totalUsers] =
-      await Promise.all([
-        this.tradeModel.countDocuments({
-          $or: [{ buyer: companyId }, { seller: companyId }],
-        }),
-        this.tradeModel.countDocuments({
-          $or: [{ buyer: companyId }, { seller: companyId }],
-          status: { $in: ['pending', 'accepted', 'in_progress'] },
-        }),
-        this.tradeModel.countDocuments({
-          $or: [{ buyer: companyId }, { seller: companyId }],
-          status: 'completed',
-        }),
-        this.userModel.countDocuments({ company: companyId }),
-      ]);
+    const users = await this.userModel
+      .find({ company: companyId })
+      .select('_id')
+      .lean();
+    const userIds = users.map((user) => user._id);
+    const participantFilter = {
+      $or: [{ buyer: { $in: userIds } }, { seller: { $in: userIds } }],
+    };
+
+    const [totalTrades, activeTrades, completedTrades] = await Promise.all([
+      this.tradeModel.countDocuments(participantFilter),
+      this.tradeModel.countDocuments({
+        ...participantFilter,
+        tradePhase: { $nin: ['COMPLETED', 'CANCELLED'] },
+        negotiationStatus: { $nin: ['rejected', 'cancelled'] },
+      }),
+      this.tradeModel.countDocuments({
+        ...participantFilter,
+        tradePhase: 'COMPLETED',
+      }),
+    ]);
 
     return {
       totalTrades,
       activeTrades,
       completedTrades,
-      totalUsers,
+      totalUsers: users.length,
       totalProducts: 0, // TODO: Add when Product model reference is available
     };
   }

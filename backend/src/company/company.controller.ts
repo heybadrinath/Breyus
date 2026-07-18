@@ -18,6 +18,7 @@ import { DeliveryAddress, KycDocumentType } from './company.schema';
 import { AuthService } from '../auth/auth.service';
 import { StorageService } from '../common/storage/storage.service';
 import { FileUploadInterceptor } from '../products/file-upload.interceptor';
+import { DocumentUploadInterceptor } from '../common/interceptors/document-upload.interceptor';
 import { AuthGuard } from '../auth/auth.guard';
 
 /**
@@ -413,7 +414,7 @@ export class CompanyController {
   }
 
   @Post('upload-cis')
-  @UseInterceptors(FileUploadInterceptor)
+  @UseInterceptors(DocumentUploadInterceptor)
   async uploadCisDocument(
     @UploadedFiles() files: Express.Multer.File[],
     @Res() response: Response,
@@ -603,7 +604,7 @@ export class CompanyController {
   }
 
   @Post('kyc-documents')
-  @UseInterceptors(FileUploadInterceptor)
+  @UseInterceptors(DocumentUploadInterceptor)
   async uploadKycDocument(
     @UploadedFiles() files: Express.Multer.File[],
     @Body()

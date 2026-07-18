@@ -104,7 +104,7 @@ export function CommentsSection({ postId }: CommentsSectionProps) {
   };
 
   // Comments are already organized by backend - root comments have nested replies array
-  const topLevelComments = data?.comments || [];
+  const topLevelComments: BlogComment[] = data?.comments || [];
   // Get replies from the nested structure (backend attaches replies to each comment)
   const getReplies = (comment: BlogComment) =>
     (comment as any).replies || [];

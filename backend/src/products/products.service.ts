@@ -487,7 +487,11 @@ export class ProductsService {
     const skip = (page - 1) * limit;
 
     // Build query conditions
-    const queryConditions: any = { isActive: { $ne: false } };
+    const queryConditions: any = {
+      isActive: { $ne: false },
+      isDeactivated: { $ne: true },
+      ownerDeleted: { $ne: true },
+    };
 
     // Search condition
     if (search) {
@@ -508,10 +512,10 @@ export class ProductsService {
     if (minPrice !== undefined || maxPrice !== undefined) {
       queryConditions.price = {};
       if (minPrice !== undefined) {
-        queryConditions.price.$gte = minPrice.toString();
+        queryConditions.price.$gte = minPrice;
       }
       if (maxPrice !== undefined) {
-        queryConditions.price.$lte = maxPrice.toString();
+        queryConditions.price.$lte = maxPrice;
       }
     }
 
@@ -608,6 +612,8 @@ export class ProductsService {
       const queryConditions: any = {
         userId: { $in: userIds },
         isActive: { $ne: false },
+        isDeactivated: { $ne: true },
+        ownerDeleted: { $ne: true },
       };
 
       // Add search condition if provided

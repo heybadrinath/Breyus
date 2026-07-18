@@ -203,9 +203,14 @@ export class AdminAnalyticsService {
     endDateStr?: string,
   ): DateRange {
     if (startDateStr && endDateStr) {
+      const endDate = new Date(endDateStr);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(endDateStr)) {
+        endDate.setUTCHours(23, 59, 59, 999);
+      }
+
       return {
         startDate: new Date(startDateStr),
-        endDate: new Date(endDateStr),
+        endDate,
       };
     }
     return this.getDefaultDateRange();
@@ -261,10 +266,9 @@ export class AdminAnalyticsService {
           const activeSellerIds = await this.tradeModel.distinct('seller', {
             createdAt: { $gte: dateRange.startDate, $lte: dateRange.endDate },
           });
-          const uniqueActiveUsers = new Set([
-            ...activeUserIds,
-            ...activeSellerIds,
-          ]);
+          const uniqueActiveUsers = new Set(
+            [...activeUserIds, ...activeSellerIds].map((id) => id.toString()),
+          );
           const activeUsers = uniqueActiveUsers.size;
 
           // Trades metrics
@@ -669,10 +673,11 @@ export class AdminAnalyticsService {
           const totalUsers = await this.userModel.countDocuments();
           const usersWithTrades = await this.tradeModel.distinct('buyer');
           const sellersWithTrades = await this.tradeModel.distinct('seller');
-          const uniqueTradingUsers = new Set([
-            ...usersWithTrades,
-            ...sellersWithTrades,
-          ]);
+          const uniqueTradingUsers = new Set(
+            [...usersWithTrades, ...sellersWithTrades].map((id) =>
+              id.toString(),
+            ),
+          );
           const activationRate =
             totalUsers > 0
               ? Math.round((uniqueTradingUsers.size / totalUsers) * 1000) / 10

@@ -124,6 +124,7 @@ export const VERIFIABLE_DOCUMENT_TYPES = [
   'sco',
   'icpo',
   'spa',
+  'signed-spa',
   'bol',
   'payment-proof',
 ] as const
@@ -134,6 +135,7 @@ export const DOCUMENT_TYPE_LABELS: Record<VerifiableDocumentType, { label: strin
   sco: { label: 'SCO (Soft Corporate Offer)', uploadedBy: 'Seller' },
   icpo: { label: 'ICPO (Purchase Order)', uploadedBy: 'Buyer' },
   spa: { label: 'SPA (Sales Agreement)', uploadedBy: 'Either' },
+  'signed-spa': { label: 'Signed SPA', uploadedBy: 'Buyer' },
   bol: { label: 'BoL (Bill of Lading)', uploadedBy: 'Seller' },
   'payment-proof': { label: 'Payment Proof', uploadedBy: 'Buyer' },
 }
