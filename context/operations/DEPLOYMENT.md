@@ -4,9 +4,12 @@ module: operations
 tags: [operations, deployment]
 ---
 
-# Breyus Deployment Architecture & Flow
+# Target Production Deployment: DigitalOcean
 
-This document outlines the agreed-upon architecture, explaining how code flows from your computer to the users, where files live, and how services communicate.
+> [!IMPORTANT]
+> This is the **future production architecture**, not the current live portfolio deployment. The site currently runs as a free Render web service with MongoDB Atlas and Cloudflare R2. Use [[RENDER_DEPLOYMENT_RUNBOOK]] for all current deployment changes, verification, rollback, and recreation steps.
+
+This document outlines the planned DigitalOcean architecture, explaining how code would flow from a developer computer to users, where files would live, and how services would communicate after a production migration.
 
 ## Infrastructure Overview
 

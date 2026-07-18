@@ -7,7 +7,8 @@ tags: [moc, operations, index]
 > Deployment, hosting, infrastructure, backup, and capacity planning documentation.
 
 ## Documents
-- [[DEPLOYMENT|Deployment Architecture]] -- Code flow, Docker, Nginx, CI/CD
+- [[RENDER_DEPLOYMENT_RUNBOOK|Current Render Deployment Runbook]] -- Live portfolio deployment, changes, verification, and rollback
+- [[DEPLOYMENT|Target DigitalOcean Architecture]] -- Future production code flow, Docker, Nginx, and CI/CD
 - [[SERVER_SETUP|Server Setup]] -- VPS provisioning and configuration
 - [[BACKUP_AND_RECOVERY|Backup & Recovery]] -- Database backup strategy and restore procedures
 - [[CAPACITY_PLANNING|Capacity Planning]] -- Scaling thresholds and resource planning
@@ -23,13 +24,13 @@ tags: [moc, operations, index]
 - [[LOAD_TESTING|Load Testing]] -- k6 test scenarios, acceptance criteria, results tracking
 
 ## Infrastructure Quick Reference
-| Component | Provider | Region |
-|-----------|----------|--------|
-| VPS | DigitalOcean Droplet | Singapore |
-| Object Storage | DigitalOcean Spaces | Singapore |
-| DNS | Cloudflare | Global |
-| Database | MongoDB (self-hosted) | Singapore |
-| AI Database | PostgreSQL + pgvector | Singapore |
+| Component | Current portfolio deployment | Future production target |
+|-----------|------------------------------|--------------------------|
+| Application runtime | Render Free web service, Singapore | DigitalOcean Droplet, Singapore |
+| Object storage | Cloudflare R2 | DigitalOcean Spaces |
+| Main database | MongoDB Atlas Free | Self-hosted MongoDB |
+| AI runtime and database | Not deployed | FastAPI + PostgreSQL/pgvector |
+| Public URL / DNS | `breyus.onrender.com` | Custom domain through Cloudflare |
 
 ## Dataview: Operations Docs
 
@@ -42,4 +43,5 @@ SORT file.name ASC
 ## Related
 - [[MEMORY]]
 - [[MOC-Development]]
+- [[RENDER_DEPLOYMENT_RUNBOOK]]
 - [[DEPLOYMENT]]

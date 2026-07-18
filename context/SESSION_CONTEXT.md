@@ -6,6 +6,22 @@ tags: [session, handoff]
 
 > Prepend new session blocks at top. Keep only 3 most recent. MAX 80 lines total. Parallel-safe.
 
+## Session: 2026-07-18 17:23
+**Branch:** `deploy/portfolio-showcase`
+**Focus:** Free Render deployment and operator handoff
+
+**Done:**
+- Documented the live `breyus` Render service, Docker topology, MongoDB Atlas database, and Cloudflare R2 storage
+- Added repeatable change, deploy, verification, rollback, secret, and service recreation procedures
+- Clearly separated the current portfolio deployment from the planned DigitalOcean production architecture
+
+**Open:**
+- [ ] Configure an HTTPS email provider for OTP delivery
+- [ ] Deploy and connect the optional AI service
+- [ ] Configure the commodity data API key
+
+**Decisions:** Keep the public Render service name exactly `breyus`; treat Render dashboard secrets as live state; do not present unavailable integrations as working
+
 ## Session: 2026-04-11 11:20
 **Branch:** `development`
 **Focus:** Daily bug scan follow-up for blog auth regressions
@@ -35,18 +51,3 @@ tags: [session, handoff]
 - [ ] Backend AI/blog/notification code changes remain uncommitted; API docs already reflect their observable behavior
 
 **Decisions:** No feature-status update was needed in this pass because the live code changes were behavior fixes already covered by the April 7 API docs sync
-
-## Session: 2026-04-07 21:41
-**Branch:** `development`
-**Focus:** Codex repo setup and agent-doc migration
-
-**Done:**
-- Rewrote root `AGENTS.md` into a shorter Codex-focused guide verified against the current repo structure
-- Added `context/development/CODEX_SETUP.md` documenting Codex setup decisions and Claude-to-Codex gaps
-- Updated `context/MOC-Development.md`, `context/MOC-Changelog.md`, and added `context/changelog/2026-04-07-codex-setup.md`
-
-**Open:**
-- [ ] Decide whether to port high-value Claude command workflows into Codex-native repo skills
-- [ ] Existing backend AI/blog/notification code changes and separate AI vault edits remain uncommitted and were not altered here
-
-**Decisions:** Keep `AGENTS.md` as the Codex authority, keep `CLAUDE.md` as the current feature-status reference, and avoid inventing a repo-local `.codex/` convention without confirmed support

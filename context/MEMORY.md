@@ -28,7 +28,8 @@ tags: [memory, index, keystone]
 | Technical architecture | [[Breyus_Technical_Documentation]] |
 | API reference | [[MOC-API]] |
 | AI system | [[ai/NICHE_COMMODITY_FINDER_PRD]] |
-| Deployment | [[DEPLOYMENT]] |
+| Current deployment | [[operations/RENDER_DEPLOYMENT_RUNBOOK]] |
+| Target production architecture | [[operations/DEPLOYMENT]] |
 | Server setup | [[SERVER_SETUP]] |
 
 ### Folder Guide
@@ -47,4 +48,5 @@ tags: [memory, index, keystone]
 - **Frontend:** React 19, TailwindCSS, port 3000
 - **Admin Portal:** React + Vite + shadcn/ui
 - **AI Server:** FastAPI, PostgreSQL + pgvector, port 8000
-- **Hosting:** DigitalOcean (Singapore), Cloudflare DNS
+- **Current Hosting:** Render Free (Singapore), MongoDB Atlas, Cloudflare R2
+- **Target Hosting:** DigitalOcean (Singapore), Cloudflare DNS
