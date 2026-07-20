@@ -18,10 +18,18 @@ interface OtpData {
   used: boolean;
 }
 
-type EmailProvider = 'brevo' | 'smtp' | 'development' | 'disabled';
+type EmailProvider = 'brevo' | 'mailjet' | 'smtp' | 'development' | 'disabled';
 
 interface BrevoEmailResponse {
   messageId?: string;
+}
+
+interface MailjetEmailResponse {
+  Messages?: Array<{
+    Status?: string;
+    Errors?: Array<{ ErrorMessage?: string }>;
+    To?: Array<{ MessageID?: number; MessageUUID?: string }>;
+  }>;
 }
 
 interface TransactionalEmail {
@@ -56,12 +64,26 @@ export class MailService implements OnModuleDestroy {
   private initializeEmailProvider(): void {
     const requestedProvider = process.env.EMAIL_PROVIDER?.toLowerCase();
     const brevoApiKey = process.env.BREVO_API_KEY;
+    const mailjetApiKey = process.env.MAILJET_API_KEY;
+    const mailjetSecretKey = process.env.MAILJET_SECRET_KEY;
     const smtpHost = process.env.SMTP_HOST;
     const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
     const smtpUser = process.env.SMTP_USER;
     const smtpPass = process.env.SMTP_PASS;
 
-    if (requestedProvider === 'brevo' || brevoApiKey) {
+    if (requestedProvider === 'mailjet') {
+      if (mailjetApiKey && mailjetSecretKey && this.fromEmail) {
+        this.emailProvider = 'mailjet';
+        this.logger.log('Email provider configured: Mailjet HTTPS API');
+      } else {
+        this.configureUnavailableProvider(
+          'Mailjet requires MAILJET_API_KEY, MAILJET_SECRET_KEY, and EMAIL_FROM.',
+        );
+      }
+      return;
+    }
+
+    if (requestedProvider === 'brevo') {
       if (brevoApiKey && this.fromEmail) {
         this.emailProvider = 'brevo';
         this.logger.log('Email provider configured: Brevo HTTPS API');
@@ -80,9 +102,26 @@ export class MailService implements OnModuleDestroy {
       return;
     }
 
+    if (
+      !requestedProvider &&
+      mailjetApiKey &&
+      mailjetSecretKey &&
+      this.fromEmail
+    ) {
+      this.emailProvider = 'mailjet';
+      this.logger.log('Email provider configured: Mailjet HTTPS API');
+      return;
+    }
+
+    if (!requestedProvider && brevoApiKey && this.fromEmail) {
+      this.emailProvider = 'brevo';
+      this.logger.log('Email provider configured: Brevo HTTPS API');
+      return;
+    }
+
     if (!(smtpHost && smtpUser && smtpPass)) {
       this.configureUnavailableProvider(
-        'Email service requires Brevo API credentials or complete SMTP settings.',
+        'Email service requires HTTPS API credentials or complete SMTP settings.',
       );
       return;
     }
@@ -376,10 +415,14 @@ export class MailService implements OnModuleDestroy {
     }
 
     try {
-      const messageId =
-        this.emailProvider === 'brevo'
-          ? await this.sendViaBrevo(email)
-          : await this.sendViaSmtp(email);
+      let messageId: string;
+      if (this.emailProvider === 'brevo') {
+        messageId = await this.sendViaBrevo(email);
+      } else if (this.emailProvider === 'mailjet') {
+        messageId = await this.sendViaMailjet(email);
+      } else {
+        messageId = await this.sendViaSmtp(email);
+      }
 
       this.logger.log(
         `Email accepted for ${this.maskEmail(email.to)}: ${messageId}`,
@@ -417,6 +460,45 @@ export class MailService implements OnModuleDestroy {
     }
 
     return response.data.messageId;
+  }
+
+  private async sendViaMailjet(email: TransactionalEmail): Promise<string> {
+    const response = await axios.post<MailjetEmailResponse>(
+      'https://api.mailjet.com/v3.1/send',
+      {
+        Messages: [
+          {
+            From: {
+              Email: this.fromEmail,
+              Name: this.fromName,
+            },
+            To: [{ Email: email.to }],
+            Subject: email.subject,
+            HTMLPart: email.html,
+          },
+        ],
+      },
+      {
+        auth: {
+          username: process.env.MAILJET_API_KEY || '',
+          password: process.env.MAILJET_SECRET_KEY || '',
+        },
+        timeout: 10000,
+      },
+    );
+
+    const result = response.data.Messages?.[0];
+    const recipient = result?.To?.[0];
+    const messageId =
+      recipient?.MessageUUID || recipient?.MessageID?.toString();
+    if (result?.Status !== 'success' || !messageId) {
+      throw new Error(
+        result?.Errors?.[0]?.ErrorMessage ||
+          'Mailjet did not accept the email for delivery.',
+      );
+    }
+
+    return messageId;
   }
 
   private async sendViaSmtp(email: TransactionalEmail): Promise<string> {
@@ -460,8 +542,17 @@ export class MailService implements OnModuleDestroy {
 
   private describeProviderError(error: unknown): string {
     if (axios.isAxiosError(error)) {
-      const providerMessage = (error.response?.data as { message?: string })
-        ?.message;
+      const providerData = error.response?.data as
+        | {
+            message?: string;
+            data?: { error?: string };
+            ErrorMessage?: string;
+          }
+        | undefined;
+      const providerMessage =
+        providerData?.message ||
+        providerData?.data?.error ||
+        providerData?.ErrorMessage;
       return [
         error.response?.status
           ? `Provider returned HTTP ${error.response.status}`

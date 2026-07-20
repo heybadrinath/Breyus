@@ -30,7 +30,7 @@ tags: [moc, operations, index]
 | Object storage | Cloudflare R2 | DigitalOcean Spaces |
 | Main database | MongoDB Atlas Free | Self-hosted MongoDB |
 | AI runtime and database | Not deployed | FastAPI + PostgreSQL/pgvector |
-| Transactional email | Brevo Free HTTPS API | Managed transactional email provider |
+| Transactional email | Mailjet Free HTTPS API | Managed transactional email provider |
 | Public URL / DNS | `breyus.onrender.com` | Custom domain through Cloudflare |
 
 ## Dataview: Operations Docs

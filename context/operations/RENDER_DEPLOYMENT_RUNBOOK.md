@@ -20,14 +20,14 @@ The larger DigitalOcean design in [[DEPLOYMENT]] is a future production target. 
 | Render service name | `breyus` |
 | Render service ID | `srv-d9dm12urnols73cnv1e0` |
 | Render plan and region | Free web service, Singapore |
-| GitHub repository | `BREYUS-CREW/Breyus` |
+| GitHub repository | [`heybadrinath/Breyus`](https://github.com/heybadrinath/Breyus) |
 | Deployment branch | `deploy/portfolio-showcase` |
 | Deploy trigger | Automatic after a commit is pushed to the deployment branch |
 | Runtime | Docker, built from `Dockerfile.showcase` |
 | Health check | `/api/health` |
 | Main database | MongoDB Atlas Free |
 | File storage | Cloudflare R2, bucket `breyus-showcase` |
-| Transactional email | Brevo Free through the HTTPS API |
+| Transactional email | Mailjet Free through the HTTPS Send API |
 
 Keep the Render service name exactly `breyus`. Adding a suffix creates a different public hostname. Renaming an existing Render service does not reliably replace its original hostname, so create it with the correct name from the start.
 
@@ -43,7 +43,7 @@ flowchart LR
     Render --> API["NestJS API at /api"]
     API --> Atlas["MongoDB Atlas"]
     API --> R2["Cloudflare R2"]
-    API --> Brevo["Brevo HTTPS email API"]
+    API --> Mailjet["Mailjet HTTPS Send API"]
 ```
 
 The NestJS process serves both compiled frontends, the API, uploaded files proxied from R2, and Socket.IO. This is intentionally simpler than the future multi-service production design.
@@ -156,7 +156,7 @@ Open **Render Dashboard → breyus → Environment** to change them. Use **Save,
 | `COOKIE_SECURE` | `true` |
 | `COOKIE_EXPIRY_LOGIN` | `86400000` |
 | `ADMIN_SESSION_EXPIRY` | `86400000` |
-| `EMAIL_PROVIDER` | `brevo` |
+| `EMAIL_PROVIDER` | `mailjet` |
 | `EMAIL_FROM_NAME` | `Breyus` |
 | `EMAIL_FROM` | `badri.supernetrix@gmail.com` |
 | `EMAIL_NOTIFICATIONS_ENABLED` | `false` |
@@ -175,26 +175,27 @@ These must exist in Render, but their values must stay out of Git and documentat
 - `S3_ENDPOINT`
 - `S3_ACCESS_KEY`
 - `S3_SECRET_KEY`
-- `BREVO_API_KEY`
+- `MAILJET_API_KEY`
+- `MAILJET_SECRET_KEY`
 
 Do not casually regenerate the JWT or cookie secrets. Existing browser sessions will become invalid.
 
-### Brevo email setup and rotation
+### Mailjet email setup and rotation
 
-Render Free blocks the SMTP ports normally used by Gmail and other mail servers. Breyus therefore sends OTP and password-reset mail through Brevo's HTTPS API.
+Render Free blocks the SMTP ports normally used by Gmail and other mail servers. Breyus therefore sends OTP and password-reset security codes through Mailjet's HTTPS Send API.
 
-1. Sign in to [Brevo](https://app.brevo.com/) with `badri.supernetrix@gmail.com`.
-2. Open **Settings → Senders, Domains & Dedicated IPs → Senders**.
-3. Add `Breyus <badri.supernetrix@gmail.com>` and complete the code verification sent to that inbox.
-4. Open **SMTP & API → API Keys**, create a v3 API key, and copy it once. Do not use an SMTP key.
-5. Open **Render → breyus → Environment**, set `BREVO_API_KEY`, and choose **Save, rebuild, and deploy**.
-6. Keep `EMAIL_FROM` identical to the verified Brevo sender. A different address will be rejected.
+1. Sign in to [Mailjet](https://app.mailjet.com/) with `badri.supernetrix@gmail.com`.
+2. Open **Account Settings → Senders & Domains** and verify `Breyus <badri.supernetrix@gmail.com>` as a sender.
+3. Open **Account Settings → API Key Management** and generate the primary secret key. The secret is displayed only once.
+4. Open **Render → breyus → Environment** and set `MAILJET_API_KEY` and `MAILJET_SECRET_KEY`.
+5. Set `EMAIL_PROVIDER=mailjet`, keep `EMAIL_FROM` identical to the verified sender, and choose **Save, rebuild, and deploy**.
+6. Request and submit a real OTP on the live site before treating the setup as complete.
 
-Never commit or document the key value. To rotate it, create a replacement in Brevo, update Render, verify a real OTP, and then delete the old key. Brevo Free currently allows 300 transactional sends per day. To conserve that allowance, `EMAIL_NOTIFICATIONS_ENABLED=false` disables welcome, trade, newsletter, admin-status, and alert emails; security OTP and password-reset code emails remain enabled. The application also limits one client IP to three onboarding OTP sends per minute on each running instance.
+Never commit or document either credential value. To rotate them, generate a replacement in Mailjet, update both Render variables, rebuild, and verify a real OTP. Mailjet Free currently allows up to 200 sends per day and 6,000 per month. To conserve that allowance, `EMAIL_NOTIFICATIONS_ENABLED=false` disables welcome, trade, newsletter, admin-status, and alert emails; security OTP and password-reset code emails remain enabled. The application also limits one client IP to three onboarding OTP sends per minute on each running instance.
 
 Do not enable non-OTP notifications on the free plan without first estimating their volume. Future paid deployments can opt in with `EMAIL_NOTIFICATIONS_ENABLED=true` after reviewing every notification trigger.
 
-If the page reports that delivery is unavailable, check Render logs for `Email delivery failed`, then check the Brevo transactional log and sender status. The backend deliberately returns an error instead of displaying a false success message when Brevo rejects a request.
+If the page reports that delivery is unavailable, check Render logs for `Email delivery failed`, then check Mailjet's **Email Activity** page, sender verification, API key state, and daily quota. The backend deliberately returns an error instead of displaying a false success message when Mailjet rejects a request.
 
 ### Optional integrations not currently configured
 

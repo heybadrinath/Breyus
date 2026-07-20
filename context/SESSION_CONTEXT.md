@@ -11,18 +11,18 @@ tags: [session, handoff]
 **Focus:** Reliable OTP delivery on the Render portfolio deployment
 
 **Done:**
-- Replaced the production OTP console fallback with Brevo's HTTPS transactional email API
+- Replaced the production OTP console fallback with Mailjet's HTTPS Send API
 - Made OTP and password-reset failures visible to users instead of returning false success
 - Reserved the free email allowance for security OTPs by disabling all non-OTP notification mail by default
 - Added OTP endpoint throttling, failed-delivery cleanup, storage fallback validation, and focused tests
-- Documented Brevo sender verification, secret setup, key rotation, limits, and troubleshooting
+- Verified the Mailjet sender and stored its API credentials only in Render
+- Documented Mailjet sender verification, secret setup, key rotation, limits, and troubleshooting
 
 **Open:**
-- [ ] Verify the Brevo sender and save `BREVO_API_KEY` in Render
 - [ ] Deploy the branch and prove inbox receipt plus OTP validation on the live service
 - [ ] Deploy and connect the optional AI service
 
-**Decisions:** Use an HTTPS email API because Render Free blocks SMTP ports; keep non-OTP email disabled on the free plan; never log production OTP values
+**Decisions:** Use Mailjet's HTTPS API because Render Free blocks SMTP ports and Brevo did not activate transactional sending; keep non-OTP email disabled on the free plan; never log production OTP values
 
 ## Session: 2026-07-18 17:23
 **Branch:** `deploy/portfolio-showcase`

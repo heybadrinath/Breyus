@@ -14,6 +14,15 @@ interface BrevoRequestConfig {
   headers: Record<string, string>;
 }
 
+interface MailjetRequestBody {
+  Messages: Array<{
+    From: { Email: string; Name: string };
+    To: Array<{ Email: string }>;
+    Subject: string;
+    HTMLPart: string;
+  }>;
+}
+
 describe('MailService', () => {
   const originalEnv = process.env;
 
@@ -28,6 +37,8 @@ describe('MailService', () => {
       EMAIL_FROM_NAME: 'Breyus',
     };
     delete process.env.EMAIL_NOTIFICATIONS_ENABLED;
+    delete process.env.MAILJET_API_KEY;
+    delete process.env.MAILJET_SECRET_KEY;
   });
 
   afterAll(() => {
@@ -65,6 +76,45 @@ describe('MailService', () => {
     await expect(
       service.sendOtpEmail('user@example.com', '123456'),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+
+  it('sends OTP email through the Mailjet HTTPS API', async () => {
+    process.env.EMAIL_PROVIDER = 'mailjet';
+    process.env.MAILJET_API_KEY = 'mailjet-api-key';
+    process.env.MAILJET_SECRET_KEY = 'mailjet-secret-key';
+    delete process.env.BREVO_API_KEY;
+    const postSpy = jest.spyOn(axios, 'post').mockResolvedValue({
+      data: {
+        Messages: [
+          {
+            Status: 'success',
+            To: [{ MessageUUID: 'mailjet-message-id' }],
+          },
+        ],
+      },
+    });
+    const service = new MailService(null);
+
+    await service.sendOtpEmail('user@example.com', '123456');
+
+    const [url, untypedBody, untypedConfig] = postSpy.mock.calls[0];
+    const body = untypedBody as MailjetRequestBody;
+    const config = untypedConfig as unknown as {
+      auth: { username: string; password: string };
+    };
+
+    expect(url).toBe('https://api.mailjet.com/v3.1/send');
+    expect(body.Messages[0].From).toEqual({
+      Email: 'sender@example.com',
+      Name: 'Breyus',
+    });
+    expect(body.Messages[0].To).toEqual([{ Email: 'user@example.com' }]);
+    expect(body.Messages[0].Subject).toBe('Verify Your Email - Breyus');
+    expect(body.Messages[0].HTMLPart).toContain('123456');
+    expect(config.auth).toEqual({
+      username: 'mailjet-api-key',
+      password: 'mailjet-secret-key',
+    });
   });
 
   it('rejects required email when production credentials are missing', async () => {

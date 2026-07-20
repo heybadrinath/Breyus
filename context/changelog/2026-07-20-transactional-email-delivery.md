@@ -10,18 +10,18 @@ tags: [backend, frontend, infrastructure, docs, fix, test, ops, auth, onboarding
 
 ## Summary
 
-Replaced the deployed OTP flow's false-success development fallback with Brevo transactional email over HTTPS.
+Replaced the deployed OTP flow's false-success development fallback with Mailjet transactional email over HTTPS.
 
 ## Changes
 
-- Added Brevo API delivery for OTP and password-reset emails while retaining SMTP for compatible environments.
+- Added Mailjet Send API delivery for OTP and password-reset security codes while retaining Brevo and SMTP compatibility for other environments.
 - Return a service-unavailable error when required production email cannot be delivered and remove the unusable OTP.
 - Added per-IP throttling for OTP send and verification endpoints.
 - Disabled welcome, trade, newsletter, admin-status, and alert emails by default so the free allowance is reserved for security OTP codes.
 - Corrected Redis-to-memory OTP fallback validation and rejected malformed stored data.
 - Updated onboarding copy to confirm delivery only after the provider accepts the message.
 - Added focused mail-service tests for delivery, failure, disabled and opt-in notifications, and storage fallback.
-- Documented sender verification, Render secret setup, key rotation, limits, and troubleshooting.
+- Documented Mailjet sender verification, Render secret setup, key rotation, limits, and troubleshooting.
 
 ## Files Modified
 

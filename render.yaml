@@ -29,14 +29,16 @@ services:
       - key: ADMIN_SESSION_EXPIRY
         value: "86400000"
       - key: EMAIL_PROVIDER
-        value: brevo
+        value: mailjet
       - key: EMAIL_FROM_NAME
         value: Breyus
       - key: EMAIL_FROM
         value: badri.supernetrix@gmail.com
       - key: EMAIL_NOTIFICATIONS_ENABLED
         value: "false"
-      - key: BREVO_API_KEY
+      - key: MAILJET_API_KEY
+        sync: false
+      - key: MAILJET_SECRET_KEY
         sync: false
       - key: JWT_SECRET_KEY
         generateValue: true
