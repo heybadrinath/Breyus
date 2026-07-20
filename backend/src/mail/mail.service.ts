@@ -463,8 +463,13 @@ export class MailService implements OnModuleDestroy {
   }
 
   private async sendViaMailjet(email: TransactionalEmail): Promise<string> {
+    const apiUrl =
+      process.env.MAILJET_API_URL ||
+      (process.env.NODE_ENV === 'production'
+        ? 'https://breyus.vercel.app/api/send'
+        : 'https://api.mailjet.com/v3.1/send');
     const response = await axios.post<MailjetEmailResponse>(
-      'https://api.mailjet.com/v3.1/send',
+      apiUrl,
       {
         Messages: [
           {

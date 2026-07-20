@@ -6,23 +6,24 @@ tags: [session, handoff]
 
 > Prepend new session blocks at top. Keep only 3 most recent. MAX 80 lines total. Parallel-safe.
 
-## Session: 2026-07-20 10:00
+## Session: 2026-07-20 11:30
 **Branch:** `deploy/portfolio-showcase`
 **Focus:** Reliable OTP delivery on the Render portfolio deployment
 
 **Done:**
-- Replaced the production OTP console fallback with Mailjet's HTTPS Send API
+- Replaced the production OTP console fallback with a secured Vercel HTTPS relay and Gmail SMTP delivery
 - Made OTP and password-reset failures visible to users instead of returning false success
 - Reserved the free email allowance for security OTPs by disabling all non-OTP notification mail by default
 - Added OTP endpoint throttling, failed-delivery cleanup, storage fallback validation, and focused tests
-- Verified the Mailjet sender and stored its API credentials only in Render
-- Documented Mailjet sender verification, secret setup, key rotation, limits, and troubleshooting
+- Deployed the Vercel project as exactly `breyus`, stored SMTP values as sensitive Production variables, and verified its public health and authorization boundary
+- Kept Mailjet credentials only in Render; the relay validates them before sending and never stores them
+- Documented relay deployment, secret ownership, rotation, and troubleshooting
 
 **Open:**
-- [ ] Deploy the branch and prove inbox receipt plus OTP validation on the live service
+- [ ] Deploy the updated Render branch and prove inbox receipt plus OTP validation on the live service
 - [ ] Deploy and connect the optional AI service
 
-**Decisions:** Use Mailjet's HTTPS API because Render Free blocks SMTP ports and Brevo did not activate transactional sending; keep non-OTP email disabled on the free plan; never log production OTP values
+**Decisions:** Use Vercel as a narrow HTTPS-to-Gmail relay because Render Free blocks SMTP and direct Render-to-Mailjet requests reset; authenticate relay calls with existing Mailjet credentials; keep non-OTP email disabled; never log production OTP values
 
 ## Session: 2026-07-18 17:23
 **Branch:** `deploy/portfolio-showcase`

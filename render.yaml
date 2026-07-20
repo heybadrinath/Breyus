@@ -40,6 +40,8 @@ services:
         sync: false
       - key: MAILJET_SECRET_KEY
         sync: false
+      - key: MAILJET_API_URL
+        value: https://breyus.vercel.app/api/send
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: COOKIE_SECRET

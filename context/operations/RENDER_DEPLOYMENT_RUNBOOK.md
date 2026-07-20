@@ -27,7 +27,8 @@ The larger DigitalOcean design in [[DEPLOYMENT]] is a future production target. 
 | Health check | `/api/health` |
 | Main database | MongoDB Atlas Free |
 | File storage | Cloudflare R2, bucket `breyus-showcase` |
-| Transactional email | Mailjet Free through the HTTPS Send API |
+| Transactional email | Gmail SMTP through the `breyus` Vercel HTTPS relay |
+| Email relay dashboard | [Open the `breyus` Vercel project](https://vercel.com/heybadrinathwork-5305s-projects/breyus) |
 
 Keep the Render service name exactly `breyus`. Adding a suffix creates a different public hostname. Renaming an existing Render service does not reliably replace its original hostname, so create it with the correct name from the start.
 
@@ -43,7 +44,9 @@ flowchart LR
     Render --> API["NestJS API at /api"]
     API --> Atlas["MongoDB Atlas"]
     API --> R2["Cloudflare R2"]
-    API --> Mailjet["Mailjet HTTPS Send API"]
+    API --> Relay["Vercel HTTPS email relay"]
+    Relay --> Mailjet["Mailjet credential validation"]
+    Relay --> Gmail["Gmail SMTP delivery"]
 ```
 
 The NestJS process serves both compiled frontends, the API, uploaded files proxied from R2, and Socket.IO. This is intentionally simpler than the future multi-service production design.
@@ -55,6 +58,7 @@ The NestJS process serves both compiled frontends, the API, uploaded files proxi
 | `Dockerfile.showcase` | Builds the customer app, admin portal, and backend into one runtime image |
 | `render.yaml` | Documents the Render service shape and non-secret environment settings |
 | `backend/src/main.ts` | Mounts `/api`, `/admin`, `/uploads`, Socket.IO, and SPA fallbacks |
+| `vercel/email-relay/` | Validates and forwards security-code email through Gmail SMTP |
 
 The customer and admin API paths are compiled as `/api` by `Dockerfile.showcase`; there are no separate production `.env` files for those builds. The Render dashboard is the source of truth for secret values and the live service connection. Values marked `sync: false` in `render.yaml` must be entered in Render and must never be committed.
 
@@ -160,6 +164,7 @@ Open **Render Dashboard → breyus → Environment** to change them. Use **Save,
 | `EMAIL_FROM_NAME` | `Breyus` |
 | `EMAIL_FROM` | `badri.supernetrix@gmail.com` |
 | `EMAIL_NOTIFICATIONS_ENABLED` | `false` |
+| `MAILJET_API_URL` | `https://breyus.vercel.app/api/send` |
 | `STORAGE_PROVIDER` | `s3` |
 | `S3_REGION` | `auto` |
 | `S3_BUCKET` | `breyus-showcase` |
@@ -180,22 +185,50 @@ These must exist in Render, but their values must stay out of Git and documentat
 
 Do not casually regenerate the JWT or cookie secrets. Existing browser sessions will become invalid.
 
-### Mailjet email setup and rotation
+### Security-code email setup and rotation
 
-Render Free blocks the SMTP ports normally used by Gmail and other mail servers. Breyus therefore sends OTP and password-reset security codes through Mailjet's HTTPS Send API.
+Render Free blocks the SMTP ports normally used by Gmail and other mail servers. Direct HTTPS requests from the Render service to Mailjet also reset before reaching Mailjet. Breyus therefore posts the Mailjet-compatible payload to `https://breyus.vercel.app/api/send`; the relay validates the supplied Mailjet credentials and then sends the security code through Gmail SMTP.
+
+The relay is intentionally narrow: it accepts one recipient, the configured sender, an allowed Breyus OTP or password-reset subject, and content containing a six-digit code. It rejects unauthenticated requests and non-security notification messages.
+
+#### Render settings
 
 1. Sign in to [Mailjet](https://app.mailjet.com/) with `badri.supernetrix@gmail.com`.
 2. Open **Account Settings → Senders & Domains** and verify `Breyus <badri.supernetrix@gmail.com>` as a sender.
 3. Open **Account Settings → API Key Management** and generate the primary secret key. The secret is displayed only once.
 4. Open **Render → breyus → Environment** and set `MAILJET_API_KEY` and `MAILJET_SECRET_KEY`.
-5. Set `EMAIL_PROVIDER=mailjet`, keep `EMAIL_FROM` identical to the verified sender, and choose **Save, rebuild, and deploy**.
+5. Set `EMAIL_PROVIDER=mailjet`, set `MAILJET_API_URL=https://breyus.vercel.app/api/send`, keep `EMAIL_FROM` identical to the verified sender, and choose **Save, rebuild, and deploy**.
 6. Request and submit a real OTP on the live site before treating the setup as complete.
 
-Never commit or document either credential value. To rotate them, generate a replacement in Mailjet, update both Render variables, rebuild, and verify a real OTP. Mailjet Free currently allows up to 200 sends per day and 6,000 per month. To conserve that allowance, `EMAIL_NOTIFICATIONS_ENABLED=false` disables welcome, trade, newsletter, admin-status, and alert emails; security OTP and password-reset code emails remain enabled. The application also limits one client IP to three onboarding OTP sends per minute on each running instance.
+Never commit or document either credential value. To rotate them, generate a replacement in Mailjet, update both Render variables, rebuild, and verify a real OTP.
+
+#### Vercel relay settings
+
+The Vercel project name must remain exactly `breyus`. Its Production environment contains these sensitive values:
+
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `EMAIL_FROM`
+- `EMAIL_FROM_NAME`
+
+To redeploy the relay after a code change:
+
+```bash
+cd vercel/email-relay
+npm ci
+npm test
+npx vercel deploy --prod
+```
+
+Rotate the Gmail app password in Google, replace `SMTP_PASS` in the Vercel Production environment, and redeploy. The SMTP values belong only in Vercel; the Render application talks to the relay over HTTPS.
+
+`EMAIL_NOTIFICATIONS_ENABLED=false` disables welcome, trade, newsletter, admin-status, and alert emails; security OTP and password-reset code emails remain enabled. The application also limits one client IP to three onboarding OTP sends per minute on each running instance.
 
 Do not enable non-OTP notifications on the free plan without first estimating their volume. Future paid deployments can opt in with `EMAIL_NOTIFICATIONS_ENABLED=true` after reviewing every notification trigger.
 
-If the page reports that delivery is unavailable, check Render logs for `Email delivery failed`, then check Mailjet's **Email Activity** page, sender verification, API key state, and daily quota. The backend deliberately returns an error instead of displaying a false success message when Mailjet rejects a request.
+If the page reports that delivery is unavailable, check Render logs for `Email delivery failed`, confirm `https://breyus.vercel.app/api/send` returns `{"status":"ok"}`, then inspect the latest Vercel function logs. A `401` or `403` points to missing or invalid Mailjet authorization; a `503` points to relay configuration or Gmail SMTP delivery. The backend deliberately returns an error instead of displaying a false success message when delivery fails.
 
 ### Optional integrations not currently configured
 
@@ -246,7 +279,7 @@ Do this only if the current service cannot be repaired. Reusing the exact defaul
 1. First try a manual deploy or **Clear build cache & deploy** on the existing service.
 2. If recreation is unavoidable, record every non-secret setting and store the current secret values in a secure password manager. Confirm MongoDB Atlas and R2 are still accessible independently of Render.
 3. Schedule a short maintenance window, then remove the failed service so the hostname can be reused.
-4. In Render, choose **New → Web Service** and connect `BREYUS-CREW/Breyus`.
+4. In Render, choose **New → Web Service** and connect `heybadrinath/Breyus`.
 5. Set the service name to exactly `breyus`.
 6. Select branch `deploy/portfolio-showcase`.
 7. Select Docker and set Dockerfile path to `./Dockerfile.showcase` with context `.`.
@@ -283,7 +316,7 @@ The local SSH key may be authenticated as a different GitHub account. Confirm th
 
 ```bash
 gh auth status
-git -c credential.helper='!gh auth git-credential' push https://github.com/BREYUS-CREW/Breyus.git deploy/portfolio-showcase
+git -c credential.helper='!gh auth git-credential' push https://github.com/heybadrinath/Breyus.git deploy/portfolio-showcase
 ```
 
 ### The site is slow or initially returns an error

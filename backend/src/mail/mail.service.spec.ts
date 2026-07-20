@@ -39,6 +39,7 @@ describe('MailService', () => {
     delete process.env.EMAIL_NOTIFICATIONS_ENABLED;
     delete process.env.MAILJET_API_KEY;
     delete process.env.MAILJET_SECRET_KEY;
+    delete process.env.MAILJET_API_URL;
   });
 
   afterAll(() => {
@@ -82,6 +83,7 @@ describe('MailService', () => {
     process.env.EMAIL_PROVIDER = 'mailjet';
     process.env.MAILJET_API_KEY = 'mailjet-api-key';
     process.env.MAILJET_SECRET_KEY = 'mailjet-secret-key';
+    process.env.MAILJET_API_URL = 'https://api.mailjet.com/v3.1/send';
     delete process.env.BREVO_API_KEY;
     const postSpy = jest.spyOn(axios, 'post').mockResolvedValue({
       data: {
@@ -115,6 +117,38 @@ describe('MailService', () => {
       username: 'mailjet-api-key',
       password: 'mailjet-secret-key',
     });
+  });
+
+  it('can route Mailjet delivery through an authenticated HTTPS relay', async () => {
+    process.env.EMAIL_PROVIDER = 'mailjet';
+    process.env.MAILJET_API_KEY = 'mailjet-api-key';
+    process.env.MAILJET_SECRET_KEY = 'mailjet-secret-key';
+    process.env.MAILJET_API_URL = 'https://breyus.vercel.app/api/send';
+    delete process.env.BREVO_API_KEY;
+    const postSpy = jest.spyOn(axios, 'post').mockResolvedValue({
+      data: {
+        Messages: [
+          {
+            Status: 'success',
+            To: [{ MessageUUID: 'relay-message-id' }],
+          },
+        ],
+      },
+    });
+    const service = new MailService(null);
+
+    await service.sendOtpEmail('user@example.com', '123456');
+
+    expect(postSpy).toHaveBeenCalledWith(
+      'https://breyus.vercel.app/api/send',
+      expect.any(Object),
+      expect.objectContaining({
+        auth: {
+          username: 'mailjet-api-key',
+          password: 'mailjet-secret-key',
+        },
+      }),
+    );
   });
 
   it('rejects required email when production credentials are missing', async () => {
