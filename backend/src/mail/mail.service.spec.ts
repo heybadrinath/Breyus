@@ -27,6 +27,7 @@ describe('MailService', () => {
       EMAIL_FROM: 'sender@example.com',
       EMAIL_FROM_NAME: 'Breyus',
     };
+    delete process.env.EMAIL_NOTIFICATIONS_ENABLED;
   });
 
   afterAll(() => {
@@ -79,12 +80,25 @@ describe('MailService', () => {
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
-  it('does not fail a trade operation when an optional notification cannot send', async () => {
-    delete process.env.BREVO_API_KEY;
-    delete process.env.EMAIL_FROM;
-    delete process.env.SMTP_HOST;
-    delete process.env.SMTP_USER;
-    delete process.env.SMTP_PASS;
+  it('does not send non-OTP email notifications by default', async () => {
+    const postSpy = jest.spyOn(axios, 'post').mockResolvedValue({
+      data: { messageId: 'brevo-message-id' },
+    });
+    const service = new MailService(null);
+
+    await expect(
+      service.sendTradeNotificationEmail(
+        'user@example.com',
+        'Trade updated',
+        '<p>Updated</p>',
+      ),
+    ).resolves.toBeUndefined();
+    expect(postSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not fail an operation when an enabled notification cannot send', async () => {
+    process.env.EMAIL_NOTIFICATIONS_ENABLED = 'true';
+    jest.spyOn(axios, 'post').mockRejectedValue(new Error('network failure'));
     const service = new MailService(null);
 
     await expect(

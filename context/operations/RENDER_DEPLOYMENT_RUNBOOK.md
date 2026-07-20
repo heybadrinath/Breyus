@@ -159,6 +159,7 @@ Open **Render Dashboard → breyus → Environment** to change them. Use **Save,
 | `EMAIL_PROVIDER` | `brevo` |
 | `EMAIL_FROM_NAME` | `Breyus` |
 | `EMAIL_FROM` | `badri.supernetrix@gmail.com` |
+| `EMAIL_NOTIFICATIONS_ENABLED` | `false` |
 | `STORAGE_PROVIDER` | `s3` |
 | `S3_REGION` | `auto` |
 | `S3_BUCKET` | `breyus-showcase` |
@@ -189,7 +190,9 @@ Render Free blocks the SMTP ports normally used by Gmail and other mail servers.
 5. Open **Render → breyus → Environment**, set `BREVO_API_KEY`, and choose **Save, rebuild, and deploy**.
 6. Keep `EMAIL_FROM` identical to the verified Brevo sender. A different address will be rejected.
 
-Never commit or document the key value. To rotate it, create a replacement in Brevo, update Render, verify a real OTP, and then delete the old key. Brevo Free currently allows 300 transactional sends per day; the application also limits one client IP to three OTP sends per minute on each running instance.
+Never commit or document the key value. To rotate it, create a replacement in Brevo, update Render, verify a real OTP, and then delete the old key. Brevo Free currently allows 300 transactional sends per day. To conserve that allowance, `EMAIL_NOTIFICATIONS_ENABLED=false` disables welcome, trade, newsletter, admin-status, and alert emails; security OTP and password-reset code emails remain enabled. The application also limits one client IP to three onboarding OTP sends per minute on each running instance.
+
+Do not enable non-OTP notifications on the free plan without first estimating their volume. Future paid deployments can opt in with `EMAIL_NOTIFICATIONS_ENABLED=true` after reviewing every notification trigger.
 
 If the page reports that delivery is unavailable, check Render logs for `Email delivery failed`, then check the Brevo transactional log and sender status. The backend deliberately returns an error instead of displaying a false success message when Brevo rejects a request.
 

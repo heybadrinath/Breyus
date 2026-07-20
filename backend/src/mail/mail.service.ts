@@ -39,6 +39,8 @@ export class MailService implements OnModuleDestroy {
   private readonly fromName = process.env.EMAIL_FROM_NAME || 'Breyus';
   private readonly fromEmail =
     process.env.EMAIL_FROM || process.env.SMTP_USER || '';
+  private readonly nonOtpEmailEnabled =
+    process.env.EMAIL_NOTIFICATIONS_ENABLED?.toLowerCase() === 'true';
 
   // Fallback in-memory store (used when Redis is unavailable)
   private otpStore: Record<string, OtpData> = {};
@@ -342,6 +344,11 @@ export class MailService implements OnModuleDestroy {
     subject: string,
     html: string,
   ): Promise<void> {
+    if (!this.nonOtpEmailEnabled) {
+      this.logger.debug('Non-OTP email skipped by configuration.');
+      return;
+    }
+
     if (this.emailProvider === 'development') {
       this.logger.log(
         `\n📧 [DEV MODE] Trade notification to ${to}: ${subject}\n`,
