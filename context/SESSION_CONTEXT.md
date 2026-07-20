@@ -17,10 +17,10 @@ tags: [session, handoff]
 - Added OTP endpoint throttling, failed-delivery cleanup, storage fallback validation, and focused tests
 - Deployed the Vercel project as exactly `breyus`, stored SMTP values as sensitive Production variables, and verified its public health and authorization boundary
 - Kept Mailjet credentials only in Render; the relay validates them before sending and never stores them
+- Deployed Render commit `9dfbd35` and proved live send, Gmail inbox receipt, and submitted OTP verification with HTTP 201 responses
 - Documented relay deployment, secret ownership, rotation, and troubleshooting
 
 **Open:**
-- [ ] Deploy the updated Render branch and prove inbox receipt plus OTP validation on the live service
 - [ ] Deploy and connect the optional AI service
 
 **Decisions:** Use Vercel as a narrow HTTPS-to-Gmail relay because Render Free blocks SMTP and direct Render-to-Mailjet requests reset; authenticate relay calls with existing Mailjet credentials; keep non-OTP email disabled; never log production OTP values

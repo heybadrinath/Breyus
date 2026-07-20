@@ -29,6 +29,7 @@ The larger DigitalOcean design in [[DEPLOYMENT]] is a future production target. 
 | File storage | Cloudflare R2, bucket `breyus-showcase` |
 | Transactional email | Gmail SMTP through the `breyus` Vercel HTTPS relay |
 | Email relay dashboard | [Open the `breyus` Vercel project](https://vercel.com/heybadrinathwork-5305s-projects/breyus) |
+| Email flow last verified | 2026-07-20: inbox receipt and submitted OTP both passed |
 
 Keep the Render service name exactly `breyus`. Adding a suffix creates a different public hostname. Renaming an existing Render service does not reliably replace its original hostname, so create it with the correct name from the start.
 
@@ -204,7 +205,7 @@ Never commit or document either credential value. To rotate them, generate a rep
 
 #### Vercel relay settings
 
-The Vercel project name must remain exactly `breyus`. Its Production environment contains these sensitive values:
+The Vercel project name must remain exactly `breyus`. Its Production environment contains these values; store SMTP credentials as sensitive:
 
 - `SMTP_HOST`
 - `SMTP_PORT`
@@ -212,6 +213,9 @@ The Vercel project name must remain exactly `breyus`. Its Production environment
 - `SMTP_PASS`
 - `EMAIL_FROM`
 - `EMAIL_FROM_NAME`
+- `ALLOWED_FROM_EMAIL`
+
+`EMAIL_FROM` must match the Gmail account that owns the app password. `ALLOWED_FROM_EMAIL` must match Render's `EMAIL_FROM`; this lets the relay authenticate through the Gmail account while accepting only the sender identity used by the application.
 
 To redeploy the relay after a code change:
 

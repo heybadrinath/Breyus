@@ -72,12 +72,12 @@ export default async function handler(request, response) {
     const authorization = getBasicAuthorization(request);
     const email = parseAndValidateMessage(
       request.body,
-      process.env.EMAIL_FROM,
+      process.env.ALLOWED_FROM_EMAIL || process.env.EMAIL_FROM,
     );
 
     await verifyMailjetCredentials(authorization);
     const sendResult = await createTransporter().sendMail({
-      from: `"${email.from.name}" <${email.from.email}>`,
+      from: `"${email.from.name}" <${process.env.EMAIL_FROM}>`,
       to: email.to,
       subject: email.subject,
       html: email.html,
