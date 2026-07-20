@@ -9,7 +9,9 @@ import {
   Headers,
   Res,
   Header,
+  UseGuards,
 } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import {
   SendEmailOtpDto,
   VerifyEmailOtpDto,
@@ -33,6 +35,8 @@ export class OnboardingController {
 
   // Endpoint to send OTP email
   @Post('send-otp')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   async sendOtp(@Body() sendEmailOtpDto: SendEmailOtpDto): Promise<string> {
     try {
       const response =
@@ -51,6 +55,8 @@ export class OnboardingController {
 
   // Endpoint to verify OTP and generate onboarding token
   @Post('verify-otp')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async verifyOtp(
     @Body() verifyEmailOtpDto: VerifyEmailOtpDto,
   ): Promise<string> {

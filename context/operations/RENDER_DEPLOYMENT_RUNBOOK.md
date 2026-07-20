@@ -27,6 +27,7 @@ The larger DigitalOcean design in [[DEPLOYMENT]] is a future production target. 
 | Health check | `/api/health` |
 | Main database | MongoDB Atlas Free |
 | File storage | Cloudflare R2, bucket `breyus-showcase` |
+| Transactional email | Brevo Free through the HTTPS API |
 
 Keep the Render service name exactly `breyus`. Adding a suffix creates a different public hostname. Renaming an existing Render service does not reliably replace its original hostname, so create it with the correct name from the start.
 
@@ -42,6 +43,7 @@ flowchart LR
     Render --> API["NestJS API at /api"]
     API --> Atlas["MongoDB Atlas"]
     API --> R2["Cloudflare R2"]
+    API --> Brevo["Brevo HTTPS email API"]
 ```
 
 The NestJS process serves both compiled frontends, the API, uploaded files proxied from R2, and Socket.IO. This is intentionally simpler than the future multi-service production design.
@@ -154,6 +156,9 @@ Open **Render Dashboard → breyus → Environment** to change them. Use **Save,
 | `COOKIE_SECURE` | `true` |
 | `COOKIE_EXPIRY_LOGIN` | `86400000` |
 | `ADMIN_SESSION_EXPIRY` | `86400000` |
+| `EMAIL_PROVIDER` | `brevo` |
+| `EMAIL_FROM_NAME` | `Breyus` |
+| `EMAIL_FROM` | `badri.supernetrix@gmail.com` |
 | `STORAGE_PROVIDER` | `s3` |
 | `S3_REGION` | `auto` |
 | `S3_BUCKET` | `breyus-showcase` |
@@ -169,12 +174,27 @@ These must exist in Render, but their values must stay out of Git and documentat
 - `S3_ENDPOINT`
 - `S3_ACCESS_KEY`
 - `S3_SECRET_KEY`
+- `BREVO_API_KEY`
 
 Do not casually regenerate the JWT or cookie secrets. Existing browser sessions will become invalid.
 
+### Brevo email setup and rotation
+
+Render Free blocks the SMTP ports normally used by Gmail and other mail servers. Breyus therefore sends OTP and password-reset mail through Brevo's HTTPS API.
+
+1. Sign in to [Brevo](https://app.brevo.com/) with `badri.supernetrix@gmail.com`.
+2. Open **Settings → Senders, Domains & Dedicated IPs → Senders**.
+3. Add `Breyus <badri.supernetrix@gmail.com>` and complete the code verification sent to that inbox.
+4. Open **SMTP & API → API Keys**, create a v3 API key, and copy it once. Do not use an SMTP key.
+5. Open **Render → breyus → Environment**, set `BREVO_API_KEY`, and choose **Save, rebuild, and deploy**.
+6. Keep `EMAIL_FROM` identical to the verified Brevo sender. A different address will be rejected.
+
+Never commit or document the key value. To rotate it, create a replacement in Brevo, update Render, verify a real OTP, and then delete the old key. Brevo Free currently allows 300 transactional sends per day; the application also limits one client IP to three OTP sends per minute on each running instance.
+
+If the page reports that delivery is unavailable, check Render logs for `Email delivery failed`, then check the Brevo transactional log and sender status. The backend deliberately returns an error instead of displaying a false success message when Brevo rejects a request.
+
 ### Optional integrations not currently configured
 
-- Email OTP: use an HTTPS email API in the future. Gmail SMTP is not suitable for this free Render service because outbound SMTP ports are blocked.
 - AI: requires a deployed AI service plus `AI_SERVER_URL` and `AI_API_KEY`.
 - Commodity prices: requires `ALPHA_VANTAGE_API_KEY`.
 
@@ -200,7 +220,8 @@ Also verify these flows in a real browser:
 2. Sign in with an existing completed account.
 3. An incomplete registration resumes at the remaining onboarding step.
 4. Completing onboarding returns to sign-in, not the meeting-booking page.
-5. At least one uploaded image loads through `/uploads/...`.
+5. Request an OTP for an inbox you control, confirm the email arrives, and submit the received six-digit code successfully.
+6. At least one uploaded image loads through `/uploads/...`.
 
 ## Rollback
 

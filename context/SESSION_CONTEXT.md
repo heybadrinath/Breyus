@@ -6,6 +6,23 @@ tags: [session, handoff]
 
 > Prepend new session blocks at top. Keep only 3 most recent. MAX 80 lines total. Parallel-safe.
 
+## Session: 2026-07-20 10:00
+**Branch:** `deploy/portfolio-showcase`
+**Focus:** Reliable OTP delivery on the Render portfolio deployment
+
+**Done:**
+- Replaced the production OTP console fallback with Brevo's HTTPS transactional email API
+- Made OTP and password-reset failures visible to users instead of returning false success
+- Added OTP endpoint throttling, failed-delivery cleanup, storage fallback validation, and focused tests
+- Documented Brevo sender verification, secret setup, key rotation, limits, and troubleshooting
+
+**Open:**
+- [ ] Verify the Brevo sender and save `BREVO_API_KEY` in Render
+- [ ] Deploy the branch and prove inbox receipt plus OTP validation on the live service
+- [ ] Deploy and connect the optional AI service
+
+**Decisions:** Use an HTTPS email API because Render Free blocks SMTP ports; keep optional trade notifications non-blocking; never log production OTP values
+
 ## Session: 2026-07-18 17:23
 **Branch:** `deploy/portfolio-showcase`
 **Focus:** Free Render deployment and operator handoff
@@ -36,18 +53,3 @@ tags: [session, handoff]
 - [ ] Pre-existing backend/docs worktree changes remain untouched
 
 **Decisions:** When the commit window is empty, this automation may carry forward prior memory-backed findings only if the current code still reproduces them concretely
-
-## Session: 2026-04-10 20:03
-**Branch:** `development`
-**Focus:** AI vault sync and docs handoff cleanup
-
-**Done:**
-- Indexed the consolidated AI PRDs plus the April 2 gap review in `context/MOC-AI.md`
-- Fixed stale renamed-doc references in the AI planning docs and added `context/changelog/2026-04-10-ai-vault-sync.md`
-- Refreshed this handoff while keeping the feature-status source of truth in `CLAUDE.md`
-
-**Open:**
-- [ ] Decide whether deleted Obsidian template/daily-note/ADR files should be replaced or their `.obsidian` references pruned
-- [ ] Backend AI/blog/notification code changes remain uncommitted; API docs already reflect their observable behavior
-
-**Decisions:** No feature-status update was needed in this pass because the live code changes were behavior fixes already covered by the April 7 API docs sync

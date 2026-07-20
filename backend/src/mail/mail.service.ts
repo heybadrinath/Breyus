@@ -1,6 +1,13 @@
-import { Injectable, Inject, Logger, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  Logger,
+  OnModuleDestroy,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import * as crypto from 'crypto';
+import axios from 'axios';
 import Redis from 'ioredis';
 import { REDIS_CLIENT } from './redis.provider';
 import { emailTemplates } from './templates/email.templates';
@@ -11,11 +18,27 @@ interface OtpData {
   used: boolean;
 }
 
+type EmailProvider = 'brevo' | 'smtp' | 'development' | 'disabled';
+
+interface BrevoEmailResponse {
+  messageId?: string;
+}
+
+interface TransactionalEmail {
+  to: string;
+  subject: string;
+  html: string;
+  required: boolean;
+}
+
 @Injectable()
 export class MailService implements OnModuleDestroy {
   private readonly logger = new Logger(MailService.name);
   private transporter: nodemailer.Transporter | null = null;
-  private isEmailConfigured: boolean;
+  private emailProvider: EmailProvider = 'disabled';
+  private readonly fromName = process.env.EMAIL_FROM_NAME || 'Breyus';
+  private readonly fromEmail =
+    process.env.EMAIL_FROM || process.env.SMTP_USER || '';
 
   // Fallback in-memory store (used when Redis is unavailable)
   private otpStore: Record<string, OtpData> = {};
@@ -25,29 +48,51 @@ export class MailService implements OnModuleDestroy {
   private readonly OTP_PREFIX = 'otp:';
 
   constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis | null) {
-    this.initializeTransporter();
+    this.initializeEmailProvider();
   }
 
-  private initializeTransporter(): void {
+  private initializeEmailProvider(): void {
+    const requestedProvider = process.env.EMAIL_PROVIDER?.toLowerCase();
+    const brevoApiKey = process.env.BREVO_API_KEY;
     const smtpHost = process.env.SMTP_HOST;
     const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
     const smtpUser = process.env.SMTP_USER;
     const smtpPass = process.env.SMTP_PASS;
 
-    this.isEmailConfigured = !!(smtpHost && smtpUser && smtpPass);
+    if (requestedProvider === 'brevo' || brevoApiKey) {
+      if (brevoApiKey && this.fromEmail) {
+        this.emailProvider = 'brevo';
+        this.logger.log('Email provider configured: Brevo HTTPS API');
+      } else {
+        this.configureUnavailableProvider(
+          'Brevo requires BREVO_API_KEY and EMAIL_FROM.',
+        );
+      }
+      return;
+    }
 
-    if (!this.isEmailConfigured) {
-      this.logger.warn(
-        'Email service not configured (SMTP_HOST, SMTP_USER, SMTP_PASS required). ' +
-          'OTPs will be logged to console for development.',
+    if (requestedProvider && requestedProvider !== 'smtp') {
+      this.configureUnavailableProvider(
+        `Unsupported EMAIL_PROVIDER: ${requestedProvider}.`,
       );
       return;
     }
 
+    if (!(smtpHost && smtpUser && smtpPass)) {
+      this.configureUnavailableProvider(
+        'Email service requires Brevo API credentials or complete SMTP settings.',
+      );
+      return;
+    }
+
+    this.emailProvider = 'smtp';
     this.transporter = nodemailer.createTransport({
       host: smtpHost,
       port: smtpPort,
       secure: smtpPort === 465, // true for 465, false for other ports
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
       auth: {
         user: smtpUser,
         pass: smtpPass,
@@ -60,11 +105,23 @@ export class MailService implements OnModuleDestroy {
         this.logger.error(
           `SMTP transporter verification failed: ${error.message}`,
         );
-        this.isEmailConfigured = false;
+        this.emailProvider =
+          process.env.NODE_ENV === 'production' ? 'disabled' : 'development';
       } else {
         this.logger.log('SMTP transporter is ready to send emails');
       }
     });
+  }
+
+  private configureUnavailableProvider(reason: string): void {
+    if (process.env.NODE_ENV === 'production') {
+      this.emailProvider = 'disabled';
+      this.logger.error(`${reason} Email delivery is disabled in production.`);
+      return;
+    }
+
+    this.emailProvider = 'development';
+    this.logger.warn(`${reason} Emails will be logged in development mode.`);
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -119,6 +176,24 @@ export class MailService implements OnModuleDestroy {
   }
 
   /**
+   * Delete an OTP after a failed delivery attempt.
+   */
+  async deleteOtp(email: string): Promise<void> {
+    const normalizedEmail = email.toLowerCase().trim();
+    delete this.otpStore[normalizedEmail];
+
+    if (!this.redis) {
+      return;
+    }
+
+    try {
+      await this.redis.del(`${this.OTP_PREFIX}${normalizedEmail}`);
+    } catch (error) {
+      this.logger.error(`Redis deleteOtp error: ${error}`);
+    }
+  }
+
+  /**
    * Validate OTP from Redis (or fallback to in-memory)
    */
   async validateOtp(email: string, otp: string): Promise<boolean> {
@@ -131,10 +206,16 @@ export class MailService implements OnModuleDestroy {
 
         if (!data) {
           this.logger.debug(`No OTP found in Redis for: ${normalizedEmail}`);
-          return false;
+          return this.validateOtpFromMemory(normalizedEmail, otp);
         }
 
-        const otpData: OtpData = JSON.parse(data);
+        const parsedOtpData: unknown = JSON.parse(data);
+        if (!this.isOtpData(parsedOtpData)) {
+          this.logger.error(`Invalid OTP data found for: ${normalizedEmail}`);
+          await this.redis.del(key);
+          return false;
+        }
+        const otpData = parsedOtpData;
 
         // Check if already used
         if (otpData.used) {
@@ -206,58 +287,51 @@ export class MailService implements OnModuleDestroy {
     return false;
   }
 
+  private isOtpData(value: unknown): value is OtpData {
+    if (!value || typeof value !== 'object') {
+      return false;
+    }
+
+    const candidate = value as Partial<OtpData>;
+    return (
+      typeof candidate.otp === 'string' &&
+      typeof candidate.timestamp === 'number' &&
+      typeof candidate.used === 'boolean'
+    );
+  }
+
   /**
    * Send OTP verification email
    */
   async sendOtpEmail(to: string, otp: string): Promise<void> {
-    // Development mode: log to console
-    if (!this.isEmailConfigured) {
+    if (this.emailProvider === 'development') {
       console.log(`\n📧 [DEV MODE] OTP for ${to}: ${otp}\n`);
       return;
     }
 
-    const mailOptions: nodemailer.SendMailOptions = {
-      from: `"${process.env.EMAIL_FROM_NAME || 'Breyus'}" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+    await this.sendTransactionalEmail({
       to,
       subject: 'Verify Your Email - Breyus',
       html: emailTemplates.otpVerification(otp),
-    };
-
-    try {
-      const info = await this.transporter!.sendMail(mailOptions);
-      this.logger.log(`OTP email sent to ${to}: ${info.messageId}`);
-    } catch (error) {
-      this.logger.error(`Error sending OTP email: ${error}`);
-      // Fallback: log OTP to console on email failure
-      console.log(`\n📧 [FALLBACK] OTP for ${to}: ${otp}\n`);
-    }
+      required: true,
+    });
   }
 
   /**
    * Send password reset email
    */
   async sendPasswordResetEmail(to: string, otp: string): Promise<void> {
-    // Development mode: log to console
-    if (!this.isEmailConfigured) {
+    if (this.emailProvider === 'development') {
       console.log(`\n📧 [DEV MODE] Password Reset OTP for ${to}: ${otp}\n`);
       return;
     }
 
-    const mailOptions: nodemailer.SendMailOptions = {
-      from: `"${process.env.EMAIL_FROM_NAME || 'Breyus'}" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+    await this.sendTransactionalEmail({
       to,
       subject: 'Password Reset Request - Breyus',
       html: emailTemplates.passwordReset(otp),
-    };
-
-    try {
-      const info = await this.transporter!.sendMail(mailOptions);
-      this.logger.log(`Password reset email sent to ${to}: ${info.messageId}`);
-    } catch (error) {
-      this.logger.error(`Error sending password reset email: ${error}`);
-      // Fallback: log OTP to console on email failure
-      console.log(`\n📧 [FALLBACK] Password Reset OTP for ${to}: ${otp}\n`);
-    }
+      required: true,
+    });
   }
 
   /**
@@ -268,28 +342,138 @@ export class MailService implements OnModuleDestroy {
     subject: string,
     html: string,
   ): Promise<void> {
-    // Development mode: log to console
-    if (!this.isEmailConfigured) {
+    if (this.emailProvider === 'development') {
       this.logger.log(
         `\n📧 [DEV MODE] Trade notification to ${to}: ${subject}\n`,
       );
       return;
     }
 
-    const mailOptions: nodemailer.SendMailOptions = {
-      from: `"${process.env.EMAIL_FROM_NAME || 'Breyus'}" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+    await this.sendTransactionalEmail({
       to,
       subject: `${subject} - Breyus`,
       html,
-    };
+      required: false,
+    });
+  }
+
+  private async sendTransactionalEmail(
+    email: TransactionalEmail,
+  ): Promise<void> {
+    if (this.emailProvider === 'disabled') {
+      this.handleDeliveryFailure(
+        email,
+        'No production email provider is configured.',
+      );
+      return;
+    }
 
     try {
-      const info = await this.transporter!.sendMail(mailOptions);
+      const messageId =
+        this.emailProvider === 'brevo'
+          ? await this.sendViaBrevo(email)
+          : await this.sendViaSmtp(email);
+
       this.logger.log(
-        `Trade notification email sent to ${to}: ${info.messageId}`,
+        `Email accepted for ${this.maskEmail(email.to)}: ${messageId}`,
       );
     } catch (error) {
-      this.logger.error(`Error sending trade notification email: ${error}`);
+      this.handleDeliveryFailure(email, this.describeProviderError(error));
     }
+  }
+
+  private async sendViaBrevo(email: TransactionalEmail): Promise<string> {
+    const response = await axios.post<BrevoEmailResponse>(
+      'https://api.brevo.com/v3/smtp/email',
+      {
+        sender: {
+          name: this.fromName,
+          email: this.fromEmail,
+        },
+        to: [{ email: email.to }],
+        subject: email.subject,
+        htmlContent: email.html,
+        tags: ['breyus-transactional'],
+      },
+      {
+        headers: {
+          accept: 'application/json',
+          'api-key': process.env.BREVO_API_KEY,
+          'content-type': 'application/json',
+        },
+        timeout: 10000,
+      },
+    );
+
+    if (!response.data.messageId) {
+      throw new Error('Brevo did not return a message ID.');
+    }
+
+    return response.data.messageId;
+  }
+
+  private async sendViaSmtp(email: TransactionalEmail): Promise<string> {
+    if (!this.transporter) {
+      throw new Error('SMTP transporter is unavailable.');
+    }
+
+    const sendResult: unknown = await this.transporter.sendMail({
+      from: `"${this.fromName}" <${this.fromEmail}>`,
+      to: email.to,
+      subject: email.subject,
+      html: email.html,
+    });
+
+    if (
+      !sendResult ||
+      typeof sendResult !== 'object' ||
+      !('messageId' in sendResult) ||
+      typeof sendResult.messageId !== 'string'
+    ) {
+      throw new Error('SMTP provider did not return a message ID.');
+    }
+
+    return sendResult.messageId;
+  }
+
+  private handleDeliveryFailure(
+    email: TransactionalEmail,
+    reason: string,
+  ): void {
+    this.logger.error(
+      `Email delivery failed for ${this.maskEmail(email.to)}: ${reason}`,
+    );
+
+    if (email.required) {
+      throw new ServiceUnavailableException(
+        'Email delivery is temporarily unavailable. Please try again shortly.',
+      );
+    }
+  }
+
+  private describeProviderError(error: unknown): string {
+    if (axios.isAxiosError(error)) {
+      const providerMessage = (error.response?.data as { message?: string })
+        ?.message;
+      return [
+        error.response?.status
+          ? `Provider returned HTTP ${error.response.status}`
+          : error.code || 'Provider request failed',
+        providerMessage,
+      ]
+        .filter(Boolean)
+        .join(': ');
+    }
+
+    return error instanceof Error ? error.message : 'Unknown provider error';
+  }
+
+  private maskEmail(email: string): string {
+    const [localPart, domain] = email.split('@');
+    if (!domain) {
+      return '[invalid-email]';
+    }
+
+    return `${localPart.slice(0, 1)}***@${domain}`;
   }
 }

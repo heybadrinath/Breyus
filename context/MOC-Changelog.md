@@ -8,6 +8,7 @@ tags: [moc, changelog, index]
 
 ## Recent Changes
 
+- [[2026-07-20-transactional-email-delivery]] — Real OTP delivery through Brevo's HTTPS API with truthful errors and throttling
 - [[2026-07-18-render-deployment-runbook]] — Current Render deployment, verification, rollback, and maintenance runbook
 - [[2026-04-11-blog-auth-regression-fixes]] — Blog auth redirect fix and signup email debounce repair
 - [[2026-04-10-ai-vault-sync]] — AI vault reindex, stale reference fixes, and handoff refresh

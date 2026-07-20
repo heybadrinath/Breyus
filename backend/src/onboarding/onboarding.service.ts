@@ -55,6 +55,10 @@ export class OnboardingService {
       await this.mailService.sendOtpEmail(email, otp);
       return 'Otp has been sent to your email';
     } catch (e) {
+      await this.mailService.deleteOtp(email);
+      if (e instanceof HttpException) {
+        throw e;
+      }
       throw new HttpException(
         'Failed to send otp!',
         HttpStatus.INTERNAL_SERVER_ERROR,

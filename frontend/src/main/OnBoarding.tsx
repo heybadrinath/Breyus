@@ -136,7 +136,9 @@ const OnBoarding: React.FC = () => {
 
     try {
       await sendOtpService(mail);
-      setSuccessMessage("Email successfully sent to your mail");
+      setSuccessMessage(
+        "Verification code sent. Check your inbox and spam folder.",
+      );
       setEmailOtpStatus("idle");
     } catch (error: any) {
       setErrorMessage(
