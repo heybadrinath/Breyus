@@ -28,12 +28,15 @@ export class AIHttpService {
   private readonly client: AxiosInstance;
   private readonly aiServerUrl: string;
   private readonly apiKey: string;
+  private readonly externalServiceConfigured: boolean;
 
   constructor(private configService: ConfigService) {
-    this.aiServerUrl =
-      this.configService.get<string>('AI_SERVER_URL') ||
-      'http://localhost:8000';
+    const configuredServerUrl = this.configService.get<string>('AI_SERVER_URL');
+    this.aiServerUrl = configuredServerUrl || 'http://localhost:8000';
     this.apiKey = this.configService.get<string>('AI_API_KEY') || '';
+    this.externalServiceConfigured = Boolean(
+      configuredServerUrl && this.apiKey,
+    );
 
     this.client = axios.create({
       baseURL: this.aiServerUrl,
@@ -75,14 +78,49 @@ export class AIHttpService {
     );
 
     this.logger.log(
-      `AI HTTP Service initialized - Server: ${this.aiServerUrl}`,
+      this.externalServiceConfigured
+        ? `External AI service configured: ${this.aiServerUrl}`
+        : 'External AI service is not configured; platform recommendation mode is active.',
     );
+  }
+
+  isExternalServiceConfigured(): boolean {
+    return this.externalServiceConfigured;
+  }
+
+  private requireExternalService(): void {
+    if (!this.externalServiceConfigured) {
+      throw new HttpException(
+        'Generative market analysis is not enabled in this deployment.',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
   }
 
   /**
    * Health check for AI server
    */
   async checkHealth(): Promise<AIHealthResponse> {
+    if (!this.externalServiceConfigured) {
+      return {
+        status: 'available',
+        timestamp: new Date().toISOString(),
+        mode: 'platform_recommendation',
+        message:
+          'Platform recommendation mode is available; generative market analysis is not configured.',
+        capabilities: {
+          partnerRecommendations: true,
+          marketAnalysis: false,
+          gravityScoring: false,
+        },
+        services: {
+          database: 'platform-data',
+          redis: 'not-required',
+          embedding_model: 'local-scoring',
+        },
+      };
+    }
+
     try {
       const response = await this.client.get<AIHealthResponse>('/health');
       return response.data;
@@ -114,6 +152,8 @@ export class AIHttpService {
       payment_terms?: any;
     };
   }): Promise<LinkPredictionResponse> {
+    this.requireExternalService();
+
     try {
       // Build payload and filter out undefined values to avoid serialization issues
       const payload: Record<string, any> = {
@@ -262,6 +302,8 @@ export class AIHttpService {
       payment_terms?: any;
     };
   }): Promise<GravityScoreResponse> {
+    this.requireExternalService();
+
     try {
       const response = await this.client.post<GravityScoreRawResponse>(
         '/v1/trades/score',
@@ -356,6 +398,8 @@ export class AIHttpService {
       price_range?: { min: number; max: number };
     };
   }): Promise<AnalysisInitiateResponse> {
+    this.requireExternalService();
+
     try {
       this.logger.log(`Initiating market analysis for ${params.commodity}`);
       const response = await this.client.post<any>(
@@ -399,6 +443,8 @@ export class AIHttpService {
     commodity?: string,
     hsCode?: string,
   ): Promise<AnalysisResultResponse> {
+    this.requireExternalService();
+
     try {
       const response = await this.client.get<any>(
         `/v1/analysis/results/${jobId}`,

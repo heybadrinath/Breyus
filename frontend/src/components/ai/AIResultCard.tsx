@@ -87,6 +87,12 @@ const getSourceBadge = (sourceType: SourceType, tier: number, userRole: 'Buyer' 
       className: 'bg-purple-100 text-purple-700',
     };
   }
+  if (sourceType === 'platform_recommended') {
+    return {
+      label: 'Smart Match',
+      className: 'bg-green-100 text-green-700',
+    };
+  }
   if (sourceType === 'platform_and_ai' || tier === 1) {
     return {
       label: 'Best Match',
@@ -173,7 +179,9 @@ export const AIResultCard: React.FC<AIResultCardProps> = ({
   // For products, use probability with aiMatchScore as fallback
   const probability = isPartner
     ? (result as EnrichedPartner).probability ?? (result as EnrichedPartner).matchScore ?? 0
-    : (result as ProductResult).probability ?? (result as ProductResult).aiMatchScore ?? 0;
+    : ['platform_and_ai', 'platform_recommended'].includes((result as ProductResult).sourceType)
+      ? (result as ProductResult).aiMatchScore ?? (result as ProductResult).probability ?? 0
+      : (result as ProductResult).probability ?? (result as ProductResult).aiMatchScore ?? 0;
 
   // For products, use the calculated riskLevel from backend
   const riskLevel = isPartner

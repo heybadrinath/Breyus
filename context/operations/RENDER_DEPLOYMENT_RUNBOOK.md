@@ -234,10 +234,13 @@ Do not enable non-OTP notifications on the free plan without first estimating th
 
 If the page reports that delivery is unavailable, check Render logs for `Email delivery failed`, confirm `https://breyus.vercel.app/api/send` returns `{"status":"ok"}`, then inspect the latest Vercel function logs. A `401` or `403` points to missing or invalid Mailjet authorization; a `503` points to relay configuration or Gmail SMTP delivery. The backend deliberately returns an error instead of displaying a false success message when delivery fails.
 
-### Optional integrations not currently configured
+### AI deployment modes
 
-- AI: requires a deployed AI service plus `AI_SERVER_URL` and `AI_API_KEY`.
-- Commodity prices: requires `ALPHA_VANTAGE_API_KEY`.
+The current free deployment runs platform recommendation mode inside the NestJS service. Buyer searches rank live marketplace products using commodity text, HS-code prefix, seller reliability, country preference, and price range. `/api/ai/health` reports this capability as available. The UI labels these results as Smart Matches and does not start market-analysis jobs.
+
+Generative market analysis, external partner discovery, and gravity scoring remain optional. They require the separate Python AI service plus valid `AI_SERVER_URL` and `AI_API_KEY` values. When both are configured, the backend uses the external mode; otherwise it stays in platform recommendation mode without making failed localhost requests.
+
+Commodity prices remain optional and require `ALPHA_VANTAGE_API_KEY`.
 
 ## Post-Deployment Verification
 
@@ -245,6 +248,7 @@ Allow for a cold start, then run:
 
 ```bash
 curl -fsS https://breyus.onrender.com/api/health
+curl -fsS https://breyus.onrender.com/api/ai/health
 curl -sS -o /dev/null -w '%{http_code}\n' https://breyus.onrender.com/
 curl -sS -o /dev/null -w '%{http_code}\n' https://breyus.onrender.com/login
 curl -sS -o /dev/null -w '%{http_code}\n' https://breyus.onrender.com/onboarding
@@ -253,7 +257,7 @@ curl -sS -o /dev/null -w '%{http_code}\n' https://breyus.onrender.com/admin/
 curl -sS -o /dev/null -w '%{http_code}\n' 'https://breyus.onrender.com/socket.io/?EIO=4&transport=polling'
 ```
 
-Expected result: health returns JSON and each page request returns HTTP `200`.
+Expected result: application health returns JSON, AI health reports `platform_recommendation`, and each page request returns HTTP `200`.
 
 Also verify these flows in a real browser:
 
@@ -263,6 +267,7 @@ Also verify these flows in a real browser:
 4. Completing onboarding returns to sign-in, not the meeting-booking page.
 5. Request an OTP for an inbox you control, confirm the email arrives, and submit the received six-digit code successfully.
 6. At least one uploaded image loads through `/uploads/...`.
+7. From a completed Buyer account, search for a listed commodity and confirm Smart Match results display a score and explanation without starting market-analysis polling.
 
 ## Rollback
 

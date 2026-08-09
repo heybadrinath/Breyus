@@ -575,7 +575,7 @@ const BuyerAiResult: React.FC = () => {
       setResults(response.data);
 
       // Optionally start market analysis
-      if (response.data.totalMatches > 0) {
+      if (response.data.totalMatches > 0 && response.data.analysisAvailable) {
         try {
           const analysisResponse = await startAnalysis({
             role: 'Buyer',
@@ -736,7 +736,9 @@ const BuyerAiResult: React.FC = () => {
       const isPartner = item.resultType === 'partner';
       const probability = isPartner
         ? (item as EnrichedPartner).probability || 0
-        : (item as ProductResult).probability || (item as ProductResult).aiMatchScore || 0;
+        : ['platform_and_ai', 'platform_recommended'].includes((item as ProductResult).sourceType)
+          ? (item as ProductResult).aiMatchScore || (item as ProductResult).probability || 0
+          : (item as ProductResult).probability || (item as ProductResult).aiMatchScore || 0;
       const riskLevel = isPartner
         ? (item as EnrichedPartner).riskLevel
         : (item as ProductResult).riskLevel;
@@ -771,10 +773,14 @@ const BuyerAiResult: React.FC = () => {
 
       const probA = isPartnerA
         ? (a as EnrichedPartner).probability || 0
-        : (a as ProductResult).probability || (a as ProductResult).aiMatchScore || 0;
+        : ['platform_and_ai', 'platform_recommended'].includes((a as ProductResult).sourceType)
+          ? (a as ProductResult).aiMatchScore || (a as ProductResult).probability || 0
+          : (a as ProductResult).probability || (a as ProductResult).aiMatchScore || 0;
       const probB = isPartnerB
         ? (b as EnrichedPartner).probability || 0
-        : (b as ProductResult).probability || (b as ProductResult).aiMatchScore || 0;
+        : ['platform_and_ai', 'platform_recommended'].includes((b as ProductResult).sourceType)
+          ? (b as ProductResult).aiMatchScore || (b as ProductResult).probability || 0
+          : (b as ProductResult).probability || (b as ProductResult).aiMatchScore || 0;
 
       const riskOrder: Record<RiskLevel, number> = {
         'Very Low': 1, 'Low': 2, 'Medium': 3, 'High': 4, 'Very High': 5
@@ -932,10 +938,16 @@ const BuyerAiResult: React.FC = () => {
                   <Globe2 className="w-5 h-5 text-amber-600" />
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-semibold text-amber-800">Country Filter Notice</h4>
+                  <h4 className="font-semibold text-amber-800">
+                    {results.recommendationMode === 'platform_recommendation'
+                      ? 'Portfolio Recommendation Mode'
+                      : 'Country Filter Notice'}
+                  </h4>
                   <p className="text-sm text-amber-700 mt-1">{results.warning}</p>
                   <p className="text-xs text-amber-600 mt-2">
-                    Tip: Try broadening your search criteria or exploring suppliers from other regions.
+                    {results.recommendationMode === 'platform_recommendation'
+                      ? 'Scores are generated from live platform data and are not financial advice.'
+                      : 'Tip: Try broadening your search criteria or exploring suppliers from other regions.'}
                   </p>
                 </div>
                 <button
@@ -1175,7 +1187,7 @@ const BuyerAiResult: React.FC = () => {
                   <div>
                     <h2 className="text-lg font-semibold text-gray-900">Suppliers Result</h2>
                     <p className="text-sm text-gray-500 mt-0.5">
-                      AI-powered matches based on your search criteria
+                      Smart-ranked matches based on your search criteria
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -1226,7 +1238,7 @@ const BuyerAiResult: React.FC = () => {
                 <TierSection
                   title="Best Match Sellers"
                   icon={<Trophy className="w-5 h-5 text-amber-600" />}
-                  description="AI-recommended sellers with verified platform presence"
+                  description="Ranked by commodity similarity, HS code, and platform reliability"
                   results={filteredTier1}
                   tier={1}
                   userRole="Buyer"

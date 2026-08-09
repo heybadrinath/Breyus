@@ -105,7 +105,7 @@ export interface ProductResult {
 
   // Platform awareness
   isOnPlatform: boolean;
-  sourceType: 'platform_and_ai' | 'platform_only';
+  sourceType: 'platform_and_ai' | 'platform_recommended' | 'platform_only';
 
   // AI match info (if in AI results)
   aiMatchScore?: number;
@@ -132,6 +132,10 @@ export interface MergedSearchResult {
   searchType: 'buyer' | 'seller';
   commodity: string;
   hsCode?: string;
+
+  // Deployment capability metadata
+  recommendationMode: 'external_ai' | 'platform_recommendation';
+  analysisAvailable: boolean;
 
   // Search parameters
   searchParams: {

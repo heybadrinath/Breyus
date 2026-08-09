@@ -730,7 +730,7 @@ const SellerAiResult: React.FC = () => {
       setResults(response.data);
 
       // Start market analysis
-      if (response.data.totalMatches > 0) {
+      if (response.data.totalMatches > 0 && response.data.analysisAvailable) {
         try {
           const commodity = state?.productName || state?.commodity || 'commodity';
           const analysisResponse = await startAnalysis({
@@ -1080,10 +1080,16 @@ const SellerAiResult: React.FC = () => {
                   <Globe2 className="w-5 h-5 text-amber-600" />
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-semibold text-amber-800">Country Filter Notice</h4>
+                  <h4 className="font-semibold text-amber-800">
+                    {results.recommendationMode === 'platform_recommendation'
+                      ? 'Portfolio Recommendation Mode'
+                      : 'Country Filter Notice'}
+                  </h4>
                   <p className="text-sm text-amber-700 mt-1">{results.warning}</p>
                   <p className="text-xs text-amber-600 mt-2">
-                    Tip: Try broadening your search criteria or exploring buyers from other regions.
+                    {results.recommendationMode === 'platform_recommendation'
+                      ? 'Scores use platform trade activity and are not financial advice.'
+                      : 'Tip: Try broadening your search criteria or exploring buyers from other regions.'}
                   </p>
                 </div>
                 <button

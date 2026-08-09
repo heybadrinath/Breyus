@@ -6,6 +6,22 @@ tags: [session, handoff]
 
 > Prepend new session blocks at top. Keep only 3 most recent. MAX 80 lines total. Parallel-safe.
 
+## Session: 2026-08-09 16:50
+**Branch:** `deploy/portfolio-showcase`
+**Focus:** Useful AI-area recommendations on the free deployment
+
+**Done:**
+- Added explainable marketplace ranking using commodity, HS code, seller reliability, country, and price signals
+- Added Smart Match scores and reasons to buyer results
+- Added deployment capability metadata and prevented unavailable market-analysis polling
+- Made AI health distinguish platform recommendations from the optional external AI stack
+- Passed focused recommendation tests and both production builds
+
+**Open:**
+- [ ] Connect a valid external AI provider only if generative market analysis is needed later
+
+**Decisions:** Keep the free deployment lightweight and truthful; do not deploy the PostgreSQL, Redis, embedding-model, and Python stack merely to support the portfolio demo
+
 ## Session: 2026-07-20 11:30
 **Branch:** `deploy/portfolio-showcase`
 **Focus:** Reliable OTP delivery on the Render portfolio deployment
@@ -21,7 +37,7 @@ tags: [session, handoff]
 - Documented relay deployment, secret ownership, rotation, and troubleshooting
 
 **Open:**
-- [ ] Deploy and connect the optional AI service
+- [ ] Connect an external AI service only if generative market analysis is required
 
 **Decisions:** Use Vercel as a narrow HTTPS-to-Gmail relay because Render Free blocks SMTP and direct Render-to-Mailjet requests reset; authenticate relay calls with existing Mailjet credentials; keep non-OTP email disabled; never log production OTP values
 
@@ -40,18 +56,3 @@ tags: [session, handoff]
 - [ ] Configure the commodity data API key
 
 **Decisions:** Keep the public Render service name exactly `breyus`; treat Render dashboard secrets as live state; do not present unavailable integrations as working
-
-## Session: 2026-04-11 11:20
-**Branch:** `development`
-**Focus:** Daily bug scan follow-up for blog auth regressions
-
-**Done:**
-- Confirmed there were no new commits since the automation anchor or in the last 24 hours
-- Fixed blog auth redirect handling so writer invite flows preserve `?redirect=` through login and signup
-- Replaced the broken signup email debounce with an effect-backed timer that avoids duplicate and stale membership checks
-
-**Open:**
-- [ ] Frontend test validation is still pending because `frontend/node_modules/react-scripts` is missing in this environment
-- [ ] Pre-existing backend/docs worktree changes remain untouched
-
-**Decisions:** When the commit window is empty, this automation may carry forward prior memory-backed findings only if the current code still reproduces them concretely

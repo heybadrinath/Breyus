@@ -6,6 +6,10 @@ tags: [moc, ai, index]
 
 > PRDs and architecture documents for the Breyus AI server (AI_NEW).
 
+## Current Portfolio Deployment
+
+The free Render deployment uses a lightweight platform recommendation mode inside the NestJS backend. It ranks real marketplace listings using commodity terms, HS-code similarity, seller reliability, country preference, and price range. The separate Python AI stack and generative market analysis are not deployed; the UI reports this distinction and does not start unavailable analysis jobs.
+
 ## Documents
 - [[ai/NICHE_COMMODITY_FINDER_PRD|Niche Commodity Finder PRD]] -- Product requirements for AI-powered niche commodity discovery
 - [[ai/NICHE_COMMODITY_FINDER_TECHNICAL_ARCHITECTURE|Technical Architecture]] -- System design for commodity search, embeddings, link prediction
@@ -26,6 +30,7 @@ tags: [moc, ai, index]
 | Market Analysis | Async job-based demand forecasting and trends |
 | Gravity Score | Multi-factor trade opportunity scoring |
 | 3-Tier Results | Confidence-based result organization |
+| Platform Recommendation Mode | Explainable smart ranking that runs within the free Render service |
 
 ## Tech Stack
 - **Runtime:** Python 3.10+, FastAPI, Uvicorn

@@ -24,6 +24,7 @@ import {
   SellerInventoryItem,
   SellerInventoryResult,
 } from './interfaces';
+import { rankPlatformProducts } from './platform-recommendation';
 import {
   AnalysisInitiateResponse,
   AnalysisResultResponse,
@@ -40,6 +41,10 @@ interface AnalysisJobInfo {
   hsCode?: string;
   notified: boolean;
   createdAt: Date;
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
@@ -117,26 +122,47 @@ export class AIService {
           }
         : undefined;
 
-      let aiResults;
-      try {
-        aiResults = await this.aiHttpService.predictPartners({
-          commodity: input.commodity,
-          role: isBuyer ? 'buyer' : 'seller',
-          // Pass buyer/seller names based on role (required by AI service)
-          // Note: Don't send buyer_id/seller_id - MongoDB ObjectIds are incompatible with PostgreSQL UUIDs
-          buyer_name: isBuyer ? companyName : undefined,
-          seller_name: !isBuyer ? companyName : undefined,
-          country_preference: input.country,
-          port_preference: input.port,
-          price_range: input.priceRange,
-          hs_code: input.hsCode,
-          top_k: input.limit || 20,
-          profile: profile,
-        });
-      } catch (aiError) {
-        this.logger.error(`AI service error for commodity "${input.commodity}": ${aiError.message}`);
-        // Return empty results instead of crashing - platform data may still be available
-        aiResults = { top_partners: [], warning: `AI service unavailable: ${aiError.message}` };
+      let aiResults = { top_partners: [], warning: undefined } as {
+        top_partners: any[];
+        warning?: string;
+      };
+      let recommendationMode: 'external_ai' | 'platform_recommendation' =
+        'platform_recommendation';
+      let analysisAvailable = false;
+
+      if (this.aiHttpService.isExternalServiceConfigured()) {
+        try {
+          aiResults = await this.aiHttpService.predictPartners({
+            commodity: input.commodity,
+            role: isBuyer ? 'buyer' : 'seller',
+            // Pass buyer/seller names based on role (required by AI service)
+            // Note: Don't send buyer_id/seller_id - MongoDB ObjectIds are incompatible with PostgreSQL UUIDs
+            buyer_name: isBuyer ? companyName : undefined,
+            seller_name: !isBuyer ? companyName : undefined,
+            country_preference: input.country,
+            port_preference: input.port,
+            price_range: input.priceRange,
+            hs_code: input.hsCode,
+            top_k: input.limit || 20,
+            profile: profile,
+          });
+          recommendationMode = 'external_ai';
+          analysisAvailable = true;
+        } catch (aiError) {
+          this.logger.error(
+            `External AI error for commodity "${input.commodity}": ${aiError.message}`,
+          );
+          aiResults = {
+            top_partners: [],
+            warning: isBuyer
+              ? 'The external AI service is unavailable, so results are ranked using live Breyus listings and platform reliability signals.'
+              : 'The external AI service is unavailable, so buyers are matched using live platform trade and purchase-request activity.',
+          };
+        }
+      } else {
+        aiResults.warning = isBuyer
+          ? 'Portfolio recommendation mode is active. Results are ranked using live Breyus listings, commodity similarity, and platform reliability signals; generative market analysis is not enabled.'
+          : 'Portfolio recommendation mode is active. Buyers are matched using platform trade and purchase-request activity; generative market analysis is not enabled.';
       }
 
       // 2. Enrich AI results with platform awareness
@@ -149,9 +175,21 @@ export class AIService {
 
       // 4. Role-specific logic
       if (userRole === 'Buyer') {
-        return this.mergeBuyerResults(input, enrichedAiResults, warning);
+        return this.mergeBuyerResults(
+          input,
+          enrichedAiResults,
+          warning,
+          recommendationMode,
+          analysisAvailable,
+        );
       } else {
-        return this.mergeSellerResults(input, enrichedAiResults, warning);
+        return this.mergeSellerResults(
+          input,
+          enrichedAiResults,
+          warning,
+          recommendationMode,
+          analysisAvailable,
+        );
       }
     } catch (error) {
       this.logger.error(`Search failed for ${input.commodity}: ${error.message}`, error.stack);
@@ -436,6 +474,10 @@ export class AIService {
     input: AISearchInputDto,
     aiResults: EnrichedPartner[],
     warning?: string,
+    recommendationMode:
+      | 'external_ai'
+      | 'platform_recommendation' = 'external_ai',
+    analysisAvailable = true,
   ): Promise<MergedSearchResult> {
     // Get platform trade history buyers (completed trades)
     const tradeHistoryBuyers = await this.getTradeHistoryBuyers(
@@ -485,6 +527,8 @@ export class AIService {
       searchType: 'seller',
       commodity: input.commodity,
       hsCode: input.hsCode,
+      recommendationMode,
+      analysisAvailable,
       searchParams: {
         country: input.country,
         port: input.port,
@@ -515,19 +559,20 @@ export class AIService {
     const query: any = {
       isActive: true,
     };
+    const commodityPattern = escapeRegex(commodity.trim());
 
     // Match by HS code prefix or name
     if (hsCode) {
       const hsPrefix = hsCode.substring(0, 4);
       query.$or = [
         { hsnCode: { $regex: `^${hsPrefix}` } },
-        { name: { $regex: commodity, $options: 'i' } },
-        { category: { $regex: commodity, $options: 'i' } },
+        { name: { $regex: commodityPattern, $options: 'i' } },
+        { category: { $regex: commodityPattern, $options: 'i' } },
       ];
     } else {
       query.$or = [
-        { name: { $regex: commodity, $options: 'i' } },
-        { category: { $regex: commodity, $options: 'i' } },
+        { name: { $regex: commodityPattern, $options: 'i' } },
+        { category: { $regex: commodityPattern, $options: 'i' } },
       ];
     }
 
@@ -686,12 +731,56 @@ export class AIService {
     input: AISearchInputDto,
     aiResults: EnrichedPartner[],
     warning?: string,
+    recommendationMode:
+      | 'external_ai'
+      | 'platform_recommendation' = 'external_ai',
+    analysisAvailable = true,
   ): Promise<MergedSearchResult> {
     // Get platform products (now includes probability and riskLevel)
     const platformProducts = await this.getPlatformProducts(
       input.hsCode,
       input.commodity,
     );
+
+    if (recommendationMode === 'platform_recommendation') {
+      const rankedProducts = rankPlatformProducts(
+        input,
+        platformProducts,
+      ).slice(0, input.limit || 20);
+      const recommendationCount = Math.min(
+        rankedProducts.length,
+        Math.max(1, Math.min(5, Math.ceil(rankedProducts.length / 3))),
+      );
+      const tier1 = rankedProducts.slice(0, recommendationCount);
+      const tier2 = rankedProducts
+        .slice(recommendationCount)
+        .map((product) => ({
+          ...product,
+          sourceType: 'platform_only' as const,
+          aiMatchScore: undefined,
+          aiMatchReason: undefined,
+        }));
+
+      const result: MergedSearchResult = {
+        tier1,
+        tier2,
+        tier3: [],
+        totalMatches: tier1.length + tier2.length,
+        searchType: 'buyer',
+        commodity: input.commodity,
+        hsCode: input.hsCode,
+        recommendationMode,
+        analysisAvailable,
+        searchParams: {
+          country: input.country,
+          port: input.port,
+          priceRange: input.priceRange,
+        },
+      };
+
+      if (warning) result.warning = warning;
+      return result;
+    }
 
     // Get company IDs from AI results that are on platform
     const aiCompanyIds = new Set(
@@ -750,6 +839,8 @@ export class AIService {
       searchType: 'buyer',
       commodity: input.commodity,
       hsCode: input.hsCode,
+      recommendationMode,
+      analysisAvailable,
       searchParams: {
         country: input.country,
         port: input.port,

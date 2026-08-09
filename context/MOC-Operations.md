@@ -29,7 +29,7 @@ tags: [moc, operations, index]
 | Application runtime | Render Free web service, Singapore | DigitalOcean Droplet, Singapore |
 | Object storage | Cloudflare R2 | DigitalOcean Spaces |
 | Main database | MongoDB Atlas Free | Self-hosted MongoDB |
-| AI runtime and database | Not deployed | FastAPI + PostgreSQL/pgvector |
+| AI runtime and database | In-app recommendation mode; full AI stack not deployed | FastAPI + PostgreSQL/pgvector |
 | Transactional email | Vercel HTTPS relay to Gmail SMTP | Managed transactional email provider |
 | Public URL / DNS | `breyus.onrender.com` | Custom domain through Cloudflare |
 

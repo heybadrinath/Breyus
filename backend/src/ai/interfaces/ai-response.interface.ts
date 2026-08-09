@@ -244,6 +244,13 @@ export interface NicheSearchResponse {
 export interface AIHealthResponse {
   status: string;
   timestamp: string;
+  mode?: 'external_ai' | 'platform_recommendation';
+  message?: string;
+  capabilities?: {
+    partnerRecommendations: boolean;
+    marketAnalysis: boolean;
+    gravityScoring: boolean;
+  };
   uptime_seconds?: number;
   services?: {
     database: string;

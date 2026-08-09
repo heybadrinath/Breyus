@@ -8,6 +8,7 @@ tags: [moc, changelog, index]
 
 ## Recent Changes
 
+- [[2026-08-09-platform-recommendation-mode]] — Explainable smart matching for the free Render deployment
 - [[2026-07-20-transactional-email-delivery]] — Secured Vercel relay for OTP delivery with truthful errors and throttling
 - [[2026-07-18-render-deployment-runbook]] — Current Render deployment, verification, rollback, and maintenance runbook
 - [[2026-04-11-blog-auth-regression-fixes]] — Blog auth redirect fix and signup email debounce repair

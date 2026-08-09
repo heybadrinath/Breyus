@@ -64,7 +64,7 @@ export interface ContactInfo {
 }
 
 export type RiskLevel = 'Very Low' | 'Low' | 'Medium' | 'High' | 'Very High';
-export type SourceType = 'platform_trade_history' | 'platform_and_ai' | 'platform_only' | 'ai_only';
+export type SourceType = 'platform_trade_history' | 'platform_and_ai' | 'platform_recommended' | 'platform_only' | 'ai_only';
 export type ResultType = 'partner' | 'product';
 
 /**
@@ -148,6 +148,8 @@ export interface MergedSearchResult {
   searchType: 'buyer' | 'seller';
   commodity: string;
   hsCode?: string;
+  recommendationMode: 'external_ai' | 'platform_recommendation';
+  analysisAvailable: boolean;
   searchParams: {
     country?: string;
     port?: string;
